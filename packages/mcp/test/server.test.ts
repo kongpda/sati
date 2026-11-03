@@ -57,6 +57,7 @@ describe("MCP server", () => {
     const client = await connect();
     const tools = (await client.listTools()).tools.map((t) => t.name).sort();
     expect(tools).toEqual([
+      "brain_brief",
       "decision_record",
       "feature_upsert",
       "search",
@@ -176,6 +177,16 @@ describe("MCP server", () => {
     const body = JSON.parse((one.contents[0] as { text: string }).text);
     expect(body.feature.id).toBe(feat.body.id);
     expect(body.tasks).toEqual([expect.objectContaining({ title: "Form", status: "todo" })]);
+  });
+
+  it("returns the brief as Markdown, listing the task the agent claimed", async () => {
+    const client = await connect();
+    const t = await call(client, "task_create", { title: "Ship it" });
+    await call(client, "task_claim", { id: t.body.id });
+    const res = await client.callTool({ name: "brain_brief", arguments: {} });
+    const text = (res.content as { text: string }[])[0]?.text ?? "";
+    expect(text).toMatch(/^# brain brief: Demo/);
+    expect(text).toContain(`${shortHandle(t.body.id)} [in_progress, medium] Ship it`);
   });
 
   it("fills prompt arguments into the instructions", async () => {

@@ -1,4 +1,5 @@
 export * from "./actor.js";
+export * from "./brief.js";
 export * from "./context.js";
 export * from "./decision.js";
 export * from "./feature.js";

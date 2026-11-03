@@ -1,5 +1,7 @@
 import {
   BrainError,
+  BriefInput,
+  buildBrief,
   CLI_NAME,
   ClaimTaskInput,
   CompleteTaskInput,
@@ -78,6 +80,25 @@ export function createServer(ctx: ServiceContext): McpServer {
 
 function registerTools(server: McpServer, ctx: ServiceContext): void {
   const task = (ref: string) => resolveId(ctx, "task", ref);
+
+  server.registerTool(
+    `${CLI_NAME}_brief`,
+    {
+      description:
+        "Call first in every session. Markdown: your claimed tasks with acceptance criteria, ready tasks, recent decisions, protected features.",
+      inputSchema: BriefInput,
+      annotations: { readOnlyHint: true },
+    },
+    async (input) => {
+      try {
+        // Markdown, not JSON: the agent reads it as is.
+        const brief = await buildBrief(ctx, input);
+        return { content: [{ type: "text", text: brief.markdown }] };
+      } catch (err) {
+        return fail(err);
+      }
+    },
+  );
 
   server.registerTool(
     "task_list",

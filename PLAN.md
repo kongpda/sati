@@ -440,8 +440,8 @@ Verify: `pnpm typecheck && pnpm test && pnpm bench`, then in a temp git repo: `b
 
 ### Phase 2 — MCP server and agent workflow (week 4)
 
-- [ ] MCP server over stdio with the 14 tools, resources and prompts
-- [ ] `brain_brief` generator with token cap and tests on large fixtures
+- [x] MCP server over stdio with the 14 tools, resources and prompts
+- [x] `brain_brief` generator with token cap and tests on large fixtures
 - [ ] Duplicate detection in `task_create` (FTS similarity)
 - [ ] `brain init` writes `.mcp.json`, `AGENTS.md` / `CLAUDE.md` block, and configs for Codex, Cursor and Gemini CLI
 - [ ] Claude Code hooks: `SessionStart` brief (also on `compact` and `resume`, short form — review fix 12), `Stop` nudge

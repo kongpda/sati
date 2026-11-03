@@ -11,6 +11,7 @@ const root = defineCommand({
   meta: { name: CLI_NAME, version: pkg.version, description: pkg.description },
   subCommands: {
     init: lazy(() => import("./commands/init.js")),
+    brief: lazy(() => import("./commands/brief.js")),
     task: lazy(() => import("./commands/task.js")),
     feature: lazy(() => import("./commands/feature.js")),
     note: lazy(() => import("./commands/note.js")),

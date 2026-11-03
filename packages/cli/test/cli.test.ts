@@ -64,6 +64,19 @@ describe("brain CLI", () => {
     expect(JSON.parse(other.stdout).error.message).toContain("tester");
   });
 
+  // The SessionStart hook runs `brain brief --format=agent` and injects stdout as is.
+  it("prints the brief as Markdown, and as JSON with its token estimate", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = brainJson<Rec>(dir, "task", "create", "Ready one").data;
+    const md = brain(dir, "brief", "--format=agent");
+    expect(md.code).toBe(0);
+    expect(md.stdout).toContain("# brain brief: Demo");
+    expect(md.stdout).toContain(`tsk_${t.id.slice(-6).toLowerCase()} [medium] Ready one`);
+    const j = brainJson<{ markdown: string; tokens: number }>(dir, "brief", "--format", "short");
+    expect(j.data.tokens).toBeGreaterThan(0);
+    expect(brainJson(dir, "brief", "--format", "long").code).toBe(5);
+  });
+
   it("refuses to mark done through update, pointing at `complete` (exit 8)", async () => {
     const dir = await tempRepo({ init: true });
     const t = brainJson<Rec>(dir, "task", "create", "x").data;

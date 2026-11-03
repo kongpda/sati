@@ -396,6 +396,23 @@ Status: in progress.
 - The brief gains a "Stale context" section (agent format only, ranked above protected
   features, trimmed first after them when over the token cap). It lists only stale entries.
 
+### Secret scanner on export
+
+- `exportSnapshot` scans every string field of every record (nested arrays and objects too,
+  tombstones included) before it writes anything. One hit refuses the whole export with
+  `VALIDATION` (exit 5); no file is written. The message lists entity, id, field and kind, at
+  most 10 lines plus a count; it never contains the secret.
+- Patterns: PEM private-key headers, AWS `AKIA`/`ASIA` keys, GitHub `gh?_` and `github_pat_`,
+  Slack `xox?-`, `sk-` keys, Stripe live keys, Google `AIza` keys, JWTs, and `.env`-style lines.
+- `.env` lines count only with an upper-case name containing SECRET, PASSWORD, PASSWD, TOKEN,
+  CREDENTIAL, or ending in `KEY`/`_KEY`, and a value of 8+ characters that is not a reference
+  (`$VAR`, `${VAR}`, `<...>`) or one repeated character. Lower-case names (code in a note) pass.
+- The pre-commit hook needs no change: a failed export exits non-zero, which blocks the commit.
+  The MCP debounced export already prints export errors on stderr and keeps serving.
+- No allowlist or override flag: the plan asks for none. A false positive is fixed by
+  rewording the field. If that proves too strict, an allowlist is an idea for `docs/ideas.md`.
+- The scanner lives in `@brain/sync` (pure functions, `secrets.ts`); only export uses it.
+
 ### Fix: full-index scan on every update (schema v4)
 
 The new claim benchmark failed with `SQLITE_BUSY` at 50,000 records. Cause: the FTS update and

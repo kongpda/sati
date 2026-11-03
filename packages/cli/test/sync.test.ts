@@ -95,6 +95,32 @@ describe("git hooks", () => {
   });
 });
 
+// PLAN Security: a secret in a record must never reach a commit.
+describe("secret scanner", () => {
+  it("blocks the commit and names the record, without printing the secret", async () => {
+    const dir = await tempRepo();
+    brain(dir, "init", "--yes", "--tools", "");
+    const secret = `gh${"p_"}${"a1".repeat(18)}`;
+    const note = brainJson<Rec>(dir, "note", "create", "Setup", "--body", `token ${secret}`).data;
+    writeFileSync(join(dir, "README.md"), "hi\n");
+    gitWithBrain(dir, "add", "README.md");
+
+    let stderr = "";
+    expect(() => {
+      try {
+        gitWithBrain(dir, "commit", "-qm", "leak");
+      } catch (err) {
+        stderr = String((err as { stderr?: unknown }).stderr);
+        throw err;
+      }
+    }).toThrow();
+    expect(stderr).toContain(`note ${note.id}, field body: GitHub token`);
+    expect(stderr).not.toContain(secret);
+    expect(existsSync(join(dir, ".brain", "notes"))).toBe(false);
+    expect(() => gitWithBrain(dir, "rev-parse", "-q", "--verify", "HEAD")).toThrow();
+  });
+});
+
 /**
  * Commits record-only changes. git decides "nothing to commit" for `commit -a` before the
  * pre-commit hook stages the snapshot, so export and stage first.

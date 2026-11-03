@@ -349,7 +349,7 @@ The biggest risks are a local server that any website can reach, secrets leaking
 
 **Data and secrets**
 
-- [ ] Scan every exported record for secrets (API keys, tokens, private keys, `.env`-style lines) before writing to `.brain/`, and refuse with a clear message.
+- [x] Scan every exported record for secrets (API keys, tokens, private keys, `.env`-style lines) before writing to `.brain/`, and refuse with a clear message.
 - [x] Never store file contents in context entries, only summaries and hashes.
 - [ ] Use parameterised queries only (Drizzle); FTS input is escaped.
 - [ ] Validate every input and every imported JSON file with Zod; reject unknown fields and enforce size limits (body up to 100 KB, arrays up to 500 items).
@@ -459,7 +459,7 @@ Verify: `pnpm typecheck && pnpm test && pnpm bench`, then in a temp git repo: `b
 - [x] Export / import engine (incremental, atomic, tombstones) and git hooks installer
 - [x] Merge driver with field-level three-way merge, `needsReview` flag, property tests
 - [x] Context cache with git-hash staleness
-- [ ] Secret scanner on export
+- [x] Secret scanner on export
 - [ ] Fencing tokens: `task_claim` returns a token; writes on the task must present the current one (review fix 2)
 - [ ] Hybrid logical clock (HLC) stamps per field for merge ordering, instead of `updatedAt` (review fix 3)
 - [ ] Delete-vs-edit rule: a newer edit revives the record and flags `needsReview`; otherwise delete wins (review fix 4)

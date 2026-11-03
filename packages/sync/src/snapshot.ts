@@ -19,6 +19,7 @@ import {
   SNAPSHOT_ENTITIES,
   snapshotRecords,
 } from "@brain/core";
+import { type SecretFinding, scanRecord } from "./secrets.js";
 
 /** A record file larger than this cannot be valid (bodies are capped at 100 KB). */
 const MAX_FILE_BYTES = 1024 * 1024;
@@ -63,8 +64,10 @@ export interface ExportResult {
  * a teammate's records that are not imported yet.
  */
 export async function exportSnapshot(ctx: ServiceContext, dir: string): Promise<ExportResult> {
+  const records = await snapshotRecords(ctx);
+  refuseSecrets(records.flatMap(({ entity, record }) => scanRecord(entity, record)));
   const result: ExportResult = { written: [], unchanged: 0 };
-  for (const { entity, record } of await snapshotRecords(ctx)) {
+  for (const { entity, record } of records) {
     const rel = join(SNAPSHOT_DIRS[entity], `${record.id}.json`);
     const file = join(dir, rel);
     const content = stableJson(record);
@@ -77,6 +80,29 @@ export async function exportSnapshot(ctx: ServiceContext, dir: string): Promise<
     result.written.push(rel);
   }
   return result;
+}
+
+/** Shown in full up to this many; the rest are counted. */
+const MAX_LISTED = 10;
+
+/**
+ * Fails the whole export when any record holds a secret, before any file is written, so a
+ * commit never carries one. The message names the record and field, never the secret.
+ */
+function refuseSecrets(found: SecretFinding[]): void {
+  if (found.length === 0) return;
+  const lines = found
+    .slice(0, MAX_LISTED)
+    .map((f) => `  ${f.entity} ${f.id}, field ${f.field}: ${f.kind}`);
+  if (found.length > MAX_LISTED) lines.push(`  and ${found.length - MAX_LISTED} more`);
+  throw new BrainError(
+    "VALIDATION",
+    `Export refused: ${found.length} record field(s) look like they contain a secret.\n${lines.join("\n")}`,
+    {
+      hint: "Remove the secret from each field listed (rotate it if it was real), then export again. Nothing was written to .brain/.",
+      details: found,
+    },
+  );
 }
 
 /** Reads every record file under `dir`. Unparseable files fail the whole read. */

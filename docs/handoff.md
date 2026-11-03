@@ -7,9 +7,9 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
 ## Where things stand
 
 - Phases 0–2: done, except the items under "Owed by the owner" below.
-- Phase 3: 6 of 19 checklist items done (claims and leases, path locks, guard, export/import and
-  hooks, merge driver, context cache). 13 items and the Phase 3 gate remain.
-- Phases 4–6 and the Security checklist: not started (two Security items are met; see below).
+- Phase 3: 7 of 19 checklist items done (claims and leases, path locks, guard, export/import and
+  hooks, merge driver, context cache, secret scanner). 12 items and the Phase 3 gate remain.
+- Phases 4–6 and the Security checklist: not started (three Security items are met; see below).
 - All checks pass at `002e9a0`: lint, typecheck, and 256 tests (core 143, CLI 55, store 26,
   sync 19, MCP 13). Core coverage: 98.4% statements, 92% branches (threshold 90%).
 
@@ -43,18 +43,18 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
 
 ### 1. Secret scanner on export
 
-- [ ] Before `exportSnapshot` (`packages/sync/src/snapshot.ts`) writes any file, scan every
+- [x] Before `exportSnapshot` (`packages/sync/src/snapshot.ts`) writes any file, scan every
       string field of every record for secrets: API keys and tokens (AWS `AKIA…`, GitHub
       `ghp_`/`github_pat_`, Slack `xox…`, `sk-…`, JWTs), PEM private-key headers, and
       `.env`-style `NAME=value` lines whose name looks secret (`*_KEY`, `*_TOKEN`, `*SECRET*`,
       `PASSWORD`).
-- [ ] Refuse the whole export with a clear error naming the entity id and field (never print the
+- [x] Refuse the whole export with a clear error naming the entity id and field (never print the
       secret itself). PLAN Security says "refuse with a clear message".
-- [ ] Decide and record: does a refused export also fail the pre-commit hook? (Simplest: yes,
+- [x] Decide and record: does a refused export also fail the pre-commit hook? (Simplest: yes,
       the hook runs `brain sync export && git add`, so a non-zero exit blocks the commit.)
-- [ ] The MCP debounced export (`packages/cli/src/commands/mcp.ts`) must report the refusal on
+- [x] The MCP debounced export (`packages/cli/src/commands/mcp.ts`) must report the refusal on
       stderr and keep serving.
-- [ ] Tick the Security item "Scan every exported record for secrets" too.
+- [x] Tick the Security item "Scan every exported record for secrets" too.
 
 ### 2. Fencing tokens (review fix 2)
 
@@ -188,6 +188,7 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
 
 - [x] "Never store file contents in context entries": met by the context cache design.
 - [x] "The merge driver only parses JSON": met (`parseRecord` in `merge.ts`).
+- [x] "Scan every exported record for secrets": done (`packages/sync/src/secrets.ts`).
 - [ ] Everything else in the Security section is open; most of it belongs to Phases 4–6.
 
 ## Owed by the owner (do not do these yourself)

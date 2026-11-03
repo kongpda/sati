@@ -7,6 +7,8 @@ export interface ListQuery {
   parentId?: string | undefined;
   label?: string | undefined;
   includeDeleted?: boolean | undefined;
+  /** Reverse the usual order (rank, then id); with equal ranks this means newest first. */
+  newestFirst?: boolean | undefined;
   /** Default 50, max 500. */
   limit?: number | undefined;
   offset?: number | undefined;

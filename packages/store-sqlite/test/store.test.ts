@@ -116,6 +116,10 @@ describe("queries", () => {
     expect(ui.map((t) => t.id)).toEqual([urgent.id]);
     const all = await store.read((r) => r.list("task", PROJECT_ID, { includeDeleted: true }));
     expect(all).toHaveLength(4);
+    const reversed = await store.read((r) =>
+      r.list("task", PROJECT_ID, { status: ["todo"], newestFirst: true }),
+    );
+    expect(reversed.map((t) => t.id)).toEqual([low.id, urgent.id]);
   });
 
   it("finds records by short-handle suffix", async () => {
@@ -234,6 +238,8 @@ describe("query plans", () => {
       `SELECT data FROM tasks WHERE project_id = 'p' AND deleted_at IS NULL ${order}`,
       `SELECT data FROM tasks WHERE project_id = 'p' AND status = 'todo' AND deleted_at IS NULL ${order}`,
       `SELECT data FROM notes WHERE project_id = 'p' AND deleted_at IS NULL ${order}`,
+      // The brief reads the newest decisions; walking the same index backwards avoids a sort.
+      `SELECT data FROM decisions WHERE project_id = 'p' AND deleted_at IS NULL ORDER BY rank DESC, id DESC LIMIT 10`,
     ];
     for (const q of queries) expect(plan(q)).not.toContain("TEMP B-TREE");
   });

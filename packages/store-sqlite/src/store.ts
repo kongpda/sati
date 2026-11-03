@@ -202,7 +202,7 @@ export class SqliteStore implements StorageAdapter {
         .select({ data: t.data })
         .from(t)
         .where(and(...where))
-        .orderBy(asc(t.rank), asc(t.id))
+        .orderBy(...(q.newestFirst ? [desc(t.rank), desc(t.id)] : [asc(t.rank), asc(t.id)]))
         .limit(clampLimit(q.limit))
         .offset(q.offset ?? 0)
         .all();

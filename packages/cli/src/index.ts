@@ -16,6 +16,7 @@ const root = defineCommand({
     note: lazy(() => import("./commands/note.js")),
     decision: lazy(() => import("./commands/decision.js")),
     search: lazy(() => import("./commands/search.js")),
+    mcp: lazy(() => import("./commands/mcp.js")),
   },
 });
 

@@ -167,3 +167,15 @@ Next: brain task create "First task"
 exit: 0
 ```
 
+
+## Phase 2 — MCP, brief and rules
+
+Status: in progress.
+
+### Choices made on ambiguous items
+
+- **MCP tool set.** PLAN lists 14 tools, but `lock_acquire`/`lock_release`, `context_get`/`context_put` and `feature_check` need the locks, context cache and guard services, which are Phase 3 checklist items. Phase 2 registers the tools whose services exist (`task_list`, `task_create`, `task_claim`, `task_update`, `task_complete`, `feature_upsert`, `decision_record`, `search`, plus `brain_brief`). The other five land in Phase 3 with their services. The Phase 2 gate (an agent finishes a real task with brain tools only) needs only the first set.
+- **Basic claims now, leases with heartbeats and fencing later.** `task_claim` needs a claim, so core gains `claimTask`: one write transaction (`BEGIN IMMEDIATE` in SQLite) that fails with CONFLICT naming the holder while another actor's lease is live, moves the task from `todo` to `in_progress`, and logs a `claim` activity row. The lease length defaults to the project's `leaseMinutes`. Following "leases renew on any write by the holder", the holder's `task_update` renews the lease; moving a task back to `backlog`, `todo` or `cancelled` drops the claim so it shows up as ready again. Heartbeats, concurrency stress tests and fencing tokens remain Phase 3 items.
+- **Tool results** are compact JSON (no indentation) to save agent context. Domain errors come back as tool errors carrying `{ error: { code, message, hint, details } }`, matching the CLI's `--json` errors. Schema errors caught by the SDK come back as its plain-text tool error.
+- **Ids.** Tools accept full ids or short handles (`tsk_8f3k2a`); resources print short handles.
+- **`brain mcp`** loads the MCP SDK lazily so other commands keep their cold-start budget. The SDK stays an external dependency of the CLI; workspace packages are bundled as before. The stdio transport does not report a client disconnect, so the server also stops when stdin ends.

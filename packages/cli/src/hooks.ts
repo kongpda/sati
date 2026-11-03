@@ -40,7 +40,7 @@ ${OWNER}: ${purpose}
 # Rewritten by \`${CLI_NAME} init --upgrade\`; do not edit.
 ${CLI_NAME}() { ${self.map(sh).join(" ")} "$@"; }
 if [ ! -e ${sh(bin)} ]; then
-  echo "${CLI_NAME} is no longer at ${bin}, so its git hooks did not run. ${UPGRADE}" >&2
+  echo ${sh(`${CLI_NAME} is no longer at ${bin}, so its git hooks did not run. ${UPGRADE}`)} >&2
   exit 0
 fi
 ${body}

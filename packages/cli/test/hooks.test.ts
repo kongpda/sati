@@ -1,7 +1,8 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { planHooks } from "../src/hooks.js";
 import { sati, satiJson, tempRepo } from "./helpers.js";
 
 interface Init {
@@ -130,6 +131,21 @@ describe("git hooks", () => {
     expect(hook).toMatch(/^# >>> sati[\s\S]*# <<< sati\nnpx lint-staged\n$/);
     expect(hook).not.toContain(dir);
     expect(existsSync(join(dir, ".husky/_/pre-commit"))).toBe(false);
+  });
+
+  // A moved or removed install must not block commits, and must say how to fix it. The message
+  // holds backticks, so it must print literally rather than run as a command.
+  it("lets git go on, with a hint, when the recorded sati is gone", async () => {
+    const dir = await tempRepo();
+    const hook = planHooks(dir, "git", ["/nonexistent/sati"]).find((h) =>
+      h.path.endsWith(join("sati", "hooks", "pre-commit")),
+    );
+    if (!hook) throw new Error("no pre-commit runner planned");
+    const r = spawnSync("sh", ["-c", hook.content], { cwd: dir, encoding: "utf8" });
+    expect(r.status).toBe(0);
+    expect(r.stderr).toBe(
+      "sati is no longer at /nonexistent/sati, so its git hooks did not run. Run `sati init --upgrade` from the new install.\n",
+    );
   });
 
   // lefthook rewrites the hooks in .git/hooks, and merges lefthook-local.yml into its config.

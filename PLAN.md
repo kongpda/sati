@@ -350,7 +350,7 @@ The biggest risks are a local server that any website can reach, secrets leaking
 **Data and secrets**
 
 - [ ] Scan every exported record for secrets (API keys, tokens, private keys, `.env`-style lines) before writing to `.brain/`, and refuse with a clear message.
-- [ ] Never store file contents in context entries, only summaries and hashes.
+- [x] Never store file contents in context entries, only summaries and hashes.
 - [ ] Use parameterised queries only (Drizzle); FTS input is escaped.
 - [ ] Validate every input and every imported JSON file with Zod; reject unknown fields and enforce size limits (body up to 100 KB, arrays up to 500 items).
 - [ ] Sanitise Markdown rendering (no raw HTML; links get `rel="noopener noreferrer"`).
@@ -363,7 +363,7 @@ The biggest risks are a local server that any website can reach, secrets leaking
 
 **Merge driver and hooks**
 
-- [ ] The merge driver only parses JSON; it never evaluates content.
+- [x] The merge driver only parses JSON; it never evaluates content.
 - [ ] Hooks call the installed `brain` binary via an absolute path recorded at init, so a malicious repo cannot swap it in through `PATH` tricks.
 - [ ] `brain init` shows exactly which hooks and configs it will write, and asks before changing them.
 

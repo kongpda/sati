@@ -48,6 +48,7 @@ The whole stack is TypeScript, so one core library powers the CLI, the MCP serve
 | Live updates | Server-sent events; cross-process change detection via `PRAGMA data_version` | No WebSocket infra; detects writes from other agents' processes cheaply |
 | Web UI | React 19 + Vite, TanStack Router + Query + Virtual | Typed routing, cache with optimistic updates, smooth long lists |
 | UI kit | Tailwind CSS v4 + shadcn/ui (Radix), `cmdk`, `dnd-kit`, Tiptap (Markdown) | Accessible primitives, command palette, keyboard-accessible drag and drop, rich notes |
+| Diagrams | `pele` (Mermaid → SVG), lazy-loaded via `pele/lazy` | Renders Mermaid blocks in notes, decisions and task bodies; no runtime deps, synchronous, themed with CSS variables, escapes text and limits size |
 | Hosted auth | Better Auth (GitHub OAuth, email) + hashed API tokens for agents | Self-hostable, no vendor lock-in |
 | Logging | `pino` (JSON logs) | Low overhead; structured logs for the hosted server |
 | Lint / format | Biome | One fast tool instead of ESLint + Prettier |
@@ -482,6 +483,7 @@ Verify: `pnpm test:e2e --repeat 100` and the guard fixtures in `e2e/guard/`.
 - [ ] Board with drag and drop, swimlanes, filters, bulk edit, virtualisation
 - [ ] Task detail panel, Agents view, Features registry with path preview
 - [ ] Roadmap timeline, Notes editor with backlinks, Decisions, Activity
+- [ ] Mermaid diagrams in Markdown (notes, decisions, task bodies) rendered with `pele`: lazy-loaded so it stays out of the first-load bundle, `--pele-*` variables mapped to the UI design tokens, render errors shown inline instead of breaking the note
 - [ ] Optimistic updates with rollback; live highlight on agent changes
 - [ ] Accessibility audit (axe + manual keyboard and screen-reader pass)
 - [ ] Playwright tests for the main flows

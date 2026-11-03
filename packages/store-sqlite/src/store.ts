@@ -1,3 +1,5 @@
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import {
   type Activity,
   type ActivityQuery,
@@ -87,6 +89,7 @@ export class SqliteStore implements StorageAdapter {
   }
 
   static async open(path: string, opts: OpenOptions = {}): Promise<SqliteStore> {
+    if (!opts.readonly) mkdirSync(dirname(path), { recursive: true });
     const db = new Database(path, { readonly: opts.readonly ?? false });
     if (!opts.readonly) {
       db.pragma("journal_mode = WAL");

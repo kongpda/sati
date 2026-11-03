@@ -425,13 +425,13 @@ flowchart LR
 
 - [x] Zod schemas for all entities; status machines with transition tests
 - [x] `StorageAdapter` port; SQLite adapter with Drizzle schema, migrations and FTS5 triggers
-- [ ] DB path resolver (git common dir → standalone fallback) and pragmas
+- [x] DB path resolver (git common dir → standalone fallback) and pragmas
 - [ ] Services: project, milestone, feature, task (create, update, list, ready, complete), note, decision, activity log in the same transaction
 - [ ] Prefixed ULIDs and short display handles; dependency-cycle check
 - [ ] CLI commands with `--json`, helpful errors and stable exit codes
 - [ ] `brain init` wizard (mode, agent tools detected, preview of every file it will write)
 - [ ] Unit tests at 90%+ coverage on `core`
-- [ ] `schemaVersion` stored in the DB; older binaries refuse writes; migrations take an exclusive lock and back up first (review fix 10)
+- [x] `schemaVersion` stored in the DB; older binaries refuse writes; migrations take an exclusive lock and back up first (review fix 10)
 - [ ] Actor identity from `BRAIN_ACTOR`, else tool + worktree + session ID (review fix 11)
 - [ ] Benchmarks for the CLI budgets in the Performance section
 

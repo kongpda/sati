@@ -244,3 +244,13 @@ export const ENTITY_SCHEMAS: { [K in StoredEntity]: z.ZodType<EntityMap[K]> } = 
   context: ContextEntry,
   actor: Actor,
 };
+
+/** `.brain/brain.config.json`: tells every worktree which project and mode it belongs to. */
+export const BrainConfigSchema = z.strictObject({
+  version: z.literal(1),
+  projectId: ProjectId,
+  mode: Mode,
+});
+export type BrainConfig = z.infer<typeof BrainConfigSchema>;
+export const CONFIG_DIR = ".brain";
+export const CONFIG_FILE = "brain.config.json";

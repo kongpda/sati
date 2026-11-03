@@ -20,7 +20,8 @@
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "bench": "node bench/bench.ts"
   },
   "dependencies": {
     "@clack/prompts": "1.8.1",

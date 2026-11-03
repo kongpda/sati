@@ -44,7 +44,7 @@ The gate is "`brain --version` publishes to npm as `0.0.1` from CI". It needs:
 
 ## Phase 1 — Core, SQLite and CLI
 
-Status: in progress.
+Status: **gate passed** (2026-11-03). Waiting for review before Phase 2.
 
 ### Choices made on ambiguous items
 
@@ -85,3 +85,85 @@ Status: in progress.
 - Core coverage is enforced: `pnpm test` in `packages/core` runs with v8 coverage and fails
   below 90% statements, branches, functions or lines. Current: 97.7% statements, 92.0%
   branches, 94.3% functions, 98.5% lines.
+- `pnpm bench` (in `packages/cli/bench/bench.ts`) covers the three Phase 1 budgets: CLI cold
+  start, CLI read p95 and full-text search on 50,000 records. It seeds 25,000 tasks and 25,000
+  notes, then times 30 runs of `--version`, `task list`, `task list --ready` and `search`, and
+  exits 1 if a budget is missed. Cold start is measured as p95 of a spawned process. The other
+  budgets (claims, MCP, brief, guard, export, UI) belong to later phases. The "fail CI on a 20%
+  regression" rule needs a stored baseline and CI wiring, so it is left for when CI runs benches.
+- The first bench run missed the read budget (p95 202 ms). Lists sorted every task because the
+  status index stopped at `rank`; indexes now end in `(rank, id)` (migration 0002).
+
+### Verify output (local, 2026-11-03, macOS, Node 26.12.1)
+
+```
+$ pnpm typecheck && pnpm test && pnpm bench
+ Tasks:    5 successful, 5 total
+@brain/core:test:       Tests  70 passed (70)
+@brain/core:test: All files      |   97.67 |    91.95 |   94.25 |   98.53 |
+@brain/store-sqlite:test:       Tests  24 passed (24)
+@scope/brain:test:       Tests  17 passed (17)
+ Tasks:    6 successful, 6 total
+@scope/brain:bench: Seeded 50000 records in 8178 ms.
+@scope/brain:bench: PASS  CLI cold start (brain --version), p95               37.8 ms  (budget 80 ms)
+@scope/brain:bench: PASS  CLI read command, p95                              122.0 ms  (budget 150 ms)
+@scope/brain:bench: PASS  Full-text search on 50000 records, p95              31.0 ms  (budget 50 ms)
+ Tasks:    4 successful, 4 total
+```
+
+In a temp git repo:
+
+```
+$ brain init --yes && brain task create "x" --json && brain task list --ready --json
+Initialized "tmp-cssdvnffcf" in git mode.
+  database  /private/var/folders/29/x0cgr_ld17l7y66k0qkdhl880000gn/T/tmp.CssdvnFFcf/.git/brain/brain.db
+  created   .brain/brain.config.json
+  tools     claude-code
+Next: brain task create "First task"
+{
+  "id": "tsk_01M6G3F885WS0EXW63ARR0ANXE",
+  "projectId": "prj_01M6G3F84C5G06X0W01D6YC8XZ",
+  "createdAt": "2026-11-03T07:02:42.692Z",
+  "updatedAt": "2026-11-03T07:02:42.692Z",
+  "createdBy": "actr_01M6G3F855K2PGWFFT1N3N46WS",
+  "version": 1,
+  "deletedAt": null,
+  "title": "x",
+  "body": "",
+  "status": "todo",
+  "priority": "medium",
+  "featureId": null,
+  "parentId": null,
+  "dependsOn": [],
+  "labels": [],
+  "branch": null,
+  "worktree": null,
+  "claim": null,
+  "completion": null
+}
+[
+  {
+    "id": "tsk_01M6G3F885WS0EXW63ARR0ANXE",
+    "projectId": "prj_01M6G3F84C5G06X0W01D6YC8XZ",
+    "createdAt": "2026-11-03T07:02:42.692Z",
+    "updatedAt": "2026-11-03T07:02:42.692Z",
+    "createdBy": "actr_01M6G3F855K2PGWFFT1N3N46WS",
+    "version": 1,
+    "deletedAt": null,
+    "title": "x",
+    "body": "",
+    "status": "todo",
+    "priority": "medium",
+    "featureId": null,
+    "parentId": null,
+    "dependsOn": [],
+    "labels": [],
+    "branch": null,
+    "worktree": null,
+    "claim": null,
+    "completion": null
+  }
+]
+exit: 0
+```
+

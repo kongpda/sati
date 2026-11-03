@@ -433,7 +433,7 @@ flowchart LR
 - [x] Unit tests at 90%+ coverage on `core`
 - [x] `schemaVersion` stored in the DB; older binaries refuse writes; migrations take an exclusive lock and back up first (review fix 10)
 - [x] Actor identity from `BRAIN_ACTOR`, else tool + worktree + session ID (review fix 11)
-- [ ] Benchmarks for the CLI budgets in the Performance section
+- [x] Benchmarks for the CLI budgets in the Performance section
 
 **Gate:** create a project, features and tasks from the CLI; ready-list and search work; benchmarks meet budgets.
 Verify: `pnpm typecheck && pnpm test && pnpm bench`, then in a temp git repo: `brain init --yes && brain task create "x" --json && brain task list --ready --json`.

@@ -188,3 +188,12 @@ describe("listTasks", () => {
     });
   });
 });
+
+describe("service input", () => {
+  // Callers such as the CLI pass every flag, set or not. An unset flag must not wipe a default.
+  it("treats undefined fields as absent", async () => {
+    const { ctx } = await setup();
+    const t = await createTask(ctx, { title: "x", body: undefined, priority: undefined });
+    expect(t).toMatchObject({ body: "", priority: "medium", status: "todo" });
+  });
+});

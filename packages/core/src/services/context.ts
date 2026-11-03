@@ -25,9 +25,14 @@ export interface ServiceContext {
 
 export type Verb = (typeof VERBS)[number];
 
-/** Validates untrusted input; failures become VALIDATION errors listing the first issues. */
+/**
+ * Validates untrusted input; failures become VALIDATION errors listing the first issues.
+ * Top-level `undefined` values count as absent, so `{ body: undefined }` gets the default body
+ * instead of overwriting it (Zod keeps explicit `undefined` keys in its output).
+ */
 export function parseInput<T extends z.ZodType>(schema: T, input: unknown): z.output<T> {
-  const result = schema.safeParse(input);
+  const plain = input !== null && typeof input === "object" && !Array.isArray(input);
+  const result = schema.safeParse(plain ? defined(input) : input);
   if (result.success) return result.data;
   const issues = result.error.issues;
   const summary = issues

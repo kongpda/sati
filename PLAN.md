@@ -364,7 +364,7 @@ The biggest risks are a local server that any website can reach, secrets leaking
 **Merge driver and hooks**
 
 - [x] The merge driver only parses JSON; it never evaluates content.
-- [ ] Hooks call the installed `sati` binary via an absolute path recorded at init, so a malicious repo cannot swap it in through `PATH` tricks.
+- [x] Hooks call the installed `sati` binary via an absolute path recorded at init, so a malicious repo cannot swap it in through `PATH` tricks.
 - [ ] `sati init` shows exactly which hooks and configs it will write, and asks before changing them.
 
 **Hosted mode**
@@ -463,13 +463,13 @@ Verify: `pnpm typecheck && pnpm test && pnpm bench`, then in a temp git repo: `s
 - [x] Fencing tokens: `task_claim` returns a token; writes on the task must present the current one (review fix 2)
 - [ ] Hybrid logical clock (HLC) stamps per field for merge ordering, instead of `updatedAt` (review fix 3)
 - [ ] Delete-vs-edit rule: a newer edit revives the record and flags `needsReview`; otherwise delete wins (review fix 4)
-- [ ] Hook installer detects `core.hooksPath`, husky and lefthook and chains into them; never overwrites (review fix 5)
+- [x] Hook installer detects `core.hooksPath`, husky and lefthook and chains into them; never overwrites (review fix 5)
 - [ ] Guard uses rename detection (`git diff -M`) and offers to update feature `paths` (review fix 6)
 - [ ] Flag feature globs matching zero files in `sati doctor` and the brief (review fix 7)
 - [ ] `PreToolUse` also matches Bash and parses `rm`, `git rm`, `mv` (review fix 8)
 - [ ] Detect network filesystems and Docker/WSL bind mounts; fall back to daemon mode (`sati serve` owns the DB, others use a local socket) (review fix 9)
 - [ ] `pre-push` hook; CI command `sati guard --range origin/main...HEAD` plus a GitHub Actions example; Claude Code deny rule for `git commit --no-verify` (review fix 1)
-- [ ] `.gitattributes`: `.sati/**/*.json merge=sati linguist-generated`
+- [x] `.gitattributes`: `.sati/**/*.json merge=sati linguist-generated`
 - [ ] `sati handoff`: structured "where I stopped" note on the task
 - [ ] E2E scenario: 4 agents in 4 worktrees, random claims, locks and merges for 1,000 steps with zero duplicate claims and zero lost records
 
@@ -507,8 +507,8 @@ Added 2026-11-03 at the owner's request. Sati becomes the default place where pe
 
 - [x] A record-only `git commit -a` fails: git finds nothing to commit before the pre-commit hook stages `.sati/`. Fix: every CLI write exports, as the MCP server already does (debounced), so `.sati/` is already dirty.
 - [ ] `needsReview` set by the merge driver is never cleared: add `sati task update --reviewed` (and the same for notes and features); the UI clears it in Phase 4.
-- [ ] Hooks and the merge driver find `sati` by name on `PATH`: record the absolute binary path at init (Security checklist item).
-- [ ] `sati init` on an initialised project does not upgrade hooks, the merge driver or `.gitattributes`: add `sati init --upgrade` that shows and applies only the managed changes.
+- [x] Hooks and the merge driver find `sati` by name on `PATH`: record the absolute binary path at init (Security checklist item).
+- [x] `sati init` on an initialised project does not upgrade hooks, the merge driver or `.gitattributes`: add `sati init --upgrade` that shows and applies only the managed changes.
 - [ ] Context staleness sees staged content only: also hash modified and untracked files under the entry's path.
 - [ ] Eight core error hints use the literal `sati` instead of `CLI_NAME`.
 

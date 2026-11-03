@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { chmodSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { locateDb, SqliteStore } from "@sati/store-sqlite";
 import { describe, expect, it } from "vitest";
@@ -154,91 +154,5 @@ describe("sati guard --paths and --hook", () => {
     expect(warn.hookSpecificOutput.additionalContext).toContain("shipped feature");
     expect(hook(join(dir, "README.md"))).toBe("");
     expect(hook("/etc/hosts")).toBe("");
-  });
-});
-
-describe("pre-commit hook", () => {
-  it("sati init installs it, and it stops a commit that deletes a protected feature", async () => {
-    const dir = await tempRepo();
-    const init = satiJson<{ files: { path: string; action: string }[] }>(
-      dir,
-      "init",
-      "--yes",
-      "--tools",
-      "",
-    );
-    expect(init.data.files).toContainEqual({ path: ".git/hooks/pre-commit", action: "create" });
-    const hookFile = join(dir, ".git/hooks/pre-commit");
-    expect(statSync(hookFile).mode & 0o111).not.toBe(0);
-
-    // The hook runs `sati` from PATH, so put a shim for the built CLI there.
-    const shims = join(dir, ".git/shims");
-    mkdirSync(shims);
-    writeFileSync(join(shims, "sati"), `#!/bin/sh\nexec "${process.execPath}" "${bin}" "$@"\n`);
-    chmodSync(join(shims, "sati"), 0o755);
-    const env = { ...process.env, PATH: `${shims}:${process.env.PATH}`, SATI_ACTOR: "tester" };
-
-    mkdirSync(join(dir, "src/billing"), { recursive: true });
-    writeFileSync(join(dir, "src/billing/a.ts"), lines(3));
-    git(dir, "add", ".");
-    execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "a"], {
-      cwd: dir,
-      env,
-    });
-    sati(
-      dir,
-      "feature",
-      "create",
-      "Billing",
-      "--status",
-      "shipped",
-      "--protected",
-      "--paths",
-      "src/billing",
-    );
-    git(dir, "rm", "-q", "src/billing/a.ts");
-    expect(() =>
-      execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "rm"], {
-        cwd: dir,
-        env,
-        stdio: "pipe",
-      }),
-    ).toThrow(/protected feature/);
-  });
-
-  it("never overwrites an existing pre-commit hook", async () => {
-    const dir = await tempRepo();
-    const hookFile = join(dir, ".git/hooks/pre-commit");
-    mkdirSync(join(dir, ".git/hooks"), { recursive: true });
-    writeFileSync(hookFile, "#!/bin/sh\nnpm test\n");
-    const init = satiJson<{ files: { path: string; action: string }[] }>(
-      dir,
-      "init",
-      "--yes",
-      "--tools",
-      "",
-    );
-    expect(init.data.files).toContainEqual({ path: ".git/hooks/pre-commit", action: "skip" });
-    expect(readFileSync(hookFile, "utf8")).toBe("#!/bin/sh\nnpm test\n");
-  });
-
-  // A hook an older `sati init` wrote is ours, so it is brought up to date.
-  it("updates a hook written by an older sati init", async () => {
-    const dir = await tempRepo();
-    const hookFile = join(dir, ".git/hooks/pre-commit");
-    mkdirSync(join(dir, ".git/hooks"), { recursive: true });
-    writeFileSync(
-      hookFile,
-      "#!/bin/sh\n# Installed by `sati init`: old\nexec sati guard --staged\n",
-    );
-    const init = satiJson<{ files: { path: string; action: string }[] }>(
-      dir,
-      "init",
-      "--yes",
-      "--tools",
-      "",
-    );
-    expect(init.data.files).toContainEqual({ path: ".git/hooks/pre-commit", action: "update" });
-    expect(readFileSync(hookFile, "utf8")).toContain("sati sync export");
   });
 });

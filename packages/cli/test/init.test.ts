@@ -23,6 +23,8 @@ interface Err {
   error: { code: string; hint: string | null; details: Record<string, unknown> | null };
 }
 
+const HOOKS = ["pre-commit", "post-merge", "post-checkout", "post-rewrite"];
+
 const tempDir = () => realpathSync(mkdtempSync(join(tmpdir(), "sati-init-")));
 
 // `sati init` decides where the memory lives and what gets committed, so these tests pin
@@ -43,20 +45,22 @@ describe("sati init", () => {
       { path: ".claude/settings.json", action: "create" },
       { path: ".claude/skills/sati/SKILL.md", action: "create" },
       { path: ".gitattributes", action: "create" },
-      ...["pre-commit", "post-merge", "post-checkout", "post-rewrite"].map((h) => ({
-        path: join(".git", "hooks", h),
-        action: "create",
-      })),
+      ...HOOKS.map((h) => ({ path: join(".git", "sati", "hooks", h), action: "create" })),
+      ...HOOKS.map((h) => ({ path: join(".git", "hooks", h), action: "create" })),
       { path: join(".git", "config"), action: "create" },
     ]);
     expect(readFileSync(join(dir, "CLAUDE.md"), "utf8")).toBe("# rules\n\n@AGENTS.md\n");
     // PLAN: the merge driver is registered through .gitattributes and local git config.
-    expect(readFileSync(join(dir, ".gitattributes"), "utf8")).toBe(".sati/**/*.json merge=sati\n");
+    // PLAN: linguist-generated collapses the snapshot in PR diffs.
+    expect(readFileSync(join(dir, ".gitattributes"), "utf8")).toBe(
+      ".sati/**/*.json merge=sati linguist-generated\n",
+    );
     const driver = execFileSync("git", ["config", "--get", "merge.sati.driver"], {
       cwd: dir,
       encoding: "utf8",
     });
-    expect(driver).toBe("sati merge-driver %O %A %B\n");
+    // PLAN Security: the driver starts sati by the absolute path recorded at init, not PATH.
+    expect(driver).toBe(`'${bin}' merge-driver %O %A %B\n`);
     expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).toContain("<!-- sati:start v1 -->");
     expect(r.data.tools).toContain("claude-code");
     const config = JSON.parse(readFileSync(join(dir, ".sati", "sati.config.json"), "utf8"));
@@ -77,6 +81,7 @@ describe("sati init", () => {
       { path: ".mcp.json", action: "create" },
       { path: ".claude/settings.local.json", action: "create" },
       { path: ".claude/skills/sati/SKILL.md", action: "create" },
+      { path: join(".git", "sati", "hooks", "pre-commit"), action: "create" },
       { path: join(".git", "hooks", "pre-commit"), action: "create" },
     ]);
     expect(readFileSync(join(dir, "CLAUDE.local.md"), "utf8")).toContain("sati:start v1");
@@ -113,8 +118,11 @@ describe("sati init", () => {
     const dir = await tempRepo();
     const r = satiJson<Init>(dir, "init", "--yes", "--mode", "stealth");
     expect(r.code).toBe(0);
-    // Only the pre-commit hook, which lives inside .git.
-    expect(r.data.files).toEqual([{ path: join(".git", "hooks", "pre-commit"), action: "create" }]);
+    // Only the pre-commit hook and its runner, both inside .git.
+    expect(r.data.files).toEqual([
+      { path: join(".git", "sati", "hooks", "pre-commit"), action: "create" },
+      { path: join(".git", "hooks", "pre-commit"), action: "create" },
+    ]);
     expect(existsSync(join(dir, ".sati"))).toBe(false);
     expect(execFileSync("git", ["status", "--porcelain"], { cwd: dir, encoding: "utf8" })).toBe("");
     expect(satiJson(dir, "task", "list").code).toBe(0);
@@ -150,6 +158,37 @@ describe("sati init", () => {
     const r = satiJson<Err>(dir, "init", "--yes");
     expect(r.code).toBe(4);
     expect(r.data.error.code).toBe("CONFLICT");
+    expect(r.data.error.hint).toContain("sati init --upgrade");
+  });
+
+  // PLAN: an initialized project gets newer hooks, driver and .gitattributes without a re-init.
+  it("--upgrade rewrites only the managed git files of an initialized project", async () => {
+    const dir = await tempRepo();
+    expect(satiJson<Err>(dir, "init", "--upgrade", "--yes").code).toBe(6);
+    expect(sati(dir, "init", "--yes", "--tools", "").code).toBe(0);
+    // What an older sati wrote: the bare attribute line and a driver found on PATH.
+    writeFileSync(join(dir, ".gitattributes"), "*.png binary\n.sati/**/*.json merge=sati\n");
+    execFileSync("git", ["config", "merge.sati.driver", "sati merge-driver %O %A %B"], {
+      cwd: dir,
+    });
+    writeFileSync(join(dir, "AGENTS.md"), "mine\n");
+
+    const r = satiJson<{ upgraded: { slug: string }; files: Init["files"] }>(
+      dir,
+      "init",
+      "--upgrade",
+      "--yes",
+    );
+    expect(r.code).toBe(0);
+    expect(r.data.files).toContainEqual({ path: ".gitattributes", action: "update" });
+    expect(r.data.files).toContainEqual({ path: join(".git", "config"), action: "update" });
+    expect(readFileSync(join(dir, ".gitattributes"), "utf8")).toBe(
+      "*.png binary\n.sati/**/*.json merge=sati linguist-generated\n",
+    );
+    // Agent files are `sati rules sync`'s job, not upgrade's.
+    expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).toBe("mine\n");
+    const again = satiJson<{ files: Init["files"] }>(dir, "init", "--upgrade", "--yes");
+    expect(again.data.files.every((f) => f.action === "keep")).toBe(true);
   });
 
   it("rejects modes that do not fit the folder", async () => {

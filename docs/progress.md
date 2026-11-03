@@ -442,6 +442,42 @@ Docs were rewritten by search-and-replace, so earlier entries in this file use t
 for work done under the old ones. The project record in this repo's DB is still named
 "Agent Brain": there is no command to rename a project.
 
+### Hook installer: absolute path, chaining, `--upgrade` (review fix 5)
+
+Phase-order exception: the owner asked to install sati in another repo (khevents-inertia, which
+has uncommitted work and a tracked `.claude/settings.local.json`). Git mode there needed these
+Phase 3 items and Phase 3b known bugs first, so they were pulled forward before the Phase 3
+gate. Stealth mode was installed there first; it needed none of this.
+
+- Layout: the hook logic lives in runners at `<git-common-dir>/sati/hooks/<name>`, next to the
+  DB. Only the runners and `merge.sati.driver` in `.git/config` hold the binary's path, and
+  neither is committed, so a repo cannot change which binary runs.
+- The path is `process.argv[1]` of the `sati init` that wrote it, resolved but not realpath'd,
+  so a symlink such as `~/.local/bin/sati` survives rebuilds. A script without the exec bit
+  is run with the current `node`. A runner whose binary is gone prints a hint to run
+  `sati init --upgrade` and exits 0: a moved install never blocks commits.
+- Each hook git calls gets a short marked block (`# >>> sati` … `# <<< sati`) that calls its
+  runner if it is executable. The block goes right after the shebang, so it runs before the
+  rest of the hook; a later `init` replaces the block in place. Only the pre-commit block stops
+  git on failure. The block has no machine path, so it is safe in a committed husky hook, and
+  it does nothing on a teammate's machine without sati.
+- Where the block goes: the folder `git rev-parse --git-path hooks` names (follows
+  `core.hooksPath`); for husky 9 (`core.hooksPath = .husky/_`, which husky regenerates) the
+  user's `.husky/<name>` instead. With a lefthook config, `.git/hooks` belongs to lefthook, so
+  sati writes `lefthook-local.yml` (create only; an existing foreign one is skipped and the
+  snippet printed) and asks the user to run `lefthook install`.
+- A whole hook file written by an older `sati init` (has the `Installed by` line, no block) is
+  replaced by the block. Stealth mode never edits a hook file inside the working tree (husky,
+  a tracked `core.hooksPath`) or `lefthook-local.yml`; it skips them with a note.
+- The runners call sati through a shell function, so `exec` is gone: `exec` cannot run a
+  function, and in a chained hook it would skip the user's own lines.
+- `sati init --upgrade`: on an initialized project, plans and applies only `.gitattributes`
+  (git mode), the runners, the chain blocks and the merge driver. Agent files stay with
+  `sati rules sync`. Asks to confirm on a TTY; needs `--yes` otherwise. A plain second
+  `sati init` still fails with CONFLICT, now with a hint to use `--upgrade`. Standalone has no
+  hooks, so `--upgrade` there is a usage error.
+- `.gitattributes` gets `linguist-generated`; the older line without it is replaced in place.
+
 ### Fix: record-only `git commit -a`
 
 - `execute` in `packages/cli/src/runtime.ts` wraps the store in git mode with the same

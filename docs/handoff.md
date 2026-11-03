@@ -95,11 +95,11 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
 
 ### 5. Hook installer chains into existing managers (review fix 5)
 
-- [ ] `planHooks` in `packages/cli/src/hooks.ts` uses `git rev-parse --git-path hooks`, which
+- [x] `planHooks` in `packages/cli/src/hooks.ts` uses `git rev-parse --git-path hooks`, which
       already follows `core.hooksPath`, but foreign hooks are skipped. Detect husky
       (`.husky/`), lefthook (`lefthook.yml`) and a custom `core.hooksPath`, and add the sati
       lines to their config instead of skipping. Never overwrite.
-- [ ] `sati init` must show each change before applying it (it prints a plan already).
+- [x] `sati init` must show each change before applying it (it prints a plan already).
 
 ### 6. Guard rename detection (review fix 6)
 
@@ -144,7 +144,7 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
 
 ### 11. `.gitattributes` `linguist-generated`
 
-- [ ] Change `ATTRIBUTE` in `packages/cli/src/hooks.ts` to
+- [x] Change `ATTRIBUTE` in `packages/cli/src/hooks.ts` to
       `.sati/**/*.json merge=sati linguist-generated`. `planGitAttributes` must then replace
       the older line in place instead of appending a second one. Update
       `packages/cli/test/init.test.ts`.
@@ -174,10 +174,10 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
       decision. See progress.md "### Merge driver".
 - [ ] **`needsReview` is never cleared.** Set by the merge driver; no command clears it yet.
       The UI (Phase 4) or a `task update` flag could; record the choice.
-- [ ] **Merge driver found by name on PATH.** Hooks and the driver call `sati` by name. The
+- [x] **Merge driver found by name on PATH.** Hooks and the driver call `sati` by name. The
       Security item "Hooks call the installed `sati` binary via an absolute path recorded at
       init" is open.
-- [ ] **This repo's own hooks and merge driver are not installed.** `sati init` does not
+- [x] **This repo's own hooks and merge driver are not installed.** `sati init` does not
       re-run on an initialised project, so `.git/hooks` here predate the sync hooks and the
       merge driver. Decide whether `sati init` (or `sati rules sync`) should upgrade them.
 - [ ] **Context staleness sees staged content only** (`git ls-files -s`): unstaged edits and

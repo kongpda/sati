@@ -27,6 +27,7 @@ import {
   planGitAttributes,
   planHooks,
   planMergeDriver,
+  selfCommand,
 } from "../hooks.js";
 import {
   excludeFileFor,
@@ -56,6 +57,8 @@ interface InitPlan {
   /** The merge driver in local git config; git mode only. */
   mergeDriver: PlannedGitConfig | undefined;
   config: SatiConfig;
+  /** `--upgrade`: the project exists; only hooks, the merge driver and .gitattributes change. */
+  upgrade: Project | undefined;
 }
 
 export interface InitResult {
@@ -117,6 +120,7 @@ async function plan(
     slug?: string | undefined;
     name?: string | undefined;
     tools?: string | undefined;
+    upgrade?: boolean | undefined;
   },
 ): Promise<InitPlan> {
   const loc = where(cwd);
@@ -144,12 +148,21 @@ async function plan(
   const projectId = existing?.projectId ?? createIdFactory()("project");
   const db = mode === "standalone" ? standaloneDbPath(homedir(), projectId) : (loc?.path ?? "");
 
+  if (args.upgrade && mode === "standalone") {
+    throw new SatiError("USAGE", "Standalone projects have no git hooks to upgrade.");
+  }
   const found = await alreadyInitialized(db);
-  if (found) {
+  if (found && !args.upgrade) {
     throw new SatiError("CONFLICT", `This project is already initialized as "${found.slug}".`, {
-      hint: 'Start with `sati task create "title"`.',
+      hint: "Run `sati init --upgrade` to update its git hooks, merge driver and .gitattributes.",
     });
   }
+  if (!found && args.upgrade) {
+    throw new SatiError("NOT_INITIALIZED", "There is no project here to upgrade.", {
+      hint: "Run `sati init`.",
+    });
+  }
+  if (found) return upgradePlan(root, db, found);
 
   const name = args.name ?? basename(root);
   const files: FileChange[] =
@@ -167,10 +180,7 @@ async function plan(
   // The snapshot only exists in git mode, so only git mode routes it to the merge driver.
   if (mode === "git") agentFiles.push(planGitAttributes(fileReader(root)));
   files.push(...agentFiles.map(({ path, action }) => ({ path, action })));
-  const hooks = planHooks(root, mode);
-  files.push(...hooks.map(({ path, action }) => ({ path, action })));
-  const mergeDriver = mode === "git" ? planMergeDriver(root) : undefined;
-  if (mergeDriver) files.push({ path: mergeDriver.path, action: mergeDriver.action });
+  const { hooks, mergeDriver } = planGit(root, mode, files);
   return {
     mode,
     slug: args.slug ?? slugify(name),
@@ -184,6 +194,40 @@ async function plan(
     hooks,
     mergeDriver,
     config: { version: 1, projectId, mode },
+    upgrade: undefined,
+  };
+}
+
+/** The hooks and merge driver, appended to `files` in display order. */
+function planGit(root: string, mode: Mode, files: FileChange[]) {
+  const self = selfCommand();
+  const hooks = planHooks(root, mode, self);
+  files.push(...hooks.map(({ path, action }) => ({ path, action })));
+  const mergeDriver = mode === "git" ? planMergeDriver(root, self) : undefined;
+  if (mergeDriver) files.push({ path: mergeDriver.path, action: mergeDriver.action });
+  return { hooks, mergeDriver };
+}
+
+/** `--upgrade` on an initialized project: only the git integration that init manages. */
+function upgradePlan(root: string, db: string, project: Project): InitPlan {
+  const mode = project.mode;
+  const agentFiles = mode === "git" ? [planGitAttributes(fileReader(root))] : [];
+  const files: FileChange[] = agentFiles.map(({ path, action }) => ({ path, action }));
+  const { hooks, mergeDriver } = planGit(root, mode, files);
+  return {
+    mode,
+    slug: project.slug,
+    name: project.name,
+    root,
+    db,
+    projectId: project.id,
+    tools: [],
+    files,
+    agentFiles,
+    hooks,
+    mergeDriver,
+    config: { version: 1, projectId: project.id, mode },
+    upgrade: project,
   };
 }
 
@@ -193,15 +237,40 @@ function preview(p: InitPlan): string {
   if (p.mode === "stealth" && p.agentFiles.some((f) => f.action === "skip")) {
     lines.push("(stealth mode skips files that already exist, so nothing tracked changes)");
   }
-  for (const h of p.hooks.filter((h) => h.action === "skip")) {
-    lines.push(`(${h.path} already exists and is left alone; call sati from it yourself)`);
-  }
+  lines.push(...notes(p.hooks));
   if (p.files.length === 0) lines.push("files     none");
-  lines.push(`tools     ${p.tools.length ? p.tools.join(", ") : "none detected"}`);
+  if (!p.upgrade) lines.push(`tools     ${p.tools.length ? p.tools.join(", ") : "none detected"}`);
   return lines.join("\n");
 }
 
-async function apply(p: InitPlan): Promise<InitResult> {
+const notes = (hooks: PlannedHook[]) =>
+  hooks.flatMap((h) => (h.note ? [`(${h.path}: ${h.note})`] : []));
+
+/** Writes the hooks, the merge driver and the agent files that `p` plans. */
+function writeManaged(p: InitPlan): void {
+  for (const h of p.hooks) {
+    if (h.action !== "create" && h.action !== "update") continue;
+    mkdirSync(join(h.abs, ".."), { recursive: true });
+    writeFileSync(h.abs, h.content, { flag: h.action === "create" ? "wx" : "w" });
+    chmodSync(h.abs, 0o755);
+  }
+  if (p.mergeDriver) applyMergeDriver(p.root, p.mergeDriver);
+  writePlanned(p.root, p.agentFiles, p.mode === "stealth" ? excludeFileFor(p.db) : undefined);
+}
+
+export interface UpgradeResult {
+  upgraded: Project;
+  files: FileChange[];
+  notes: string[];
+}
+
+function applyUpgrade(p: InitPlan & { upgrade: Project }): UpgradeResult {
+  writeManaged(p);
+  return { upgraded: p.upgrade, files: p.files, notes: notes(p.hooks) };
+}
+
+async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
+  if (p.upgrade) return applyUpgrade({ ...p, upgrade: p.upgrade });
   const store = await SqliteStore.open(p.db);
   const ids = createIdFactory();
   // The project id is chosen before the DB exists, so the config file and the row agree.
@@ -224,14 +293,7 @@ async function apply(p: InitPlan): Promise<InitResult> {
       mkdirSync(join(abs, ".."), { recursive: true });
       writeFileSync(abs, `${JSON.stringify(p.config, null, 2)}\n`, { flag: "wx" });
     }
-    for (const h of p.hooks) {
-      if (h.action !== "create" && h.action !== "update") continue;
-      mkdirSync(join(h.abs, ".."), { recursive: true });
-      writeFileSync(h.abs, h.content, { flag: h.action === "create" ? "wx" : "w" });
-      chmodSync(h.abs, 0o755);
-    }
-    if (p.mergeDriver) applyMergeDriver(p.root, p.mergeDriver);
-    writePlanned(p.root, p.agentFiles, p.mode === "stealth" ? excludeFileFor(p.db) : undefined);
+    writeManaged(p);
     warnIfNotOnPath(p.tools);
     return { project, actor, db: p.db, tools: p.tools, files: p.files };
   } finally {
@@ -271,8 +333,21 @@ async function wizard(cwd: string, args: Parameters<typeof plan>[1]): Promise<In
   return final;
 }
 
-function render(r: InitResult | null): string {
+/** `--upgrade` asks nothing but whether to go ahead. */
+async function confirmUpgrade(p: InitPlan): Promise<InitPlan | null> {
+  const clack = await import("@clack/prompts");
+  clack.note(preview(p), "sati will write");
+  const ok = await clack.confirm({ message: "Apply these changes?" });
+  return clack.isCancel(ok) || !ok ? null : p;
+}
+
+function render(r: InitResult | UpgradeResult | null): string {
   if (!r) return "Cancelled. Nothing was written.";
+  if ("upgraded" in r) {
+    const lines = [`Upgraded "${r.upgraded.slug}" (${r.upgraded.mode} mode).`];
+    for (const f of r.files) lines.push(`  ${LABEL[f.action].padEnd(9)} ${f.path}`);
+    return [...lines, ...r.notes.map((n) => `  ${n}`)].join("\n");
+  }
   const lines = [
     `Initialized "${r.project.slug}" in ${r.project.mode} mode.`,
     `  database  ${r.db}`,
@@ -294,6 +369,11 @@ export default defineCommand({
       description: "Also set up these agent tools, comma-separated (e.g. claude-code,codex)",
     },
     yes: { type: "boolean", description: "Skip prompts and accept the defaults" },
+    upgrade: {
+      type: "boolean",
+      description:
+        "Update the git hooks, merge driver and .gitattributes of an initialized project",
+    },
     ...json,
   },
   run: ({ args }) =>
@@ -301,15 +381,24 @@ export default defineCommand({
       args.json,
       async () => {
         const cwd = process.cwd();
-        const opts = { mode: args.mode, name: args.name, slug: args.slug, tools: args.tools };
+        const opts = {
+          mode: args.mode,
+          name: args.name,
+          slug: args.slug,
+          tools: args.tools,
+          upgrade: args.upgrade,
+        };
         if (args.yes) return apply(await plan(cwd, opts));
         if (!args.json && process.stdin.isTTY && process.stdout.isTTY) {
-          const chosen = await wizard(cwd, opts);
+          const chosen = args.upgrade
+            ? await confirmUpgrade(await plan(cwd, opts))
+            : await wizard(cwd, opts);
           return chosen && apply(chosen);
         }
         const p = await plan(cwd, opts);
-        throw new SatiError("USAGE", "sati init needs --yes when it cannot ask questions.", {
-          hint: "Run `sati init --yes`, or add `--json` to see what it would write.",
+        const yes = args.upgrade ? "--upgrade --yes" : "--yes";
+        throw new SatiError("USAGE", `sati init needs --yes when it cannot ask questions.`, {
+          hint: `Run \`sati init ${yes}\`, or add \`--json\` to see what it would write.`,
           details: {
             preview: {
               ...p,

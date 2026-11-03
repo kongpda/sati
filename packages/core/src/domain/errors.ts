@@ -12,6 +12,8 @@ export const ERROR_EXIT_CODES = {
   SCHEMA_TOO_NEW: 7,
   INVALID_TRANSITION: 8,
   AMBIGUOUS: 9,
+  /** `brain guard` found a blocked change. */
+  BLOCKED: 10,
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_EXIT_CODES;

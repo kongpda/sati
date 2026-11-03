@@ -455,7 +455,7 @@ Verify: `pnpm typecheck && pnpm test && pnpm bench`, then in a temp git repo: `b
 
 - [x] Claims with leases and heartbeats; atomic claim under concurrency
 - [x] Path locks (exclusive / shared) with overlap detection
-- [ ] `brain guard` for staged diffs and single paths; `PreToolUse` hook; `pre-commit` hook
+- [x] `brain guard` for staged diffs and single paths; `PreToolUse` hook; `pre-commit` hook
 - [ ] Export / import engine (incremental, atomic, tombstones) and git hooks installer
 - [ ] Merge driver with field-level three-way merge, `needsReview` flag, property tests
 - [ ] Context cache with git-hash staleness

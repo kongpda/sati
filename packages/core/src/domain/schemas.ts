@@ -209,6 +209,7 @@ export const VERBS = [
   "status",
   "import",
   "init",
+  "guard",
 ] as const;
 export const Activity = z.strictObject({
   id: idOf("act"),
@@ -253,6 +254,12 @@ export const BrainConfigSchema = z.strictObject({
   version: z.literal(1),
   projectId: ProjectId,
   mode: Mode,
+  guard: z
+    .strictObject({
+      /** Share of a protected feature's changed lines a commit may remove before it is blocked. */
+      maxRemovalRatio: z.number().min(0).max(1).optional(),
+    })
+    .optional(),
 });
 export type BrainConfig = z.infer<typeof BrainConfigSchema>;
 export const CONFIG_DIR = ".brain";

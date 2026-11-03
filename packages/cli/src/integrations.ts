@@ -101,7 +101,10 @@ const HooksSetting = z.record(
   z.array(z.looseObject({ hooks: z.array(z.looseObject({ command: z.string().optional() })) })),
 );
 
-/** Claude Code hooks: the brief at session start (short after resume and compaction), a nudge at stop. */
+/**
+ * Claude Code hooks: the brief at session start (short after resume and compaction), the guard
+ * before edits, a nudge at stop.
+ */
 const CLAUDE_HOOKS: Record<string, HookGroup[]> = {
   SessionStart: [
     {
@@ -111,6 +114,12 @@ const CLAUDE_HOOKS: Record<string, HookGroup[]> = {
     {
       matcher: "resume|compact",
       hooks: [{ type: "command", command: `${CLI_NAME} brief --format=short` }],
+    },
+  ],
+  PreToolUse: [
+    {
+      matcher: "Edit|MultiEdit|Write|NotebookEdit",
+      hooks: [{ type: "command", command: `${CLI_NAME} guard --hook` }],
     },
   ],
   Stop: [{ hooks: [{ type: "command", command: `${CLI_NAME} nudge` }] }],

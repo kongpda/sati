@@ -7,6 +7,7 @@ import {
   actorName,
   baseFields,
   insertWithLog,
+  listAll,
   mustGet,
   nowIso,
   parseInput,
@@ -60,19 +61,15 @@ export interface AcquireLockResult {
   warnings: LockOverlap[];
 }
 
-const PAGE = 500;
+const allLocks = (r: StorageReader, ctx: ServiceContext) => listAll(r, ctx, "lock");
 
-/** Every undeleted lock of the project, paging past the list limit. */
-async function allLocks(r: StorageReader, ctx: ServiceContext): Promise<Lock[]> {
-  const out: Lock[] = [];
-  for (let offset = 0; ; offset += PAGE) {
-    const page = await r.list("lock", ctx.projectId, { limit: PAGE, offset });
-    out.push(...page);
-    if (page.length < PAGE) return out;
-  }
+export const isLive = (l: Lock, now: string) => l.leaseUntil > now;
+
+/** Other actors' live locks. */
+export async function othersLiveLocks(r: StorageReader, ctx: ServiceContext): Promise<Lock[]> {
+  const now = nowIso(ctx);
+  return (await allLocks(r, ctx)).filter((l) => l.actorId !== ctx.actorId && isLive(l, now));
 }
-
-const isLive = (l: Lock, now: string) => l.leaseUntil > now;
 
 /** Live locks, oldest first. Expired locks are not listed; they no longer block anyone. */
 export async function listLocks(ctx: ServiceContext): Promise<Lock[]> {

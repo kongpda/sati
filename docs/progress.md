@@ -277,6 +277,37 @@ Status: in progress.
 - `micromatch` 4.0.8 is a new dependency of core, as the stack names it. The CLI keeps it external
   (a runtime dependency) rather than bundling it.
 
+### Guard
+
+- `brain guard --staged` checks the staged diff (`git diff --cached --no-renames`, with removed
+  line counts and the `HEAD` line count of each modified file). `brain guard --paths a,b` checks
+  paths as edits. MCP `feature_check` takes paths and `modify` or `delete`. Exit 10 (BLOCKED)
+  when anything is blocked; warnings exit 0.
+- Rules, as in the PLAN: another actor's exclusive lock blocks (a shared one warns). Deleting a
+  file of a shipped, protected feature blocks, and so does removing more than half of its lines
+  (`guard.maxRemovalRatio` in `brain.config.json`). Any Decision listing the feature turns those
+  into warnings that name the decision; the newest one wins. Any other change to a shipped
+  feature warns. Features not shipped are ignored.
+- Removal share (choice on an ambiguous item): removed lines over base lines across the
+  feature's changed files, not the whole feature. Files with no counts (binary, or `--paths`) are
+  left out. A deleted file counts as fully removed.
+- Logging: staged mode writes one `guard` activity row per finding. `--paths`, the hook and
+  `feature_check` are read-only, except that a blocked run let through by `BRAIN_GUARD=off`
+  always writes its rows with `override: true` and the actor.
+- Renames show as a delete plus an add, which errs towards blocking, until the rename item.
+- `brain init` installs `.git/hooks/pre-commit` (found with `git rev-parse --git-path hooks`) in
+  git and stealth modes. It runs `brain guard --staged` if `brain` is on PATH, and otherwise
+  warns and lets the commit through. An existing hook is never overwritten: it is reported as
+  `keep` if it already runs the guard and `skip` otherwise. Chaining with husky or lefthook is a
+  later item.
+- The Claude Code hook is `PreToolUse` on `Edit|MultiEdit|Write|NotebookEdit`, running
+  `brain guard --hook`, which reads the tool input from stdin. Blocked exits 2 with the reason
+  on stderr, so Claude Code stops the edit and shows the reason. Warnings go to stdout as
+  `hookSpecificOutput.additionalContext` (assumed from the hook docs; not checked against a live
+  Claude Code). Errors exit 1 so a broken brain never blocks edits. Paths outside the repo pass.
+- `init` used to write the config JSON into every created file before the agent files replaced
+  it. It now writes only the config entry.
+
 ### Fix: full-index scan on every update (schema v4)
 
 The new claim benchmark failed with `SQLITE_BUSY` at 50,000 records. Cause: the FTS update and

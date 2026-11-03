@@ -42,6 +42,7 @@ describe("brain init", () => {
       { path: ".mcp.json", action: "create" },
       { path: ".claude/settings.json", action: "create" },
       { path: ".claude/skills/brain/SKILL.md", action: "create" },
+      { path: join(".git", "hooks", "pre-commit"), action: "create" },
     ]);
     expect(readFileSync(join(dir, "CLAUDE.md"), "utf8")).toBe("# rules\n\n@AGENTS.md\n");
     expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).toContain("<!-- brain:start v1 -->");
@@ -64,6 +65,7 @@ describe("brain init", () => {
       { path: ".mcp.json", action: "create" },
       { path: ".claude/settings.local.json", action: "create" },
       { path: ".claude/skills/brain/SKILL.md", action: "create" },
+      { path: join(".git", "hooks", "pre-commit"), action: "create" },
     ]);
     expect(readFileSync(join(dir, "CLAUDE.local.md"), "utf8")).toContain("brain:start v1");
     expect(readFileSync(join(dir, "CLAUDE.md"), "utf8")).toBe("# shared\n");
@@ -99,8 +101,10 @@ describe("brain init", () => {
     const dir = await tempRepo();
     const r = brainJson<Init>(dir, "init", "--yes", "--mode", "stealth");
     expect(r.code).toBe(0);
-    expect(r.data.files).toEqual([]);
+    // Only the pre-commit hook, which lives inside .git.
+    expect(r.data.files).toEqual([{ path: join(".git", "hooks", "pre-commit"), action: "create" }]);
     expect(existsSync(join(dir, ".brain"))).toBe(false);
+    expect(execFileSync("git", ["status", "--porcelain"], { cwd: dir, encoding: "utf8" })).toBe("");
     expect(brainJson(dir, "task", "list").code).toBe(0);
   });
 

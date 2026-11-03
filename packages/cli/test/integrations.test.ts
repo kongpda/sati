@@ -70,7 +70,7 @@ describe("agent file planning", () => {
 
   // Hooks are how the brief and nudge run without the agent remembering to; the user's own
   // hooks and settings must survive.
-  it("adds the SessionStart and Stop hooks to Claude Code settings, keeping the user's", () => {
+  it("adds the SessionStart, PreToolUse and Stop hooks to Claude Code settings, keeping the user's", () => {
     const mine = {
       permissions: { allow: ["Bash(ls)"] },
       hooks: { Stop: [{ hooks: [{ type: "command", command: "say done" }] }] },
@@ -95,6 +95,12 @@ describe("agent file planning", () => {
       {
         matcher: "resume|compact",
         hooks: [{ type: "command", command: "brain brief --format=short" }],
+      },
+    ]); // The guard runs before every file edit.
+    expect(settings.hooks.PreToolUse).toEqual([
+      {
+        matcher: "Edit|MultiEdit|Write|NotebookEdit",
+        hooks: [{ type: "command", command: "brain guard --hook" }],
       },
     ]);
   });

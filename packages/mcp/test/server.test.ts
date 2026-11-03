@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  createFeature,
   createIdFactory,
   ensureActor,
   fixedClock,
@@ -60,6 +61,7 @@ describe("MCP server", () => {
     expect(tools).toEqual([
       "brain_brief",
       "decision_record",
+      "feature_check",
       "feature_upsert",
       "lock_acquire",
       "lock_release",
@@ -226,6 +228,27 @@ describe("MCP server", () => {
     const text = (res.content as { text: string }[])[0]?.text ?? "";
     expect(text).toMatch(/^# brain brief: Demo/);
     expect(text).toContain(`${shortHandle(t.body.id)} [in_progress, medium] Ship it`);
+  });
+
+  // AGENTS.md rule 3: agents call feature_check before deleting code, and stop when blocked.
+  it("feature_check blocks deleting a shipped, protected feature's file", async () => {
+    const client = await connect();
+    await createFeature(ctx, {
+      title: "Billing",
+      status: "shipped",
+      protected: true,
+      paths: ["src/billing/**"],
+    });
+    const del = await call(client, "feature_check", {
+      paths: ["src/billing/a.ts"],
+      change: "delete",
+    });
+    expect(del.body).toMatchObject({
+      verdict: "blocked",
+      findings: [{ rule: "protected-delete" }],
+    });
+    const edit = await call(client, "feature_check", { paths: ["src/billing/a.ts"] });
+    expect(edit.body.verdict).toBe("warn");
   });
 
   it("fills prompt arguments into the instructions", async () => {

@@ -67,6 +67,22 @@ export function baseFields(ctx: ServiceContext, entity: StoredEntity) {
   };
 }
 
+const PAGE = 500;
+
+/** Every undeleted record of one entity in this project, paging past the list limit. */
+export async function listAll<E extends StoredEntity>(
+  r: StorageReader,
+  ctx: ServiceContext,
+  entity: E,
+): Promise<EntityMap[E][]> {
+  const out: EntityMap[E][] = [];
+  for (let offset = 0; ; offset += PAGE) {
+    const page = await r.list(entity, ctx.projectId, { limit: PAGE, offset });
+    out.push(...page);
+    if (page.length < PAGE) return out;
+  }
+}
+
 /** An actor's display name, falling back to its id. */
 export async function actorName(r: StorageReader, actorId: string): Promise<string> {
   return (await r.get("actor", actorId))?.name ?? actorId;

@@ -17,6 +17,7 @@ const root = defineCommand({
     note: lazy(() => import("./commands/note.js")),
     decision: lazy(() => import("./commands/decision.js")),
     lock: lazy(() => import("./commands/lock.js")),
+    guard: lazy(() => import("./commands/guard.js")),
     search: lazy(() => import("./commands/search.js")),
     nudge: lazy(() => import("./commands/nudge.js")),
     rules: lazy(() => import("./commands/rules.js")),

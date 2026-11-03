@@ -8,6 +8,7 @@ import {
   ClaimTaskInput,
   CompleteTaskInput,
   CreateTaskInput,
+  checkChanges,
   claimTask,
   completeTask,
   createFeature,
@@ -160,6 +161,30 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
       inputSchema: CompleteTaskInput.extend({ id: Ref }),
     },
     ({ id, ...input }) => run(async () => completeTask(ctx, await task(id), input)),
+  );
+
+  server.registerTool(
+    "feature_check",
+    {
+      description:
+        "Before deleting, moving or rewriting code: returns the shipped features and other agents' locks the paths affect, with a verdict ok, warn or blocked. If blocked, stop and ask.",
+      inputSchema: z.strictObject({
+        paths: z.array(z.string().min(1)).min(1).max(500),
+        change: z
+          .enum(["modify", "delete"])
+          .default("modify")
+          .describe("delete when the paths will be removed"),
+      }),
+    },
+    ({ paths, change }) =>
+      run(async () =>
+        checkChanges(ctx, {
+          changes: paths.map((path) => ({
+            path,
+            kind: change === "delete" ? "deleted" : "modified",
+          })),
+        }),
+      ),
   );
 
   server.registerTool(

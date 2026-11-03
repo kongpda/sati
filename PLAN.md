@@ -432,7 +432,7 @@ flowchart LR
 - [ ] `brain init` wizard (mode, agent tools detected, preview of every file it will write)
 - [ ] Unit tests at 90%+ coverage on `core`
 - [x] `schemaVersion` stored in the DB; older binaries refuse writes; migrations take an exclusive lock and back up first (review fix 10)
-- [ ] Actor identity from `BRAIN_ACTOR`, else tool + worktree + session ID (review fix 11)
+- [x] Actor identity from `BRAIN_ACTOR`, else tool + worktree + session ID (review fix 11)
 - [ ] Benchmarks for the CLI budgets in the Performance section
 
 **Gate:** create a project, features and tasks from the CLI; ready-list and search work; benchmarks meet budgets.

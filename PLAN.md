@@ -458,7 +458,7 @@ Verify: `pnpm typecheck && pnpm test && pnpm bench`, then in a temp git repo: `b
 - [x] `brain guard` for staged diffs and single paths; `PreToolUse` hook; `pre-commit` hook
 - [x] Export / import engine (incremental, atomic, tombstones) and git hooks installer
 - [x] Merge driver with field-level three-way merge, `needsReview` flag, property tests
-- [ ] Context cache with git-hash staleness
+- [x] Context cache with git-hash staleness
 - [ ] Secret scanner on export
 - [ ] Fencing tokens: `task_claim` returns a token; writes on the task must present the current one (review fix 2)
 - [ ] Hybrid logical clock (HLC) stamps per field for merge ordering, instead of `updatedAt` (review fix 3)

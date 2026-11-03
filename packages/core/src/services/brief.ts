@@ -3,6 +3,7 @@ import { shortHandle } from "../domain/ids.js";
 import type { Feature, Task } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
 import { actorName, nowIso, parseInput, type ServiceContext } from "./context.js";
+import { getContext } from "./context-cache.js";
 import { releaseExpiredClaims } from "./task.js";
 
 /** PLAN: the brief stays under 1,500 tokens so it is cheap to inject at every session start. */
@@ -43,7 +44,7 @@ interface Section {
 
 /**
  * The session-start brief: who I am, my claimed tasks with their acceptance criteria, ready
- * tasks, paths other agents have locked, recent decisions and protected features. Every line carries an id so the agent can
+ * tasks, paths other agents have locked, recent decisions, stale context entries and protected features. Every line carries an id so the agent can
  * fetch more. Lower sections lose items first when the text would exceed the token cap.
  */
 export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Promise<Brief> {
@@ -87,6 +88,9 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
     for (const l of locks) held.push({ ...l, holder: await actorName(r, l.actorId) });
     return { project, actor, mine, ready, features, decisions, guarded, locks: held };
   });
+
+  // Read after the DB snapshot: staleness needs the git index, which is outside the store.
+  const stale = short ? [] : (await getContext(ctx)).filter((e) => e.stale === true);
 
   const name = data.project?.name ?? "this project";
   const who = data.actor ? `${data.actor.name} (${shortHandle(data.actor.id)})` : ctx.actorId;
@@ -133,6 +137,11 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       items: data.decisions.map(
         (d) => `- ${shortHandle(d.id)} ${clip(d.title)} (${d.createdAt.slice(0, 10)})`,
       ),
+    },
+    {
+      title: "Stale context (files changed since summary; re-read, then context_put)",
+      empty: null,
+      items: stale.map((e) => `- ${shortHandle(e.id)} ${clip(e.path, 80)}: ${clip(e.summary, 80)}`),
     },
     {
       title: "Protected features",

@@ -133,3 +133,41 @@ describe("merge driver", () => {
     expect(merged.body).toContain("<<<<<<< ours\nMAIN\n=======\nSIDE\n>>>>>>> theirs");
   });
 });
+
+// PLAN: context entries hash the module's files from `git ls-files -s` and go stale on change.
+describe("brain context", () => {
+  it("flags an entry stale after a file under its path is staged, and fresh after put", async () => {
+    const dir = await tempRepo({ init: true });
+    mkdirSync(join(dir, "src"));
+    writeFileSync(join(dir, "src", "a.ts"), "export const a = 1;\n");
+    writeFileSync(join(dir, "other.ts"), "x\n");
+    gitWithBrain(dir, "add", "-A");
+    const put = brainJson<{ id: string }>(
+      dir,
+      "context",
+      "put",
+      "src",
+      "--summary",
+      "Source tree",
+      "--key-files",
+      "src/a.ts",
+    );
+    expect(put.code).toBe(0);
+    const stale = () =>
+      brainJson<{ stale: boolean | null }[]>(dir, "context", "get").data.map((e) => e.stale);
+    expect(stale()).toEqual([false]);
+
+    writeFileSync(join(dir, "other.ts"), "y\n");
+    gitWithBrain(dir, "add", "-A");
+    expect(stale()).toEqual([false]);
+
+    writeFileSync(join(dir, "src", "a.ts"), "export const a = 2;\n");
+    gitWithBrain(dir, "add", "-A");
+    expect(stale()).toEqual([true]);
+    expect(brain(dir, "context", "get").stdout).toContain("[STALE]");
+    expect(brain(dir, "brief").stdout).toContain("## Stale context");
+
+    brain(dir, "context", "put", "src", "--summary", "Source tree, re-read");
+    expect(stale()).toEqual([false]);
+  });
+});

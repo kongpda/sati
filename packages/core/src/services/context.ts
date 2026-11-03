@@ -9,6 +9,7 @@ import {
   type VERBS,
 } from "../domain/schemas.js";
 import type { Clock } from "../ports/clock.js";
+import type { RepoIndex } from "../ports/repo.js";
 import type { StorageAdapter, StorageReader, StorageWriter } from "../ports/storage.js";
 
 /** Everything a service call needs. One per command or MCP request. */
@@ -21,6 +22,8 @@ export interface ServiceContext {
   actorId: string;
   /** Current git branch, recorded on activity rows. */
   branch: string | null;
+  /** The git index, for context-cache hashes. Absent outside a git repo. */
+  repo?: RepoIndex;
 }
 
 export type Verb = (typeof VERBS)[number];

@@ -10,6 +10,8 @@ import {
   getProject,
   isBrainError,
   type Project,
+  type RepoFile,
+  type RepoIndex,
   resolveId,
   type ServiceContext,
   type StoredEntity,
@@ -49,6 +51,43 @@ export function osUser(): string | undefined {
   }
 }
 
+/** Large monorepos list many files; the default 1 MB buffer is far too small. */
+const LS_FILES_BUFFER = 512 * 1024 * 1024;
+
+/**
+ * The git index as `git ls-files -s` reports it: staged blob ids, no file reads. Untracked files
+ * and unstaged edits are not seen, so a context entry goes stale once its files are staged.
+ */
+export function gitRepoIndex(root: string): RepoIndex {
+  const git = (...args: string[]) =>
+    execFileSync("git", args, {
+      cwd: root,
+      encoding: "utf8",
+      maxBuffer: LS_FILES_BUFFER,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  return {
+    files: async () => {
+      const out: RepoFile[] = [];
+      // Each record: "<mode> <blob> <stage>\t<path>", NUL-terminated so any path is safe.
+      for (const rec of git("ls-files", "-s", "-z").split("\0")) {
+        const tab = rec.indexOf("\t");
+        if (tab < 0) continue;
+        const blob = rec.slice(0, tab).split(" ")[1];
+        if (blob) out.push({ path: rec.slice(tab + 1), blob });
+      }
+      return out;
+    },
+    head: async () => {
+      try {
+        return git("rev-parse", "--verify", "-q", "HEAD").trim() || null;
+      } catch {
+        return null; // no commits yet
+      }
+    },
+  };
+}
+
 /** Opens this project's DB and identifies the caller. Fails with NOT_INITIALIZED before init. */
 export async function openRuntime(cwd: string = process.cwd()): Promise<Runtime> {
   const location = locateDb(cwd);
@@ -69,6 +108,7 @@ export async function openRuntime(cwd: string = process.cwd()): Promise<Runtime>
   const identity = actorIdentity({ env: process.env, worktree: location.root, user: osUser() });
   const actor = await ensureActor({ ...deps, projectId: project.id }, identity);
   const ctx: ServiceContext = { ...deps, projectId: project.id, actorId: actor.id };
+  if (location.mode !== "standalone") ctx.repo = gitRepoIndex(location.root);
   return { ctx, project, actor, location };
 }
 

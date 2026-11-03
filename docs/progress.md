@@ -373,6 +373,29 @@ Status: in progress.
   stages the snapshot. Commits that also change code are fine. Workaround: `brain sync export`
   and `git add .brain` first. Not fixed in this item.
 
+### Context cache
+
+- `brain context put <path> --summary … [--key-files …]` and `brain context get [path]`, plus
+  the MCP tools `context_get` and `context_put`. That makes 14 MCP tools, as PLAN lists.
+- One entry per path: putting the same path again updates that entry (version bump, `update`
+  activity row) instead of adding a second one. Paths are normalised like lock paths
+  (`./src/` becomes `src`); `..` and absolute paths are rejected.
+- The hash covers the tracked files the path covers: what it matches as a glob, or everything
+  beneath it as a directory. Each covered file contributes `<blob id> <path>` from
+  `git ls-files -s`, sorted, then SHA-256. No file is read and no content is stored.
+  `gitCommit` records HEAD at put time (null before the first commit).
+- `context_get` recomputes the hash on every call and returns `stale: true | false`. The git
+  index comes in through a new optional `repo` port on `ServiceContext`, so core does no I/O;
+  the CLI runtime supplies it in git and stealth mode.
+- Choices on ambiguous items:
+  - Standalone mode has no git, so the hash is empty and `stale` is `null` ("unknown"), never
+    reported as fresh.
+  - `git ls-files -s` sees only staged content. An entry goes stale once its changed files are
+    staged or committed, not on unstaged edits, and untracked files are ignored.
+  - `keyFiles` are stored for the reader only; they are not part of the hash.
+- The brief gains a "Stale context" section (agent format only, ranked above protected
+  features, trimmed first after them when over the token cap). It lists only stale entries.
+
 ### Fix: full-index scan on every update (schema v4)
 
 The new claim benchmark failed with `SQLITE_BUSY` at 50,000 records. Cause: the FTS update and

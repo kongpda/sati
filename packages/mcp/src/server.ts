@@ -15,12 +15,16 @@ import {
   createTask,
   type Feature,
   findSimilarTasks,
+  GetContextInput,
+  getContext,
   getProject,
   getRecord,
   isBrainError,
   ListTasksInput,
   listRecords,
   listTasks,
+  PutContextInput,
+  putContext,
   RecordDecisionInput,
   ReleaseLockInput,
   recordDecision,
@@ -91,7 +95,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
     `${CLI_NAME}_brief`,
     {
       description:
-        "Call first in every session. Markdown: your claimed tasks with acceptance criteria, ready tasks, recent decisions, protected features.",
+        "Call first in every session. Markdown: your claimed tasks with acceptance criteria, ready tasks, others' locks, recent decisions, stale context, protected features.",
       inputSchema: BriefInput,
       annotations: { readOnlyHint: true },
     },
@@ -237,6 +241,27 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
       inputSchema: RecordDecisionInput,
     },
     (input) => run(() => recordDecision(ctx, input)),
+  );
+
+  server.registerTool(
+    "context_get",
+    {
+      description:
+        "Cached module summaries. stale: true means files under the path changed since the summary; re-read them, then context_put. Use before crawling the repo.",
+      inputSchema: GetContextInput,
+      annotations: { readOnlyHint: true },
+    },
+    (input) => run(() => getContext(ctx, input)),
+  );
+
+  server.registerTool(
+    "context_put",
+    {
+      description:
+        "Save what you learned about a module: a path or glob, a short summary and key files. Never paste code. Replaces the entry for the same path.",
+      inputSchema: PutContextInput,
+    },
+    (input) => run(() => putContext(ctx, input)),
   );
 
   server.registerTool(

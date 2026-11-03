@@ -60,6 +60,8 @@ describe("MCP server", () => {
     const tools = (await client.listTools()).tools.map((t) => t.name).sort();
     expect(tools).toEqual([
       "brain_brief",
+      "context_get",
+      "context_put",
       "decision_record",
       "feature_check",
       "feature_upsert",
@@ -249,6 +251,25 @@ describe("MCP server", () => {
     });
     const edit = await call(client, "feature_check", { paths: ["src/billing/a.ts"] });
     expect(edit.body.verdict).toBe("warn");
+  });
+
+  // PLAN: context_get flags stale entries by hash, so agents re-read only changed modules.
+  it("saves context and flags it stale when the module's files change", async () => {
+    let blob = "a1";
+    const repo = {
+      files: async () => [{ path: "src/auth/login.ts", blob }],
+      head: async () => "c0ffee",
+    };
+    const client = await connect({ ...ctx, repo });
+    const put = await call(client, "context_put", { path: "src/auth", summary: "Login flow" });
+    expect(put).toMatchObject({ isError: false, body: { path: "src/auth", gitCommit: "c0ffee" } });
+    expect((await call(client, "context_get", {})).body).toEqual([
+      expect.objectContaining({ path: "src/auth", stale: false }),
+    ]);
+    blob = "a2";
+    expect((await call(client, "context_get", { path: "src/auth/login.ts" })).body).toEqual([
+      expect.objectContaining({ stale: true }),
+    ]);
   });
 
   it("fills prompt arguments into the instructions", async () => {

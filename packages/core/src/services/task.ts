@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { BrainError } from "../domain/errors.js";
 import { findDependencyCycle } from "../domain/rules.js";
-import { Completion, type Task, TaskShape } from "../domain/schemas.js";
+import { type Claim, Completion, type Task, TaskShape } from "../domain/schemas.js";
 import { TASK_TRANSITIONS } from "../domain/status.js";
 import type { StorageReader } from "../ports/storage.js";
 import {
@@ -49,11 +49,23 @@ export const UpdateTaskInput = fields.partial().extend(ExpectedVersion);
 export const CompleteTaskInput = Completion.pick({ summary: true, filesTouched: true }).extend(
   ExpectedVersion,
 );
+export const ClaimTaskInput = z.strictObject({
+  leaseMinutes: z
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 60)
+    .optional(),
+});
 export const ListTasksInput = listInput("task").extend({ ready: z.boolean().optional() });
 export type CreateTaskInput = z.input<typeof CreateTaskInput>;
 export type UpdateTaskInput = z.input<typeof UpdateTaskInput>;
 export type CompleteTaskInput = z.input<typeof CompleteTaskInput>;
 export type ListTasksInput = z.input<typeof ListTasksInput>;
+export type ClaimTaskInput = z.input<typeof ClaimTaskInput>;
+
+/** Statuses that put a task back in the pool, so moving there drops the claim. */
+const UNCLAIMED_STATUSES: readonly string[] = ["backlog", "todo", "cancelled"];
 
 export async function createTask(ctx: ServiceContext, input: unknown): Promise<Task> {
   const data = parseInput(CreateTaskInput, input);
@@ -94,7 +106,17 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
       assertTransition(TASK_TRANSITIONS, "task", before.status, patch.status);
       if (before.status === "done") completion = null;
     }
-    return updateWithLog(w, ctx, "task", before, { ...patch, completion }, { expectedVersion });
+    let claim = before.claim;
+    if (patch.status && UNCLAIMED_STATUSES.includes(patch.status)) claim = null;
+    else if (claim?.actorId === ctx.actorId) claim = await lease(w, ctx);
+    return updateWithLog(
+      w,
+      ctx,
+      "task",
+      before,
+      { ...patch, completion, claim },
+      { expectedVersion },
+    );
   });
 }
 
@@ -114,6 +136,64 @@ export async function completeTask(ctx: ServiceContext, id: string, input: unkno
       { verb: "complete", expectedVersion },
     );
   });
+}
+
+/**
+ * Claims a task for the calling actor and moves it to `in_progress`. The check and the write run
+ * in one write transaction, so two agents can never both hold the same task. Fails with CONFLICT,
+ * naming the holder, while another actor's lease is live. Claiming again renews the lease.
+ */
+export async function claimTask(
+  ctx: ServiceContext,
+  id: string,
+  input: unknown = {},
+): Promise<Task> {
+  const { leaseMinutes } = parseInput(ClaimTaskInput, input);
+  return ctx.store.write(async (w) => {
+    const before = await mustGet(w, ctx, "task", id);
+    const held = before.claim;
+    if (held && held.actorId !== ctx.actorId && held.leaseUntil > nowIso(ctx)) {
+      const holder = await w.get("actor", held.actorId);
+      const name = holder?.name ?? held.actorId;
+      throw new BrainError(
+        "CONFLICT",
+        `Task ${id} is claimed by ${name} until ${held.leaseUntil}.`,
+        {
+          hint: "Pick another ready task with `brain task list --ready`.",
+          details: { holder: held.actorId, holderName: name, leaseUntil: held.leaseUntil },
+        },
+      );
+    }
+    if (before.status !== "todo" && before.status !== "in_progress") {
+      throw new BrainError(
+        "INVALID_TRANSITION",
+        `Only todo tasks can be claimed; ${id} is ${before.status}.`,
+        {
+          details: { from: before.status },
+        },
+      );
+    }
+    const claim = await lease(w, ctx, leaseMinutes);
+    return updateWithLog(
+      w,
+      ctx,
+      "task",
+      before,
+      { status: "in_progress", claim },
+      { verb: "claim" },
+    );
+  });
+}
+
+/** A fresh lease for the calling actor, defaulting to the project's lease length. */
+async function lease(r: StorageReader, ctx: ServiceContext, minutes?: number): Promise<Claim> {
+  const now = ctx.clock.now();
+  const length = minutes ?? (await r.getProject())?.settings.leaseMinutes ?? 30;
+  return {
+    actorId: ctx.actorId,
+    leaseUntil: new Date(now.getTime() + length * 60_000).toISOString(),
+    heartbeatAt: now.toISOString(),
+  };
 }
 
 /** Lists tasks; `ready: true` returns todo, unclaimed tasks whose dependencies are done. */

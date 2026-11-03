@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  claimTask,
   completeTask,
   createFeature,
   createTask,
+  ensureActor,
   getRecord,
   listTasks,
+  type ServiceContext,
   updateTask,
 } from "../src/index.js";
-import { setup } from "./support/setup.js";
+import { START, setup } from "./support/setup.js";
 
 const done = { summary: "did it", filesTouched: ["src/a.ts"] };
 
@@ -197,3 +200,71 @@ describe("service input", () => {
     expect(t).toMatchObject({ body: "", priority: "medium", status: "todo" });
   });
 });
+
+describe("claimTask", () => {
+  // Two agents must never both work on one task; the loser learns who holds it.
+  it("claims a todo task and refuses a second actor while the lease is live", async () => {
+    const { ctx, store, clock, actor } = await setup();
+    const t = await createTask(ctx, { title: "x" });
+    const claimed = await claimTask(ctx, t.id);
+    expect(claimed.status).toBe("in_progress");
+    expect(claimed.claim).toEqual({
+      actorId: actor.id,
+      leaseUntil: "2026-11-03T12:30:00.000Z",
+      heartbeatAt: START,
+    });
+    expect(store.activity.at(-1)).toMatchObject({ verb: "claim", entityId: t.id });
+
+    const other = await otherActor(ctx);
+    await expect(claimTask(other, t.id)).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: expect.stringContaining("claude-code@main#1"),
+    });
+
+    // Once the lease lapses, another agent may take over the abandoned task.
+    clock.advance(31 * 60_000);
+    expect((await claimTask(other, t.id)).claim?.actorId).toBe(other.actorId);
+  });
+
+  it("lets the holder re-claim to renew, with a custom lease", async () => {
+    const { ctx, clock } = await setup();
+    const t = await createTask(ctx, { title: "x" });
+    await claimTask(ctx, t.id);
+    clock.advance(10 * 60_000);
+    const renewed = await claimTask(ctx, t.id, { leaseMinutes: 5 });
+    expect(renewed.claim?.leaseUntil).toBe("2026-11-03T12:15:00.000Z");
+  });
+
+  it("only claims todo or in-progress tasks", async () => {
+    const { ctx } = await setup();
+    const t = await createTask(ctx, { title: "x", status: "backlog" });
+    await expect(claimTask(ctx, t.id)).rejects.toMatchObject({ code: "INVALID_TRANSITION" });
+  });
+
+  // "Leases renew on any write by the holder", and handing a task back frees it for others.
+  it("renews the lease on the holder's updates and drops it when moved back to todo", async () => {
+    const { ctx, clock } = await setup();
+    const t = await createTask(ctx, { title: "x" });
+    await claimTask(ctx, t.id);
+    clock.advance(20 * 60_000);
+    const updated = await updateTask(ctx, t.id, { body: "progress" });
+    expect(updated.claim?.leaseUntil).toBe("2026-11-03T12:50:00.000Z");
+    const back = await updateTask(ctx, t.id, { status: "todo" });
+    expect(back.claim).toBeNull();
+    expect((await listTasks(ctx, { ready: true })).map((x) => x.id)).toEqual([t.id]);
+  });
+
+  it("does not renew another actor's lease on their update", async () => {
+    const { ctx } = await setup();
+    const t = await createTask(ctx, { title: "x" });
+    const claimed = await claimTask(ctx, t.id);
+    const other = await otherActor(ctx);
+    const updated = await updateTask(other, t.id, { body: "note" });
+    expect(updated.claim).toEqual(claimed.claim);
+  });
+});
+
+async function otherActor(ctx: ServiceContext): Promise<ServiceContext> {
+  const actor = await ensureActor(ctx, { name: "codex@main#2", kind: "agent", tool: "codex" });
+  return { ...ctx, actorId: actor.id };
+}

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BrainError } from "../domain/errors.js";
+import { SatiError } from "../domain/errors.js";
 import type { IdFactory } from "../domain/ids.js";
 import {
   type Activity,
@@ -42,7 +42,7 @@ export function parseInput<T extends z.ZodType>(schema: T, input: unknown): z.ou
     .slice(0, 3)
     .map((i) => `${i.path.join(".") || "input"}: ${i.message}`)
     .join("; ");
-  throw new BrainError("VALIDATION", `Invalid input: ${summary}`, { details: { issues } });
+  throw new SatiError("VALIDATION", `Invalid input: ${summary}`, { details: { issues } });
 }
 
 /** Re-validates a full record before it is stored, so services can never write a bad row. */
@@ -102,8 +102,8 @@ export async function mustGet<E extends StoredEntity>(
   const rec = await r.get(entity, id);
   const projectId = rec && "projectId" in rec ? rec.projectId : rec?.id;
   if (!rec || rec.deletedAt !== null || projectId !== ctx.projectId) {
-    throw new BrainError("NOT_FOUND", `No ${entity} with id ${id}.`, {
-      hint: `List them with \`brain ${entity} list\`.`,
+    throw new SatiError("NOT_FOUND", `No ${entity} with id ${id}.`, {
+      hint: `List them with \`sati ${entity} list\`.`,
     });
   }
   return rec;
@@ -177,7 +177,7 @@ export async function updateWithLog<E extends StoredEntity>(
   opts: { verb?: Verb; expectedVersion?: number | undefined } = {},
 ): Promise<EntityMap[E]> {
   if (opts.expectedVersion !== undefined && opts.expectedVersion !== before.version) {
-    throw new BrainError(
+    throw new SatiError(
       "CONFLICT",
       `${entity} ${before.id} is at version ${before.version}, not ${opts.expectedVersion}.`,
       { hint: "Re-read the record and apply your change again." },
@@ -206,7 +206,7 @@ export function assertTransition<S extends string>(
 ): void {
   if (from === to || machine[from].includes(to)) return;
   const allowed = machine[from].join(", ") || "none";
-  throw new BrainError("INVALID_TRANSITION", `A ${entity} cannot move from ${from} to ${to}.`, {
+  throw new SatiError("INVALID_TRANSITION", `A ${entity} cannot move from ${from} to ${to}.`, {
     hint: `Allowed from ${from}: ${allowed}.`,
     details: { from, to, allowed: machine[from] },
   });

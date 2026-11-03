@@ -3,14 +3,14 @@ import { mkdtempSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createIdFactory, initProject, systemClock } from "@brain/core";
-import { clearLocateCache, locateDb, SqliteStore } from "@brain/store-sqlite";
+import { createIdFactory, initProject, systemClock } from "@sati/core";
+import { clearLocateCache, locateDb, SqliteStore } from "@sati/store-sqlite";
 
 export const bin = fileURLToPath(new URL("../dist/index.mjs", import.meta.url));
 
-/** A temp git repo. `init: true` also creates the project through core, skipping `brain init`. */
+/** A temp git repo. `init: true` also creates the project through core, skipping `sati init`. */
 export async function tempRepo(opts: { init?: boolean } = {}): Promise<string> {
-  const dir = realpathSync(mkdtempSync(join(tmpdir(), "brain-cli-")));
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), "sati-cli-")));
   execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir });
   if (opts.init) {
     clearLocateCache();
@@ -31,11 +31,11 @@ export interface Result {
   stderr: string;
 }
 
-/** Runs the built CLI. `BRAIN_ACTOR` defaults to "tester" so actor names are predictable. */
+/** Runs the built CLI. `SATI_ACTOR` defaults to "tester" so actor names are predictable. */
 export function run(cwd: string, args: string[], env: NodeJS.ProcessEnv = {}): Result {
   const full: NodeJS.ProcessEnv = {
     ...process.env,
-    BRAIN_ACTOR: "tester",
+    SATI_ACTOR: "tester",
     CLAUDECODE: "",
     AI_AGENT: "",
     ...env,
@@ -44,10 +44,10 @@ export function run(cwd: string, args: string[], env: NodeJS.ProcessEnv = {}): R
   return { code: r.status ?? -1, stdout: r.stdout, stderr: r.stderr };
 }
 
-export const brain = (cwd: string, ...args: string[]): Result => run(cwd, args);
+export const sati = (cwd: string, ...args: string[]): Result => run(cwd, args);
 
 /** Runs with `--json` and parses stdout (data on success, `{ error }` on failure). */
-export function brainJson<T = unknown>(cwd: string, ...args: string[]): { code: number; data: T } {
-  const r = brain(cwd, ...args, "--json");
+export function satiJson<T = unknown>(cwd: string, ...args: string[]): { code: number; data: T } {
+  const r = sati(cwd, ...args, "--json");
   return { code: r.code, data: JSON.parse(r.stdout) as T };
 }

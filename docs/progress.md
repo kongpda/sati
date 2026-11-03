@@ -14,7 +14,7 @@ Status: **blocked on human steps** (gate not passed yet).
 
 ### Choices made on ambiguous items
 
-- Package names use the placeholder `@scope/brain`; internal packages use the private `@brain/*` scope and are bundled into the CLI.
+- Package names use the placeholder `@kongpda/sati`; internal packages use the private `@sati/*` scope and are bundled into the CLI.
 - Biome does not format or lint Markdown, so hand-written docs (`PLAN.md`) are not rewritten.
 - TypeScript 7.0.2 is used. tsdown warns its declaration emit on TS 7 is experimental. If d.ts output breaks, pin TypeScript 5.x and record an ADR.
 - `@types/node` is pinned to `^22` to match the lowest supported Node.
@@ -24,20 +24,20 @@ Status: **blocked on human steps** (gate not passed yet).
 ```
 pnpm lint       Checked 19 files. No fixes applied.
 pnpm typecheck  Tasks: 3 successful, 3 total
-pnpm test       @brain/core 1 passed; @scope/brain 1 passed
-brain --version 0.0.0   (from dist and from an npm-installed packed tarball)
-changeset status: @scope/brain patch -> 0.0.1
+pnpm test       @sati/core 1 passed; @kongpda/sati 1 passed
+sati --version 0.0.0   (from dist and from an npm-installed packed tarball)
+changeset status: @kongpda/sati patch -> 0.0.1
 ```
 
 ### Decision 2026-11-03
 
-Owner chose to keep the `brain` / `@scope/brain` placeholder for now. Name, npm scope and the publish gate are deferred.
+Owner chose to keep the `sati` / `@kongpda/sati` placeholder for now. Name, npm scope and the publish gate are deferred.
 
 ### Gate remaining
 
-The gate is "`brain --version` publishes to npm as `0.0.1` from CI". It needs:
+The gate is "`sati --version` publishes to npm as `0.0.1` from CI". It needs:
 
-1. Final product name and npm scope (then edit `packages/core/src/name.ts` and the `@scope/brain` package name).
+1. Final product name and npm scope (then edit `packages/core/src/name.ts` and the `@kongpda/sati` package name).
 2. A GitHub repo with this code pushed.
 3. npm account 2FA, and an `NPM_TOKEN` secret (or npm trusted publishing) on the repo.
 4. Merge the "Version Packages" PR that the release workflow opens.
@@ -49,7 +49,7 @@ Status: **gate passed** (2026-11-03). Waiting for review before Phase 2.
 ### Choices made on ambiguous items
 
 - Storage port is async (ADR 0001) so Postgres and remote adapters reuse the same services.
-- One project per DB. `brain init` refuses to run twice (CONFLICT).
+- One project per DB. `sati init` refuses to run twice (CONFLICT).
 - Services cover what the checklist names: create / update / list for each entity, plus task
   ready and complete. Delete, claims and locks are not in Phase 1 (claims and locks are Phase 3).
 - Tasks start only in `backlog` or `todo`. `done` is reached only through `complete`, which needs
@@ -61,7 +61,7 @@ Status: **gate passed** (2026-11-03). Waiting for review before Phase 2.
   their length only, to keep the log small.
 - Core service tests use an in-memory adapter (`test/support/memory-store.ts`); the SQLite
   adapter has its own tests, and the CLI end-to-end tests run services on SQLite.
-- Actor identity: `BRAIN_ACTOR` wins; otherwise an agent is `<tool>@<worktree>#<session8>` and a
+- Actor identity: `SATI_ACTOR` wins; otherwise an agent is `<tool>@<worktree>#<session8>` and a
   human is `<user>@<worktree>`. Only Claude Code detection (`CLAUDECODE`,
   `CLAUDE_CODE_SESSION_ID`) is verified; other tools are picked up from the generic `AI_AGENT`
   variable, unverified for Codex, Cursor and Gemini CLI.
@@ -73,14 +73,14 @@ Status: **gate passed** (2026-11-03). Waiting for review before Phase 2.
 - Bad usage (missing argument, unknown command, non-numeric number) exits 2 (`USAGE`), not
   citty's default 1. With `--json`, errors print `{"error":{code,message,hint,details}}` on stdout.
 - The CLI bundles drizzle-orm, zod and ulid. Loading them as separate npm files took ~200 ms per
-  command (over the 150 ms budget); bundled, `brain task list` takes ~80 ms. `brain --version`
+  command (over the 150 ms budget); bundled, `sati task list` takes ~80 ms. `sati --version`
   loads only the name constant (~30 ms).
-- `brain init` picks git mode inside a repository and standalone outside one; standalone inside
+- `sati init` picks git mode inside a repository and standalone outside one; standalone inside
   git (and git or stealth outside git) is rejected. It asks questions only on a TTY. Without a
   TTY it writes nothing unless `--yes` is given; with `--json` the error carries the preview.
-- `brain init` only reports detected agent tools in Phase 1. Writing their configs, hooks and
-  rules is Phase 2 work, so the preview lists just `.brain/brain.config.json` for now.
-- A committed `.brain/brain.config.json` (as in a fresh clone) is kept, and its project id is
+- `sati init` only reports detected agent tools in Phase 1. Writing their configs, hooks and
+  rules is Phase 2 work, so the preview lists just `.sati/sati.config.json` for now.
+- A committed `.sati/sati.config.json` (as in a fresh clone) is kept, and its project id is
   reused for the new local DB.
 - Core coverage is enforced: `pnpm test` in `packages/core` runs with v8 coverage and fails
   below 90% statements, branches, functions or lines. Current: 97.7% statements, 92.0%
@@ -99,27 +99,27 @@ Status: **gate passed** (2026-11-03). Waiting for review before Phase 2.
 ```
 $ pnpm typecheck && pnpm test && pnpm bench
  Tasks:    5 successful, 5 total
-@brain/core:test:       Tests  70 passed (70)
-@brain/core:test: All files      |   97.67 |    91.95 |   94.25 |   98.53 |
-@brain/store-sqlite:test:       Tests  24 passed (24)
-@scope/brain:test:       Tests  17 passed (17)
+@sati/core:test:       Tests  70 passed (70)
+@sati/core:test: All files      |   97.67 |    91.95 |   94.25 |   98.53 |
+@sati/store-sqlite:test:       Tests  24 passed (24)
+@kongpda/sati:test:       Tests  17 passed (17)
  Tasks:    6 successful, 6 total
-@scope/brain:bench: Seeded 50000 records in 8178 ms.
-@scope/brain:bench: PASS  CLI cold start (brain --version), p95               37.8 ms  (budget 80 ms)
-@scope/brain:bench: PASS  CLI read command, p95                              122.0 ms  (budget 150 ms)
-@scope/brain:bench: PASS  Full-text search on 50000 records, p95              31.0 ms  (budget 50 ms)
+@kongpda/sati:bench: Seeded 50000 records in 8178 ms.
+@kongpda/sati:bench: PASS  CLI cold start (sati --version), p95               37.8 ms  (budget 80 ms)
+@kongpda/sati:bench: PASS  CLI read command, p95                              122.0 ms  (budget 150 ms)
+@kongpda/sati:bench: PASS  Full-text search on 50000 records, p95              31.0 ms  (budget 50 ms)
  Tasks:    4 successful, 4 total
 ```
 
 In a temp git repo:
 
 ```
-$ brain init --yes && brain task create "x" --json && brain task list --ready --json
+$ sati init --yes && sati task create "x" --json && sati task list --ready --json
 Initialized "tmp-cssdvnffcf" in git mode.
-  database  /private/var/folders/29/x0cgr_ld17l7y66k0qkdhl880000gn/T/tmp.CssdvnFFcf/.git/brain/brain.db
-  created   .brain/brain.config.json
+  database  /private/var/folders/29/x0cgr_ld17l7y66k0qkdhl880000gn/T/tmp.CssdvnFFcf/.git/sati/sati.db
+  created   .sati/sati.config.json
   tools     claude-code
-Next: brain task create "First task"
+Next: sati task create "First task"
 {
   "id": "tsk_01M6G3F885WS0EXW63ARR0ANXE",
   "projectId": "prj_01M6G3F84C5G06X0W01D6YC8XZ",
@@ -174,51 +174,51 @@ Status: checklist done; gate waived for now (see "Gate remaining").
 
 ### Choices made on ambiguous items
 
-- **MCP tool set.** PLAN lists 14 tools, but `lock_acquire`/`lock_release`, `context_get`/`context_put` and `feature_check` need the locks, context cache and guard services, which are Phase 3 checklist items. Phase 2 registers the tools whose services exist (`task_list`, `task_create`, `task_claim`, `task_update`, `task_complete`, `feature_upsert`, `decision_record`, `search`, plus `brain_brief`). The other five land in Phase 3 with their services. The Phase 2 gate (an agent finishes a real task with brain tools only) needs only the first set.
+- **MCP tool set.** PLAN lists 14 tools, but `lock_acquire`/`lock_release`, `context_get`/`context_put` and `feature_check` need the locks, context cache and guard services, which are Phase 3 checklist items. Phase 2 registers the tools whose services exist (`task_list`, `task_create`, `task_claim`, `task_update`, `task_complete`, `feature_upsert`, `decision_record`, `search`, plus `sati_brief`). The other five land in Phase 3 with their services. The Phase 2 gate (an agent finishes a real task with sati tools only) needs only the first set.
 - **Basic claims now, leases with heartbeats and fencing later.** `task_claim` needs a claim, so core gains `claimTask`: one write transaction (`BEGIN IMMEDIATE` in SQLite) that fails with CONFLICT naming the holder while another actor's lease is live, moves the task from `todo` to `in_progress`, and logs a `claim` activity row. The lease length defaults to the project's `leaseMinutes`. Following "leases renew on any write by the holder", the holder's `task_update` renews the lease; moving a task back to `backlog`, `todo` or `cancelled` drops the claim so it shows up as ready again. Heartbeats, concurrency stress tests and fencing tokens remain Phase 3 items.
 - **Tool results** are compact JSON (no indentation) to save agent context. Domain errors come back as tool errors carrying `{ error: { code, message, hint, details } }`, matching the CLI's `--json` errors. Schema errors caught by the SDK come back as its plain-text tool error.
 - **Ids.** Tools accept full ids or short handles (`tsk_8f3k2a`); resources print short handles.
-- **`brain mcp`** loads the MCP SDK lazily so other commands keep their cold-start budget. The SDK stays an external dependency of the CLI; workspace packages are bundled as before. The stdio transport does not report a client disconnect, so the server also stops when stdin ends.
-- **The brief** (`brain brief`, `brain_brief`) is Markdown in four sections: your claimed tasks with their feature's acceptance criteria, ready tasks, decisions from the last 7 days, and protected features with their paths. Empty sections say so in one line (or are left out for decisions and protected features). `--format=short`, for resumed and compacted sessions, keeps only your tasks and the top three ready ones. Tokens are estimated as characters / 4; when the brief is over its cap (1,500, or a lower `maxTokens`), items are dropped from the bottom section up and a "… N more left out" line is added. Lines are clipped to 160 characters. The project has no description field, so the "what the project is" paragraph is its name, mode and the caller's identity.
+- **`sati mcp`** loads the MCP SDK lazily so other commands keep their cold-start budget. The SDK stays an external dependency of the CLI; workspace packages are bundled as before. The stdio transport does not report a client disconnect, so the server also stops when stdin ends.
+- **The brief** (`sati brief`, `sati_brief`) is Markdown in four sections: your claimed tasks with their feature's acceptance criteria, ready tasks, decisions from the last 7 days, and protected features with their paths. Empty sections say so in one line (or are left out for decisions and protected features). `--format=short`, for resumed and compacted sessions, keeps only your tasks and the top three ready ones. Tokens are estimated as characters / 4; when the brief is over its cap (1,500, or a lower `maxTokens`), items are dropped from the bottom section up and a "… N more left out" line is added. Lines are clipped to 160 characters. The project has no description field, so the "what the project is" paragraph is its name, mode and the caller's identity.
 - **Deferred from the brief:** clearing expired leases (the brief is a read; lease cleanup comes with the Phase 3 leases item), others' active locks and stale context entries (Phase 3 services), and "changes since my last session" (needs a per-actor session marker that the plan does not define yet).
-- **Duplicate detection.** `task_create` searches before it creates (so the new task never matches itself) and returns the task plus `similar`: up to three existing tasks, best first. FTS finds candidates sharing any significant title word (3+ letters, minus a short list of words common in task titles such as "add", "fix", "update"); a candidate counts when the Dice overlap of significant title words is at least 0.5. Done tasks are kept, since redoing finished work is duplicate work too; cancelled ones are skipped. The task is still created: the agent decides, and the tool description tells it to cancel the new task if one match is the same work. Only the MCP tool reports matches; `brain task create` is unchanged.
-- **Agent files.** `brain init` sets up the tools it detects (marker files, or the agent running it) plus any named with `--tools`. Every project gets the managed block in `AGENTS.md`. Claude Code gets `@AGENTS.md` in `CLAUDE.md` and a `brain` entry in `.mcp.json`; Codex gets `[mcp_servers.brain]` in `.codex/config.toml`; Cursor gets `.cursor/mcp.json` and `.cursor/rules/brain.mdc`; Gemini CLI gets `.gemini/settings.json` and a block in `GEMINI.md`. MCP configs are merged: other servers and keys are kept, a `brain` entry the user already wrote (say, one running through `npx`) is left alone, and a config that is not valid JSON stops init before anything is written. The MCP command is `brain mcp`, which assumes the CLI is on PATH.
-- **Stealth mode** must leave `git status` clean, so it never edits files that already exist (they are reported as `skipped`), puts the rules block in `CLAUDE.local.md` instead of `AGENTS.md`/`CLAUDE.md`, and lists every file it creates in `.git/info/exclude`. Files listed there stay brain's to update.
-- **The rules block is the plan's text word for word**, so it already names Phase 3 tools (`feature_check`, `lock_acquire`, `context_get`, `context_put`). Until Phase 3 lands, agents will not find those tools. The block is versioned (`v1`), and `brain rules sync` rewrites it.
-- **Managed rules files.** Blocks go into `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md` and a single-file `.clinerules`. brain owns whole files at `.cursor/rules/brain.mdc` (`alwaysApply: true`), `.windsurf/rules/brain.md` (`trigger: always_on`), `.kiro/steering/brain.md` (`inclusion: always`) and `.clinerules/brain.md`; these still carry the markers, so drift checks can treat every file the same way. Any older `v<n>` block is replaced in place.
-- **`brain rules sync`** reruns the same plan as init for the tools detected now (plus `--tools`), so it also adds missing MCP entries. It reports `create`/`update`/`keep`/`skip` per file and "Everything is up to date." when nothing changed. Drift reporting in `brain doctor` comes with the Phase 5 doctor item.
-- **Claude Code hooks** go into `.claude/settings.json` (`.claude/settings.local.json` in stealth mode, which Claude Code treats as personal). SessionStart runs `brain brief --format=agent` on `startup|clear` and `brain brief --format=short` on `resume|compact`; Stop runs `brain nudge`. The merge keeps every other setting and hook, and adds a group only when its command is not already there, so a user can reorder or edit ours freely.
-- **`brain nudge`** lists the tasks the caller holds a live claim on (`in_progress`, `review` or `blocked`). As a Stop hook (`hook_event_name: "Stop"` on stdin) it prints `{"decision":"block","reason":...}` so the agent completes or updates them, but only once: with `stop_hook_active` set it prints the reminder as plain text and lets the stop through. With no held tasks it prints nothing. Errors exit 1, not their usual code, because Claude Code reads exit 2 from a Stop hook as "block".
-- **The skill** (`.claude/skills/brain/SKILL.md`) is the same workflow text the MCP server serves as `brain://workflow`, so the text now lives in core and both use it. The skill's description tells Claude Code when to load it.
-- **Dogfood.** Phase 2 was tracked in brain itself: every checklist item was a brain task, claimed before work and completed with a summary and files. This repo now has the rules block in `AGENTS.md`, `@AGENTS.md` in `CLAUDE.md`, the MCP entry in `.mcp.json`, and the hooks and skill under `.claude/`, all written by `brain rules sync`.
+- **Duplicate detection.** `task_create` searches before it creates (so the new task never matches itself) and returns the task plus `similar`: up to three existing tasks, best first. FTS finds candidates sharing any significant title word (3+ letters, minus a short list of words common in task titles such as "add", "fix", "update"); a candidate counts when the Dice overlap of significant title words is at least 0.5. Done tasks are kept, since redoing finished work is duplicate work too; cancelled ones are skipped. The task is still created: the agent decides, and the tool description tells it to cancel the new task if one match is the same work. Only the MCP tool reports matches; `sati task create` is unchanged.
+- **Agent files.** `sati init` sets up the tools it detects (marker files, or the agent running it) plus any named with `--tools`. Every project gets the managed block in `AGENTS.md`. Claude Code gets `@AGENTS.md` in `CLAUDE.md` and a `sati` entry in `.mcp.json`; Codex gets `[mcp_servers.sati]` in `.codex/config.toml`; Cursor gets `.cursor/mcp.json` and `.cursor/rules/sati.mdc`; Gemini CLI gets `.gemini/settings.json` and a block in `GEMINI.md`. MCP configs are merged: other servers and keys are kept, a `sati` entry the user already wrote (say, one running through `npx`) is left alone, and a config that is not valid JSON stops init before anything is written. The MCP command is `sati mcp`, which assumes the CLI is on PATH.
+- **Stealth mode** must leave `git status` clean, so it never edits files that already exist (they are reported as `skipped`), puts the rules block in `CLAUDE.local.md` instead of `AGENTS.md`/`CLAUDE.md`, and lists every file it creates in `.git/info/exclude`. Files listed there stay sati's to update.
+- **The rules block is the plan's text word for word**, so it already names Phase 3 tools (`feature_check`, `lock_acquire`, `context_get`, `context_put`). Until Phase 3 lands, agents will not find those tools. The block is versioned (`v1`), and `sati rules sync` rewrites it.
+- **Managed rules files.** Blocks go into `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md` and a single-file `.clinerules`. sati owns whole files at `.cursor/rules/sati.mdc` (`alwaysApply: true`), `.windsurf/rules/sati.md` (`trigger: always_on`), `.kiro/steering/sati.md` (`inclusion: always`) and `.clinerules/sati.md`; these still carry the markers, so drift checks can treat every file the same way. Any older `v<n>` block is replaced in place.
+- **`sati rules sync`** reruns the same plan as init for the tools detected now (plus `--tools`), so it also adds missing MCP entries. It reports `create`/`update`/`keep`/`skip` per file and "Everything is up to date." when nothing changed. Drift reporting in `sati doctor` comes with the Phase 5 doctor item.
+- **Claude Code hooks** go into `.claude/settings.json` (`.claude/settings.local.json` in stealth mode, which Claude Code treats as personal). SessionStart runs `sati brief --format=agent` on `startup|clear` and `sati brief --format=short` on `resume|compact`; Stop runs `sati nudge`. The merge keeps every other setting and hook, and adds a group only when its command is not already there, so a user can reorder or edit ours freely.
+- **`sati nudge`** lists the tasks the caller holds a live claim on (`in_progress`, `review` or `blocked`). As a Stop hook (`hook_event_name: "Stop"` on stdin) it prints `{"decision":"block","reason":...}` so the agent completes or updates them, but only once: with `stop_hook_active` set it prints the reminder as plain text and lets the stop through. With no held tasks it prints nothing. Errors exit 1, not their usual code, because Claude Code reads exit 2 from a Stop hook as "block".
+- **The skill** (`.claude/skills/sati/SKILL.md`) is the same workflow text the MCP server serves as `sati://workflow`, so the text now lives in core and both use it. The skill's description tells Claude Code when to load it.
+- **Dogfood.** Phase 2 was tracked in sati itself: every checklist item was a sati task, claimed before work and completed with a summary and files. This repo now has the rules block in `AGENTS.md`, `@AGENTS.md` in `CLAUDE.md`, the MCP entry in `.mcp.json`, and the hooks and skill under `.claude/`, all written by `sati rules sync`.
 
 ### Verify output (local, 2026-11-03, macOS, Node 26.12.1)
 
 ```
 $ pnpm lint && pnpm typecheck && pnpm test
  Tasks:    7 successful, 7 total
-@brain/core:test:       Tests  83 passed (83)
-@brain/core:test: All files      |   98.08 |    90.23 |   95.68 |   99.11 |
-@brain/store-sqlite:test:       Tests  24 passed (24)
-@brain/mcp:test:       Tests  10 passed (10)
-@scope/brain:test:       Tests  36 passed (36)
+@sati/core:test:       Tests  83 passed (83)
+@sati/core:test: All files      |   98.08 |    90.23 |   95.68 |   99.11 |
+@sati/store-sqlite:test:       Tests  24 passed (24)
+@sati/mcp:test:       Tests  10 passed (10)
+@kongpda/sati:test:       Tests  36 passed (36)
  Tasks:    8 successful, 8 total
 ```
 
 Brief size: the core test "stays under the token cap on a large project" checks the 1,500-token cap
-on a large fixture. In this repo, `brain brief --json` reports 54 tokens (agent and short formats).
+on a large fixture. In this repo, `sati brief --json` reports 54 tokens (agent and short formats).
 
 The Stop hook against this repo's DB while holding a claim:
 
 ```
-$ echo '{"hook_event_name":"Stop","stop_hook_active":false}' | brain nudge
+$ echo '{"hook_event_name":"Stop","stop_hook_active":false}' | sati nudge
 {"decision":"block","reason":"You still hold tsk_e25mwf (Claude Code hooks: SessionStart brief (startup, compact, resume) and Stop nudge). If the work is finished, call task_complete with a summary and the files touched; otherwise call task_update with its status and a note."}
 ```
 
 ### Gate remaining
 
-- **Claude Code and Codex each finish a real task using only brain tools.** This needs a person to
-  start fresh sessions in each tool, with `brain` on PATH, in a project set up by `brain init`. The
+- **Claude Code and Codex each finish a real task using only sati tools.** This needs a person to
+  start fresh sessions in each tool, with `sati` on PATH, in a project set up by `sati init`. The
   automated MCP tests cover the same flow (brief, list, claim, update, complete) through a real
   client over the SDK's in-memory transport, but they are not the gate.
 - **Waived 2026-11-03 by the user.** Phase 3 starts before these runs. The gate is still owed:
@@ -226,7 +226,7 @@ $ echo '{"hook_event_name":"Stop","stop_hook_active":false}' | brain nudge
 
 ### Fixes after the checklist
 
-- `brain init` and `brain rules sync` warn on stderr when `brain` is not on PATH, because the MCP
+- `sati init` and `sati rules sync` warn on stderr when `sati` is not on PATH, because the MCP
   config and hooks start it by name and would otherwise fail without a message (for example after
   `npx ... init`). JSON output is unchanged.
 - A `.claude/settings.json` whose `hooks` setting is malformed now stops with a VALIDATION error
@@ -239,7 +239,7 @@ Status: in progress.
 ### Claims with leases and heartbeats
 
 - The claim check-and-set already ran in one `BEGIN IMMEDIATE` transaction (Phase 1). New here: a
-  test that starts 20 `brain task claim` processes on one task. Exactly one wins, 19 get CONFLICT
+  test that starts 20 `sati task claim` processes on one task. Exactly one wins, 19 get CONFLICT
   (exit 4), and none see `SQLITE_BUSY`. With a deferred `BEGIN` the same test fails, so it guards
   the lock mode.
 - Heartbeats: choice on an ambiguous item. "Any write by the holder" is read as any write the
@@ -249,11 +249,11 @@ Status: in progress.
   start of `buildBrief` and writes only when something expired. Choice: an expired `in_progress`
   task goes back to `todo`, so it shows up as ready again. `review` and `blocked` tasks keep their
   status and only lose the claim. Each release logs a new activity verb, `release`.
-- `brain doctor` does not exist yet; it should call the same service when it is added.
+- `sati doctor` does not exist yet; it should call the same service when it is added.
 
 ### Path locks
 
-- `brain lock acquire|release|list`, MCP `lock_acquire` and `lock_release`. The overlap check and
+- `sati lock acquire|release|list`, MCP `lock_acquire` and `lock_release`. The overlap check and
   the insert run in one write transaction. A test with 10 processes requesting overlapping paths
   shows exactly one gets the lock.
 - Rules: an overlap with another actor's live lock fails with CONFLICT (exit 4), naming the
@@ -279,41 +279,41 @@ Status: in progress.
 
 ### Guard
 
-- `brain guard --staged` checks the staged diff (`git diff --cached --no-renames`, with removed
-  line counts and the `HEAD` line count of each modified file). `brain guard --paths a,b` checks
+- `sati guard --staged` checks the staged diff (`git diff --cached --no-renames`, with removed
+  line counts and the `HEAD` line count of each modified file). `sati guard --paths a,b` checks
   paths as edits. MCP `feature_check` takes paths and `modify` or `delete`. Exit 10 (BLOCKED)
   when anything is blocked; warnings exit 0.
 - Rules, as in the PLAN: another actor's exclusive lock blocks (a shared one warns). Deleting a
   file of a shipped, protected feature blocks, and so does removing more than half of its lines
-  (`guard.maxRemovalRatio` in `brain.config.json`). Any Decision listing the feature turns those
+  (`guard.maxRemovalRatio` in `sati.config.json`). Any Decision listing the feature turns those
   into warnings that name the decision; the newest one wins. Any other change to a shipped
   feature warns. Features not shipped are ignored.
 - Removal share (choice on an ambiguous item): removed lines over base lines across the
   feature's changed files, not the whole feature. Files with no counts (binary, or `--paths`) are
   left out. A deleted file counts as fully removed.
 - Logging: staged mode writes one `guard` activity row per finding. `--paths`, the hook and
-  `feature_check` are read-only, except that a blocked run let through by `BRAIN_GUARD=off`
+  `feature_check` are read-only, except that a blocked run let through by `SATI_GUARD=off`
   always writes its rows with `override: true` and the actor.
 - Renames show as a delete plus an add, which errs towards blocking, until the rename item.
-- `brain init` installs `.git/hooks/pre-commit` (found with `git rev-parse --git-path hooks`) in
-  git and stealth modes. It runs `brain guard --staged` if `brain` is on PATH, and otherwise
+- `sati init` installs `.git/hooks/pre-commit` (found with `git rev-parse --git-path hooks`) in
+  git and stealth modes. It runs `sati guard --staged` if `sati` is on PATH, and otherwise
   warns and lets the commit through. An existing hook is never overwritten: it is reported as
   `keep` if it already runs the guard and `skip` otherwise. Chaining with husky or lefthook is a
   later item.
 - The Claude Code hook is `PreToolUse` on `Edit|MultiEdit|Write|NotebookEdit`, running
-  `brain guard --hook`, which reads the tool input from stdin. Blocked exits 2 with the reason
+  `sati guard --hook`, which reads the tool input from stdin. Blocked exits 2 with the reason
   on stderr, so Claude Code stops the edit and shows the reason. Warnings go to stdout as
   `hookSpecificOutput.additionalContext` (assumed from the hook docs; not checked against a live
-  Claude Code). Errors exit 1 so a broken brain never blocks edits. Paths outside the repo pass.
+  Claude Code). Errors exit 1 so a broken sati never blocks edits. Paths outside the repo pass.
 - `init` used to write the config JSON into every created file before the agent files replaced
   it. It now writes only the config entry.
 
 ### Export / import
 
-- New package `packages/sync` (`@brain/sync`, bundled into the CLI like the others). It holds
+- New package `packages/sync` (`@sati/sync`, bundled into the CLI like the others). It holds
   the file I/O, so `core` stays free of I/O: core only has `snapshotRecords` and
   `importRecords`. This grew the item by one package.
-- Export writes `.brain/<plural>/<id>.json` for milestones, features, tasks, decisions, notes
+- Export writes `.sati/<plural>/<id>.json` for milestones, features, tasks, decisions, notes
   and context, soft-deleted records included as tombstones. Keys are sorted at every depth,
   2-space indent, trailing newline. A file is rewritten only when its content changed, through a
   temp file and a rename. Files with no DB record are left alone: they may be a teammate's
@@ -324,22 +324,22 @@ Status: in progress.
   records and replaces a stored one only when the file has a higher `version`, or the same
   `version` with a later `updatedAt` (choice on an ambiguous item). Each import writes an
   `import` activity row.
-- `brain sync export|import` work only in git mode. Stealth and standalone commit nothing, so
+- `sati sync export|import` work only in git mode. Stealth and standalone commit nothing, so
   they exit with USAGE.
-- Debounce: `brain mcp` in git mode exports 2 s after the last write, and once more on
+- Debounce: `sati mcp` in git mode exports 2 s after the last write, and once more on
   shutdown. CLI write commands do not export; the pre-commit hook covers commits. Export errors
   go to stderr and never fail the write.
-- Hooks: `brain init` writes `pre-commit` (guard, then `brain sync export` and
-  `git add -A -- .brain`) and `post-merge`, `post-checkout`, `post-rewrite`
-  (`brain sync import`) in git mode. Stealth gets the guard-only pre-commit. A hook carrying the
-  "Installed by `brain init`" header is ours and is updated; any other existing hook is skipped.
-  Every hook warns and exits 0 when `brain` is not on PATH.
-- Caveat: `git add` inside pre-commit also stages `.brain/` on a partial commit
+- Hooks: `sati init` writes `pre-commit` (guard, then `sati sync export` and
+  `git add -A -- .sati`) and `post-merge`, `post-checkout`, `post-rewrite`
+  (`sati sync import`) in git mode. Stealth gets the guard-only pre-commit. A hook carrying the
+  "Installed by `sati init`" header is ours and is updated; any other existing hook is skipped.
+  Every hook warns and exits 0 when `sati` is not on PATH.
+- Caveat: `git add` inside pre-commit also stages `.sati/` on a partial commit
   (`git commit <path>`). That is the intended snapshot, but it is a side effect worth knowing.
 
 ### Merge driver
 
-- `brain merge-driver %O %A %B` merges one `.brain/` record file and writes the result over
+- `sati merge-driver %O %A %B` merges one `.sati/` record file and writes the result over
   `%A`. It only parses JSON; nothing in the files runs. A side that is not a JSON object exits 1,
   which leaves git's normal conflict. A missing or empty base (both sides added the file) merges
   with an empty base.
@@ -362,20 +362,20 @@ Status: in progress.
   other fields on the other gives a deleted record with the edits. Reviving is a later item.
 - Bodies over 4M LCS cells (about 2000 x 2000 lines) are not diffed: a two-sided change of
   such a body is one conflict chunk. This bounds time and memory.
-- `brain init` in git mode appends `.brain/**/*.json merge=brain` to `.gitattributes` (other
-  lines kept) and sets `merge.brain.name` / `merge.brain.driver` in the local git config. The
+- `sati init` in git mode appends `.sati/**/*.json merge=sati` to `.gitattributes` (other
+  lines kept) and sets `merge.sati.name` / `merge.sati.driver` in the local git config. The
   driver is found by name on PATH; recording an absolute path is the later security item.
 - Property tests (fast-check, 2000 runs each): merge is deterministic; it is symmetric when no
   field clashes; no one-sided change or added label is lost; separate line edits merge cleanly.
   An end-to-end test merges two branches through git and the post-merge import.
 - Found while testing: a commit that changes only records (`git commit -a` with no tracked
   file changed) stops with "nothing to commit". git decides that before the pre-commit hook
-  stages the snapshot. Commits that also change code are fine. Workaround: `brain sync export`
-  and `git add .brain` first. Not fixed in this item.
+  stages the snapshot. Commits that also change code are fine. Workaround: `sati sync export`
+  and `git add .sati` first. Not fixed in this item.
 
 ### Context cache
 
-- `brain context put <path> --summary … [--key-files …]` and `brain context get [path]`, plus
+- `sati context put <path> --summary … [--key-files …]` and `sati context get [path]`, plus
   the MCP tools `context_get` and `context_put`. That makes 14 MCP tools, as PLAN lists.
 - One entry per path: putting the same path again updates that entry (version bump, `update`
   activity row) instead of adding a second one. Paths are normalised like lock paths
@@ -411,7 +411,7 @@ Status: in progress.
   The MCP debounced export already prints export errors on stderr and keeps serving.
 - No allowlist or override flag: the plan asks for none. A false positive is fixed by
   rewording the field. If that proves too strict, an allowlist is an idea for `docs/ideas.md`.
-- The scanner lives in `@brain/sync` (pure functions, `secrets.ts`); only export uses it.
+- The scanner lives in `@sati/sync` (pure functions, `secrets.ts`); only export uses it.
 
 ### Fencing tokens (review fix 2)
 
@@ -431,8 +431,16 @@ Status: in progress.
 - Tests: the core fake-clock test covers the point of fencing (A's lease expires, B claims, A's
   late update and complete are refused). The CLI test cannot cover expiry: the CLI has no clock
   override. It covers the holder's implicit token, another actor, and a stale `--token`.
-- Cleanup flagged: seven core hints and one doc comment still say literal `brain` instead of
-  `CLI_NAME` (`grep -rn '`brain ' packages/core/src`). Left alone; the new hints use `CLI_NAME`.
+- Cleanup flagged: seven core hints and one doc comment still say literal `sati` instead of
+  `CLI_NAME` (`grep -rn '`sati ' packages/core/src`). Left alone; the new hints use `CLI_NAME`.
+
+### Rename to sati
+
+The product, binary, packages, `.sati/` folder, DB paths, `SATI_*` env vars and MCP names were
+renamed from the placeholder `brain` in one change; see `docs/decisions/0002-rename-to-sati.md`.
+Docs were rewritten by search-and-replace, so earlier entries in this file use the new names
+for work done under the old ones. The project record in this repo's DB is still named
+"Agent Brain": there is no command to rename a project.
 
 ### Fix: full-index scan on every update (schema v4)
 
@@ -452,7 +460,7 @@ and actor, claiming 50 tasks at once on the 50,000-record DB:
 
 ```
 Seeded 50000 records in 11570 ms.
-PASS  CLI cold start (brain --version), p95               61.9 ms  (budget 80 ms)
+PASS  CLI cold start (sati --version), p95               61.9 ms  (budget 80 ms)
 PASS  CLI read command, p95                              139.2 ms  (budget 150 ms)
 PASS  Full-text search on 50000 records, p95              32.4 ms  (budget 50 ms)
 PASS  task_claim under 10 concurrent agents, p95           3.3 ms  (budget 50 ms)

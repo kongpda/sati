@@ -1,9 +1,9 @@
 import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { locateDb, SqliteStore } from "@brain/store-sqlite";
+import { locateDb, SqliteStore } from "@sati/store-sqlite";
 import { describe, expect, it } from "vitest";
-import { bin, brain, brainJson, tempRepo } from "./helpers.js";
+import { bin, sati, satiJson, tempRepo } from "./helpers.js";
 
 interface Rec {
   id: string;
@@ -19,79 +19,79 @@ async function projectId(dir: string): Promise<string> {
   }
 }
 
-/** Runs git with `brain` on PATH, so the installed hooks can call it. */
-function gitWithBrain(dir: string, ...args: string[]): string {
+/** Runs git with `sati` on PATH, so the installed hooks can call it. */
+function gitWithSati(dir: string, ...args: string[]): string {
   const shims = join(dir, ".git", "shims");
   if (!existsSync(shims)) {
     mkdirSync(shims);
-    writeFileSync(join(shims, "brain"), `#!/bin/sh\nexec "${process.execPath}" "${bin}" "$@"\n`);
-    chmodSync(join(shims, "brain"), 0o755);
+    writeFileSync(join(shims, "sati"), `#!/bin/sh\nexec "${process.execPath}" "${bin}" "$@"\n`);
+    chmodSync(join(shims, "sati"), 0o755);
   }
   return execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], {
     cwd: dir,
-    env: { ...process.env, PATH: `${shims}:${process.env.PATH}`, BRAIN_ACTOR: "tester" },
+    env: { ...process.env, PATH: `${shims}:${process.env.PATH}`, SATI_ACTOR: "tester" },
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
 }
 
-describe("brain sync", () => {
-  it("exports changed records to .brain/ and imports them into another clone", async () => {
+describe("sati sync", () => {
+  it("exports changed records to .sati/ and imports them into another clone", async () => {
     const a = await tempRepo({ init: true });
     const b = await tempRepo({ init: true });
-    const task = brainJson<Rec>(a, "task", "create", "Shared").data;
-    expect(brainJson(a, "sync", "export").data).toEqual({
+    const task = satiJson<Rec>(a, "task", "create", "Shared").data;
+    expect(satiJson(a, "sync", "export").data).toEqual({
       written: [join("tasks", `${task.id}.json`)],
       unchanged: 0,
     });
-    expect(brainJson(a, "sync", "export").data).toEqual({ written: [], unchanged: 1 });
+    expect(satiJson(a, "sync", "export").data).toEqual({ written: [], unchanged: 1 });
 
     // Copy the snapshot by hand. Clones of one repo share the project id, so give b's id to the record.
-    const file = readFileSync(join(a, ".brain", "tasks", `${task.id}.json`), "utf8");
+    const file = readFileSync(join(a, ".sati", "tasks", `${task.id}.json`), "utf8");
     const bProject = await projectId(b);
-    mkdirSync(join(b, ".brain", "tasks"), { recursive: true });
+    mkdirSync(join(b, ".sati", "tasks"), { recursive: true });
     writeFileSync(
-      join(b, ".brain", "tasks", `${task.id}.json`),
+      join(b, ".sati", "tasks", `${task.id}.json`),
       file.replace(/"projectId": "[^"]+"/, `"projectId": "${bProject}"`),
     );
-    expect(brain(b, "sync", "import")).toMatchObject({
+    expect(sati(b, "sync", "import")).toMatchObject({
       code: 0,
       stdout: "Imported 1 newer, 0 unchanged.\n",
     });
-    expect(brainJson<Rec>(b, "task", "show", task.id).data.title).toBe("Shared");
+    expect(satiJson<Rec>(b, "task", "show", task.id).data.title).toBe("Shared");
   });
 
   it("refuses stealth mode, which commits nothing", async () => {
     const dir = await tempRepo();
-    brain(dir, "init", "--yes", "--mode", "stealth", "--tools", "");
-    const r = brain(dir, "sync", "export");
+    sati(dir, "init", "--yes", "--mode", "stealth", "--tools", "");
+    const r = sati(dir, "sync", "export");
     expect(r.code).toBe(2);
     expect(r.stderr).toContain("needs git mode");
   });
 });
 
-// PLAN: pre-commit exports and stages .brain/; post-merge imports a teammate's records.
+// PLAN: pre-commit exports and stages .sati/; post-merge imports a teammate's records.
 describe("git hooks", () => {
   it("a commit carries the snapshot, and a pull brings it into the other clone's DB", async () => {
     const a = await tempRepo();
-    brain(a, "init", "--yes", "--tools", "");
+    sati(a, "init", "--yes", "--tools", "");
     writeFileSync(join(a, "README.md"), "hi\n");
-    gitWithBrain(a, "add", "README.md", ".brain/brain.config.json");
-    gitWithBrain(a, "commit", "-qm", "init");
+    gitWithSati(a, "add", "README.md", ".sati/sati.config.json");
+    gitWithSati(a, "commit", "-qm", "init");
 
     const b = `${a}-b`;
     execFileSync("git", ["clone", "-q", a, b]);
-    brain(b, "init", "--yes", "--tools", "");
+    sati(b, "init", "--yes", "--tools", "");
 
-    const task = brainJson<Rec>(a, "task", "create", "From a").data;
+    const task = satiJson<Rec>(a, "task", "create", "From a").data;
     writeFileSync(join(a, "README.md"), "changed\n");
-    gitWithBrain(a, "add", "README.md");
-    gitWithBrain(a, "commit", "-qm", "work");
-    const committed = gitWithBrain(a, "show", "--name-only", "--format=", "HEAD");
-    expect(committed).toContain(`.brain/tasks/${task.id}.json`);
+    gitWithSati(a, "add", "README.md");
+    gitWithSati(a, "commit", "-qm", "work");
+    const committed = gitWithSati(a, "show", "--name-only", "--format=", "HEAD");
+    expect(committed).toContain(`.sati/tasks/${task.id}.json`);
 
-    gitWithBrain(b, "pull", "-q", "--no-rebase", "origin", "main");
-    expect(brainJson<Rec>(b, "task", "show", task.id).data.title).toBe("From a");
+    gitWithSati(b, "pull", "-q", "--no-rebase", "origin", "main");
+    expect(satiJson<Rec>(b, "task", "show", task.id).data.title).toBe("From a");
   });
 });
 
@@ -99,16 +99,16 @@ describe("git hooks", () => {
 describe("secret scanner", () => {
   it("blocks the commit and names the record, without printing the secret", async () => {
     const dir = await tempRepo();
-    brain(dir, "init", "--yes", "--tools", "");
+    sati(dir, "init", "--yes", "--tools", "");
     const secret = `gh${"p_"}${"a1".repeat(18)}`;
-    const note = brainJson<Rec>(dir, "note", "create", "Setup", "--body", `token ${secret}`).data;
+    const note = satiJson<Rec>(dir, "note", "create", "Setup", "--body", `token ${secret}`).data;
     writeFileSync(join(dir, "README.md"), "hi\n");
-    gitWithBrain(dir, "add", "README.md");
+    gitWithSati(dir, "add", "README.md");
 
     let stderr = "";
     expect(() => {
       try {
-        gitWithBrain(dir, "commit", "-qm", "leak");
+        gitWithSati(dir, "commit", "-qm", "leak");
       } catch (err) {
         stderr = String((err as { stderr?: unknown }).stderr);
         throw err;
@@ -116,8 +116,8 @@ describe("secret scanner", () => {
     }).toThrow();
     expect(stderr).toContain(`note ${note.id}, field body: GitHub token`);
     expect(stderr).not.toContain(secret);
-    expect(existsSync(join(dir, ".brain", "notes"))).toBe(false);
-    expect(() => gitWithBrain(dir, "rev-parse", "-q", "--verify", "HEAD")).toThrow();
+    expect(existsSync(join(dir, ".sati", "notes"))).toBe(false);
+    expect(() => gitWithSati(dir, "rev-parse", "-q", "--verify", "HEAD")).toThrow();
   });
 });
 
@@ -126,30 +126,30 @@ describe("secret scanner", () => {
  * pre-commit hook stages the snapshot, so export and stage first.
  */
 function commitRecords(dir: string, message: string): void {
-  brain(dir, "sync", "export");
-  gitWithBrain(dir, "add", "-A", "--", ".brain");
-  gitWithBrain(dir, "commit", "-qm", message);
+  sati(dir, "sync", "export");
+  gitWithSati(dir, "add", "-A", "--", ".sati");
+  gitWithSati(dir, "commit", "-qm", message);
 }
 
-// PLAN: the merge driver merges .brain/ JSON per field; a body conflict never fails the merge.
+// PLAN: the merge driver merges .sati/ JSON per field; a body conflict never fails the merge.
 describe("merge driver", () => {
   it("merges two branches' edits to one task and flags a body conflict for review", async () => {
     const dir = await tempRepo();
-    brain(dir, "init", "--yes", "--tools", "");
-    const task = brainJson<Rec>(dir, "task", "create", "Shared", "--body", "one\ntwo\nthree").data;
-    gitWithBrain(dir, "add", "-A");
-    gitWithBrain(dir, "commit", "-qm", "base");
+    sati(dir, "init", "--yes", "--tools", "");
+    const task = satiJson<Rec>(dir, "task", "create", "Shared", "--body", "one\ntwo\nthree").data;
+    gitWithSati(dir, "add", "-A");
+    gitWithSati(dir, "commit", "-qm", "base");
 
-    gitWithBrain(dir, "checkout", "-qb", "side");
-    brain(dir, "task", "update", task.id, "--title", "Renamed", "--body", "one\nSIDE\nthree");
+    gitWithSati(dir, "checkout", "-qb", "side");
+    sati(dir, "task", "update", task.id, "--title", "Renamed", "--body", "one\nSIDE\nthree");
     commitRecords(dir, "side");
-    gitWithBrain(dir, "checkout", "-q", "main");
-    brain(dir, "task", "update", task.id, "--labels", "x", "--body", "one\nMAIN\nthree");
+    gitWithSati(dir, "checkout", "-q", "main");
+    sati(dir, "task", "update", task.id, "--labels", "x", "--body", "one\nMAIN\nthree");
     commitRecords(dir, "main");
 
     // Plain git would stop with a JSON conflict; the driver merges and post-merge imports.
-    gitWithBrain(dir, "merge", "-q", "--no-edit", "side");
-    const merged = brainJson<Rec & { labels: string[]; body: string; needsReview?: boolean }>(
+    gitWithSati(dir, "merge", "-q", "--no-edit", "side");
+    const merged = satiJson<Rec & { labels: string[]; body: string; needsReview?: boolean }>(
       dir,
       "task",
       "show",
@@ -161,14 +161,14 @@ describe("merge driver", () => {
 });
 
 // PLAN: context entries hash the module's files from `git ls-files -s` and go stale on change.
-describe("brain context", () => {
+describe("sati context", () => {
   it("flags an entry stale after a file under its path is staged, and fresh after put", async () => {
     const dir = await tempRepo({ init: true });
     mkdirSync(join(dir, "src"));
     writeFileSync(join(dir, "src", "a.ts"), "export const a = 1;\n");
     writeFileSync(join(dir, "other.ts"), "x\n");
-    gitWithBrain(dir, "add", "-A");
-    const put = brainJson<{ id: string }>(
+    gitWithSati(dir, "add", "-A");
+    const put = satiJson<{ id: string }>(
       dir,
       "context",
       "put",
@@ -180,20 +180,20 @@ describe("brain context", () => {
     );
     expect(put.code).toBe(0);
     const stale = () =>
-      brainJson<{ stale: boolean | null }[]>(dir, "context", "get").data.map((e) => e.stale);
+      satiJson<{ stale: boolean | null }[]>(dir, "context", "get").data.map((e) => e.stale);
     expect(stale()).toEqual([false]);
 
     writeFileSync(join(dir, "other.ts"), "y\n");
-    gitWithBrain(dir, "add", "-A");
+    gitWithSati(dir, "add", "-A");
     expect(stale()).toEqual([false]);
 
     writeFileSync(join(dir, "src", "a.ts"), "export const a = 2;\n");
-    gitWithBrain(dir, "add", "-A");
+    gitWithSati(dir, "add", "-A");
     expect(stale()).toEqual([true]);
-    expect(brain(dir, "context", "get").stdout).toContain("[STALE]");
-    expect(brain(dir, "brief").stdout).toContain("## Stale context");
+    expect(sati(dir, "context", "get").stdout).toContain("[STALE]");
+    expect(sati(dir, "brief").stdout).toContain("## Stale context");
 
-    brain(dir, "context", "put", "src", "--summary", "Source tree, re-read");
+    sati(dir, "context", "put", "src", "--summary", "Source tree, re-read");
     expect(stale()).toEqual([false]);
   });
 });

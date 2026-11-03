@@ -176,7 +176,7 @@ export async function checkChanges(ctx: ServiceContext, input: unknown): Promise
 
 /**
  * Writes one `guard` activity row per finding, so warnings and overrides are on record with the
- * actor. `override` marks a run where the caller let a blocked change through (`BRAIN_GUARD=off`).
+ * actor. `override` marks a run where the caller let a blocked change through (`SATI_GUARD=off`).
  */
 export async function recordGuard(
   ctx: ServiceContext,

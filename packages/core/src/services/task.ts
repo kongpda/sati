@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BrainError } from "../domain/errors.js";
+import { SatiError } from "../domain/errors.js";
 import { findDependencyCycle } from "../domain/rules.js";
 import { type Claim, Completion, type Task, TaskShape } from "../domain/schemas.js";
 import { TASK_TRANSITIONS } from "../domain/status.js";
@@ -104,8 +104,8 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
     let completion = before.completion;
     if (patch.status && patch.status !== before.status) {
       if (patch.status === "done") {
-        throw new BrainError("INVALID_TRANSITION", "Use complete to mark a task done.", {
-          hint: `Run \`brain task complete ${id} --summary … --files …\`.`,
+        throw new SatiError("INVALID_TRANSITION", "Use complete to mark a task done.", {
+          hint: `Run \`sati task complete ${id} --summary … --files …\`.`,
         });
       }
       assertTransition(TASK_TRANSITIONS, "task", before.status, patch.status);
@@ -164,17 +164,17 @@ export async function claimTask(
     if (held && held.actorId !== ctx.actorId && held.leaseUntil > nowIso(ctx)) {
       const holder = await w.get("actor", held.actorId);
       const name = holder?.name ?? held.actorId;
-      throw new BrainError(
+      throw new SatiError(
         "CONFLICT",
         `Task ${id} is claimed by ${name} until ${held.leaseUntil}.`,
         {
-          hint: "Pick another ready task with `brain task list --ready`.",
+          hint: "Pick another ready task with `sati task list --ready`.",
           details: { holder: held.actorId, holderName: name, leaseUntil: held.leaseUntil },
         },
       );
     }
     if (before.status !== "todo" && before.status !== "in_progress") {
-      throw new BrainError(
+      throw new SatiError(
         "INVALID_TRANSITION",
         `Only todo tasks can be claimed; ${id} is ${before.status}.`,
         {
@@ -240,7 +240,7 @@ function checkToken(task: Task, token: number | undefined): void {
     token === undefined
       ? `Claim it with \`${CLI_NAME} task claim ${task.id}\` and pass the token it returns.`
       : `Your claim was lost. Run \`${CLI_NAME} task show ${task.id}\` before changing anything.`;
-  throw new BrainError(
+  throw new SatiError(
     "CONFLICT",
     token === undefined
       ? `Task ${task.id} is claimed; this write needs the claim's fencing token.`
@@ -296,7 +296,7 @@ async function checkLinks(
     }
     const cycle = findDependencyCycle(taskId, links.dependsOn, (id) => graph.get(id));
     if (cycle) {
-      throw new BrainError("VALIDATION", `Dependency cycle: ${cycle.join(" -> ")}.`, {
+      throw new SatiError("VALIDATION", `Dependency cycle: ${cycle.join(" -> ")}.`, {
         details: { cycle },
       });
     }
@@ -313,7 +313,7 @@ async function checkParent(
   const seen = new Set<string>();
   while (current !== null && !seen.has(current)) {
     if (current === taskId) {
-      throw new BrainError("VALIDATION", `Task ${taskId} cannot be its own ancestor.`);
+      throw new SatiError("VALIDATION", `Task ${taskId} cannot be its own ancestor.`);
     }
     seen.add(current);
     current = (await mustGet(r, ctx, "task", current)).parentId;

@@ -1,8 +1,8 @@
-# Agent kickoff: build Agent Brain
+# Agent kickoff: build Sati
 
-You are building **Agent Brain**, a local-first memory, task and feature manager for AI coding agents, published to npm. The full specification is in `PLAN.md`. Read it fully before writing any code.
+You are building **Sati**, a local-first memory, task and feature manager for AI coding agents, published to npm. The full specification is in `PLAN.md`. Read it fully before writing any code.
 
-> Working name: `brain` (CLI) and `@scope/brain` (package). The final name is not chosen yet. Use `brain` everywhere and keep the name in one constant (`packages/core/src/name.ts`) so a rename is a one-line change plus a search-and-replace.
+> Working name: `sati` (CLI) and `@kongpda/sati` (package). The final name is not chosen yet. Use `sati` everywhere and keep the name in one constant (`packages/core/src/name.ts`) so a rename is a one-line change plus a search-and-replace.
 
 ## How to work
 
@@ -11,7 +11,7 @@ You are building **Agent Brain**, a local-first memory, task and feature manager
 3. **Small commits.** Use conventional commits: `feat(core): …`, `fix(sync): …`, `test(e2e): …`. One checklist item per commit where possible.
 4. **Tests come with the code.** Never tick an item whose tests are missing or failing. Run `pnpm typecheck && pnpm lint && pnpm test` before each commit.
 5. **At each Gate:** run the Verify commands, paste the output into `docs/progress.md` under the phase heading, and stop to report a summary to the human before starting the next phase.
-6. **From Phase 2 onward, dogfood.** Track the remaining work in brain itself (`brain task create` for each checklist item) and follow the rules block it installs.
+6. **From Phase 2 onward, dogfood.** Track the remaining work in sati itself (`sati task create` for each checklist item) and follow the rules block it installs.
 
 ## Rules
 

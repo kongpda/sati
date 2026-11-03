@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
-import { CLI_NAME, CONFIG_DIR, type Mode } from "@brain/core";
+import { CLI_NAME, CONFIG_DIR, type Mode } from "@sati/core";
 import type { FileChange, PlannedFile, ReadFile } from "./integrations.js";
 
 /** Marks a hook as ours, so a later `init` may update it. Foreign hooks are never touched. */
@@ -18,11 +18,11 @@ ${body}
 `;
 }
 
-const GUARD = `# Override the guard once with BRAIN_GUARD=off (logged).
+const GUARD = `# Override the guard once with SATI_GUARD=off (logged).
 ${CLI_NAME} guard --staged || exit $?`;
 
 const IMPORT = script(
-  "loads teammates' records from .brain/ after git changes the files.",
+  "loads teammates' records from .sati/ after git changes the files.",
   `exec ${CLI_NAME} sync import`,
 );
 
@@ -33,9 +33,9 @@ function hookScripts(mode: Mode): Record<string, string> {
   }
   return {
     "pre-commit": script(
-      "guards shipped features, then commits the .brain/ snapshot.",
+      "guards shipped features, then commits the .sati/ snapshot.",
       `${GUARD}
-${CLI_NAME} sync export >/dev/null && exec git add -A -- .brain`,
+${CLI_NAME} sync export >/dev/null && exec git add -A -- .sati`,
     ),
     "post-merge": IMPORT,
     "post-checkout": IMPORT,

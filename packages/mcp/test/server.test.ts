@@ -1,6 +1,8 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import {
   createFeature,
   createIdFactory,
@@ -10,10 +12,8 @@ import {
   type ServiceContext,
   shortHandle,
   WORKFLOW,
-} from "@brain/core";
-import { SqliteStore } from "@brain/store-sqlite";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+} from "@sati/core";
+import { SqliteStore } from "@sati/store-sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createServer } from "../src/index.js";
 
@@ -22,8 +22,8 @@ let store: SqliteStore;
 let ctx: ServiceContext;
 
 beforeEach(async () => {
-  dir = mkdtempSync(join(tmpdir(), "brain-mcp-"));
-  store = await SqliteStore.open(join(dir, "brain.db"));
+  dir = mkdtempSync(join(tmpdir(), "sati-mcp-"));
+  store = await SqliteStore.open(join(dir, "sati.db"));
   const clock = fixedClock("2026-11-03T12:00:00.000Z");
   const ids = createIdFactory(() => clock.now().getTime());
   const { project, actor } = await initProject(
@@ -59,7 +59,6 @@ describe("MCP server", () => {
     const client = await connect();
     const tools = (await client.listTools()).tools.map((t) => t.name).sort();
     expect(tools).toEqual([
-      "brain_brief",
       "context_get",
       "context_put",
       "decision_record",
@@ -67,6 +66,7 @@ describe("MCP server", () => {
       "feature_upsert",
       "lock_acquire",
       "lock_release",
+      "sati_brief",
       "search",
       "task_claim",
       "task_complete",
@@ -75,14 +75,14 @@ describe("MCP server", () => {
       "task_update",
     ]);
     const resources = (await client.listResources()).resources.map((r) => r.uri);
-    expect(resources).toEqual(["brain://workflow", "brain://project/roadmap"]);
+    expect(resources).toEqual(["sati://workflow", "sati://project/roadmap"]);
     const templates = (await client.listResourceTemplates()).resourceTemplates;
-    expect(templates.map((t) => t.uriTemplate)).toEqual(["brain://feature/{id}"]);
+    expect(templates.map((t) => t.uriTemplate)).toEqual(["sati://feature/{id}"]);
     const prompts = (await client.listPrompts()).prompts.map((p) => p.name).sort();
     expect(prompts).toEqual(["finish-task", "plan-feature", "start-task"]);
   });
 
-  // The gate: an agent finishes a real task end to end using only brain tools.
+  // The gate: an agent finishes a real task end to end using only sati tools.
   it("runs a task from create through claim and update to complete, by short handle", async () => {
     const client = await connect();
     const created = await call(client, "task_create", { title: "Add login", priority: "high" });
@@ -211,18 +211,18 @@ describe("MCP server", () => {
 
   it("serves the workflow, the roadmap and a feature with its tasks", async () => {
     const client = await connect();
-    const workflow = await client.readResource({ uri: "brain://workflow" });
+    const workflow = await client.readResource({ uri: "sati://workflow" });
     expect(workflow.contents[0]).toMatchObject({ text: WORKFLOW });
 
     const feat = await call(client, "feature_upsert", { title: "Login" });
     await call(client, "task_create", { title: "Form", featureId: feat.body.id });
 
-    const roadmap = await client.readResource({ uri: "brain://project/roadmap" });
+    const roadmap = await client.readResource({ uri: "sati://project/roadmap" });
     const text = (roadmap.contents[0] as { text: string }).text;
     expect(text).toContain("# Demo roadmap");
     expect(text).toContain(`${shortHandle(feat.body.id)} Login (planned)`);
 
-    const one = await client.readResource({ uri: `brain://feature/${shortHandle(feat.body.id)}` });
+    const one = await client.readResource({ uri: `sati://feature/${shortHandle(feat.body.id)}` });
     const body = JSON.parse((one.contents[0] as { text: string }).text);
     expect(body.feature.id).toBe(feat.body.id);
     expect(body.tasks).toEqual([expect.objectContaining({ title: "Form", status: "todo" })]);
@@ -232,9 +232,9 @@ describe("MCP server", () => {
     const client = await connect();
     const t = await call(client, "task_create", { title: "Ship it" });
     await call(client, "task_claim", { id: t.body.id });
-    const res = await client.callTool({ name: "brain_brief", arguments: {} });
+    const res = await client.callTool({ name: "sati_brief", arguments: {} });
     const text = (res.content as { text: string }[])[0]?.text ?? "";
-    expect(text).toMatch(/^# brain brief: Demo/);
+    expect(text).toMatch(/^# sati brief: Demo/);
     expect(text).toContain(`${shortHandle(t.body.id)} [in_progress, medium] Ship it`);
   });
 

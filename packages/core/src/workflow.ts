@@ -1,7 +1,7 @@
 import { CLI_NAME } from "./name.js";
 
 /**
- * The full agent workflow: served as `brain://workflow` over MCP and written as the Claude Code
+ * The full agent workflow: served as `sati://workflow` over MCP and written as the Claude Code
  * skill. The rules block in AGENTS.md points here.
  */
 export const WORKFLOW = `# ${CLI_NAME} workflow

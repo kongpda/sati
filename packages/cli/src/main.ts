@@ -1,5 +1,5 @@
 import { stripVTControlCharacters } from "node:util";
-import { CLI_NAME } from "@brain/core/name";
+import { CLI_NAME } from "@sati/core/name";
 import { type CommandDef, runCommand, runMain, showUsage } from "citty";
 
 const HELP = new Set(["--help", "-h"]);
@@ -11,7 +11,7 @@ function words(argv: readonly string[]): string[] {
 }
 
 /**
- * citty's `runMain` exits 1 on bad usage; brain documents exit code 2 (USAGE) for that, and
+ * citty's `runMain` exits 1 on bad usage; sati documents exit code 2 (USAGE) for that, and
  * `--json` callers get the error as JSON. Help and version still go through `runMain`.
  */
 export async function main(root: CommandDef): Promise<void> {
@@ -33,11 +33,11 @@ export async function main(root: CommandDef): Promise<void> {
     // An unknown subcommand is not worth repeating in the hint.
     const known = words(argv).slice(0, message.startsWith("Unknown command") ? 1 : 2);
     // Loaded only here: the core and SQLite stay out of `--version` and `--help`.
-    const [{ BrainError }, { printError }] = await Promise.all([
-      import("@brain/core"),
+    const [{ SatiError }, { printError }] = await Promise.all([
+      import("@sati/core"),
       import("./runtime.js"),
     ]);
-    const usage = new BrainError("USAGE", message, {
+    const usage = new SatiError("USAGE", message, {
       hint: `Run \`${[CLI_NAME, ...known, "--help"].join(" ")}\` for usage.`,
     });
     process.exitCode = printError(usage, argv.includes("--json"));

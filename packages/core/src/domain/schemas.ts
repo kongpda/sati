@@ -196,7 +196,7 @@ export const Actor = z.strictObject({
   id: ActorId,
   projectId: ProjectId,
   kind: z.enum(ACTOR_KINDS),
-  /** Stable identity string, e.g. `claude-code@feature-a#1234` or `$BRAIN_ACTOR`. */
+  /** Stable identity string, e.g. `claude-code@feature-a#1234` or `$SATI_ACTOR`. */
   name: z.string().min(1).max(200),
   tool: z.string().max(100).nullable(),
   worktree: z.string().max(LIMITS.path).nullable(),
@@ -257,8 +257,8 @@ export const ENTITY_SCHEMAS: { [K in StoredEntity]: z.ZodType<EntityMap[K]> } = 
   actor: Actor,
 };
 
-/** `.brain/brain.config.json`: tells every worktree which project and mode it belongs to. */
-export const BrainConfigSchema = z.strictObject({
+/** `.sati/sati.config.json`: tells every worktree which project and mode it belongs to. */
+export const SatiConfigSchema = z.strictObject({
   version: z.literal(1),
   projectId: ProjectId,
   mode: Mode,
@@ -269,6 +269,6 @@ export const BrainConfigSchema = z.strictObject({
     })
     .optional(),
 });
-export type BrainConfig = z.infer<typeof BrainConfigSchema>;
-export const CONFIG_DIR = ".brain";
-export const CONFIG_FILE = "brain.config.json";
+export type SatiConfig = z.infer<typeof SatiConfigSchema>;
+export const CONFIG_DIR = ".sati";
+export const CONFIG_FILE = "sati.config.json";

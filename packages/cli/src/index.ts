@@ -1,9 +1,9 @@
-import { CLI_NAME } from "@brain/core/name";
+import { CLI_NAME } from "@sati/core/name";
 import { defineCommand } from "citty";
 import pkg from "../package.json" with { type: "json" };
 import { main } from "./main.js";
 
-// Subcommands load on demand so `brain --version` and `--help` stay fast.
+// Subcommands load on demand so `sati --version` and `--help` stay fast.
 const lazy = (load: () => Promise<{ default: unknown }>) => () =>
   load().then((m) => m.default as ReturnType<typeof defineCommand>);
 

@@ -1,4 +1,4 @@
-import { type Brief, buildBrief } from "@brain/core";
+import { type Brief, buildBrief } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { execute } from "../runtime.js";

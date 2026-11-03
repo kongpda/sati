@@ -1,4 +1,4 @@
-import { type SearchHit, search } from "@brain/core";
+import { type SearchHit, search } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { hits } from "../render.js";

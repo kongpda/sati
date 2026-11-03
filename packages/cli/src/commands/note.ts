@@ -1,4 +1,4 @@
-import { createNote, getRecord, listRecords, type Note, resolveId, updateNote } from "@brain/core";
+import { createNote, getRecord, listRecords, type Note, resolveId, updateNote } from "@sati/core";
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
@@ -44,7 +44,7 @@ const ls = defineCommand({
           limit: int(args.limit, "limit"),
           offset: int(args.offset, "offset"),
         }),
-      (items: Note[]) => rows(items, 'No notes. Write one with `brain note create "title"`.'),
+      (items: Note[]) => rows(items, 'No notes. Write one with `sati note create "title"`.'),
     ),
 });
 

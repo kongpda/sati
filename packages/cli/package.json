@@ -1,11 +1,11 @@
 {
-  "name": "@scope/brain",
+  "name": "@kongpda/sati",
   "version": "0.0.0",
   "description": "Local-first memory, task and feature manager for AI coding agents",
   "type": "module",
   "license": "UNLICENSED",
   "bin": {
-    "brain": "./dist/index.mjs"
+    "sati": "./dist/index.mjs"
   },
   "files": [
     "dist"
@@ -31,10 +31,10 @@
     "micromatch": "4.0.8"
   },
   "devDependencies": {
-    "@brain/core": "workspace:*",
-    "@brain/mcp": "workspace:*",
-    "@brain/store-sqlite": "workspace:*",
-    "@brain/sync": "workspace:*",
+    "@sati/core": "workspace:*",
+    "@sati/mcp": "workspace:*",
+    "@sati/store-sqlite": "workspace:*",
+    "@sati/sync": "workspace:*",
     "drizzle-orm": "0.45.4",
     "ulid": "3.0.2",
     "zod": "4.6.7"

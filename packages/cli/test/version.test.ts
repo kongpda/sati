@@ -8,7 +8,7 @@ const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url),
   version: string;
 };
 
-describe("brain --version", () => {
+describe("sati --version", () => {
   // Phase 0 gate: the published binary must start and report the package version.
   it("prints the package version from the built bundle", () => {
     const out = execFileSync(process.execPath, [bin, "--version"], { encoding: "utf8" });

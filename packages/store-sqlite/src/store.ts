@@ -3,10 +3,10 @@ import { dirname } from "node:path";
 import {
   type Activity,
   type ActivityQuery,
-  BrainError,
   type EntityMap,
   type ListQuery,
   type Project,
+  SatiError,
   SEARCHABLE,
   type SearchHit,
   type SearchOptions,
@@ -15,7 +15,7 @@ import {
   type StorageWriter,
   type StoredEntity,
   type Task,
-} from "@brain/core";
+} from "@sati/core";
 import Database from "better-sqlite3";
 import { and, asc, desc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
 import { type BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
@@ -121,10 +121,10 @@ export class SqliteStore implements StorageAdapter {
         // Checked inside the lock: another process may have upgraded the schema since we opened.
         const current = this.db.pragma("user_version", { simple: true }) as number;
         if (current > LATEST_SCHEMA_VERSION) {
-          throw new BrainError(
+          throw new SatiError(
             "SCHEMA_TOO_NEW",
-            `The database uses schema v${current}, but this brain only knows v${LATEST_SCHEMA_VERSION}.`,
-            { hint: "A newer brain upgraded this project. Update brain and restart this process." },
+            `The database uses schema v${current}, but this sati only knows v${LATEST_SCHEMA_VERSION}.`,
+            { hint: "A newer sati upgraded this project. Update sati and restart this process." },
           );
         }
         const result = await fn(this.writer);
@@ -275,7 +275,7 @@ export class SqliteStore implements StorageAdapter {
         this.orm.insert(t).values(toRow(entity, record)).run();
       } catch (err) {
         if (err instanceof Database.SqliteError && err.code.startsWith("SQLITE_CONSTRAINT")) {
-          throw new BrainError("CONFLICT", `${entity} ${record.id} already exists`);
+          throw new SatiError("CONFLICT", `${entity} ${record.id} already exists`);
         }
         throw err;
       }
@@ -290,7 +290,7 @@ export class SqliteStore implements StorageAdapter {
         .where(and(eq(t.id, record.id), eq(t.version, expectedVersion)))
         .run();
       if (res.changes !== 1) {
-        throw new BrainError(
+        throw new SatiError(
           "CONFLICT",
           `${entity} ${record.id} was changed by someone else (expected version ${expectedVersion})`,
           { hint: "Fetch it again and retry your change." },

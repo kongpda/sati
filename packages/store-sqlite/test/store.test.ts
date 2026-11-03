@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { BrainError } from "@brain/core";
+import { SatiError } from "@sati/core";
 import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { LATEST_SCHEMA_VERSION, SqliteStore } from "../src/index.js";
@@ -38,7 +38,7 @@ describe("open", () => {
     await upgraded.close();
     const backups = readdirSync(join(dirname(v1), "backups"));
     expect(backups).toHaveLength(1);
-    expect(backups[0]).toMatch(/^brain\.db\.v1\..+\.bak$/);
+    expect(backups[0]).toMatch(/^sati\.db\.v1\..+\.bak$/);
   });
 
   it("does not back up a brand-new DB", () => {
@@ -49,7 +49,7 @@ describe("open", () => {
   it("refuses writes when a newer binary has upgraded the schema", async () => {
     store.db.pragma(`user_version = ${LATEST_SCHEMA_VERSION + 1}`);
     const err = await store.write((w) => w.insert("task", task())).catch((e) => e);
-    expect(err).toBeInstanceOf(BrainError);
+    expect(err).toBeInstanceOf(SatiError);
     expect(err.code).toBe("SCHEMA_TOO_NEW");
     expect(await store.read((r) => r.list("task", PROJECT_ID))).toHaveLength(0);
   });

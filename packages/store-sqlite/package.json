@@ -1,5 +1,5 @@
 {
-  "name": "@brain/store-sqlite",
+  "name": "@sati/store-sqlite",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,7 +16,7 @@
     "db:generate": "drizzle-kit generate && node scripts/embed-migrations.mjs"
   },
   "dependencies": {
-    "@brain/core": "workspace:*",
+    "@sati/core": "workspace:*",
     "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.4"
   },

@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { BrainError } from "../domain/errors.js";
+import { SatiError } from "../domain/errors.js";
 import { DecisionId, Feature } from "../domain/schemas.js";
 import { FEATURE_TRANSITIONS, featureRemovalNeedsDecision } from "../domain/status.js";
 import {
@@ -72,9 +72,9 @@ export async function updateFeature(
     if (patch.status) {
       assertTransition(FEATURE_TRANSITIONS, "feature", before.status, patch.status);
       if (featureRemovalNeedsDecision(before.status, patch.status)) {
-        const hint = `Record one first: \`brain decision record --feature ${id}\`, then pass its id.`;
+        const hint = `Record one first: \`sati decision record --feature ${id}\`, then pass its id.`;
         if (!decisionId) {
-          throw new BrainError(
+          throw new SatiError(
             "VALIDATION",
             `Removing a ${before.status} feature needs a Decision.`,
             { hint },
@@ -82,13 +82,9 @@ export async function updateFeature(
         }
         const decision = await mustGet(w, ctx, "decision", decisionId);
         if (!decision.featureIds.includes(id)) {
-          throw new BrainError(
-            "VALIDATION",
-            `Decision ${decisionId} does not list feature ${id}.`,
-            {
-              hint,
-            },
-          );
+          throw new SatiError("VALIDATION", `Decision ${decisionId} does not list feature ${id}.`, {
+            hint,
+          });
         }
       }
     }

@@ -1,4 +1,4 @@
-import type { StorageAdapter } from "@brain/core";
+import type { StorageAdapter } from "@sati/core";
 
 export interface AfterWrites {
   /** The store to hand to services; its writes schedule `fn`. */

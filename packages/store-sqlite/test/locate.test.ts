@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { clearLocateCache, locateDb, SqliteStore } from "../src/index.js";
 
-const tmp = () => realpathSync(mkdtempSync(join(tmpdir(), "brain-locate-")));
+const tmp = () => realpathSync(mkdtempSync(join(tmpdir(), "sati-locate-")));
 const git = (cwd: string, ...args: string[]) =>
   execFileSync("git", args, {
     cwd,
@@ -20,9 +20,9 @@ const git = (cwd: string, ...args: string[]) =>
   });
 
 const writeConfig = (dir: string, mode: string) => {
-  mkdirSync(join(dir, ".brain"), { recursive: true });
+  mkdirSync(join(dir, ".sati"), { recursive: true });
   writeFileSync(
-    join(dir, ".brain", "brain.config.json"),
+    join(dir, ".sati", "sati.config.json"),
     JSON.stringify({ version: 1, projectId: "prj_01JC0000000000000000000000", mode }),
   );
 };
@@ -41,20 +41,20 @@ describe("locateDb", () => {
 
     const main = locateDb(join(repo, "src", "deep"));
     const linked = locateDb(wt);
-    expect(main.path).toBe(join(repo, ".git", "brain", "brain.db"));
+    expect(main.path).toBe(join(repo, ".git", "sati", "sati.db"));
     expect(linked.path).toBe(main.path);
     expect(main).toMatchObject({ mode: "git", root: repo });
     expect(linked.root).toBe(wt);
   });
 
-  it("uses ~/.brain/projects/<id>.db for a standalone project outside git", () => {
+  it("uses ~/.sati/projects/<id>.db for a standalone project outside git", () => {
     const dir = tmp();
     const home = tmp();
     writeConfig(dir, "standalone");
     mkdirSync(join(dir, "notes"));
     const loc = locateDb(join(dir, "notes"), { home });
     expect(loc).toEqual({
-      path: join(home, ".brain", "projects", "prj_01JC0000000000000000000000.db"),
+      path: join(home, ".sati", "projects", "prj_01JC0000000000000000000000.db"),
       mode: "standalone",
       root: dir,
     });
@@ -76,8 +76,8 @@ describe("locateDb", () => {
 
   it("rejects a malformed config with VALIDATION", () => {
     const dir = tmp();
-    mkdirSync(join(dir, ".brain"));
-    writeFileSync(join(dir, ".brain", "brain.config.json"), "{nope");
+    mkdirSync(join(dir, ".sati"));
+    writeFileSync(join(dir, ".sati", "sati.config.json"), "{nope");
     expect(() => locateDb(dir, { home: tmp() })).toThrow(
       expect.objectContaining({ code: "VALIDATION" }),
     );

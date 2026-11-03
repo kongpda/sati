@@ -1,18 +1,18 @@
 import { join } from "node:path";
-import { BrainError, CONFIG_DIR, type ImportResult } from "@brain/core";
-import { type ExportResult, exportSnapshot, importSnapshot } from "@brain/sync";
+import { CONFIG_DIR, type ImportResult, SatiError } from "@sati/core";
+import { type ExportResult, exportSnapshot, importSnapshot } from "@sati/sync";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { execute, type Runtime } from "../runtime.js";
 
-/** The `.brain/` folder. Only git mode has one: stealth and standalone commit nothing. */
+/** The `.sati/` folder. Only git mode has one: stealth and standalone commit nothing. */
 function snapshotDir(rt: Runtime): string {
   if (rt.project.mode !== "git") {
-    throw new BrainError(
+    throw new SatiError(
       "USAGE",
-      `\`brain sync\` needs git mode; this project is ${rt.project.mode}.`,
+      `\`sati sync\` needs git mode; this project is ${rt.project.mode}.`,
       {
-        hint: "Only git mode keeps a committed snapshot in .brain/.",
+        hint: "Only git mode keeps a committed snapshot in .sati/.",
       },
     );
   }
@@ -20,7 +20,7 @@ function snapshotDir(rt: Runtime): string {
 }
 
 const exportCmd = defineCommand({
-  meta: { name: "export", description: "Write changed records to .brain/ (run by pre-commit)" },
+  meta: { name: "export", description: "Write changed records to .sati/ (run by pre-commit)" },
   args: { ...json },
   run: ({ args }) =>
     execute(
@@ -31,7 +31,7 @@ const exportCmd = defineCommand({
 });
 
 const importCmd = defineCommand({
-  meta: { name: "import", description: "Load newer records from .brain/ (run by git hooks)" },
+  meta: { name: "import", description: "Load newer records from .sati/ (run by git hooks)" },
   args: { ...json },
   run: ({ args }) =>
     execute(
@@ -42,6 +42,6 @@ const importCmd = defineCommand({
 });
 
 export default defineCommand({
-  meta: { name: "sync", description: "Export or import the .brain/ snapshot committed to git" },
+  meta: { name: "sync", description: "Export or import the .sati/ snapshot committed to git" },
   subCommands: { export: exportCmd, import: importCmd },
 });

@@ -12,13 +12,13 @@ export const ERROR_EXIT_CODES = {
   SCHEMA_TOO_NEW: 7,
   INVALID_TRANSITION: 8,
   AMBIGUOUS: 9,
-  /** `brain guard` found a blocked change. */
+  /** `sati guard` found a blocked change. */
   BLOCKED: 10,
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_EXIT_CODES;
 
-export class BrainError extends Error {
+export class SatiError extends Error {
   readonly code: ErrorCode;
   /** What the user or agent should run next. */
   readonly hint: string | undefined;
@@ -26,7 +26,7 @@ export class BrainError extends Error {
 
   constructor(code: ErrorCode, message: string, opts: { hint?: string; details?: unknown } = {}) {
     super(message);
-    this.name = "BrainError";
+    this.name = "SatiError";
     this.code = code;
     this.hint = opts.hint;
     this.details = opts.details;
@@ -37,6 +37,6 @@ export class BrainError extends Error {
   }
 }
 
-export function isBrainError(err: unknown): err is BrainError {
-  return err instanceof BrainError;
+export function isSatiError(err: unknown): err is SatiError {
+  return err instanceof SatiError;
 }

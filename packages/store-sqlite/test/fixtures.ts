@@ -1,13 +1,13 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Note, Project, Task } from "@brain/core";
+import type { Note, Project, Task } from "@sati/core";
 
 export const NOW = "2026-11-03T12:00:00.000Z";
 export const ACTOR = "actr_01JC0000000000000000000000";
 export const PROJECT_ID = "prj_01JC0000000000000000000000";
 
-export const tmpDb = () => join(mkdtempSync(join(tmpdir(), "brain-store-")), "brain.db");
+export const tmpDb = () => join(mkdtempSync(join(tmpdir(), "sati-store-")), "sati.db");
 
 let seq = 0;
 const nextId = (prefix: string) => `${prefix}_01JC${String(++seq).padStart(22, "0")}`;

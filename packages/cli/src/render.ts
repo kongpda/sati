@@ -1,4 +1,4 @@
-import { type SearchHit, shortHandle } from "@brain/core";
+import { type SearchHit, shortHandle } from "@sati/core";
 
 interface Row {
   id: string;

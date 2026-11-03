@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import type { ChangeKind } from "@brain/core";
+import type { ChangeKind } from "@sati/core";
 
 export interface Change {
   path: string;

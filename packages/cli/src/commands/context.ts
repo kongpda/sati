@@ -4,7 +4,7 @@ import {
   getContext,
   putContext,
   shortHandle,
-} from "@brain/core";
+} from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { execute, list } from "../runtime.js";
@@ -31,7 +31,7 @@ const get = defineCommand({
           ? entries
               .map((e) => `${shortHandle(e.id)}  ${e.path}  [${state(e)}]\n  ${e.summary}`)
               .join("\n")
-          : 'No context entries. Add one with `brain context put src/area --summary "…"`.',
+          : 'No context entries. Add one with `sati context put src/area --summary "…"`.',
     ),
 });
 

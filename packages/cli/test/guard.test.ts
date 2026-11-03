@@ -1,9 +1,9 @@
 import { execFileSync } from "node:child_process";
 import { chmodSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { locateDb, SqliteStore } from "@brain/store-sqlite";
+import { locateDb, SqliteStore } from "@sati/store-sqlite";
 import { describe, expect, it } from "vitest";
-import { bin, brain, brainJson, run, tempRepo } from "./helpers.js";
+import { bin, run, sati, satiJson, tempRepo } from "./helpers.js";
 
 interface Rec {
   id: string;
@@ -31,7 +31,7 @@ async function billingRepo(protect = true): Promise<{ dir: string; feature: Rec 
   git(dir, "add", ".");
   git(dir, "commit", "-qm", "init");
   const args = ["feature", "create", "Billing", "--status", "shipped", "--paths", "src/billing/**"];
-  const feature = brainJson<Rec>(dir, ...args, ...(protect ? ["--protected"] : [])).data;
+  const feature = satiJson<Rec>(dir, ...args, ...(protect ? ["--protected"] : [])).data;
   return { dir, feature };
 }
 
@@ -49,16 +49,16 @@ async function guardRows(dir: string) {
 }
 
 // PLAN gate: "a staged deletion of a protected feature is blocked".
-describe("brain guard --staged", () => {
+describe("sati guard --staged", () => {
   it("blocks a staged deletion of a protected feature until a decision lists it", async () => {
     const { dir, feature } = await billingRepo();
     git(dir, "rm", "-q", "src/billing/invoice.ts");
-    const blocked = brain(dir, "guard", "--staged");
+    const blocked = sati(dir, "guard", "--staged");
     expect(blocked.code).toBe(10);
     expect(blocked.stdout).toContain("blocked: This deletes src/billing/invoice.ts");
-    expect(blocked.stdout).toContain("BRAIN_GUARD=off");
+    expect(blocked.stdout).toContain("SATI_GUARD=off");
 
-    brain(
+    sati(
       dir,
       "decision",
       "record",
@@ -68,7 +68,7 @@ describe("brain guard --staged", () => {
       "--features",
       feature.id,
     );
-    const allowed = brainJson<{ verdict: string }>(dir, "guard", "--staged");
+    const allowed = satiJson<{ verdict: string }>(dir, "guard", "--staged");
     expect(allowed).toMatchObject({ code: 0, data: { verdict: "warn" } });
   });
 
@@ -76,27 +76,27 @@ describe("brain guard --staged", () => {
     const { dir } = await billingRepo();
     writeFileSync(join(dir, "README.md"), "changed\n");
     git(dir, "add", "README.md");
-    expect(brain(dir, "guard", "--staged")).toMatchObject({ code: 0, stdout: "Guard: ok.\n" });
+    expect(sati(dir, "guard", "--staged")).toMatchObject({ code: 0, stdout: "Guard: ok.\n" });
 
     // 9 of the 20 lines of the feature's changed files: under half.
     writeFileSync(join(dir, "src/billing/invoice.ts"), "line 0\n");
     writeFileSync(join(dir, "src/billing/tax.ts"), lines(10).concat("more\n"));
     git(dir, "add", ".");
-    expect(brain(dir, "guard", "--staged").code).toBe(0);
+    expect(sati(dir, "guard", "--staged").code).toBe(0);
 
     writeFileSync(join(dir, "src/billing/tax.ts"), "");
     git(dir, "add", ".");
-    const r = brain(dir, "guard", "--staged");
+    const r = sati(dir, "guard", "--staged");
     expect(r.code).toBe(10);
     expect(r.stdout).toContain("removes 95% of the changed lines");
   });
 
-  it("BRAIN_GUARD=off lets a blocked commit through and logs the override", async () => {
+  it("SATI_GUARD=off lets a blocked commit through and logs the override", async () => {
     const { dir, feature } = await billingRepo();
     git(dir, "rm", "-q", "src/billing/invoice.ts");
-    const r = run(dir, ["guard", "--staged"], { BRAIN_GUARD: "off" });
+    const r = run(dir, ["guard", "--staged"], { SATI_GUARD: "off" });
     expect(r.code).toBe(0);
-    expect(r.stdout).toContain("let through by BRAIN_GUARD=off");
+    expect(r.stdout).toContain("let through by SATI_GUARD=off");
     expect(await guardRows(dir)).toEqual([
       expect.objectContaining({
         entityId: feature.id,
@@ -109,7 +109,7 @@ describe("brain guard --staged", () => {
   it("warns on an unprotected shipped feature and logs it", async () => {
     const { dir } = await billingRepo(false);
     git(dir, "rm", "-q", "src/billing/invoice.ts");
-    const r = brain(dir, "guard", "--staged");
+    const r = sati(dir, "guard", "--staged");
     expect(r.code).toBe(0);
     expect(r.stdout).toContain(
       'warning: src/billing/invoice.ts belongs to shipped feature "Billing"',
@@ -118,24 +118,24 @@ describe("brain guard --staged", () => {
   });
 });
 
-describe("brain guard --paths and --hook", () => {
+describe("sati guard --paths and --hook", () => {
   it("--paths blocks a file in another agent's exclusive lock", async () => {
     const dir = await tempRepo({ init: true });
-    run(dir, ["lock", "acquire", "src/auth/**"], { BRAIN_ACTOR: "other" });
-    const r = brain(dir, "guard", "--paths", "src/auth/login.ts,README.md");
+    run(dir, ["lock", "acquire", "src/auth/**"], { SATI_ACTOR: "other" });
+    const r = sati(dir, "guard", "--paths", "src/auth/login.ts,README.md");
     expect(r.code).toBe(10);
     expect(r.stdout).toContain("src/auth/login.ts is inside a exclusive lock held by other");
-    expect(brain(dir, "guard").code).toBe(2);
+    expect(sati(dir, "guard").code).toBe(2);
   });
 
   // Claude Code reads exit 2 as "block the tool call" and shows stderr to the agent.
   it("--hook blocks an Edit inside a lock with exit 2, and passes warnings as context", async () => {
     const { dir } = await billingRepo(false);
-    run(dir, ["lock", "acquire", "src/auth"], { BRAIN_ACTOR: "other" });
+    run(dir, ["lock", "acquire", "src/auth"], { SATI_ACTOR: "other" });
     const hook = (file_path: string) =>
       execFileSync(process.execPath, [bin, "guard", "--hook"], {
         cwd: dir,
-        env: { ...process.env, BRAIN_ACTOR: "tester" },
+        env: { ...process.env, SATI_ACTOR: "tester" },
         input: JSON.stringify({ cwd: dir, tool_name: "Edit", tool_input: { file_path } }),
         encoding: "utf8",
         stdio: ["pipe", "pipe", "pipe"],
@@ -158,9 +158,9 @@ describe("brain guard --paths and --hook", () => {
 });
 
 describe("pre-commit hook", () => {
-  it("brain init installs it, and it stops a commit that deletes a protected feature", async () => {
+  it("sati init installs it, and it stops a commit that deletes a protected feature", async () => {
     const dir = await tempRepo();
-    const init = brainJson<{ files: { path: string; action: string }[] }>(
+    const init = satiJson<{ files: { path: string; action: string }[] }>(
       dir,
       "init",
       "--yes",
@@ -171,12 +171,12 @@ describe("pre-commit hook", () => {
     const hookFile = join(dir, ".git/hooks/pre-commit");
     expect(statSync(hookFile).mode & 0o111).not.toBe(0);
 
-    // The hook runs `brain` from PATH, so put a shim for the built CLI there.
+    // The hook runs `sati` from PATH, so put a shim for the built CLI there.
     const shims = join(dir, ".git/shims");
     mkdirSync(shims);
-    writeFileSync(join(shims, "brain"), `#!/bin/sh\nexec "${process.execPath}" "${bin}" "$@"\n`);
-    chmodSync(join(shims, "brain"), 0o755);
-    const env = { ...process.env, PATH: `${shims}:${process.env.PATH}`, BRAIN_ACTOR: "tester" };
+    writeFileSync(join(shims, "sati"), `#!/bin/sh\nexec "${process.execPath}" "${bin}" "$@"\n`);
+    chmodSync(join(shims, "sati"), 0o755);
+    const env = { ...process.env, PATH: `${shims}:${process.env.PATH}`, SATI_ACTOR: "tester" };
 
     mkdirSync(join(dir, "src/billing"), { recursive: true });
     writeFileSync(join(dir, "src/billing/a.ts"), lines(3));
@@ -185,7 +185,7 @@ describe("pre-commit hook", () => {
       cwd: dir,
       env,
     });
-    brain(
+    sati(
       dir,
       "feature",
       "create",
@@ -211,7 +211,7 @@ describe("pre-commit hook", () => {
     const hookFile = join(dir, ".git/hooks/pre-commit");
     mkdirSync(join(dir, ".git/hooks"), { recursive: true });
     writeFileSync(hookFile, "#!/bin/sh\nnpm test\n");
-    const init = brainJson<{ files: { path: string; action: string }[] }>(
+    const init = satiJson<{ files: { path: string; action: string }[] }>(
       dir,
       "init",
       "--yes",
@@ -222,16 +222,16 @@ describe("pre-commit hook", () => {
     expect(readFileSync(hookFile, "utf8")).toBe("#!/bin/sh\nnpm test\n");
   });
 
-  // A hook an older `brain init` wrote is ours, so it is brought up to date.
-  it("updates a hook written by an older brain init", async () => {
+  // A hook an older `sati init` wrote is ours, so it is brought up to date.
+  it("updates a hook written by an older sati init", async () => {
     const dir = await tempRepo();
     const hookFile = join(dir, ".git/hooks/pre-commit");
     mkdirSync(join(dir, ".git/hooks"), { recursive: true });
     writeFileSync(
       hookFile,
-      "#!/bin/sh\n# Installed by `brain init`: old\nexec brain guard --staged\n",
+      "#!/bin/sh\n# Installed by `sati init`: old\nexec sati guard --staged\n",
     );
-    const init = brainJson<{ files: { path: string; action: string }[] }>(
+    const init = satiJson<{ files: { path: string; action: string }[] }>(
       dir,
       "init",
       "--yes",
@@ -239,6 +239,6 @@ describe("pre-commit hook", () => {
       "",
     );
     expect(init.data.files).toContainEqual({ path: ".git/hooks/pre-commit", action: "update" });
-    expect(readFileSync(hookFile, "utf8")).toContain("brain sync export");
+    expect(readFileSync(hookFile, "utf8")).toContain("sati sync export");
   });
 });

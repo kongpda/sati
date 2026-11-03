@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { shortHandle, type Task } from "@brain/core";
+import { shortHandle, type Task } from "@sati/core";
 import { defineCommand } from "citty";
 import { closeRuntime, openRuntime, printError } from "../runtime.js";
 

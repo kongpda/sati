@@ -4,9 +4,6 @@ import { basename, join, relative } from "node:path";
 import {
   type Actor,
   actorIdentity,
-  type BrainConfig,
-  BrainConfigSchema,
-  BrainError,
   CONFIG_DIR,
   CONFIG_FILE,
   createIdFactory,
@@ -14,9 +11,12 @@ import {
   MODES,
   type Mode,
   type Project,
+  type SatiConfig,
+  SatiConfigSchema,
+  SatiError,
   systemClock,
-} from "@brain/core";
-import { type DbLocation, locateDb, SqliteStore, standaloneDbPath } from "@brain/store-sqlite";
+} from "@sati/core";
+import { type DbLocation, locateDb, SqliteStore, standaloneDbPath } from "@sati/store-sqlite";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { selectTools } from "../detect.js";
@@ -55,7 +55,7 @@ interface InitPlan {
   hooks: PlannedHook[];
   /** The merge driver in local git config; git mode only. */
   mergeDriver: PlannedGitConfig | undefined;
-  config: BrainConfig;
+  config: SatiConfig;
 }
 
 export interface InitResult {
@@ -80,15 +80,15 @@ function where(cwd: string): DbLocation | undefined {
   try {
     return locateDb(cwd);
   } catch (err) {
-    if (err instanceof BrainError && err.code === "NOT_INITIALIZED") return undefined;
+    if (err instanceof SatiError && err.code === "NOT_INITIALIZED") return undefined;
     throw err;
   }
 }
 
-function readConfig(file: string): BrainConfig | undefined {
+function readConfig(file: string): SatiConfig | undefined {
   if (!existsSync(file)) return undefined;
-  const parsed = BrainConfigSchema.safeParse(JSON.parse(readFileSync(file, "utf8")));
-  if (!parsed.success) throw new BrainError("VALIDATION", `Invalid ${file}.`);
+  const parsed = SatiConfigSchema.safeParse(JSON.parse(readFileSync(file, "utf8")));
+  if (!parsed.success) throw new SatiError("VALIDATION", `Invalid ${file}.`);
   return parsed.data;
 }
 
@@ -123,18 +123,18 @@ async function plan(
   const inGit = loc?.mode === "git";
   const mode = (args.mode ?? (inGit ? "git" : "standalone")) as Mode;
   if (!MODES.includes(mode)) {
-    throw new BrainError("USAGE", `Unknown mode "${args.mode}".`, {
+    throw new SatiError("USAGE", `Unknown mode "${args.mode}".`, {
       hint: `Use one of: ${MODES.join(", ")}.`,
     });
   }
   if (mode !== "standalone" && !inGit) {
-    throw new BrainError("VALIDATION", `${mode} mode needs a git repository.`, {
-      hint: "Run `git init` first, or use `brain init --mode standalone`.",
+    throw new SatiError("VALIDATION", `${mode} mode needs a git repository.`, {
+      hint: "Run `git init` first, or use `sati init --mode standalone`.",
     });
   }
   if (mode === "standalone" && inGit) {
-    throw new BrainError("VALIDATION", "Standalone mode is for folders outside git.", {
-      hint: "Use `brain init --mode git`, or `--mode stealth` to commit nothing.",
+    throw new SatiError("VALIDATION", "Standalone mode is for folders outside git.", {
+      hint: "Use `sati init --mode git`, or `--mode stealth` to commit nothing.",
     });
   }
   const root = loc?.root ?? cwd;
@@ -146,8 +146,8 @@ async function plan(
 
   const found = await alreadyInitialized(db);
   if (found) {
-    throw new BrainError("CONFLICT", `This project is already initialized as "${found.slug}".`, {
-      hint: 'Start with `brain task create "title"`.',
+    throw new SatiError("CONFLICT", `This project is already initialized as "${found.slug}".`, {
+      hint: 'Start with `sati task create "title"`.',
     });
   }
 
@@ -194,7 +194,7 @@ function preview(p: InitPlan): string {
     lines.push("(stealth mode skips files that already exist, so nothing tracked changes)");
   }
   for (const h of p.hooks.filter((h) => h.action === "skip")) {
-    lines.push(`(${h.path} already exists and is left alone; call brain from it yourself)`);
+    lines.push(`(${h.path} already exists and is left alone; call sati from it yourself)`);
   }
   if (p.files.length === 0) lines.push("files     none");
   lines.push(`tools     ${p.tools.length ? p.tools.join(", ") : "none detected"}`);
@@ -242,10 +242,10 @@ async function apply(p: InitPlan): Promise<InitResult> {
 /** The wizard: asks for mode and name, shows the preview, and confirms. */
 async function wizard(cwd: string, args: Parameters<typeof plan>[1]): Promise<InitPlan | null> {
   const clack = await import("@clack/prompts");
-  clack.intro("brain init");
+  clack.intro("sati init");
   const inGit = where(cwd)?.mode === "git";
   const mode = await clack.select<Mode>({
-    message: "Where should brain keep this project?",
+    message: "Where should sati keep this project?",
     initialValue: (args.mode as Mode | undefined) ?? (inGit ? "git" : "standalone"),
     options: inGit
       ? [
@@ -256,7 +256,7 @@ async function wizard(cwd: string, args: Parameters<typeof plan>[1]): Promise<In
           {
             value: "standalone",
             label: "standalone",
-            hint: "DB in ~/.brain, for folders outside git",
+            hint: "DB in ~/.sati, for folders outside git",
           },
         ],
   });
@@ -265,7 +265,7 @@ async function wizard(cwd: string, args: Parameters<typeof plan>[1]): Promise<In
   const name = await clack.text({ message: "Project name", initialValue: draft.name });
   if (clack.isCancel(name)) return null;
   const final = await plan(cwd, { ...args, mode, name, slug: args.slug ?? slugify(name) });
-  clack.note(preview(final), "brain will write");
+  clack.note(preview(final), "sati will write");
   const ok = await clack.confirm({ message: "Create the project?" });
   if (clack.isCancel(ok) || !ok) return null;
   return final;
@@ -279,12 +279,12 @@ function render(r: InitResult | null): string {
   ];
   for (const f of r.files) lines.push(`  ${LABEL[f.action].padEnd(9)} ${f.path}`);
   lines.push(`  tools     ${r.tools.length ? r.tools.join(", ") : "none detected"}`);
-  lines.push('Next: brain task create "First task"');
+  lines.push('Next: sati task create "First task"');
   return lines.join("\n");
 }
 
 export default defineCommand({
-  meta: { name: "init", description: "Set up brain for this project" },
+  meta: { name: "init", description: "Set up sati for this project" },
   args: {
     mode: { type: "string", description: "git | stealth | standalone" },
     name: { type: "string", description: "Project name (default: folder name)" },
@@ -308,8 +308,8 @@ export default defineCommand({
           return chosen && apply(chosen);
         }
         const p = await plan(cwd, opts);
-        throw new BrainError("USAGE", "brain init needs --yes when it cannot ask questions.", {
-          hint: "Run `brain init --yes`, or add `--json` to see what it would write.",
+        throw new SatiError("USAGE", "sati init needs --yes when it cannot ask questions.", {
+          hint: "Run `sati init --yes`, or add `--json` to see what it would write.",
           details: {
             preview: {
               ...p,

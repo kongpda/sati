@@ -7,6 +7,6 @@ export default defineConfig({
   entry: ["src/index.ts"],
   format: "esm",
   platform: "node",
-  noExternal: [/^@brain\//, /^drizzle-orm(\/|$)/, /^zod(\/|$)/, "ulid"],
+  noExternal: [/^@sati\//, /^drizzle-orm(\/|$)/, /^zod(\/|$)/, "ulid"],
   banner: { js: "#!/usr/bin/env node" },
 });

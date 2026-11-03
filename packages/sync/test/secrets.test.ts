@@ -8,8 +8,8 @@ import {
   fixedClock,
   initProject,
   type ServiceContext,
-} from "@brain/core";
-import { SqliteStore } from "@brain/store-sqlite";
+} from "@sati/core";
+import { SqliteStore } from "@sati/store-sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { detectSecret, exportSnapshot, scanRecord } from "../src/index.js";
 
@@ -72,9 +72,9 @@ afterEach(async () => {
 });
 
 async function clone(): Promise<{ ctx: ServiceContext; dir: string }> {
-  const dir = mkdtempSync(join(tmpdir(), "brain-secrets-"));
+  const dir = mkdtempSync(join(tmpdir(), "sati-secrets-"));
   dirs.push(dir);
-  const store = await SqliteStore.open(join(dir, "brain.db"));
+  const store = await SqliteStore.open(join(dir, "sati.db"));
   stores.push(store);
   const deps = { store, clock: fixedClock("2026-11-03T12:00:00.000Z"), ids: createIdFactory() };
   const { project, actor } = await initProject(
@@ -86,10 +86,10 @@ async function clone(): Promise<{ ctx: ServiceContext; dir: string }> {
 }
 
 describe("exportSnapshot secret refusal", () => {
-  // PLAN Security: refuse with a clear message before writing to .brain/, so no commit carries it.
+  // PLAN Security: refuse with a clear message before writing to .sati/, so no commit carries it.
   it("refuses the whole export, writes no file, and does not print the secret", async () => {
     const { ctx, dir } = await clone();
-    const out = join(dir, ".brain");
+    const out = join(dir, ".sati");
     await createTask(ctx, { title: "Clean task" });
     const note = await createNote(ctx, { title: "Setup", body: `Use ${fake.sk} for staging` });
 

@@ -22,19 +22,19 @@ function detectTool(env: IdentityEnv["env"]): string | null {
 }
 
 function sessionId(env: IdentityEnv["env"]): string | null {
-  const raw = env.CLAUDE_CODE_SESSION_ID ?? env.BRAIN_SESSION_ID;
+  const raw = env.CLAUDE_CODE_SESSION_ID ?? env.SATI_SESSION_ID;
   return raw ? raw.replace(/[^0-9a-z]/gi, "").slice(0, 8) || null : null;
 }
 
 /**
- * Who is calling (review fix 11). `BRAIN_ACTOR` wins. Otherwise an agent is
+ * Who is calling (review fix 11). `SATI_ACTOR` wins. Otherwise an agent is
  * `<tool>@<worktree>#<session>` so parallel sessions in different worktrees stay distinct,
  * and a human is `<user>@<worktree>`.
  */
 export function actorIdentity({ env, worktree, user }: IdentityEnv): ActorIdentity {
   const tool = detectTool(env);
   const kind = tool ? "agent" : "human";
-  const forced = env.BRAIN_ACTOR?.trim();
+  const forced = env.SATI_ACTOR?.trim();
   if (forced) return { name: forced, kind, tool, worktree };
   const place = worktree ? basename(worktree) : "local";
   if (tool) {

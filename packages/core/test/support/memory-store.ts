@@ -1,9 +1,9 @@
 import {
   type Activity,
-  BrainError,
   type EntityMap,
   isReady,
   type Project,
+  SatiError,
   type SearchHit,
   type StorageAdapter,
   type StorageWriter,
@@ -113,12 +113,12 @@ export class MemoryStore implements StorageAdapter {
           .reverse()
           .map(clone),
       insert: async (e, rec) => {
-        if (table(e).has(rec.id)) throw new BrainError("CONFLICT", `duplicate ${rec.id}`);
+        if (table(e).has(rec.id)) throw new SatiError("CONFLICT", `duplicate ${rec.id}`);
         table(e).set(rec.id, clone(rec) as AnyRecord);
       },
       update: async (e, rec, expected) => {
         if (table(e).get(rec.id)?.version !== expected) {
-          throw new BrainError("CONFLICT", `stale ${rec.id}`);
+          throw new SatiError("CONFLICT", `stale ${rec.id}`);
         }
         table(e).set(rec.id, clone(rec) as AnyRecord);
       },

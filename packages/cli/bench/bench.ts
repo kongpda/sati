@@ -21,8 +21,8 @@ import {
   search,
   systemClock,
   type Task,
-} from "@brain/core";
-import { clearLocateCache, locateDb, SqliteStore } from "@brain/store-sqlite";
+} from "@sati/core";
+import { clearLocateCache, locateDb, SqliteStore } from "@sati/store-sqlite";
 
 const bin = fileURLToPath(new URL("../dist/index.mjs", import.meta.url));
 const RECORDS = 50_000;
@@ -62,10 +62,10 @@ function time(fn: () => void): number {
 function cli(cwd: string, args: string[]): void {
   const r = spawnSync(process.execPath, [bin, ...args], {
     cwd,
-    env: { ...process.env, BRAIN_ACTOR: "bench" },
+    env: { ...process.env, SATI_ACTOR: "bench" },
     encoding: "utf8",
   });
-  if (r.status !== 0) throw new Error(`brain ${args.join(" ")} failed: ${r.stderr}`);
+  if (r.status !== 0) throw new Error(`sati ${args.join(" ")} failed: ${r.stderr}`);
 }
 
 /** Inserts `RECORDS` tasks and notes in one transaction, cloned from service-made templates. */
@@ -157,7 +157,7 @@ interface Result {
 }
 
 async function main(): Promise<void> {
-  const dir = realpathSync(mkdtempSync(join(tmpdir(), "brain-bench-")));
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), "sati-bench-")));
   execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir });
   cli(dir, ["init", "--yes"]);
   const seedStart = performance.now();
@@ -189,7 +189,7 @@ async function main(): Promise<void> {
 
   const results: Result[] = [
     {
-      measure: "CLI cold start (brain --version), p95",
+      measure: "CLI cold start (sati --version), p95",
       value: percentile(coldStart, 95),
       budget: 80,
     },

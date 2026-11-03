@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { actorIdentity, BrainError } from "@brain/core";
+import { actorIdentity, SatiError } from "@sati/core";
 
 /** Files or folders whose presence shows a project already uses an agent tool. */
 const MARKERS: Record<string, readonly string[]> = {
@@ -42,7 +42,7 @@ export function selectTools(root: string, asked: string | undefined): string[] {
     .map((x) => x.trim())
     .filter(Boolean)) {
     if (!TOOLS.includes(t)) {
-      throw new BrainError("USAGE", `Unknown tool "${t}".`, {
+      throw new SatiError("USAGE", `Unknown tool "${t}".`, {
         hint: `Use any of: ${TOOLS.join(", ")}.`,
       });
     }

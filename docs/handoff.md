@@ -22,10 +22,10 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
       `rtk proxy pnpm biome check --write .`, then `rtk proxy pnpm lint`,
       `rtk proxy pnpm typecheck`, `rtk proxy pnpm test`. Rebuild (`rtk proxy pnpm build`) before
       CLI tests: they run `packages/cli/dist/index.mjs`.
-- [ ] Track each item in brain itself:
-      `id=$(brain task create "…" --json | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])')`,
-      `brain task claim $id`, then before the commit
-      `brain task complete $id --summary "…" --files a,b`.
+- [ ] Track each item in sati itself:
+      `id=$(sati task create "…" --json | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])')`,
+      `sati task claim $id`, then before the commit
+      `sati task complete $id --summary "…" --files a,b`.
 - [ ] One conventional commit per item; tick `- [x]` in `PLAN.md` in that commit; add a
       `### <item>` section to `docs/progress.md` (before "### Fix: full-index scan…") listing
       choices made on ambiguous points.
@@ -34,10 +34,10 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
       Core does no I/O: git and file access come in through ports (`ports/repo.ts` is the
       newest example) or as input data (the guard takes a change list).
 - [ ] The product name lives only in `packages/core/src/name.ts`; use `CLI_NAME`, never the
-      literal `brain`, in code and generated text.
+      literal `sati`, in code and generated text.
 - [ ] Tests explain why (a `// PLAN:` comment) and should fail when the rule breaks. Mutate the
       key line once to prove it.
-- [ ] Never use `--no-verify`; never edit `.brain/` by hand; stack changes need an ADR in
+- [ ] Never use `--no-verify`; never edit `.sati/` by hand; stack changes need an ADR in
       `docs/decisions/` and the owner's approval; ideas outside the plan go in `docs/ideas.md`.
 
 ## Phase 3: remaining checklist items, in order
@@ -52,7 +52,7 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
 - [x] Refuse the whole export with a clear error naming the entity id and field (never print the
       secret itself). PLAN Security says "refuse with a clear message".
 - [x] Decide and record: does a refused export also fail the pre-commit hook? (Simplest: yes,
-      the hook runs `brain sync export && git add`, so a non-zero exit blocks the commit.)
+      the hook runs `sati sync export && git add`, so a non-zero exit blocks the commit.)
 - [x] The MCP debounced export (`packages/cli/src/commands/mcp.ts`) must report the refusal on
       stderr and keep serving.
 - [x] Tick the Security item "Scan every exported record for secrets" too.
@@ -66,7 +66,7 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
       token from the claim holder fails with CONFLICT. Decide what non-holders get (they are
       already refused while a lease is live).
 - [x] Wire through: MCP `task_claim` / `task_update` / `task_complete`
-      (`packages/mcp/src/server.ts`), CLI `brain task claim|update|complete`
+      (`packages/mcp/src/server.ts`), CLI `sati task claim|update|complete`
       (`packages/cli/src/commands/task.ts`, e.g. `--token`), and the workflow text
       (`packages/core/src/workflow.ts`, rules in `domain/rules.ts`; bump the rules block
       version if the managed text changes).
@@ -97,9 +97,9 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
 
 - [ ] `planHooks` in `packages/cli/src/hooks.ts` uses `git rev-parse --git-path hooks`, which
       already follows `core.hooksPath`, but foreign hooks are skipped. Detect husky
-      (`.husky/`), lefthook (`lefthook.yml`) and a custom `core.hooksPath`, and add the brain
+      (`.husky/`), lefthook (`lefthook.yml`) and a custom `core.hooksPath`, and add the sati
       lines to their config instead of skipping. Never overwrite.
-- [ ] `brain init` must show each change before applying it (it prints a plan already).
+- [ ] `sati init` must show each change before applying it (it prints a plan already).
 
 ### 6. Guard rename detection (review fix 6)
 
@@ -108,48 +108,48 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
       blocking; see progress.md "### Guard").
 - [ ] Core `checkChanges` (`packages/core/src/services/guard.ts`) needs a `renamed` kind with
       the old path. Offer to update feature `paths` (CLI prompt or a hint with the
-      `brain feature update` command; pick the simplest and record it).
+      `sati feature update` command; pick the simplest and record it).
 
 ### 7. Feature globs matching zero files (review fix 7)
 
-- [ ] `brain doctor` does not exist yet (Phase 5). Simplest reading: add the check to the brief
+- [ ] `sati doctor` does not exist yet (Phase 5). Simplest reading: add the check to the brief
       now (needs the `repo` port's file list, like the stale-context section in
       `packages/core/src/services/brief.ts`) and leave doctor to Phase 5. Record the choice.
 
 ### 8. PreToolUse matches Bash (review fix 8)
 
 - [ ] The Claude Code hook (written by `packages/cli/src/integrations.ts`, handled by
-      `brain guard --hook`) matches `Edit|MultiEdit|Write|NotebookEdit`. Add `Bash` and parse
+      `sati guard --hook`) matches `Edit|MultiEdit|Write|NotebookEdit`. Add `Bash` and parse
       `rm`, `git rm`, `mv` (with flags, multiple paths, `&&` chains) into delete/rename
       changes for `checkChanges`. Unknown commands pass.
-- [ ] Existing installs get the new matcher through `brain init` / `brain rules sync` (check
+- [ ] Existing installs get the new matcher through `sati init` / `sati rules sync` (check
       which one rewrites `.claude/settings.json`).
 
 ### 9. Network filesystems and daemon mode (review fix 9)
 
 - [ ] Detect NFS/SMB and Docker/WSL bind mounts for the DB path
       (`packages/store-sqlite/src/locate.ts`); SQLite locking is unsafe there.
-- [ ] Fallback is a daemon: `brain serve` owns the DB and other processes talk to it over a
+- [ ] Fallback is a daemon: `sati serve` owns the DB and other processes talk to it over a
       local socket. This is large (a new transport behind `StorageAdapter`); tell the owner
       about the size before starting, per the global "keep effort proportional" rule.
 
 ### 10. pre-push hook and CI guard (review fix 1)
 
-- [ ] Add a `pre-push` hook running `brain guard --range origin/main...HEAD` (the `--range`
-      flag is new on `brain guard`).
+- [ ] Add a `pre-push` hook running `sati guard --range origin/main...HEAD` (the `--range`
+      flag is new on `sati guard`).
 - [ ] Add a GitHub Actions example (docs, and optionally `.github/workflows/`) running the same
       command, so `--no-verify` commits are still caught.
-- [ ] Add a Claude Code deny rule for `git commit --no-verify` in the settings `brain init`
+- [ ] Add a Claude Code deny rule for `git commit --no-verify` in the settings `sati init`
       writes.
 
 ### 11. `.gitattributes` `linguist-generated`
 
 - [ ] Change `ATTRIBUTE` in `packages/cli/src/hooks.ts` to
-      `.brain/**/*.json merge=brain linguist-generated`. `planGitAttributes` must then replace
+      `.sati/**/*.json merge=sati linguist-generated`. `planGitAttributes` must then replace
       the older line in place instead of appending a second one. Update
       `packages/cli/test/init.test.ts`.
 
-### 12. `brain handoff`
+### 12. `sati handoff`
 
 - [ ] A structured "where I stopped" note on a task: done so far, next step, open questions,
       files in flight. Store it on the task (or as a linked note; pick the simplest and record
@@ -167,19 +167,19 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
 
 ## Known gaps found along the way (not checklist items)
 
-- [ ] **Record-only `git commit -a` fails.** If only brain records changed, git says "nothing
+- [ ] **Record-only `git commit -a` fails.** If only sati records changed, git says "nothing
       to commit" before the pre-commit hook stages the snapshot. Commits that also change code
-      work. Workaround: `brain sync export && git add .brain` first. Possible fix: export on
-      CLI writes (like the MCP debounce), so `.brain/` is already dirty. Needs an owner
+      work. Workaround: `sati sync export && git add .sati` first. Possible fix: export on
+      CLI writes (like the MCP debounce), so `.sati/` is already dirty. Needs an owner
       decision. See progress.md "### Merge driver".
 - [ ] **`needsReview` is never cleared.** Set by the merge driver; no command clears it yet.
       The UI (Phase 4) or a `task update` flag could; record the choice.
-- [ ] **Merge driver found by name on PATH.** Hooks and the driver call `brain` by name. The
-      Security item "Hooks call the installed `brain` binary via an absolute path recorded at
+- [ ] **Merge driver found by name on PATH.** Hooks and the driver call `sati` by name. The
+      Security item "Hooks call the installed `sati` binary via an absolute path recorded at
       init" is open.
-- [ ] **This repo's own hooks and merge driver are not installed.** `brain init` does not
+- [ ] **This repo's own hooks and merge driver are not installed.** `sati init` does not
       re-run on an initialised project, so `.git/hooks` here predate the sync hooks and the
-      merge driver. Decide whether `brain init` (or `brain rules sync`) should upgrade them.
+      merge driver. Decide whether `sati init` (or `sati rules sync`) should upgrade them.
 - [ ] **Context staleness sees staged content only** (`git ls-files -s`): unstaged edits and
       untracked files do not mark an entry stale. Documented as a choice.
 - [ ] **Brief deferrals** (progress.md, Phase 2 section): "changes since my last session"
@@ -194,14 +194,14 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
 
 ## Owed by the owner (do not do these yourself)
 
-- [ ] Phase 2 gate: Claude Code and Codex each finish a real task using only brain tools (waived
+- [ ] Phase 2 gate: Claude Code and Codex each finish a real task using only sati tools (waived
       on 2026-11-03, still owed).
-- [ ] Product name (placeholder `brain` / `@scope/brain` stays until then), npm scope,
+- [ ] Product name (placeholder `sati` / `@kongpda/sati` stays until then), npm scope,
       two-factor and provenance publishing (Phase 0 items on PLAN lines 418–419).
 - [ ] `pele` licence check before Phase 4 uses it for Mermaid rendering.
 - [ ] First CI run: there is no GitHub remote yet, so `.github/workflows/ci.yml` has never run.
 
 ## After Phase 3
 
-Phase 4 (web UI), Phase 5 (hardening, `brain doctor`, v1.0) and Phase 6 (hosted) are untouched.
+Phase 4 (web UI), Phase 5 (hardening, `sati doctor`, v1.0) and Phase 6 (hosted) are untouched.
 Their checklists in `PLAN.md` are the task list; do not start them before the Phase 3 gate.

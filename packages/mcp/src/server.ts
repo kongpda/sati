@@ -1,7 +1,8 @@
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import {
   AcquireLockInput,
   acquireLock,
-  BrainError,
   BriefInput,
   buildBrief,
   CLI_NAME,
@@ -19,7 +20,7 @@ import {
   getContext,
   getProject,
   getRecord,
-  isBrainError,
+  isSatiError,
   ListTasksInput,
   listRecords,
   listTasks,
@@ -30,6 +31,7 @@ import {
   recordDecision,
   releaseLock,
   resolveId,
+  SatiError,
   SearchInput,
   type ServiceContext,
   search,
@@ -39,9 +41,7 @@ import {
   updateFeature,
   updateTask,
   WORKFLOW,
-} from "@brain/core";
-import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+} from "@sati/core";
 import { z } from "zod";
 
 /** Bumped with the published package; reported to clients on connect. */
@@ -56,9 +56,9 @@ function ok(value: unknown): CallToolResult {
 
 /** Domain errors become tool errors with a code and hint the agent can act on. */
 function fail(err: unknown): CallToolResult {
-  const e = isBrainError(err)
+  const e = isSatiError(err)
     ? err
-    : new BrainError("INTERNAL", err instanceof Error ? err.message : String(err));
+    : new SatiError("INTERNAL", err instanceof Error ? err.message : String(err));
   const error = { code: e.code, message: e.message, hint: e.hint ?? null, details: e.details };
   return { isError: true, content: [{ type: "text", text: JSON.stringify({ error }) }] };
 }

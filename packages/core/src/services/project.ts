@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BrainError } from "../domain/errors.js";
+import { SatiError } from "../domain/errors.js";
 import type { IdFactory } from "../domain/ids.js";
 import { ACTOR_KINDS, type Actor, Mode, type Project } from "../domain/schemas.js";
 import type { Clock } from "../ports/clock.js";
@@ -48,8 +48,8 @@ export async function initProject(
   return deps.store.write(async (w) => {
     const existing = await w.getProject();
     if (existing) {
-      throw new BrainError("CONFLICT", `This repository already has project "${existing.slug}".`, {
-        hint: "Run `brain doctor` to inspect it; init runs once per repository.",
+      throw new SatiError("CONFLICT", `This repository already has project "${existing.slug}".`, {
+        hint: "Run `sati doctor` to inspect it; init runs once per repository.",
       });
     }
     const at = nowIso(deps);
@@ -82,8 +82,8 @@ export async function initProject(
 export async function getProject(store: StorageAdapter): Promise<Project> {
   const project = await store.read((r) => r.getProject());
   if (!project) {
-    throw new BrainError("NOT_INITIALIZED", "No project in this database.", {
-      hint: "Run `brain init`.",
+    throw new SatiError("NOT_INITIALIZED", "No project in this database.", {
+      hint: "Run `sati init`.",
     });
   }
   return project;

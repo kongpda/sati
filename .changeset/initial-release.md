@@ -1,5 +1,5 @@
 ---
-"@scope/brain": patch
+"@kongpda/sati": patch
 ---
 
-First publish: `brain --version`.
+First publish: `sati --version`.

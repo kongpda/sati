@@ -11,8 +11,8 @@ import {
   listTasks,
   type ServiceContext,
   updateTask,
-} from "@brain/core";
-import { SqliteStore } from "@brain/store-sqlite";
+} from "@sati/core";
+import { SqliteStore } from "@sati/store-sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   afterWrites,
@@ -32,14 +32,14 @@ afterEach(async () => {
 });
 
 function tempDir(): string {
-  const d = mkdtempSync(join(tmpdir(), "brain-sync-"));
+  const d = mkdtempSync(join(tmpdir(), "sati-sync-"));
   dirs.push(d);
   return d;
 }
 
 /** One clone's DB. Clones of one repo share the project id from the committed config. */
 async function clone(projectId?: string): Promise<ServiceContext> {
-  const store = await SqliteStore.open(join(tempDir(), "brain.db"));
+  const store = await SqliteStore.open(join(tempDir(), "sati.db"));
   stores.push(store);
   const clock = fixedClock("2026-11-03T12:00:00.000Z");
   const base = createIdFactory();

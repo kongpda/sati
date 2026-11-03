@@ -1,4 +1,4 @@
-import { type Decision, getRecord, listRecords, recordDecision, resolveId } from "@brain/core";
+import { type Decision, getRecord, listRecords, recordDecision, resolveId } from "@sati/core";
 import { defineCommand } from "citty";
 import { id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
@@ -43,10 +43,7 @@ const ls = defineCommand({
           offset: int(args.offset, "offset"),
         }),
       (items: Decision[]) =>
-        rows(
-          items,
-          'No decisions. Record one with `brain decision record "title" --decision "…"`.',
-        ),
+        rows(items, 'No decisions. Record one with `sati decision record "title" --decision "…"`.'),
     ),
 });
 

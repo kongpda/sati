@@ -6,8 +6,8 @@ const wt = "/repo/.worktrees/feature-a";
 // The identity name is the actor's key: two sessions must differ, and the same session must
 // map back to the same actor every time it runs a command.
 describe("actorIdentity", () => {
-  it("BRAIN_ACTOR overrides everything", () => {
-    const id = actorIdentity({ env: { BRAIN_ACTOR: "ci-bot", CLAUDECODE: "1" }, worktree: wt });
+  it("SATI_ACTOR overrides everything", () => {
+    const id = actorIdentity({ env: { SATI_ACTOR: "ci-bot", CLAUDECODE: "1" }, worktree: wt });
     expect(id).toEqual({ name: "ci-bot", kind: "agent", tool: "claude-code", worktree: wt });
   });
 

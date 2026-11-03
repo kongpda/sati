@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BrainError } from "../domain/errors.js";
+import { SatiError } from "../domain/errors.js";
 import { normalizeLockPath, overlappingPaths } from "../domain/locks.js";
 import { LIMITS, LOCK_MODES, type Lock, TaskId } from "../domain/schemas.js";
 import type { StorageReader, StorageWriter } from "../ports/storage.js";
@@ -115,7 +115,7 @@ export async function acquireLock(ctx: ServiceContext, input: unknown): Promise<
     const first = conflicts[0];
     if (first) {
       const pairs = first.paths.map(([mine, theirs]) => `${mine} overlaps ${theirs}`).join("; ");
-      throw new BrainError(
+      throw new SatiError(
         "CONFLICT",
         `${pairs}, locked (${first.mode}) by ${first.holderName} until ${first.leaseUntil}.`,
         {
@@ -154,7 +154,7 @@ export async function releaseLock(
     const lock = await mustGet(w, ctx, "lock", id);
     if (lock.actorId !== ctx.actorId && isLive(lock, nowIso(ctx)) && !force) {
       const name = await actorName(w, lock.actorId);
-      throw new BrainError("CONFLICT", `Lock ${id} is held by ${name} until ${lock.leaseUntil}.`, {
+      throw new SatiError("CONFLICT", `Lock ${id} is held by ${name} until ${lock.leaseUntil}.`, {
         hint: "Only the holder releases a lock. Use --force to override; it is logged.",
         details: { holder: lock.actorId, holderName: name, leaseUntil: lock.leaseUntil },
       });

@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { CONFIG_DIR } from "@brain/core";
+import { CONFIG_DIR } from "@sati/core";
 import { defineCommand } from "citty";
 import { openRuntime, printError } from "../runtime.js";
 
@@ -12,7 +12,7 @@ export default defineCommand({
     try {
       const { ctx, project, location } = await openRuntime();
       // Loaded here so the MCP SDK never slows down the other commands.
-      const { serveStdio } = await import("@brain/mcp");
+      const { serveStdio } = await import("@sati/mcp");
       if (project.mode !== "git") {
         try {
           await serveStdio(ctx);
@@ -21,8 +21,8 @@ export default defineCommand({
         }
         return;
       }
-      // Git mode keeps .brain/ current while the agent works; pre-commit exports again anyway.
-      const { afterWrites, exportSnapshot } = await import("@brain/sync");
+      // Git mode keeps .sati/ current while the agent works; pre-commit exports again anyway.
+      const { afterWrites, exportSnapshot } = await import("@sati/sync");
       const dir = join(location.root, CONFIG_DIR);
       const synced = afterWrites(
         ctx.store,

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   acquireLock,
-  BrainError,
   buildBrief,
   claimTask,
   completeTask,
@@ -9,6 +8,7 @@ import {
   ensureActor,
   listLocks,
   releaseLock,
+  SatiError,
   type ServiceContext,
   shortHandle,
 } from "../src/index.js";
@@ -19,14 +19,14 @@ async function otherActor(ctx: ServiceContext): Promise<ServiceContext> {
   return { ...ctx, actorId: actor.id };
 }
 
-async function conflictOf(p: Promise<unknown>): Promise<BrainError> {
+async function conflictOf(p: Promise<unknown>): Promise<SatiError> {
   const err = await p.then(
     () => undefined,
     (e: unknown) => e,
   );
-  expect(err).toBeInstanceOf(BrainError);
-  expect((err as BrainError).code).toBe("CONFLICT");
-  return err as BrainError;
+  expect(err).toBeInstanceOf(SatiError);
+  expect((err as SatiError).code).toBe("CONFLICT");
+  return err as SatiError;
 }
 
 describe("acquireLock", () => {

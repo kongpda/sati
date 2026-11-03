@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BrainError } from "../domain/errors.js";
+import { SatiError } from "../domain/errors.js";
 import { ENTITY_SCHEMAS, type EntityMap, LIMITS } from "../domain/schemas.js";
 import { listAll, logActivity, parseInput, type ServiceContext } from "./context.js";
 
@@ -14,7 +14,7 @@ export const SNAPSHOT_ENTITIES = [
 ] as const;
 export type SnapshotEntity = (typeof SNAPSHOT_ENTITIES)[number];
 
-/** Folder of each entity under `.brain/`. */
+/** Folder of each entity under `.sati/`. */
 export const SNAPSHOT_DIRS: Record<SnapshotEntity, string> = {
   milestone: "milestones",
   feature: "features",
@@ -90,7 +90,7 @@ export async function importRecords(ctx: ServiceContext, input: unknown): Promis
     }
   }
   if (bad.length > 0) {
-    throw new BrainError("VALIDATION", `Invalid snapshot records: ${bad.slice(0, 3).join("; ")}`, {
+    throw new SatiError("VALIDATION", `Invalid snapshot records: ${bad.slice(0, 3).join("; ")}`, {
       hint: "Nothing was imported. Fix or restore these files from git.",
       details: { invalid: bad },
     });

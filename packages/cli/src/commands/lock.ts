@@ -6,7 +6,7 @@ import {
   releaseLock,
   resolveId,
   shortHandle,
-} from "@brain/core";
+} from "@sati/core";
 import { defineCommand } from "citty";
 import { id, json } from "../args.js";
 import { execute, int, list, ref } from "../runtime.js";
@@ -75,7 +75,7 @@ const ls = defineCommand({
       (locks: Lock[]) =>
         locks.length
           ? locks.map(line).join("\n")
-          : 'No locks. Lock paths with `brain lock acquire "src/area/**"`.',
+          : 'No locks. Lock paths with `sati lock acquire "src/area/**"`.',
     ),
 });
 

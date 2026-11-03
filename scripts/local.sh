@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Builds the repo, checks it, and puts the local `brain` binary on PATH.
+# Builds the repo, checks it, and puts the local `sati` binary on PATH.
 #
 #   pnpm local            install, build, lint, typecheck, test, link, smoke test
 #   pnpm local --fast     install, build, link, smoke test (skips the checks)
 #
 # The full log of every step goes to .logs/local-<time>.log; the terminal shows one line per step.
-# `brain` is a symlink to packages/cli/dist/index.mjs, so later builds need no relinking.
+# `sati` is a symlink to packages/cli/dist/index.mjs, so later builds need no relinking.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BIN_DIR="${BRAIN_BIN_DIR:-$HOME/.local/bin}"
+BIN_DIR="${SATI_BIN_DIR:-$HOME/.local/bin}"
 ENTRY="$ROOT/packages/cli/dist/index.mjs"
 FAST=false
 
@@ -59,20 +59,20 @@ step() {
 
 link() {
   mkdir -p "$BIN_DIR"
-  ln -sfn "$ENTRY" "$BIN_DIR/brain"
-  ls -l "$BIN_DIR/brain"
+  ln -sfn "$ENTRY" "$BIN_DIR/sati"
+  ls -l "$BIN_DIR/sati"
 }
 
 smoke() {
   local found
-  found="$(command -v brain || true)"
-  if [ "$found" != "$BIN_DIR/brain" ]; then
-    echo "brain on PATH is '${found:-nothing}', expected $BIN_DIR/brain."
-    echo "Add $BIN_DIR to PATH, ahead of any other brain."
+  found="$(command -v sati || true)"
+  if [ "$found" != "$BIN_DIR/sati" ]; then
+    echo "sati on PATH is '${found:-nothing}', expected $BIN_DIR/sati."
+    echo "Add $BIN_DIR to PATH, ahead of any other sati."
     return 1
   fi
-  brain --version
-  brain --help >/dev/null
+  sati --version
+  sati --help >/dev/null
 }
 
 step "install" pnpm install --frozen-lockfile
@@ -82,8 +82,8 @@ if [ "$FAST" = false ]; then
   step "typecheck" pnpm typecheck
   step "test" pnpm test
 fi
-step "link brain" link
+step "link sati" link
 step "smoke test" smoke
 
-printf '\nDone in %ss. brain %s\nFull log: %s\n' \
-  "$((SECONDS - STARTED))" "$(brain --version)" "$LOG"
+printf '\nDone in %ss. sati %s\nFull log: %s\n' \
+  "$((SECONDS - STARTED))" "$(sati --version)" "$LOG"

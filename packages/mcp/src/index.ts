@@ -1,5 +1,5 @@
-import type { ServiceContext } from "@brain/core";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import type { ServiceContext } from "@sati/core";
 import { createServer } from "./server.js";
 
 export { createServer } from "./server.js";

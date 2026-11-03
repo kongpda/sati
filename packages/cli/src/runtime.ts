@@ -4,20 +4,20 @@ import { userInfo } from "node:os";
 import {
   type Actor,
   actorIdentity,
-  BrainError,
   createIdFactory,
   ensureActor,
   getProject,
-  isBrainError,
+  isSatiError,
   type Project,
   type RepoFile,
   type RepoIndex,
   resolveId,
+  SatiError,
   type ServiceContext,
   type StoredEntity,
   systemClock,
-} from "@brain/core";
-import { type DbLocation, locateDb, SqliteStore } from "@brain/store-sqlite";
+} from "@sati/core";
+import { type DbLocation, locateDb, SqliteStore } from "@sati/store-sqlite";
 
 export interface Runtime {
   ctx: ServiceContext;
@@ -92,8 +92,8 @@ export function gitRepoIndex(root: string): RepoIndex {
 export async function openRuntime(cwd: string = process.cwd()): Promise<Runtime> {
   const location = locateDb(cwd);
   if (!existsSync(location.path)) {
-    throw new BrainError("NOT_INITIALIZED", "This project has no brain yet.", {
-      hint: "Run `brain init`.",
+    throw new SatiError("NOT_INITIALIZED", "This project has no sati yet.", {
+      hint: "Run `sati init`.",
     });
   }
   const store = await SqliteStore.open(location.path);
@@ -125,7 +125,7 @@ export function int(value: string | undefined, flag: string): number | undefined
   if (value === undefined) return undefined;
   const n = Number(value);
   if (!Number.isInteger(n)) {
-    throw new BrainError("USAGE", `--${flag} must be a whole number, got "${value}".`);
+    throw new SatiError("USAGE", `--${flag} must be a whole number, got "${value}".`);
   }
   return n;
 }
@@ -148,10 +148,10 @@ export async function refs(
 }
 
 export function printError(err: unknown, json: boolean): number {
-  const e = isBrainError(err)
+  const e = isSatiError(err)
     ? err
-    : new BrainError("INTERNAL", err instanceof Error ? err.message : String(err), {
-        hint: "This is a bug in brain. Please report it with the command you ran.",
+    : new SatiError("INTERNAL", err instanceof Error ? err.message : String(err), {
+        hint: "This is a bug in sati. Please report it with the command you ran.",
       });
   if (json) {
     const error = { code: e.code, message: e.message, hint: e.hint ?? null, details: e.details };
@@ -159,7 +159,7 @@ export function printError(err: unknown, json: boolean): number {
   } else {
     process.stderr.write(`error: ${e.message}\n`);
     if (e.hint) process.stderr.write(`hint: ${e.hint}\n`);
-    if (!isBrainError(err) && err instanceof Error && err.stack && process.env.BRAIN_DEBUG) {
+    if (!isSatiError(err) && err instanceof Error && err.stack && process.env.SATI_DEBUG) {
       process.stderr.write(`${err.stack}\n`);
     }
   }

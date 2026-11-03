@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BrainError } from "../domain/errors.js";
+import { SatiError } from "../domain/errors.js";
 import { ID_PREFIXES, parseHandle, parseId, shortHandle } from "../domain/ids.js";
 import type { EntityMap, StoredEntity } from "../domain/schemas.js";
 import { FEATURE_STATUSES, MILESTONE_STATUSES, TASK_STATUSES } from "../domain/status.js";
@@ -60,7 +60,7 @@ export async function resolveId(
   const input = ref.trim();
   const prefix = ID_PREFIXES[entity];
   const wrongKind = () =>
-    new BrainError("VALIDATION", `"${input}" is not a ${entity} id.`, {
+    new SatiError("VALIDATION", `"${input}" is not a ${entity} id.`, {
       hint: `${entity} ids look like ${prefix}_8f3k2a.`,
     });
   const full = parseId(input);
@@ -78,12 +78,12 @@ export async function resolveId(
   );
   const [only, ...rest] = matches;
   if (!only) {
-    throw new BrainError("NOT_FOUND", `No ${entity} matches ${input}.`, {
-      hint: `List them with \`brain ${entity} list\`.`,
+    throw new SatiError("NOT_FOUND", `No ${entity} matches ${input}.`, {
+      hint: `List them with \`sati ${entity} list\`.`,
     });
   }
   if (rest.length > 0) {
-    throw new BrainError("AMBIGUOUS", `${input} matches ${matches.length} ${entity} records.`, {
+    throw new SatiError("AMBIGUOUS", `${input} matches ${matches.length} ${entity} records.`, {
       hint: "Use more characters of the id, or the full id.",
       details: { candidates: matches.map((m) => ({ id: m.id, handle: shortHandle(m.id) })) },
     });

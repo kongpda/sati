@@ -5,7 +5,7 @@ import {
   listRecords,
   resolveId,
   updateFeature,
-} from "@brain/core";
+} from "@sati/core";
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
@@ -65,7 +65,7 @@ const ls = defineCommand({
           offset: int(args.offset, "offset"),
         }),
       (items: Feature[]) =>
-        rows(items, 'No features. Create one with `brain feature create "title"`.'),
+        rows(items, 'No features. Create one with `sati feature create "title"`.'),
     ),
 });
 

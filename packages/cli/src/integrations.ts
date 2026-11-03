@@ -8,7 +8,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { delimiter, dirname, join } from "node:path";
-import { BrainError, CLI_NAME, type Mode, PACKAGE_NAME, WORKFLOW } from "@brain/core";
+import { CLI_NAME, type Mode, PACKAGE_NAME, SatiError, WORKFLOW } from "@sati/core";
 import { z } from "zod";
 
 /** What init or `rules sync` does to one file. `skip`: stealth mode leaves existing files alone. */
@@ -76,7 +76,7 @@ function parseJson(path: string, existing: string | undefined): Record<string, u
   } catch {
     // Reported below.
   }
-  throw new BrainError("VALIDATION", `Cannot update ${path}: it is not a valid JSON object.`, {
+  throw new SatiError("VALIDATION", `Cannot update ${path}: it is not a valid JSON object.`, {
     hint: "Fix or remove the file, then run again.",
   });
 }
@@ -130,7 +130,7 @@ const claudeSettings = (path: string) => (existing: string | undefined) => {
   const config = parseJson(path, existing);
   const parsed = HooksSetting.safeParse(config.hooks ?? {});
   if (!parsed.success) {
-    throw new BrainError(
+    throw new SatiError(
       "VALIDATION",
       `Cannot add hooks to ${path}: its "hooks" setting is malformed.`,
       {
@@ -215,7 +215,7 @@ function targets(read: ReadFile): Target[] {
 }
 
 /**
- * Every agent file `brain init` and `brain rules sync` manage for these tools, with the content
+ * Every agent file `sati init` and `sati rules sync` manage for these tools, with the content
  * each should have. Pure: the caller reads and writes. In stealth mode nothing tracked may change,
  * so the rules go to `CLAUDE.local.md` instead of AGENTS.md and CLAUDE.md, existing files are
  * skipped unless `isPrivate` says git ignores them, and the caller git-ignores new files.
@@ -275,7 +275,7 @@ export function onPath(name: string, env: NodeJS.ProcessEnv = process.env): bool
 }
 
 /**
- * The MCP configs and hooks start `brain` by name, so they fail quietly when it is not on PATH
+ * The MCP configs and hooks start `sati` by name, so they fail quietly when it is not on PATH
  * (for example after `npx ... init`). Warns on stderr, leaving stdout and `--json` output alone.
  */
 export function warnIfNotOnPath(tools: readonly string[]): void {
@@ -298,7 +298,7 @@ export function fileReader(root: string): ReadFile {
   };
 }
 
-/** `.git/info/exclude` next to the git-mode DB (`<git common dir>/brain/brain.db`). */
+/** `.git/info/exclude` next to the git-mode DB (`<git common dir>/sati/sati.db`). */
 export const excludeFileFor = (db: string) => join(dirname(dirname(db)), "info", "exclude");
 
 /** Root-anchored paths (`/CLAUDE.local.md`) listed in a git exclude file. */

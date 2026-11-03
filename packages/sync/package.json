@@ -1,5 +1,5 @@
 {
-  "name": "@brain/sync",
+  "name": "@sati/sync",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,10 +15,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@brain/core": "workspace:*"
+    "@sati/core": "workspace:*"
   },
   "devDependencies": {
-    "@brain/store-sqlite": "workspace:*",
+    "@sati/store-sqlite": "workspace:*",
     "fast-check": "4.10.2"
   }
 }

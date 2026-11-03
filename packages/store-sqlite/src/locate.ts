@@ -2,13 +2,13 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { BrainConfigSchema, BrainError, CONFIG_DIR, CONFIG_FILE } from "@brain/core";
+import { CONFIG_DIR, CONFIG_FILE, SatiConfigSchema, SatiError } from "@sati/core";
 
 export interface DbLocation {
   /** Absolute path of the live SQLite file. */
   path: string;
   mode: "git" | "standalone";
-  /** Worktree root (git) or the folder holding `.brain/` (standalone). */
+  /** Worktree root (git) or the folder holding `.sati/` (standalone). */
   root: string;
 }
 
@@ -20,9 +20,9 @@ export interface LocateOptions {
 const cache = new Map<string, DbLocation>();
 
 /**
- * Finds the live DB for `cwd`. Inside git it is `<git-common-dir>/brain/brain.db`, shared by
- * every worktree. Outside git it walks up to a standalone `.brain/brain.config.json` and uses
- * `~/.brain/projects/<projectId>.db`. Cached per process.
+ * Finds the live DB for `cwd`. Inside git it is `<git-common-dir>/sati/sati.db`, shared by
+ * every worktree. Outside git it walks up to a standalone `.sati/sati.config.json` and uses
+ * `~/.sati/projects/<projectId>.db`. Cached per process.
  */
 export function locateDb(cwd: string, opts: LocateOptions = {}): DbLocation {
   const key = `${resolve(cwd)}\0${opts.home ?? ""}`;
@@ -30,17 +30,17 @@ export function locateDb(cwd: string, opts: LocateOptions = {}): DbLocation {
   if (hit) return hit;
   const found = fromGit(cwd) ?? fromStandalone(cwd, opts.home ?? homedir());
   if (!found) {
-    throw new BrainError("NOT_INITIALIZED", "No git repository or standalone project found.", {
-      hint: "Run `brain init` in a git repository, or `brain init --mode standalone`.",
+    throw new SatiError("NOT_INITIALIZED", "No git repository or standalone project found.", {
+      hint: "Run `sati init` in a git repository, or `sati init --mode standalone`.",
     });
   }
   cache.set(key, found);
   return found;
 }
 
-/** Where a standalone project's DB lives: `~/.brain/projects/<projectId>.db`. */
+/** Where a standalone project's DB lives: `~/.sati/projects/<projectId>.db`. */
 export function standaloneDbPath(home: string, projectId: string): string {
-  return join(home, ".brain", "projects", `${projectId}.db`);
+  return join(home, ".sati", "projects", `${projectId}.db`);
 }
 
 /** For tests only. */
@@ -62,7 +62,7 @@ function fromGit(cwd: string): DbLocation | undefined {
   const [top, common] = out.trim().split(/\r?\n/);
   if (!top || !common) return undefined;
   // `--git-common-dir` may be relative to cwd.
-  return { path: join(resolve(cwd, common), "brain", "brain.db"), mode: "git", root: top };
+  return { path: join(resolve(cwd, common), "sati", "sati.db"), mode: "git", root: top };
 }
 
 function fromStandalone(cwd: string, home: string): DbLocation | undefined {
@@ -70,9 +70,9 @@ function fromStandalone(cwd: string, home: string): DbLocation | undefined {
   for (;;) {
     const file = join(dir, CONFIG_DIR, CONFIG_FILE);
     if (existsSync(file)) {
-      const parsed = BrainConfigSchema.safeParse(readJson(file));
+      const parsed = SatiConfigSchema.safeParse(readJson(file));
       if (!parsed.success) {
-        throw new BrainError("VALIDATION", `Invalid ${file}.`, {
+        throw new SatiError("VALIDATION", `Invalid ${file}.`, {
           details: { issues: parsed.error.issues },
         });
       }
@@ -89,7 +89,7 @@ function readJson(file: string): unknown {
   try {
     return JSON.parse(readFileSync(file, "utf8"));
   } catch (e) {
-    throw new BrainError("VALIDATION", `${file} is not valid JSON.`, {
+    throw new SatiError("VALIDATION", `${file} is not valid JSON.`, {
       details: { cause: String(e) },
     });
   }

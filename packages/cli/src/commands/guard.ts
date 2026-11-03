@@ -1,28 +1,28 @@
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import {
-  BrainConfigSchema,
-  BrainError,
   CONFIG_DIR,
   CONFIG_FILE,
   checkChanges,
   ERROR_EXIT_CODES,
   type GuardResult,
   recordGuard,
-} from "@brain/core";
+  SatiConfigSchema,
+  SatiError,
+} from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { type Change, stagedChanges } from "../git.js";
 import { closeRuntime, list, openRuntime, printError, type Runtime } from "../runtime.js";
 
-/** `BRAIN_GUARD=off` lets one blocked run through; the override is logged. */
-const overridden = () => process.env.BRAIN_GUARD === "off";
+/** `SATI_GUARD=off` lets one blocked run through; the override is logged. */
+const overridden = () => process.env.SATI_GUARD === "off";
 
 function maxRemovalRatio(root: string): number | undefined {
   const file = join(root, CONFIG_DIR, CONFIG_FILE);
   if (!existsSync(file)) return undefined;
-  const parsed = BrainConfigSchema.safeParse(JSON.parse(readFileSync(file, "utf8")));
-  if (!parsed.success) throw new BrainError("VALIDATION", `Invalid ${file}.`);
+  const parsed = SatiConfigSchema.safeParse(JSON.parse(readFileSync(file, "utf8")));
+  if (!parsed.success) throw new SatiError("VALIDATION", `Invalid ${file}.`);
   return parsed.data.guard?.maxRemovalRatio;
 }
 
@@ -52,8 +52,8 @@ function render(r: GuardResult): string {
   if (r.verdict === "blocked") {
     lines.push(
       overridden()
-        ? "Blocked changes let through by BRAIN_GUARD=off; the override is logged."
-        : "Record a decision on the feature (`brain decision record --feature <id>`), ask the lock holder, or override once with BRAIN_GUARD=off (logged).",
+        ? "Blocked changes let through by SATI_GUARD=off; the override is logged."
+        : "Record a decision on the feature (`sati decision record --feature <id>`), ask the lock holder, or override once with SATI_GUARD=off (logged).",
     );
   }
   return lines.join("\n");
@@ -111,14 +111,14 @@ export default defineCommand({
     const asJson = args.json ?? false;
     try {
       if (!args.staged && !args.paths) {
-        throw new BrainError("USAGE", "Say what to check.", {
-          hint: "Use `brain guard --staged`, or `brain guard --paths src/a.ts`.",
+        throw new SatiError("USAGE", "Say what to check.", {
+          hint: "Use `sati guard --staged`, or `sati guard --paths src/a.ts`.",
         });
       }
       const rt = await openRuntime();
       if (args.staged && rt.location.mode !== "git") {
-        throw new BrainError("USAGE", "`--staged` needs a git repository.", {
-          hint: "Use `brain guard --paths <file>` instead.",
+        throw new SatiError("USAGE", "`--staged` needs a git repository.", {
+          hint: "Use `sati guard --paths <file>` instead.",
         });
       }
       const cwd = process.cwd();

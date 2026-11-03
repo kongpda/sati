@@ -10,15 +10,15 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import {
-  BrainError,
   type ImportRecordsInput,
   type ImportResult,
   importRecords,
+  SatiError,
   type ServiceContext,
   SNAPSHOT_DIRS,
   SNAPSHOT_ENTITIES,
   snapshotRecords,
-} from "@brain/core";
+} from "@sati/core";
 import { type SecretFinding, scanRecord } from "./secrets.js";
 
 /** A record file larger than this cannot be valid (bodies are capped at 100 KB). */
@@ -59,7 +59,7 @@ export interface ExportResult {
 }
 
 /**
- * Writes one file per record to `dir` (the `.brain/` folder), tombstones included. Only files
+ * Writes one file per record to `dir` (the `.sati/` folder), tombstones included. Only files
  * whose content changed are rewritten. Files with no matching record are left alone: they may be
  * a teammate's records that are not imported yet.
  */
@@ -95,11 +95,11 @@ function refuseSecrets(found: SecretFinding[]): void {
     .slice(0, MAX_LISTED)
     .map((f) => `  ${f.entity} ${f.id}, field ${f.field}: ${f.kind}`);
   if (found.length > MAX_LISTED) lines.push(`  and ${found.length - MAX_LISTED} more`);
-  throw new BrainError(
+  throw new SatiError(
     "VALIDATION",
     `Export refused: ${found.length} record field(s) look like they contain a secret.\n${lines.join("\n")}`,
     {
-      hint: "Remove the secret from each field listed (rotate it if it was real), then export again. Nothing was written to .brain/.",
+      hint: "Remove the secret from each field listed (rotate it if it was real), then export again. Nothing was written to .sati/.",
       details: found,
     },
   );
@@ -116,7 +116,7 @@ export function readSnapshot(dir: string): ImportRecordsInput {
       const source = join(SNAPSHOT_DIRS[entity], name);
       const file = join(folder, name);
       const fail = (why: string) => {
-        throw new BrainError("VALIDATION", `Invalid snapshot file ${source}: ${why}`, {
+        throw new SatiError("VALIDATION", `Invalid snapshot file ${source}: ${why}`, {
           hint: "Nothing was imported. Fix or restore the file from git.",
         });
       };

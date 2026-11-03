@@ -9,7 +9,7 @@ import {
 const reader = (files: Record<string, string>) => (path: string) => files[path];
 const byPath = (plan: PlannedFile[]) => Object.fromEntries(plan.map((f) => [f.path, f]));
 
-// These files belong to the user. brain may only own the text between its markers
+// These files belong to the user. sati may only own the text between its markers
 // and its own MCP entry; everything else must survive every run unchanged.
 describe("agent file planning", () => {
   it("replaces only the managed block, keeping the user's text around it", () => {
@@ -29,22 +29,22 @@ describe("agent file planning", () => {
     const plan = byPath(planIntegrations(["claude-code"], "git", reader({})));
     expect(Object.keys(plan).sort()).toEqual([
       ".claude/settings.json",
-      ".claude/skills/brain/SKILL.md",
+      ".claude/skills/sati/SKILL.md",
       ".mcp.json",
       "AGENTS.md",
       "CLAUDE.md",
     ]);
-    expect(plan[".claude/skills/brain/SKILL.md"]?.content).toMatch(
-      /^---\nname: brain\ndescription: /,
+    expect(plan[".claude/skills/sati/SKILL.md"]?.content).toMatch(
+      /^---\nname: sati\ndescription: /,
     );
     expect(plan["CLAUDE.md"]?.content).toBe("@AGENTS.md\n");
     expect(JSON.parse(plan[".mcp.json"]?.content ?? "")).toEqual({
-      mcpServers: { brain: { command: "brain", args: ["mcp"] } },
+      mcpServers: { sati: { command: "sati", args: ["mcp"] } },
     });
   });
 
-  it("merges into existing MCP configs and leaves a user's own brain entry alone", () => {
-    const mine = { mcpServers: { brain: { command: "npx", args: ["@scope/brain", "mcp"] } } };
+  it("merges into existing MCP configs and leaves a user's own sati entry alone", () => {
+    const mine = { mcpServers: { sati: { command: "npx", args: ["@kongpda/sati", "mcp"] } } };
     const other = { mcpServers: { db: { command: "db-mcp" } }, theme: "dark" };
     const plan = byPath(
       planIntegrations(
@@ -59,13 +59,13 @@ describe("agent file planning", () => {
     );
     expect(plan[".mcp.json"]?.action).toBe("keep");
     expect(JSON.parse(plan[".cursor/mcp.json"]?.content ?? "")).toEqual({
-      mcpServers: { db: { command: "db-mcp" }, brain: { command: "brain", args: ["mcp"] } },
+      mcpServers: { db: { command: "db-mcp" }, sati: { command: "sati", args: ["mcp"] } },
       theme: "dark",
     });
     expect(plan[".codex/config.toml"]?.content).toBe(
-      'model = "o5"\n\n[mcp_servers.brain]\ncommand = "brain"\nargs = ["mcp"]\n',
+      'model = "o5"\n\n[mcp_servers.sati]\ncommand = "sati"\nargs = ["mcp"]\n',
     );
-    expect(plan[".cursor/rules/brain.mdc"]?.content).toMatch(/^---\n.*\nalwaysApply: true\n---\n/);
+    expect(plan[".cursor/rules/sati.mdc"]?.content).toMatch(/^---\n.*\nalwaysApply: true\n---\n/);
   });
 
   // Hooks are how the brief and nudge run without the agent remembering to; the user's own
@@ -86,27 +86,27 @@ describe("agent file planning", () => {
     expect(settings.permissions).toEqual(mine.permissions);
     expect(
       settings.hooks.Stop.map((g: { hooks: { command: string }[] }) => g.hooks[0]?.command),
-    ).toEqual(["say done", "brain nudge"]);
+    ).toEqual(["say done", "sati nudge"]);
     expect(settings.hooks.SessionStart).toEqual([
       {
         matcher: "startup|clear",
-        hooks: [{ type: "command", command: "brain brief --format=agent" }],
+        hooks: [{ type: "command", command: "sati brief --format=agent" }],
       },
       {
         matcher: "resume|compact",
-        hooks: [{ type: "command", command: "brain brief --format=short" }],
+        hooks: [{ type: "command", command: "sati brief --format=short" }],
       },
     ]); // The guard runs before every file edit.
     expect(settings.hooks.PreToolUse).toEqual([
       {
         matcher: "Edit|MultiEdit|Write|NotebookEdit",
-        hooks: [{ type: "command", command: "brain guard --hook" }],
+        hooks: [{ type: "command", command: "sati guard --hook" }],
       },
     ]);
   });
 
   it("refuses to merge into a malformed hooks setting instead of crashing", () => {
-    const bad = JSON.stringify({ hooks: { Stop: "brain nudge" } });
+    const bad = JSON.stringify({ hooks: { Stop: "sati nudge" } });
     expect(() =>
       planIntegrations(["claude-code"], "git", reader({ ".claude/settings.json": bad })),
     ).toThrow(/"hooks" setting is malformed/);
@@ -146,7 +146,7 @@ describe("agent file planning", () => {
       ["CLAUDE.local.md", "create"],
       [".mcp.json", "create"],
       [".claude/settings.local.json", "create"],
-      [".claude/skills/brain/SKILL.md", "create"],
+      [".claude/skills/sati/SKILL.md", "create"],
       ["GEMINI.md", "skip"],
       [".gemini/settings.json", "create"],
     ]);
@@ -157,8 +157,8 @@ describe("agent file planning", () => {
     const plan = planIntegrations(
       ["kiro"],
       "stealth",
-      reader({ ".kiro/steering/brain.md": "stale" }),
-      (p) => p === ".kiro/steering/brain.md",
+      reader({ ".kiro/steering/sati.md": "stale" }),
+      (p) => p === ".kiro/steering/sati.md",
     );
     expect(plan[0]).toMatchObject({ action: "update" });
   });

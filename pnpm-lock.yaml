@@ -51,16 +51,16 @@ importers:
         specifier: 4.0.8
         version: 4.0.8
     devDependencies:
-      '@brain/core':
+      '@sati/core':
         specifier: workspace:*
         version: link:../core
-      '@brain/mcp':
+      '@sati/mcp':
         specifier: workspace:*
         version: link:../mcp
-      '@brain/store-sqlite':
+      '@sati/store-sqlite':
         specifier: workspace:*
         version: link:../store-sqlite
-      '@brain/sync':
+      '@sati/sync':
         specifier: workspace:*
         version: link:../sync
       drizzle-orm:
@@ -91,23 +91,23 @@ importers:
 
   packages/mcp:
     dependencies:
-      '@brain/core':
-        specifier: workspace:*
-        version: link:../core
       '@modelcontextprotocol/sdk':
         specifier: 1.32.2
         version: 1.32.2(zod@4.6.7)
+      '@sati/core':
+        specifier: workspace:*
+        version: link:../core
       zod:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
-      '@brain/store-sqlite':
+      '@sati/store-sqlite':
         specifier: workspace:*
         version: link:../store-sqlite
 
   packages/store-sqlite:
     dependencies:
-      '@brain/core':
+      '@sati/core':
         specifier: workspace:*
         version: link:../core
       better-sqlite3:
@@ -126,11 +126,11 @@ importers:
 
   packages/sync:
     dependencies:
-      '@brain/core':
+      '@sati/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
-      '@brain/store-sqlite':
+      '@sati/store-sqlite':
         specifier: workspace:*
         version: link:../store-sqlite
       fast-check:

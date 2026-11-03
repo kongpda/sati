@@ -8,7 +8,7 @@ import {
   type ServiceContext,
   type Task,
   updateTask,
-} from "@brain/core";
+} from "@sati/core";
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
@@ -97,7 +97,7 @@ const ls = defineCommand({
           limit: int(args.limit, "limit"),
           offset: int(args.offset, "offset"),
         }),
-      (tasks: Task[]) => rows(tasks, 'No tasks. Create one with `brain task create "title"`.'),
+      (tasks: Task[]) => rows(tasks, 'No tasks. Create one with `sati task create "title"`.'),
     ),
 });
 

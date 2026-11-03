@@ -1,17 +1,17 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { CLI_NAME } from "@brain/core";
-import { mergeRecord, parseRecord, stableJson } from "@brain/sync";
+import { CLI_NAME } from "@sati/core";
+import { mergeRecord, parseRecord, stableJson } from "@sati/sync";
 import { defineCommand } from "citty";
 
 /**
- * Git merge driver for `.brain/**\/*.json` (`<cli> merge-driver %O %A %B`). Writes the merged
+ * Git merge driver for `.sati/**\/*.json` (`<cli> merge-driver %O %A %B`). Writes the merged
  * record over `%A`. Conflicts never fail the merge: they flag the record `needsReview`. Only a
  * file that is not JSON exits 1, which leaves git's normal conflict in place.
  */
 export default defineCommand({
   meta: {
     name: "merge-driver",
-    description: "Git merge driver for .brain/ records (set up by init)",
+    description: "Git merge driver for .sati/ records (set up by init)",
   },
   args: {
     base: { type: "positional", required: true, description: "%O: the common ancestor" },

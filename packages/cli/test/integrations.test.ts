@@ -68,6 +68,20 @@ describe("agent file planning", () => {
     expect(plan[".cursor/rules/sati.mdc"]?.content).toMatch(/^---\n.*\nalwaysApply: true\n---\n/);
   });
 
+  // A merge that reindents someone's config turns one added entry into a whole-file diff.
+  it("keeps the indent of an existing JSON config", () => {
+    const other = { mcpServers: { db: { command: "db-mcp" } } };
+    const files = { ".mcp.json": JSON.stringify(other, null, 4), ".cursor/mcp.json": "{}" };
+    const plan = byPath(planIntegrations(["claude-code", "cursor"], "git", reader(files)));
+    const merged = {
+      mcpServers: { ...other.mcpServers, sati: { command: "sati", args: ["mcp"] } },
+    };
+    expect(plan[".mcp.json"]?.content).toBe(`${JSON.stringify(merged, null, 4)}\n`);
+    expect(plan[".cursor/mcp.json"]?.content).toBe(
+      `${JSON.stringify({ mcpServers: { sati: { command: "sati", args: ["mcp"] } } }, null, 2)}\n`,
+    );
+  });
+
   // Hooks are how the brief and nudge run without the agent remembering to; the user's own
   // hooks and settings must survive.
   it("adds the SessionStart, PreToolUse and Stop hooks to Claude Code settings, keeping the user's", () => {

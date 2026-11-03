@@ -81,13 +81,20 @@ function parseJson(path: string, existing: string | undefined): Record<string, u
   });
 }
 
+/** Writes JSON with the indent the file already uses (2 spaces for a new file), so a merge does
+ * not reformat every line of someone else's config. */
+function jsonText(value: unknown, existing: string | undefined): string {
+  const indent = existing?.match(/^[{[]\s*\n([ \t]+)\S/)?.[1] ?? 2;
+  return `${JSON.stringify(value, null, indent)}\n`;
+}
+
 /** Adds our server to a JSON `mcpServers` map, keeping an entry the user already set up. */
 const mcpJson = (path: string) => (existing: string | undefined) => {
   const config = parseJson(path, existing);
   const servers = (config.mcpServers ?? {}) as Record<string, unknown>;
   if (servers[CLI_NAME] !== undefined) return existing ?? "";
   config.mcpServers = { ...servers, [CLI_NAME]: { command: CLI_NAME, args: ["mcp"] } };
-  return `${JSON.stringify(config, null, 2)}\n`;
+  return jsonText(config, existing);
 };
 
 interface HookGroup {
@@ -151,7 +158,7 @@ const claudeSettings = (path: string) => (existing: string | undefined) => {
     }
   }
   if (!changed) return existing ?? "";
-  return `${JSON.stringify({ ...config, hooks }, null, 2)}\n`;
+  return jsonText({ ...config, hooks }, existing);
 };
 
 const SKILL = `---

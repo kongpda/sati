@@ -478,6 +478,13 @@ gate. Stealth mode was installed there first; it needed none of this.
   hooks, so `--upgrade` there is a usage error.
 - `.gitattributes` gets `linguist-generated`; the older line without it is replaced in place.
 
+### Fix: hook hint and JSON indent (2026-11-03)
+
+Found while moving a real repo from stealth to git mode.
+
+- The runner's missing-binary hint held backticks inside double quotes, so `sh` ran `` `sati init --upgrade` `` instead of printing it. The hint is now single-quoted; a test runs a runner whose binary is gone and checks the exact message.
+- Merging into `.mcp.json`, `.cursor/mcp.json` and `.claude/settings.json` rewrote them with 2-space indent, turning one added entry into a whole-file diff. The merge now keeps the file's own indent (2 spaces for a new file).
+
 ### Fix: record-only `git commit -a`
 
 - `execute` in `packages/cli/src/runtime.ts` wraps the store in git mode with the same

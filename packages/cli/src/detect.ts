@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { actorIdentity, BrainError } from "@brain/core";
 
 /** Files or folders whose presence shows a project already uses an agent tool. */
 const MARKERS: Record<string, readonly string[]> = {
@@ -30,4 +31,22 @@ export function detectTools(
   }
   if (runningTool) found.add(runningTool);
   return [...found].sort();
+}
+
+/** Detected tools plus the ones asked for with `--tools`. */
+export function selectTools(root: string, asked: string | undefined): string[] {
+  const running = actorIdentity({ env: process.env, worktree: root }).tool ?? null;
+  const tools = new Set(detectTools(root, running));
+  for (const t of (asked ?? "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean)) {
+    if (!TOOLS.includes(t)) {
+      throw new BrainError("USAGE", `Unknown tool "${t}".`, {
+        hint: `Use any of: ${TOOLS.join(", ")}.`,
+      });
+    }
+    tools.add(t);
+  }
+  return [...tools].sort();
 }

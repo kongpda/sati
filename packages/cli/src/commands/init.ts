@@ -19,7 +19,7 @@ import {
 import { type DbLocation, locateDb, SqliteStore, standaloneDbPath } from "@brain/store-sqlite";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { detectTools, TOOLS } from "../detect.js";
+import { selectTools } from "../detect.js";
 import {
   excludeFileFor,
   type FileAction,
@@ -87,24 +87,6 @@ async function alreadyInitialized(db: string): Promise<Project | undefined> {
   } finally {
     await store.close();
   }
-}
-
-/** Detected tools plus the ones asked for with `--tools`. */
-function selectTools(root: string, asked: string | undefined): string[] {
-  const running = actorIdentity({ env: process.env, worktree: root }).tool ?? null;
-  const tools = new Set(detectTools(root, running));
-  for (const t of (asked ?? "")
-    .split(",")
-    .map((x) => x.trim())
-    .filter(Boolean)) {
-    if (!TOOLS.includes(t)) {
-      throw new BrainError("USAGE", `Unknown tool "${t}".`, {
-        hint: `Use any of: ${TOOLS.join(", ")}.`,
-      });
-    }
-    tools.add(t);
-  }
-  return [...tools].sort();
 }
 
 const LABEL: Record<FileAction, string> = {

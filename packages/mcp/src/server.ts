@@ -29,11 +29,11 @@ import {
   UpdateTaskInput,
   updateFeature,
   updateTask,
+  WORKFLOW,
 } from "@brain/core";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { WORKFLOW } from "./workflow.js";
 
 /** Bumped with the published package; reported to clients on connect. */
 const VERSION = "0.0.0";

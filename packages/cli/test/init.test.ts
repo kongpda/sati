@@ -39,6 +39,8 @@ describe("brain init", () => {
       { path: "AGENTS.md", action: "create" },
       { path: "CLAUDE.md", action: "update" },
       { path: ".mcp.json", action: "create" },
+      { path: ".claude/settings.json", action: "create" },
+      { path: ".claude/skills/brain/SKILL.md", action: "create" },
     ]);
     expect(readFileSync(join(dir, "CLAUDE.md"), "utf8")).toBe("# rules\n\n@AGENTS.md\n");
     expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).toContain("<!-- brain:start v1 -->");
@@ -59,6 +61,8 @@ describe("brain init", () => {
     expect(r.data.files).toEqual([
       { path: "CLAUDE.local.md", action: "create" },
       { path: ".mcp.json", action: "create" },
+      { path: ".claude/settings.local.json", action: "create" },
+      { path: ".claude/skills/brain/SKILL.md", action: "create" },
     ]);
     expect(readFileSync(join(dir, "CLAUDE.local.md"), "utf8")).toContain("brain:start v1");
     expect(readFileSync(join(dir, "CLAUDE.md"), "utf8")).toBe("# shared\n");

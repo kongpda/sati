@@ -1,6 +1,6 @@
 import { appendFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { BrainError, CLI_NAME, type Mode } from "@brain/core";
+import { BrainError, CLI_NAME, type Mode, WORKFLOW } from "@brain/core";
 
 /** What init or `rules sync` does to one file. `skip`: stealth mode leaves existing files alone. */
 export type FileAction = "create" | "update" | "keep" | "skip";
@@ -57,27 +57,74 @@ function importAgents(existing: string | undefined): string {
   return `${existing.trimEnd()}\n\n${line}\n`;
 }
 
+function parseJson(path: string, existing: string | undefined): Record<string, unknown> {
+  if (existing === undefined || existing.trim() === "") return {};
+  try {
+    const value: unknown = JSON.parse(existing);
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return value as Record<string, unknown>;
+    }
+  } catch {
+    // Reported below.
+  }
+  throw new BrainError("VALIDATION", `Cannot update ${path}: it is not a valid JSON object.`, {
+    hint: "Fix or remove the file, then run again.",
+  });
+}
+
 /** Adds our server to a JSON `mcpServers` map, keeping an entry the user already set up. */
 const mcpJson = (path: string) => (existing: string | undefined) => {
-  let config: Record<string, unknown> = {};
-  if (existing !== undefined && existing.trim() !== "") {
-    try {
-      config = JSON.parse(existing) as Record<string, unknown>;
-    } catch {
-      throw new BrainError(
-        "VALIDATION",
-        `Cannot add the MCP server to ${path}: it is not valid JSON.`,
-        {
-          hint: "Fix or remove the file, then run again.",
-        },
-      );
-    }
-  }
+  const config = parseJson(path, existing);
   const servers = (config.mcpServers ?? {}) as Record<string, unknown>;
   if (servers[CLI_NAME] !== undefined) return existing ?? "";
   config.mcpServers = { ...servers, [CLI_NAME]: { command: CLI_NAME, args: ["mcp"] } };
   return `${JSON.stringify(config, null, 2)}\n`;
 };
+
+interface HookGroup {
+  matcher?: string;
+  hooks: { type: "command"; command: string }[];
+}
+
+/** Claude Code hooks: the brief at session start (short after resume and compaction), a nudge at stop. */
+const CLAUDE_HOOKS: Record<string, HookGroup[]> = {
+  SessionStart: [
+    {
+      matcher: "startup|clear",
+      hooks: [{ type: "command", command: `${CLI_NAME} brief --format=agent` }],
+    },
+    {
+      matcher: "resume|compact",
+      hooks: [{ type: "command", command: `${CLI_NAME} brief --format=short` }],
+    },
+  ],
+  Stop: [{ hooks: [{ type: "command", command: `${CLI_NAME} nudge` }] }],
+};
+
+/** Adds our hook groups to Claude Code settings, keeping every other setting and hook. */
+const claudeSettings = (path: string) => (existing: string | undefined) => {
+  const config = parseJson(path, existing);
+  const hooks = (config.hooks ?? {}) as Record<string, HookGroup[]>;
+  let changed = false;
+  for (const [event, groups] of Object.entries(CLAUDE_HOOKS)) {
+    const current = hooks[event] ?? [];
+    const has = (cmd: string) => current.some((g) => g.hooks?.some((h) => h.command === cmd));
+    const missing = groups.filter((g) => !g.hooks.every((h) => has(h.command)));
+    if (missing.length) {
+      hooks[event] = [...current, ...missing];
+      changed = true;
+    }
+  }
+  if (!changed) return existing ?? "";
+  return `${JSON.stringify({ ...config, hooks }, null, 2)}\n`;
+};
+
+const SKILL = `---
+name: ${CLI_NAME}
+description: How to use ${CLI_NAME}, this repo's shared memory for tasks, features and decisions. Use at the start of any coding task, before claiming or finishing work, and before deleting or rewriting code that belongs to a feature.
+---
+
+${WORKFLOW}`;
 
 function codexToml(existing: string | undefined): string {
   const table = `[mcp_servers.${CLI_NAME}]`;
@@ -100,6 +147,12 @@ function targets(read: ReadFile): Target[] {
     { path: "AGENTS.md", tool: null, render: upsertBlock },
     { path: "CLAUDE.md", tool: "claude-code", render: importAgents },
     { path: ".mcp.json", tool: "claude-code", render: mcpJson(".mcp.json") },
+    {
+      path: ".claude/settings.json",
+      tool: "claude-code",
+      render: claudeSettings(".claude/settings.json"),
+    },
+    { path: `.claude/skills/${CLI_NAME}/SKILL.md`, tool: "claude-code", render: () => SKILL },
     { path: ".codex/config.toml", tool: "codex", render: codexToml },
     { path: ".cursor/mcp.json", tool: "cursor", render: mcpJson(".cursor/mcp.json") },
     {
@@ -140,7 +193,18 @@ export function planIntegrations(
 ): PlannedFile[] {
   let list = targets(read).filter((t) => t.tool === null || tools.includes(t.tool));
   if (mode === "stealth") {
-    list = list.filter((t) => t.path !== "AGENTS.md" && t.path !== "CLAUDE.md");
+    // Claude Code reads CLAUDE.local.md and .claude/settings.local.json as personal files.
+    list = list
+      .filter((t) => t.path !== "AGENTS.md" && t.path !== "CLAUDE.md")
+      .map((t) =>
+        t.path === ".claude/settings.json"
+          ? {
+              ...t,
+              path: ".claude/settings.local.json",
+              render: claudeSettings(".claude/settings.local.json"),
+            }
+          : t,
+      );
     if (tools.includes("claude-code")) {
       list.unshift({ path: "CLAUDE.local.md", tool: "claude-code", render: upsertBlock });
     }

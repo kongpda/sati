@@ -150,7 +150,12 @@ export async function output<T>(
   } catch (err) {
     process.exitCode = printError(err, json ?? false);
   } finally {
-    await opened?.close();
-    opened = undefined;
+    await closeRuntime();
   }
+}
+
+/** Closes the DB opened by `openRuntime`, if any. */
+export async function closeRuntime(): Promise<void> {
+  await opened?.close();
+  opened = undefined;
 }

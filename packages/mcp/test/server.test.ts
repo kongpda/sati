@@ -8,12 +8,13 @@ import {
   initProject,
   type ServiceContext,
   shortHandle,
+  WORKFLOW,
 } from "@brain/core";
 import { SqliteStore } from "@brain/store-sqlite";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createServer, WORKFLOW } from "../src/index.js";
+import { createServer } from "../src/index.js";
 
 let dir: string;
 let store: SqliteStore;

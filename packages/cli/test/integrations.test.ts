@@ -27,7 +27,16 @@ describe("agent file planning", () => {
 
   it("writes AGENTS.md for everyone and only the files of the selected tools", () => {
     const plan = byPath(planIntegrations(["claude-code"], "git", reader({})));
-    expect(Object.keys(plan).sort()).toEqual([".mcp.json", "AGENTS.md", "CLAUDE.md"]);
+    expect(Object.keys(plan).sort()).toEqual([
+      ".claude/settings.json",
+      ".claude/skills/brain/SKILL.md",
+      ".mcp.json",
+      "AGENTS.md",
+      "CLAUDE.md",
+    ]);
+    expect(plan[".claude/skills/brain/SKILL.md"]?.content).toMatch(
+      /^---\nname: brain\ndescription: /,
+    );
     expect(plan["CLAUDE.md"]?.content).toBe("@AGENTS.md\n");
     expect(JSON.parse(plan[".mcp.json"]?.content ?? "")).toEqual({
       mcpServers: { brain: { command: "brain", args: ["mcp"] } },
@@ -59,10 +68,41 @@ describe("agent file planning", () => {
     expect(plan[".cursor/rules/brain.mdc"]?.content).toMatch(/^---\n.*\nalwaysApply: true\n---\n/);
   });
 
+  // Hooks are how the brief and nudge run without the agent remembering to; the user's own
+  // hooks and settings must survive.
+  it("adds the SessionStart and Stop hooks to Claude Code settings, keeping the user's", () => {
+    const mine = {
+      permissions: { allow: ["Bash(ls)"] },
+      hooks: { Stop: [{ hooks: [{ type: "command", command: "say done" }] }] },
+    };
+    const plan = byPath(
+      planIntegrations(
+        ["claude-code"],
+        "git",
+        reader({ ".claude/settings.json": JSON.stringify(mine) }),
+      ),
+    );
+    const settings = JSON.parse(plan[".claude/settings.json"]?.content ?? "");
+    expect(settings.permissions).toEqual(mine.permissions);
+    expect(
+      settings.hooks.Stop.map((g: { hooks: { command: string }[] }) => g.hooks[0]?.command),
+    ).toEqual(["say done", "brain nudge"]);
+    expect(settings.hooks.SessionStart).toEqual([
+      {
+        matcher: "startup|clear",
+        hooks: [{ type: "command", command: "brain brief --format=agent" }],
+      },
+      {
+        matcher: "resume|compact",
+        hooks: [{ type: "command", command: "brain brief --format=short" }],
+      },
+    ]);
+  });
+
   it("refuses to overwrite an MCP config it cannot parse", () => {
     expect(() =>
       planIntegrations(["claude-code"], "git", reader({ ".mcp.json": "{ nope" })),
-    ).toThrow(/not valid JSON/);
+    ).toThrow(/not a valid JSON object/);
   });
 
   it("is idempotent: a second run keeps every file", () => {
@@ -92,6 +132,8 @@ describe("agent file planning", () => {
     expect(plan.map((f) => [f.path, f.action])).toEqual([
       ["CLAUDE.local.md", "create"],
       [".mcp.json", "create"],
+      [".claude/settings.local.json", "create"],
+      [".claude/skills/brain/SKILL.md", "create"],
       ["GEMINI.md", "skip"],
       [".gemini/settings.json", "create"],
     ]);

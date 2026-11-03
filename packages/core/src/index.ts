@@ -7,3 +7,4 @@ export { CLI_NAME, PACKAGE_NAME, PRODUCT_NAME } from "./name.js";
 export * from "./ports/clock.js";
 export * from "./ports/storage.js";
 export * from "./services/index.js";
+export * from "./workflow.js";

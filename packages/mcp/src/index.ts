@@ -3,7 +3,6 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { createServer } from "./server.js";
 
 export { createServer } from "./server.js";
-export { WORKFLOW } from "./workflow.js";
 
 /** Serves MCP over stdin/stdout until the client disconnects. */
 export async function serveStdio(ctx: ServiceContext): Promise<void> {

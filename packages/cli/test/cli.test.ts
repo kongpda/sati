@@ -1,5 +1,6 @@
+import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
-import { brain, brainJson, run, tempRepo } from "./helpers.js";
+import { bin, brain, brainJson, run, tempRepo } from "./helpers.js";
 
 interface Rec {
   id: string;
@@ -75,6 +76,29 @@ describe("brain CLI", () => {
     const j = brainJson<{ markdown: string; tokens: number }>(dir, "brief", "--format", "short");
     expect(j.data.tokens).toBeGreaterThan(0);
     expect(brainJson(dir, "brief", "--format", "long").code).toBe(5);
+  });
+
+  // The Stop hook blocks once while the agent holds a claim, then lets the stop through.
+  it("nudge blocks a stop while the caller holds a task, once", async () => {
+    const dir = await tempRepo({ init: true });
+    expect(brain(dir, "nudge").stdout).toBe("");
+    const t = brainJson<Rec>(dir, "task", "create", "Wire hooks").data;
+    brain(dir, "task", "claim", t.id);
+    const stop = (active: boolean) =>
+      spawnSync(process.execPath, [bin, "nudge"], {
+        cwd: dir,
+        encoding: "utf8",
+        input: JSON.stringify({ hook_event_name: "Stop", stop_hook_active: active }),
+        env: { ...process.env, BRAIN_ACTOR: "tester", CLAUDECODE: "", AI_AGENT: "" },
+      });
+    const first = stop(false);
+    expect(first.status).toBe(0);
+    const out = JSON.parse(first.stdout) as { decision: string; reason: string };
+    expect(out.decision).toBe("block");
+    expect(out.reason).toContain(`tsk_${t.id.slice(-6).toLowerCase()} (Wire hooks)`);
+    expect(stop(true).stdout).not.toContain("decision");
+    // Another actor's claim is not ours to finish.
+    expect(run(dir, ["nudge"], { BRAIN_ACTOR: "someone-else" }).stdout).toBe("");
   });
 
   it("refuses to mark done through update, pointing at `complete` (exit 8)", async () => {

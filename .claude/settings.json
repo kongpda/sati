@@ -1,0 +1,34 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "brain brief --format=agent"
+          }
+        ]
+      },
+      {
+        "matcher": "resume|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "brain brief --format=short"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "brain nudge"
+          }
+        ]
+      }
+    ]
+  }
+}

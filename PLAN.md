@@ -444,9 +444,9 @@ Verify: `pnpm typecheck && pnpm test && pnpm bench`, then in a temp git repo: `b
 - [x] `brain_brief` generator with token cap and tests on large fixtures
 - [x] Duplicate detection in `task_create` (FTS similarity)
 - [x] `brain init` writes `.mcp.json`, `AGENTS.md` / `CLAUDE.md` block, and configs for Codex, Cursor and Gemini CLI
-- [ ] Claude Code hooks: `SessionStart` brief (also on `compact` and `resume`, short form — review fix 12), `Stop` nudge
+- [x] Claude Code hooks: `SessionStart` brief (also on `compact` and `resume`, short form — review fix 12), `Stop` nudge
 - [x] Managed rules blocks with `<!-- brain:start v1 -->` markers for AGENTS.md, CLAUDE.md (`@AGENTS.md`), GEMINI.md, `.cursor/rules/brain.mdc`, Copilot, Windsurf, Cline, Kiro; `brain rules sync`; stealth mode writes to git-ignored files
-- [ ] Claude Code skill `.claude/skills/brain/SKILL.md` with the full workflow
+- [x] Claude Code skill `.claude/skills/brain/SKILL.md` with the full workflow
 - [ ] Dogfood: use brain to build brain from this point on
 
 **Gate:** Claude Code and Codex each finish a real task end to end using only brain tools; the brief stays under 1,500 tokens.

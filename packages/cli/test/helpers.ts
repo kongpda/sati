@@ -8,7 +8,7 @@ import { clearLocateCache, locateDb, SqliteStore } from "@brain/store-sqlite";
 
 export const bin = fileURLToPath(new URL("../dist/index.mjs", import.meta.url));
 
-/** A temp git repo. `init: true` also creates the project through core (no `brain init` yet). */
+/** A temp git repo. `init: true` also creates the project through core, skipping `brain init`. */
 export async function tempRepo(opts: { init?: boolean } = {}): Promise<string> {
   const dir = realpathSync(mkdtempSync(join(tmpdir(), "brain-cli-")));
   execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir });

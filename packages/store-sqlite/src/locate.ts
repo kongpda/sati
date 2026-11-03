@@ -38,6 +38,11 @@ export function locateDb(cwd: string, opts: LocateOptions = {}): DbLocation {
   return found;
 }
 
+/** Where a standalone project's DB lives: `~/.brain/projects/<projectId>.db`. */
+export function standaloneDbPath(home: string, projectId: string): string {
+  return join(home, ".brain", "projects", `${projectId}.db`);
+}
+
 /** For tests only. */
 export function clearLocateCache(): void {
   cache.clear();
@@ -72,8 +77,7 @@ function fromStandalone(cwd: string, home: string): DbLocation | undefined {
         });
       }
       if (parsed.data.mode !== "standalone") return undefined;
-      const path = join(home, ".brain", "projects", `${parsed.data.projectId}.db`);
-      return { path, mode: "standalone", root: dir };
+      return { path: standaloneDbPath(home, parsed.data.projectId), mode: "standalone", root: dir };
     }
     const up = dirname(dir);
     if (up === dir) return undefined;

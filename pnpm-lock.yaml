@@ -35,6 +35,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@clack/prompts':
+        specifier: 1.8.1
+        version: 1.8.1
       better-sqlite3:
         specifier: 13.0.3
         version: 13.0.3

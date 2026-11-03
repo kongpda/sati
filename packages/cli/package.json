@@ -23,6 +23,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@clack/prompts": "1.8.1",
     "better-sqlite3": "13.0.3",
     "citty": "0.2.2"
   },

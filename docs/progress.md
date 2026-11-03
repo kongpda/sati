@@ -75,3 +75,10 @@ Status: in progress.
 - The CLI bundles drizzle-orm, zod and ulid. Loading them as separate npm files took ~200 ms per
   command (over the 150 ms budget); bundled, `brain task list` takes ~80 ms. `brain --version`
   loads only the name constant (~30 ms).
+- `brain init` picks git mode inside a repository and standalone outside one; standalone inside
+  git (and git or stealth outside git) is rejected. It asks questions only on a TTY. Without a
+  TTY it writes nothing unless `--yes` is given; with `--json` the error carries the preview.
+- `brain init` only reports detected agent tools in Phase 1. Writing their configs, hooks and
+  rules is Phase 2 work, so the preview lists just `.brain/brain.config.json` for now.
+- A committed `.brain/brain.config.json` (as in a fresh clone) is kept, and its project id is
+  reused for the new local DB.

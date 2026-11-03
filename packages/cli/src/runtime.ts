@@ -41,7 +41,7 @@ export function currentBranch(location: DbLocation): string | null {
   }
 }
 
-function osUser(): string | undefined {
+export function osUser(): string | undefined {
   try {
     return userInfo().username;
   } catch {
@@ -135,8 +135,17 @@ export async function execute<T>(
   fn: (rt: Runtime) => Promise<T>,
   render: (value: T) => string,
 ): Promise<void> {
+  return output(json, async () => fn(await openRuntime()), render);
+}
+
+/** Like `execute`, for commands that run before a project exists (`init`). */
+export async function output<T>(
+  json: boolean | undefined,
+  fn: () => Promise<T>,
+  render: (value: T) => string,
+): Promise<void> {
   try {
-    const value = await fn(await openRuntime());
+    const value = await fn();
     process.stdout.write(json ? `${JSON.stringify(value, null, 2)}\n` : `${render(value)}\n`);
   } catch (err) {
     process.exitCode = printError(err, json ?? false);

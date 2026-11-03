@@ -412,7 +412,7 @@ flowchart LR
 
 ### Phase 0 — Foundations (week 1)
 
-- [ ] Create the monorepo: pnpm workspaces, Turborepo, `tsconfig.base.json` (strict, `noUncheckedIndexedAccess`), Biome
+- [x] Create the monorepo: pnpm workspaces, Turborepo, `tsconfig.base.json` (strict, `noUncheckedIndexedAccess`), Biome
 - [ ] GitHub Actions: lint, typecheck, test on Linux, macOS and Windows with Node 22 and 24
 - [ ] Changesets, npm scope reserved, two-factor on npm, provenance publishing workflow
 - [ ] Pick the product name and check npm and domain availability

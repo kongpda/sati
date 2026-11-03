@@ -231,3 +231,49 @@ $ echo '{"hook_event_name":"Stop","stop_hook_active":false}' | brain nudge
   `npx ... init`). JSON output is unchanged.
 - A `.claude/settings.json` whose `hooks` setting is malformed now stops with a VALIDATION error
   instead of crashing the merge.
+
+## Phase 3 — Coordination
+
+Status: in progress.
+
+### Claims with leases and heartbeats
+
+- The claim check-and-set already ran in one `BEGIN IMMEDIATE` transaction (Phase 1). New here: a
+  test that starts 20 `brain task claim` processes on one task. Exactly one wins, 19 get CONFLICT
+  (exit 4), and none see `SQLITE_BUSY`. With a deferred `BEGIN` the same test fails, so it guards
+  the lock mode.
+- Heartbeats: choice on an ambiguous item. "Any write by the holder" is read as any write the
+  holder makes to the claimed task (update, or claiming again to renew). Writes to other records
+  do not renew it. Lock writes can renew claims when locks land, if needed.
+- Expired leases: `releaseExpiredClaims` clears them, as PLAN asks of every brief. It runs at the
+  start of `buildBrief` and writes only when something expired. Choice: an expired `in_progress`
+  task goes back to `todo`, so it shows up as ready again. `review` and `blocked` tasks keep their
+  status and only lose the claim. Each release logs a new activity verb, `release`.
+- `brain doctor` does not exist yet; it should call the same service when it is added.
+
+### Fix: full-index scan on every update (schema v4)
+
+The new claim benchmark failed with `SQLITE_BUSY` at 50,000 records. Cause: the FTS update and
+delete triggers ran `DELETE FROM search_fts WHERE id = OLD.id`, and `id` is an UNINDEXED FTS
+column, so every task, feature, note or decision update scanned the whole index (1 to 2.6 seconds
+at 50,000 records) while holding the write lock. Other writers then waited past `busy_timeout`.
+
+Migration `0003_fts_rowids.sql` adds `search_rowids` (record id to FTS rowid), backfills it from
+the existing index and recreates the triggers to delete by rowid. Tests cover edits, hard deletes
+and an upgrade from schema v3. A test without the backfill fails.
+
+### Benchmarks (local, 2026-11-03, macOS, Node 26.12.1)
+
+`pnpm bench` now also measures `task_claim` with 10 worker processes, each with its own connection
+and actor, claiming 50 tasks at once on the 50,000-record DB:
+
+```
+Seeded 50000 records in 11570 ms.
+PASS  CLI cold start (brain --version), p95               61.9 ms  (budget 80 ms)
+PASS  CLI read command, p95                              139.2 ms  (budget 150 ms)
+PASS  Full-text search on 50000 records, p95              32.4 ms  (budget 50 ms)
+PASS  task_claim under 10 concurrent agents, p95           3.3 ms  (budget 50 ms)
+```
+
+The CLI read p95 is close to its budget and varies with machine load (one run on a busy machine
+measured 233 ms on a tiny DB). Watch it in CI.

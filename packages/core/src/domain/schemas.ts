@@ -205,6 +205,7 @@ export const VERBS = [
   "delete",
   "complete",
   "claim",
+  "release",
   "status",
   "import",
   "init",

@@ -2,15 +2,16 @@
  * Benchmarks for the Phase 1 CLI budgets (PLAN "Performance budgets"). Run with `pnpm bench`
  * after a build. Exits 1 if any budget is missed.
  *
- * Budgets checked here: CLI cold start, CLI read p95 and full-text search on 50,000 records.
- * The other budgets belong to later phases (claims, MCP, brief, guard, export, UI).
+ * Budgets checked here: CLI cold start, CLI read p95, full-text search on 50,000 records and
+ * `task_claim` under 10 concurrent agents. The other budgets belong to later phases.
  */
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  claimTask,
   createIdFactory,
   createNote,
   createTask,
@@ -26,6 +27,8 @@ import { clearLocateCache, locateDb, SqliteStore } from "@brain/store-sqlite";
 const bin = fileURLToPath(new URL("../dist/index.mjs", import.meta.url));
 const RECORDS = 50_000;
 const RUNS = 30;
+const AGENTS = 10;
+const CLAIMS_PER_AGENT = 50;
 
 const WORDS = (
   "auth token session cache index query schema migration router handler parser render " +
@@ -99,6 +102,54 @@ async function seed(dir: string): Promise<ServiceContext> {
   return ctx;
 }
 
+/**
+ * One simulated agent: a long-lived process (like the MCP server) with its own DB connection
+ * and actor, claiming its tasks. Waits until `startAt` so all agents contend at once, then
+ * prints the claim latencies as JSON.
+ */
+async function claimWorker(dir: string, name: string, startAt: number, ids: string[]) {
+  const store = await SqliteStore.open(locateDb(dir).path);
+  const project = await store.read((r) => r.getProject());
+  if (!project) throw new Error("worker: no project");
+  const deps = { store, clock: systemClock, ids: createIdFactory(), branch: null };
+  const actor = await ensureActor({ ...deps, projectId: project.id }, { name, kind: "agent" });
+  const ctx: ServiceContext = { ...deps, projectId: project.id, actorId: actor.id };
+  while (Date.now() < startAt) await new Promise((r) => setTimeout(r, 5));
+  const samples: number[] = [];
+  for (const id of ids) {
+    const start = performance.now();
+    await claimTask(ctx, id);
+    samples.push(performance.now() - start);
+  }
+  await store.close();
+  process.stdout.write(JSON.stringify(samples));
+}
+
+/** Runs `AGENTS` worker processes at once and returns every claim latency. */
+async function concurrentClaims(dir: string, ctx: ServiceContext): Promise<number[]> {
+  const ids: string[] = [];
+  for (let i = 0; i < AGENTS * CLAIMS_PER_AGENT; i++) {
+    ids.push((await createTask(ctx, { title: `claim target ${i}` })).id);
+  }
+  const startAt = Date.now() + 2_000;
+  const self = fileURLToPath(import.meta.url);
+  const runs = Array.from({ length: AGENTS }, (_, a) => {
+    const mine = ids.slice(a * CLAIMS_PER_AGENT, (a + 1) * CLAIMS_PER_AGENT);
+    const args = [self, "--claim-worker", dir, `agent-${a}`, String(startAt), ...mine];
+    return new Promise<number[]>((resolve, reject) => {
+      const child = spawn(process.execPath, args, { stdio: ["ignore", "pipe", "inherit"] });
+      let out = "";
+      child.stdout.on("data", (d: Buffer) => {
+        out += d.toString();
+      });
+      child.on("close", (code) =>
+        code === 0 ? resolve(JSON.parse(out) as number[]) : reject(new Error(`worker ${a} failed`)),
+      );
+    });
+  });
+  return (await Promise.all(runs)).flat();
+}
+
 interface Result {
   measure: string;
   value: number;
@@ -133,6 +184,7 @@ async function main(): Promise<void> {
       fts.push(performance.now() - start);
     }
   }
+  const claims = await concurrentClaims(dir, ctx);
   await ctx.store.close();
 
   const results: Result[] = [
@@ -147,6 +199,11 @@ async function main(): Promise<void> {
       value: percentile(fts, 95),
       budget: 50,
     },
+    {
+      measure: `task_claim under ${AGENTS} concurrent agents, p95`,
+      value: percentile(claims, 95),
+      budget: 50,
+    },
   ];
   let failed = false;
   for (const r of results) {
@@ -159,4 +216,9 @@ async function main(): Promise<void> {
   if (failed) process.exitCode = 1;
 }
 
-await main();
+const [mode, dir, name, startAt, ...ids] = process.argv.slice(2);
+if (mode === "--claim-worker" && dir && name && startAt) {
+  await claimWorker(dir, name, Number(startAt), ids);
+} else {
+  await main();
+}

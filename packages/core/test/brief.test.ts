@@ -65,6 +65,8 @@ describe("buildBrief", () => {
     const md = (await buildBrief(ctx)).markdown;
     expect(md).toContain("None claimed.");
     expect(md).not.toContain("Theirs");
+    // The brief also released the expired claim, so the task is offered as ready again.
+    expect(md).toContain(`${shortHandle(a.id)} [medium] Mine, expired`);
   });
 
   it("short format keeps my tasks and the top 3 ready tasks only", async () => {

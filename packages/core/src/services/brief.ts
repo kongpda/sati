@@ -3,6 +3,7 @@ import { shortHandle } from "../domain/ids.js";
 import type { Feature, Task } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
 import { nowIso, parseInput, type ServiceContext } from "./context.js";
+import { releaseExpiredClaims } from "./task.js";
 
 /** PLAN: the brief stays under 1,500 tokens so it is cheap to inject at every session start. */
 export const BRIEF_TOKEN_CAP = 1_500;
@@ -50,6 +51,8 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
   const short = format === "short";
   const now = nowIso(ctx);
   const since = new Date(ctx.clock.now().getTime() - 7 * DAY_MS).toISOString();
+  // "Every brief clears expired leases" (PLAN), so abandoned tasks show up as ready again.
+  await releaseExpiredClaims(ctx);
 
   const data = await ctx.store.read(async (r) => {
     const project = await r.getProject();

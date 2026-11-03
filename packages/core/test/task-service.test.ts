@@ -7,6 +7,7 @@ import {
   ensureActor,
   getRecord,
   listTasks,
+  releaseExpiredClaims,
   type ServiceContext,
   updateTask,
 } from "../src/index.js";
@@ -261,6 +262,41 @@ describe("claimTask", () => {
     const other = await otherActor(ctx);
     const updated = await updateTask(other, t.id, { body: "note" });
     expect(updated.claim).toEqual(claimed.claim);
+  });
+});
+
+describe("releaseExpiredClaims", () => {
+  // PLAN: "every brief clears expired leases", so work an agent abandoned becomes ready again
+  // instead of sitting in in_progress with nobody on it.
+  it("returns abandoned in-progress work to todo and leaves live claims alone", async () => {
+    const { ctx, clock, store } = await setup();
+    const abandoned = await createTask(ctx, { title: "abandoned" });
+    await claimTask(ctx, abandoned.id, { leaseMinutes: 10 });
+    const live = await createTask(ctx, { title: "live" });
+    await claimTask(ctx, live.id, { leaseMinutes: 60 });
+    const waiting = await createTask(ctx, { title: "waiting" });
+    await claimTask(ctx, waiting.id, { leaseMinutes: 10 });
+    await updateTask(ctx, waiting.id, { status: "review" });
+    clock.advance(31 * 60_000);
+
+    const released = await releaseExpiredClaims(ctx);
+    expect(released.map((t) => [t.title, t.status, t.claim])).toEqual([
+      ["abandoned", "todo", null],
+      ["waiting", "review", null],
+    ]);
+    expect(store.activity.at(-1)).toMatchObject({ verb: "release", entityId: waiting.id });
+    expect((await listTasks(ctx, { ready: true })).map((t) => t.id)).toEqual([abandoned.id]);
+    const stillLive = await listTasks(ctx, { status: ["in_progress"] });
+    expect(stillLive.map((t) => t.claim?.leaseUntil)).toEqual(["2026-11-03T13:00:00.000Z"]);
+  });
+
+  it("writes nothing when no lease has expired", async () => {
+    const { ctx, store } = await setup();
+    const t = await createTask(ctx, { title: "x" });
+    await claimTask(ctx, t.id);
+    const before = store.activity.length;
+    expect(await releaseExpiredClaims(ctx)).toEqual([]);
+    expect(store.activity.length).toBe(before);
   });
 });
 

@@ -185,6 +185,38 @@ export async function claimTask(
   });
 }
 
+/**
+ * Clears claims whose lease has run out, so abandoned work returns to the pool: an
+ * `in_progress` task goes back to `todo`; `review` and `blocked` tasks keep their status.
+ * Writes only when something expired. Returns the released tasks.
+ */
+export async function releaseExpiredClaims(ctx: ServiceContext): Promise<Task[]> {
+  const now = nowIso(ctx);
+  const expired = (t: Task) => t.claim !== null && t.claim.leaseUntil <= now;
+  const candidates = await ctx.store.read(async (r) =>
+    (
+      await r.list("task", ctx.projectId, {
+        status: ["in_progress", "review", "blocked"],
+        limit: 500,
+      })
+    ).filter(expired),
+  );
+  if (candidates.length === 0) return [];
+  return ctx.store.write(async (w) => {
+    const released: Task[] = [];
+    for (const { id } of candidates) {
+      // Re-read inside the transaction: the holder may have renewed since the check above.
+      const before = await w.get("task", id);
+      if (!before || !expired(before)) continue;
+      const status = before.status === "in_progress" ? "todo" : before.status;
+      released.push(
+        await updateWithLog(w, ctx, "task", before, { status, claim: null }, { verb: "release" }),
+      );
+    }
+    return released;
+  });
+}
+
 /** A fresh lease for the calling actor, defaulting to the project's lease length. */
 async function lease(r: StorageReader, ctx: ServiceContext, minutes?: number): Promise<Claim> {
   const now = ctx.clock.now();

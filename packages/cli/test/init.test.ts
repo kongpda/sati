@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -26,14 +27,21 @@ const tempDir = () => realpathSync(mkdtempSync(join(tmpdir(), "brain-init-")));
 // `brain init` decides where the memory lives and what gets committed, so these tests pin
 // both the files it writes and the files it must not write.
 describe("brain init", () => {
-  it("git mode keeps the DB inside .git and commits only the config file", async () => {
+  it("git mode keeps the DB inside .git and writes the config and agent files", async () => {
     const dir = await tempRepo();
     writeFileSync(join(dir, "CLAUDE.md"), "# rules\n");
     const r = brainJson<Init>(dir, "init", "--yes");
     expect(r.code).toBe(0);
     expect(r.data.project.mode).toBe("git");
     expect(r.data.db).toBe(join(dir, ".git", "brain", "brain.db"));
-    expect(r.data.files).toEqual([{ path: join(".brain", "brain.config.json"), action: "create" }]);
+    expect(r.data.files).toEqual([
+      { path: join(".brain", "brain.config.json"), action: "create" },
+      { path: "AGENTS.md", action: "create" },
+      { path: "CLAUDE.md", action: "update" },
+      { path: ".mcp.json", action: "create" },
+    ]);
+    expect(readFileSync(join(dir, "CLAUDE.md"), "utf8")).toBe("# rules\n\n@AGENTS.md\n");
+    expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).toContain("<!-- brain:start v1 -->");
     expect(r.data.tools).toContain("claude-code");
     const config = JSON.parse(readFileSync(join(dir, ".brain", "brain.config.json"), "utf8"));
     // The committed id must match the DB row, or a fresh clone would start a second project.
@@ -41,7 +49,29 @@ describe("brain init", () => {
     expect(brainJson(dir, "task", "create", "x").code).toBe(0);
   });
 
-  it("stealth mode writes nothing into the working tree", async () => {
+  // Stealth is for repos where the team has not adopted brain: `git status` must stay clean.
+  it("stealth mode writes only git-ignored files, leaving git status clean", async () => {
+    const dir = await tempRepo();
+    writeFileSync(join(dir, "CLAUDE.md"), "# shared\n");
+    execFileSync("git", ["add", "."], { cwd: dir });
+    const r = brainJson<Init>(dir, "init", "--yes", "--mode", "stealth", "--tools", "claude-code");
+    expect(r.code).toBe(0);
+    expect(r.data.files).toEqual([
+      { path: "CLAUDE.local.md", action: "create" },
+      { path: ".mcp.json", action: "create" },
+    ]);
+    expect(readFileSync(join(dir, "CLAUDE.local.md"), "utf8")).toContain("brain:start v1");
+    expect(readFileSync(join(dir, "CLAUDE.md"), "utf8")).toBe("# shared\n");
+    const status = execFileSync("git", ["status", "--porcelain"], { cwd: dir, encoding: "utf8" });
+    expect(status).toBe("A  CLAUDE.md\n");
+  });
+
+  it("rejects an unknown --tools name with a usage error", async () => {
+    const dir = await tempRepo();
+    expect(brainJson(dir, "init", "--yes", "--tools", "vim").code).toBe(2);
+  });
+
+  it("stealth mode with no agent tools writes nothing into the working tree", async () => {
     const dir = await tempRepo();
     const r = brainJson<Init>(dir, "init", "--yes", "--mode", "stealth");
     expect(r.code).toBe(0);

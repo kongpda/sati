@@ -33,7 +33,13 @@ export interface Result {
 
 /** Runs the built CLI. `BRAIN_ACTOR` defaults to "tester" so actor names are predictable. */
 export function run(cwd: string, args: string[], env: NodeJS.ProcessEnv = {}): Result {
-  const full: NodeJS.ProcessEnv = { ...process.env, BRAIN_ACTOR: "tester", CLAUDECODE: "", ...env };
+  const full: NodeJS.ProcessEnv = {
+    ...process.env,
+    BRAIN_ACTOR: "tester",
+    CLAUDECODE: "",
+    AI_AGENT: "",
+    ...env,
+  };
   const r = spawnSync(process.execPath, [bin, ...args], { cwd, env: full, encoding: "utf8" });
   return { code: r.status ?? -1, stdout: r.stdout, stderr: r.stderr };
 }

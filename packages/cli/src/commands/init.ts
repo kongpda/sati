@@ -19,13 +19,18 @@ import {
 import { type DbLocation, locateDb, SqliteStore, standaloneDbPath } from "@brain/store-sqlite";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { detectTools } from "../detect.js";
+import { detectTools, TOOLS } from "../detect.js";
+import {
+  excludeFileFor,
+  type FileAction,
+  type FileChange,
+  fileReader,
+  type PlannedFile,
+  planIntegrations,
+  readExcluded,
+  writePlanned,
+} from "../integrations.js";
 import { currentBranch, osUser, output } from "../runtime.js";
-
-interface FileChange {
-  path: string;
-  action: "create" | "keep";
-}
 
 interface InitPlan {
   mode: Mode;
@@ -36,6 +41,7 @@ interface InitPlan {
   projectId: string;
   tools: string[];
   files: FileChange[];
+  agentFiles: PlannedFile[];
   config: BrainConfig;
 }
 
@@ -83,10 +89,40 @@ async function alreadyInitialized(db: string): Promise<Project | undefined> {
   }
 }
 
+/** Detected tools plus the ones asked for with `--tools`. */
+function selectTools(root: string, asked: string | undefined): string[] {
+  const running = actorIdentity({ env: process.env, worktree: root }).tool ?? null;
+  const tools = new Set(detectTools(root, running));
+  for (const t of (asked ?? "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean)) {
+    if (!TOOLS.includes(t)) {
+      throw new BrainError("USAGE", `Unknown tool "${t}".`, {
+        hint: `Use any of: ${TOOLS.join(", ")}.`,
+      });
+    }
+    tools.add(t);
+  }
+  return [...tools].sort();
+}
+
+const LABEL: Record<FileAction, string> = {
+  create: "created",
+  update: "updated",
+  keep: "kept",
+  skip: "skipped",
+};
+
 /** Works out everything init will do, without writing anything. */
 async function plan(
   cwd: string,
-  args: { mode?: string | undefined; slug?: string | undefined; name?: string | undefined },
+  args: {
+    mode?: string | undefined;
+    slug?: string | undefined;
+    name?: string | undefined;
+    tools?: string | undefined;
+  },
 ): Promise<InitPlan> {
   const loc = where(cwd);
   const inGit = loc?.mode === "git";
@@ -125,6 +161,15 @@ async function plan(
     mode === "stealth"
       ? []
       : [{ path: relative(root, configPath), action: existing ? "keep" : "create" }];
+  const tools = selectTools(root, args.tools);
+  const excluded = mode === "stealth" ? readExcluded(excludeFileFor(db)) : new Set<string>();
+  const agentFiles = planIntegrations(
+    tools,
+    mode,
+    fileReader(root),
+    (path) => path === "CLAUDE.local.md" || excluded.has(path),
+  );
+  files.push(...agentFiles.map(({ path, action }) => ({ path, action })));
   return {
     mode,
     slug: args.slug ?? slugify(name),
@@ -132,8 +177,9 @@ async function plan(
     root,
     db,
     projectId,
-    tools: detectTools(root, actorIdentity({ env: process.env, worktree: root }).tool ?? null),
+    tools,
     files,
+    agentFiles,
     config: { version: 1, projectId, mode },
   };
 }
@@ -141,7 +187,10 @@ async function plan(
 function preview(p: InitPlan): string {
   const lines = [`mode      ${p.mode}`, `project   ${p.slug} (${p.name})`, `database  ${p.db}`];
   for (const f of p.files) lines.push(`${f.action.padEnd(9)} ${f.path}`);
-  if (p.files.length === 0) lines.push("files     none (stealth mode commits nothing)");
+  if (p.files.some((f) => f.action === "skip")) {
+    lines.push("(stealth mode skips files that already exist, so nothing tracked changes)");
+  }
+  if (p.files.length === 0) lines.push("files     none");
   lines.push(`tools     ${p.tools.length ? p.tools.join(", ") : "none detected"}`);
   return lines.join("\n");
 }
@@ -169,6 +218,7 @@ async function apply(p: InitPlan): Promise<InitResult> {
       mkdirSync(join(abs, ".."), { recursive: true });
       writeFileSync(abs, `${JSON.stringify(p.config, null, 2)}\n`, { flag: "wx" });
     }
+    writePlanned(p.root, p.agentFiles, p.mode === "stealth" ? excludeFileFor(p.db) : undefined);
     return { project, actor, db: p.db, tools: p.tools, files: p.files };
   } finally {
     await store.close();
@@ -213,8 +263,7 @@ function render(r: InitResult | null): string {
     `Initialized "${r.project.slug}" in ${r.project.mode} mode.`,
     `  database  ${r.db}`,
   ];
-  for (const f of r.files)
-    lines.push(`  ${f.action === "create" ? "created" : "kept   "}   ${f.path}`);
+  for (const f of r.files) lines.push(`  ${LABEL[f.action].padEnd(9)} ${f.path}`);
   lines.push(`  tools     ${r.tools.length ? r.tools.join(", ") : "none detected"}`);
   lines.push('Next: brain task create "First task"');
   return lines.join("\n");
@@ -226,6 +275,10 @@ export default defineCommand({
     mode: { type: "string", description: "git | stealth | standalone" },
     name: { type: "string", description: "Project name (default: folder name)" },
     slug: { type: "string", description: "Project slug (default: from the name)" },
+    tools: {
+      type: "string",
+      description: "Also set up these agent tools, comma-separated (e.g. claude-code,codex)",
+    },
     yes: { type: "boolean", description: "Skip prompts and accept the defaults" },
     ...json,
   },
@@ -234,7 +287,7 @@ export default defineCommand({
       args.json,
       async () => {
         const cwd = process.cwd();
-        const opts = { mode: args.mode, name: args.name, slug: args.slug };
+        const opts = { mode: args.mode, name: args.name, slug: args.slug, tools: args.tools };
         if (args.yes) return apply(await plan(cwd, opts));
         if (!args.json && process.stdin.isTTY && process.stdout.isTTY) {
           const chosen = await wizard(cwd, opts);
@@ -243,7 +296,7 @@ export default defineCommand({
         const p = await plan(cwd, opts);
         throw new BrainError("USAGE", "brain init needs --yes when it cannot ask questions.", {
           hint: "Run `brain init --yes`, or add `--json` to see what it would write.",
-          details: { preview: { ...p, config: undefined } },
+          details: { preview: { ...p, config: undefined, agentFiles: undefined } },
         });
       },
       render,

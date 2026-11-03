@@ -99,6 +99,13 @@ describe("agent file planning", () => {
     ]);
   });
 
+  it("refuses to merge into a malformed hooks setting instead of crashing", () => {
+    const bad = JSON.stringify({ hooks: { Stop: "brain nudge" } });
+    expect(() =>
+      planIntegrations(["claude-code"], "git", reader({ ".claude/settings.json": bad })),
+    ).toThrow(/"hooks" setting is malformed/);
+  });
+
   it("refuses to overwrite an MCP config it cannot parse", () => {
     expect(() =>
       planIntegrations(["claude-code"], "git", reader({ ".mcp.json": "{ nope" })),

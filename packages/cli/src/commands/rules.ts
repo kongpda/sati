@@ -7,6 +7,7 @@ import {
   fileReader,
   planIntegrations,
   readExcluded,
+  warnIfNotOnPath,
   writePlanned,
 } from "../integrations.js";
 import { execute } from "../runtime.js";
@@ -30,13 +31,15 @@ const sync = defineCommand({
         const stealth = project.mode === "stealth";
         const exclude = stealth ? excludeFileFor(location.path) : undefined;
         const excluded = exclude ? readExcluded(exclude) : new Set<string>();
+        const tools = selectTools(location.root, args.tools);
         const files = planIntegrations(
-          selectTools(location.root, args.tools),
+          tools,
           project.mode,
           fileReader(location.root),
           (path) => path === "CLAUDE.local.md" || excluded.has(path),
         );
         writePlanned(location.root, files, exclude);
+        warnIfNotOnPath(tools);
         return files.map(({ path, action }): FileChange => ({ path, action }));
       },
       (files) => {

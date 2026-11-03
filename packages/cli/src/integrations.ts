@@ -1,6 +1,15 @@
-import { appendFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { BrainError, CLI_NAME, type Mode, WORKFLOW } from "@brain/core";
+import {
+  accessSync,
+  appendFileSync,
+  constants,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { delimiter, dirname, join } from "node:path";
+import { BrainError, CLI_NAME, type Mode, PACKAGE_NAME, WORKFLOW } from "@brain/core";
+import { z } from "zod";
 
 /** What init or `rules sync` does to one file. `skip`: stealth mode leaves existing files alone. */
 export type FileAction = "create" | "update" | "keep" | "skip";
@@ -86,6 +95,12 @@ interface HookGroup {
   hooks: { type: "command"; command: string }[];
 }
 
+/** Just enough of Claude Code's `hooks` setting to merge into it; unknown keys pass through. */
+const HooksSetting = z.record(
+  z.string(),
+  z.array(z.looseObject({ hooks: z.array(z.looseObject({ command: z.string().optional() })) })),
+);
+
 /** Claude Code hooks: the brief at session start (short after resume and compaction), a nudge at stop. */
 const CLAUDE_HOOKS: Record<string, HookGroup[]> = {
   SessionStart: [
@@ -104,11 +119,22 @@ const CLAUDE_HOOKS: Record<string, HookGroup[]> = {
 /** Adds our hook groups to Claude Code settings, keeping every other setting and hook. */
 const claudeSettings = (path: string) => (existing: string | undefined) => {
   const config = parseJson(path, existing);
-  const hooks = (config.hooks ?? {}) as Record<string, HookGroup[]>;
+  const parsed = HooksSetting.safeParse(config.hooks ?? {});
+  if (!parsed.success) {
+    throw new BrainError(
+      "VALIDATION",
+      `Cannot add hooks to ${path}: its "hooks" setting is malformed.`,
+      {
+        hint: "Each event must hold a list of { matcher?, hooks: [...] } groups. Fix it, then run again.",
+      },
+    );
+  }
+  const hooks: Record<string, unknown[]> = parsed.data;
   let changed = false;
   for (const [event, groups] of Object.entries(CLAUDE_HOOKS)) {
     const current = hooks[event] ?? [];
-    const has = (cmd: string) => current.some((g) => g.hooks?.some((h) => h.command === cmd));
+    const has = (cmd: string) =>
+      parsed.data[event]?.some((g) => g.hooks.some((h) => h.command === cmd)) ?? false;
     const missing = groups.filter((g) => !g.hooks.every((h) => has(h.command)));
     if (missing.length) {
       hooks[event] = [...current, ...missing];
@@ -219,6 +245,36 @@ export function planIntegrations(
       existing === undefined ? "create" : content === existing ? "keep" : "update";
     return { path: t.path, action, content };
   });
+}
+
+/** True when an executable named `name` is on PATH. */
+export function onPath(name: string, env: NodeJS.ProcessEnv = process.env): boolean {
+  const exts = process.platform === "win32" ? ["", ".cmd", ".exe"] : [""];
+  return (env.PATH ?? "")
+    .split(delimiter)
+    .filter(Boolean)
+    .some((dir) =>
+      exts.some((ext) => {
+        try {
+          accessSync(join(dir, name + ext), constants.X_OK);
+          return true;
+        } catch {
+          return false;
+        }
+      }),
+    );
+}
+
+/**
+ * The MCP configs and hooks start `brain` by name, so they fail quietly when it is not on PATH
+ * (for example after `npx ... init`). Warns on stderr, leaving stdout and `--json` output alone.
+ */
+export function warnIfNotOnPath(tools: readonly string[]): void {
+  if (tools.length === 0 || onPath(CLI_NAME)) return;
+  process.stderr.write(
+    `warning: \`${CLI_NAME}\` is not on PATH, so the MCP server and hooks set up here will not start.\n` +
+      `hint: Install it globally with \`npm install -g ${PACKAGE_NAME}\`.\n`,
+  );
 }
 
 /** Reads files under `root`; folders and missing files read as undefined. */

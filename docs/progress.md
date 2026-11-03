@@ -170,7 +170,7 @@ exit: 0
 
 ## Phase 2 — MCP, brief and rules
 
-Status: checklist done; gate waits on real Claude Code and Codex runs (see "Gate remaining").
+Status: checklist done; gate waived for now (see "Gate remaining").
 
 ### Choices made on ambiguous items
 
@@ -221,3 +221,13 @@ $ echo '{"hook_event_name":"Stop","stop_hook_active":false}' | brain nudge
   start fresh sessions in each tool, with `brain` on PATH, in a project set up by `brain init`. The
   automated MCP tests cover the same flow (brief, list, claim, update, complete) through a real
   client over the SDK's in-memory transport, but they are not the gate.
+- **Waived 2026-11-03 by the user.** Phase 3 starts before these runs. The gate is still owed:
+  run it once the Phase 3 tools exist, so the rules block no longer names missing tools.
+
+### Fixes after the checklist
+
+- `brain init` and `brain rules sync` warn on stderr when `brain` is not on PATH, because the MCP
+  config and hooks start it by name and would otherwise fail without a message (for example after
+  `npx ... init`). JSON output is unchanged.
+- A `.claude/settings.json` whose `hooks` setting is malformed now stops with a VALIDATION error
+  instead of crashing the merge.

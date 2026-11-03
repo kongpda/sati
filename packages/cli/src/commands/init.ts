@@ -28,6 +28,7 @@ import {
   type PlannedFile,
   planIntegrations,
   readExcluded,
+  warnIfNotOnPath,
   writePlanned,
 } from "../integrations.js";
 import { currentBranch, osUser, output } from "../runtime.js";
@@ -201,6 +202,7 @@ async function apply(p: InitPlan): Promise<InitResult> {
       writeFileSync(abs, `${JSON.stringify(p.config, null, 2)}\n`, { flag: "wx" });
     }
     writePlanned(p.root, p.agentFiles, p.mode === "stealth" ? excludeFileFor(p.db) : undefined);
+    warnIfNotOnPath(p.tools);
     return { project, actor, db: p.db, tools: p.tools, files: p.files };
   } finally {
     await store.close();

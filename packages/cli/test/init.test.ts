@@ -5,12 +5,13 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { brain, brainJson, run, tempRepo } from "./helpers.js";
+import { bin, brain, brainJson, run, tempRepo } from "./helpers.js";
 
 interface Init {
   project: { id: string; slug: string; mode: string };
@@ -73,6 +74,25 @@ describe("brain init", () => {
   it("rejects an unknown --tools name with a usage error", async () => {
     const dir = await tempRepo();
     expect(brainJson(dir, "init", "--yes", "--tools", "vim").code).toBe(2);
+  });
+
+  // The MCP config and hooks start `brain` by name; without it on PATH they fail silently,
+  // so init must say so (on stderr, keeping --json output clean).
+  it("warns when brain is not on PATH, and stays quiet when it is", async () => {
+    const base = `${dirname(process.execPath)}:/usr/bin:/bin`;
+    const dir = await tempRepo();
+    const missing = run(dir, ["init", "--yes", "--tools", "claude-code"], { PATH: base });
+    expect(missing.code).toBe(0);
+    expect(missing.stderr).toContain("warning: `brain` is not on PATH");
+
+    const binDir = realpathSync(mkdtempSync(join(tmpdir(), "brain-bin-")));
+    symlinkSync(bin, join(binDir, "brain"));
+    const other = await tempRepo();
+    const found = run(other, ["init", "--yes", "--tools", "claude-code"], {
+      PATH: `${binDir}:${base}`,
+    });
+    expect(found.code).toBe(0);
+    expect(found.stderr).toBe("");
   });
 
   it("stealth mode with no agent tools writes nothing into the working tree", async () => {

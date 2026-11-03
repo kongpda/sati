@@ -219,3 +219,22 @@ describe("activity", () => {
     ]);
   });
 });
+
+// Read budgets (150 ms p95) hold on large projects only if lists stop after `limit` rows
+// instead of sorting every task. A temp B-tree in the plan means a full sort.
+describe("query plans", () => {
+  const plan = (sql: string): string =>
+    (store.db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all() as { detail: string }[])
+      .map((r) => r.detail)
+      .join("\n");
+
+  it("list and ready queries walk an index in (rank, id) order", () => {
+    const order = "ORDER BY rank, id LIMIT 50";
+    const queries = [
+      `SELECT data FROM tasks WHERE project_id = 'p' AND deleted_at IS NULL ${order}`,
+      `SELECT data FROM tasks WHERE project_id = 'p' AND status = 'todo' AND deleted_at IS NULL ${order}`,
+      `SELECT data FROM notes WHERE project_id = 'p' AND deleted_at IS NULL ${order}`,
+    ];
+    for (const q of queries) expect(plan(q)).not.toContain("TEMP B-TREE");
+  });
+});

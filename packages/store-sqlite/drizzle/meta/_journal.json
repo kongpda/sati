@@ -15,6 +15,13 @@
       "when": 1793687697609,
       "tag": "0001_fts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793689246477,
+      "tag": "0002_list_order_indexes",
+      "breakpoints": true
     }
   ]
 }

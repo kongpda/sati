@@ -35,7 +35,9 @@ type Extra = (t: { [K in keyof Cols]: SQLiteColumn }) => IndexBuilder[];
 
 const entityTable = (name: string, extra: Extra = () => []) =>
   sqliteTable(name, entityColumns(), (t) => [
-    index(`${name}_project_status`).on(t.projectId, t.status, t.rank),
+    // Lists sort by (rank, id); ending each index with both lets SQLite stop after `limit` rows.
+    index(`${name}_project_status`).on(t.projectId, t.status, t.rank, t.id),
+    index(`${name}_project_rank`).on(t.projectId, t.rank, t.id),
     index(`${name}_project_feature`).on(t.projectId, t.featureId),
     index(`${name}_project_updated`).on(t.projectId, t.updatedAt),
     uniqueIndex(`${name}_project_key`).on(t.projectId, t.key),

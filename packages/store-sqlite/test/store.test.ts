@@ -181,6 +181,45 @@ describe("search", () => {
     expect(await store.read((r) => r.search(PROJECT_ID, "ephemeral"))).toEqual([]);
   });
 
+  // Updates find the index row by rowid (search_rowids). An edit must replace the old text,
+  // and a hard delete must drop both the index row and its rowid entry.
+  it("keeps exactly one index row per record across edits and deletes", async () => {
+    const t = task({ title: "Old words" });
+    await store.write((w) => w.insert("task", t));
+    await store.write((w) => w.update("task", { ...t, title: "New words", version: 2 }, 1));
+    expect(await store.read((r) => r.search(PROJECT_ID, "old"))).toEqual([]);
+    expect(await store.read((r) => r.search(PROJECT_ID, "new"))).toHaveLength(1);
+    store.db.prepare("DELETE FROM tasks WHERE id = ?").run(t.id);
+    const count = (sql: string) => (store.db.prepare(sql).get() as { n: number }).n;
+    expect(count("SELECT count(*) AS n FROM search_fts")).toBe(0);
+    expect(count("SELECT count(*) AS n FROM search_rowids")).toBe(0);
+  });
+
+  // Records indexed before migration 0003 have no search_rowids entry until it backfills them;
+  // without the backfill their edits would leave stale text in the index.
+  it("upgrading from schema v3 keeps existing records searchable and editable", async () => {
+    const v3 = tmpDb();
+    const raw = new Database(v3);
+    for (const m of MIGRATIONS.slice(0, 3)) raw.exec(m.sql);
+    raw.pragma("user_version = 3");
+    const t = task({ title: "Legacy title" });
+    raw
+      .prepare(
+        "INSERT INTO tasks (id, project_id, status, rank, created_at, updated_at, version, data) VALUES (?, ?, 'todo', 0, ?, ?, 1, ?)",
+      )
+      .run(t.id, PROJECT_ID, NOW, NOW, JSON.stringify(t));
+    raw.close();
+    const upgraded = await SqliteStore.open(v3);
+    try {
+      expect(await upgraded.read((r) => r.search(PROJECT_ID, "legacy"))).toHaveLength(1);
+      await upgraded.write((w) => w.update("task", { ...t, title: "Renamed", version: 2 }, 1));
+      expect(await upgraded.read((r) => r.search(PROJECT_ID, "legacy"))).toEqual([]);
+      expect(await upgraded.read((r) => r.search(PROJECT_ID, "renamed"))).toHaveLength(1);
+    } finally {
+      await upgraded.close();
+    }
+  });
+
   // User text must never be interpreted as FTS syntax (column filters, NEAR, unbalanced quotes).
   it("treats operators and quotes in the query as plain text", async () => {
     await store.write((w) => w.insert("task", task({ title: "Alpha OR beta" })));

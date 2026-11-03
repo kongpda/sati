@@ -11,6 +11,7 @@ import {
   createFeature,
   createTask,
   type Feature,
+  findSimilarTasks,
   getProject,
   getRecord,
   isBrainError,
@@ -114,10 +115,17 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
   server.registerTool(
     "task_create",
     {
-      description: "Create a task. New tasks start in todo (or backlog).",
+      description:
+        "Create a task. New tasks start in todo (or backlog). The result lists `similar` existing tasks; if one is the same work, cancel the new task and use that one.",
       inputSchema: CreateTaskInput,
     },
-    (input) => run(() => createTask(ctx, input)),
+    (input) =>
+      run(async () => {
+        // Search before creating, so the new task does not match itself.
+        const similar = await findSimilarTasks(ctx, { title: input.title });
+        const task = await createTask(ctx, input);
+        return { ...task, similar: similar.map((t) => ({ ...t, id: shortHandle(t.id) })) };
+      }),
   );
 
   server.registerTool(

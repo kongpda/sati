@@ -104,6 +104,18 @@ describe("MCP server", () => {
   });
 
   // Two agents must never hold one task; the loser needs the holder's name to coordinate.
+  // The agent decides what to do with a likely duplicate; the tool only has to show it.
+  it("lists likely duplicates when creating a task, but never the new task itself", async () => {
+    const client = await connect();
+    const first = await call(client, "task_create", { title: "Fix login redirect loop" });
+    expect(first.body.similar).toEqual([]);
+    const second = await call(client, "task_create", { title: "Login redirect loop after OAuth" });
+    expect(second.isError).toBe(false);
+    expect(second.body.similar).toEqual([
+      expect.objectContaining({ id: shortHandle(first.body.id), status: "todo" }),
+    ]);
+  });
+
   it("returns a CONFLICT tool error naming the holder when another agent claims", async () => {
     const first = await connect();
     const task = await call(first, "task_create", { title: "x" });

@@ -93,13 +93,14 @@ export class MemoryStore implements StorageAdapter {
       },
       getByKey: async (e, projectId, key) =>
         clone(live(e, projectId).find((r) => (e === "project" ? r.slug : r.name) === key)) as never,
-      search: async (projectId, query) => {
+      search: async (projectId, query, opts = {}) => {
         const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
         const hits: SearchHit[] = [];
-        for (const entity of ["task", "feature", "note", "decision"] as const) {
+        const test = opts.match === "any" ? "some" : "every";
+        for (const entity of opts.entities ?? (["task", "feature", "note", "decision"] as const)) {
           for (const r of live(entity, projectId)) {
             const text = JSON.stringify(r).toLowerCase();
-            if (terms.length && terms.every((t) => text.includes(t))) {
+            if (terms.length && terms[test]((t) => text.includes(t))) {
               hits.push({ entity, id: r.id, title: String(r.title), snippet: "", rank: 0 });
             }
           }

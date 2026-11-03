@@ -1,9 +1,11 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { userInfo } from "node:os";
+import { join } from "node:path";
 import {
   type Actor,
   actorIdentity,
+  CONFIG_DIR,
   createIdFactory,
   ensureActor,
   getProject,
@@ -175,7 +177,35 @@ export async function execute<T>(
   fn: (rt: Runtime) => Promise<T>,
   render: (value: T) => string,
 ): Promise<void> {
-  return output(json, async () => fn(await openRuntime()), render);
+  return output(json, async () => withExport(await openRuntime(), fn), render);
+}
+
+/**
+ * Git mode exports `.sati/` after a command that wrote, as the MCP server does, so the snapshot
+ * is already dirty when git looks: `git commit -a` decides there is nothing to commit before the
+ * pre-commit hook runs. A failed export (say, a secret in a record) warns but keeps the write.
+ */
+async function withExport<T>(rt: Runtime, fn: (rt: Runtime) => Promise<T>): Promise<T> {
+  if (rt.project.mode !== "git") return fn(rt);
+  const { afterWrites, exportSnapshot } = await import("@sati/sync");
+  const dir = join(rt.location.root, CONFIG_DIR);
+  const synced = afterWrites(
+    rt.ctx.store,
+    // Never fires: flush() below runs the export when the command ends.
+    2 ** 31 - 1,
+    async () => {
+      await exportSnapshot(rt.ctx, dir);
+    },
+    (err) => {
+      process.stderr.write("warning: the .sati/ snapshot was not updated.\n");
+      printError(err, false);
+    },
+  );
+  try {
+    return await fn({ ...rt, ctx: { ...rt.ctx, store: synced.store } });
+  } finally {
+    await synced.flush();
+  }
 }
 
 /** Like `execute`, for commands that run before a project exists (`init`). */

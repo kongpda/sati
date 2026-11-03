@@ -167,7 +167,7 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
 
 ## Known gaps found along the way (not checklist items)
 
-- [ ] **Record-only `git commit -a` fails.** If only sati records changed, git says "nothing
+- [x] **Record-only `git commit -a` fails.** If only sati records changed, git says "nothing
       to commit" before the pre-commit hook stages the snapshot. Commits that also change code
       work. Workaround: `sati sync export && git add .sati` first. Possible fix: export on
       CLI writes (like the MCP debounce), so `.sati/` is already dirty. Needs an owner

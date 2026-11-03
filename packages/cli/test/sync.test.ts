@@ -40,10 +40,8 @@ describe("sati sync", () => {
     const a = await tempRepo({ init: true });
     const b = await tempRepo({ init: true });
     const task = satiJson<Rec>(a, "task", "create", "Shared").data;
-    expect(satiJson(a, "sync", "export").data).toEqual({
-      written: [join("tasks", `${task.id}.json`)],
-      unchanged: 0,
-    });
+    // PLAN: every CLI write exports in git mode, so the record is on disk before any commit.
+    expect(existsSync(join(a, ".sati", "tasks", `${task.id}.json`))).toBe(true);
     expect(satiJson(a, "sync", "export").data).toEqual({ written: [], unchanged: 1 });
 
     // Copy the snapshot by hand. Clones of one repo share the project id, so give b's id to the record.
@@ -121,15 +119,26 @@ describe("secret scanner", () => {
   });
 });
 
-/**
- * Commits record-only changes. git decides "nothing to commit" for `commit -a` before the
- * pre-commit hook stages the snapshot, so export and stage first.
- */
+/** Commits record-only changes the way a person would, with `commit -a`. */
 function commitRecords(dir: string, message: string): void {
-  sati(dir, "sync", "export");
-  gitWithSati(dir, "add", "-A", "--", ".sati");
-  gitWithSati(dir, "commit", "-qm", message);
+  gitWithSati(dir, "commit", "-qam", message);
 }
+
+// PLAN: git decides "nothing to commit" for `commit -a` before pre-commit runs, so a record-only
+// commit works only because each CLI write has already exported .sati/.
+describe("record-only commit", () => {
+  it("`git commit -a` carries a changed record with no code change", async () => {
+    const dir = await tempRepo();
+    sati(dir, "init", "--yes", "--tools", "");
+    const task = satiJson<Rec>(dir, "task", "create", "One").data;
+    gitWithSati(dir, "add", "-A");
+    gitWithSati(dir, "commit", "-qm", "base");
+    sati(dir, "task", "update", task.id, "--title", "Renamed");
+    commitRecords(dir, "rename");
+    const shown = gitWithSati(dir, "show", `HEAD:.sati/tasks/${task.id}.json`);
+    expect(shown).toContain('"title": "Renamed"');
+  });
+});
 
 // PLAN: the merge driver merges .sati/ JSON per field; a body conflict never fails the merge.
 describe("merge driver", () => {

@@ -3,7 +3,7 @@ import { CONFIG_DIR, type ImportResult, SatiError } from "@sati/core";
 import { type ExportResult, exportSnapshot, importSnapshot } from "@sati/sync";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { execute, type Runtime } from "../runtime.js";
+import { execute, openRuntime, output, type Runtime } from "../runtime.js";
 
 /** The `.sati/` folder. Only git mode has one: stealth and standalone commit nothing. */
 function snapshotDir(rt: Runtime): string {
@@ -34,9 +34,14 @@ const importCmd = defineCommand({
   meta: { name: "import", description: "Load newer records from .sati/ (run by git hooks)" },
   args: { ...json },
   run: ({ args }) =>
-    execute(
+    // Not `execute`: its export after writes would put newer DB records back into .sati/ after
+    // checking out an older branch, leaving the tree dirty.
+    output(
       args.json,
-      (rt) => importSnapshot(rt.ctx, snapshotDir(rt)),
+      async () => {
+        const rt = await openRuntime();
+        return importSnapshot(rt.ctx, snapshotDir(rt));
+      },
       (r: ImportResult) => `Imported ${r.imported.length} newer, ${r.unchanged} unchanged.`,
     ),
 });

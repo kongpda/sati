@@ -505,7 +505,7 @@ Added 2026-11-03 at the owner's request. Sati becomes the default place where pe
 
 **Known bugs found during Phase 3**
 
-- [ ] A record-only `git commit -a` fails: git finds nothing to commit before the pre-commit hook stages `.sati/`. Fix: every CLI write exports, as the MCP server already does (debounced), so `.sati/` is already dirty.
+- [x] A record-only `git commit -a` fails: git finds nothing to commit before the pre-commit hook stages `.sati/`. Fix: every CLI write exports, as the MCP server already does (debounced), so `.sati/` is already dirty.
 - [ ] `needsReview` set by the merge driver is never cleared: add `sati task update --reviewed` (and the same for notes and features); the UI clears it in Phase 4.
 - [ ] Hooks and the merge driver find `sati` by name on `PATH`: record the absolute binary path at init (Security checklist item).
 - [ ] `sati init` on an initialised project does not upgrade hooks, the merge driver or `.gitattributes`: add `sati init --upgrade` that shows and applies only the managed changes.

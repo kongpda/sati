@@ -442,6 +442,17 @@ Docs were rewritten by search-and-replace, so earlier entries in this file use t
 for work done under the old ones. The project record in this repo's DB is still named
 "Agent Brain": there is no command to rename a project.
 
+### Fix: record-only `git commit -a`
+
+- `execute` in `packages/cli/src/runtime.ts` wraps the store in git mode with the same
+  `afterWrites` the MCP server uses, and flushes it when the command ends: any command that
+  wrote exports `.sati/` before exiting. A failed export (a secret) prints a warning and the
+  error, and the write stands, as in MCP. Commands that write nothing export nothing.
+- `sati sync import` does not export: after checking out an older branch the DB keeps newer
+  records, and exporting them would leave the tree dirty after a plain checkout.
+- The merge driver test now commits with `git commit -a`, and a new test commits a record-only
+  change that way. Both fail with the export disabled (checked by hand).
+
 ### Fix: full-index scan on every update (schema v4)
 
 The new claim benchmark failed with `SQLITE_BUSY` at 50,000 records. Cause: the FTS update and

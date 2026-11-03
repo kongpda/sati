@@ -41,3 +41,23 @@ The gate is "`brain --version` publishes to npm as `0.0.1` from CI". It needs:
 2. A GitHub repo with this code pushed.
 3. npm account 2FA, and an `NPM_TOKEN` secret (or npm trusted publishing) on the repo.
 4. Merge the "Version Packages" PR that the release workflow opens.
+
+## Phase 1 — Core, SQLite and CLI
+
+Status: in progress.
+
+### Choices made on ambiguous items
+
+- Storage port is async (ADR 0001) so Postgres and remote adapters reuse the same services.
+- One project per DB. `brain init` refuses to run twice (CONFLICT).
+- Services cover what the checklist names: create / update / list for each entity, plus task
+  ready and complete. Delete, claims and locks are not in Phase 1 (claims and locks are Phase 3).
+- Tasks start only in `backlog` or `todo`. `done` is reached only through `complete`, which needs
+  a summary and at least one file. Reopening a done task clears its completion.
+- Removing a shipped or deprecated feature takes a `decisionId` whose Decision lists the feature.
+- Decisions are append-only; a change is a new Decision with `supersedes`.
+- A no-op update writes nothing and logs nothing.
+- Activity diffs store `{from, to}` per changed field; strings over 200 characters are stored as
+  their length only, to keep the log small.
+- Core service tests use an in-memory adapter (`test/support/memory-store.ts`); the SQLite
+  adapter has its own tests, and the CLI end-to-end tests run services on SQLite.

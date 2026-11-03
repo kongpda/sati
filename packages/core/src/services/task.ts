@@ -1,0 +1,177 @@
+import { z } from "zod";
+import { BrainError } from "../domain/errors.js";
+import { findDependencyCycle } from "../domain/rules.js";
+import { Completion, type Task, TaskShape } from "../domain/schemas.js";
+import { TASK_TRANSITIONS } from "../domain/status.js";
+import type { StorageReader } from "../ports/storage.js";
+import {
+  assertTransition,
+  baseFields,
+  ExpectedVersion,
+  insertWithLog,
+  mustGet,
+  nowIso,
+  parseInput,
+  type ServiceContext,
+  updateWithLog,
+} from "./context.js";
+import { listInput } from "./query.js";
+
+const fields = TaskShape.pick({
+  title: true,
+  body: true,
+  status: true,
+  priority: true,
+  featureId: true,
+  parentId: true,
+  dependsOn: true,
+  labels: true,
+  branch: true,
+  worktree: true,
+});
+const optional = {
+  body: true,
+  status: true,
+  priority: true,
+  featureId: true,
+  parentId: true,
+  dependsOn: true,
+  labels: true,
+  branch: true,
+  worktree: true,
+} as const;
+
+/** New tasks start in `backlog` or `todo`; later states need the update and complete flows. */
+export const CreateTaskInput = fields
+  .partial(optional)
+  .extend({ status: z.enum(["backlog", "todo"]).optional() });
+export const UpdateTaskInput = fields.partial().extend(ExpectedVersion);
+export const CompleteTaskInput = Completion.pick({ summary: true, filesTouched: true }).extend(
+  ExpectedVersion,
+);
+export const ListTasksInput = listInput("task").extend({ ready: z.boolean().optional() });
+export type CreateTaskInput = z.input<typeof CreateTaskInput>;
+export type UpdateTaskInput = z.input<typeof UpdateTaskInput>;
+export type CompleteTaskInput = z.input<typeof CompleteTaskInput>;
+export type ListTasksInput = z.input<typeof ListTasksInput>;
+
+export async function createTask(ctx: ServiceContext, input: unknown): Promise<Task> {
+  const data = parseInput(CreateTaskInput, input);
+  return ctx.store.write(async (w) => {
+    const base = baseFields(ctx, "task");
+    await checkLinks(w, ctx, base.id, data);
+    return insertWithLog(w, ctx, "task", {
+      ...base,
+      body: "",
+      status: "todo",
+      priority: "medium",
+      featureId: null,
+      parentId: null,
+      dependsOn: [],
+      labels: [],
+      branch: null,
+      worktree: null,
+      claim: null,
+      completion: null,
+      ...data,
+    });
+  });
+}
+
+/** Edits a task. Use `completeTask` to reach `done`; reopening a done task clears its completion. */
+export async function updateTask(ctx: ServiceContext, id: string, input: unknown): Promise<Task> {
+  const { expectedVersion, ...patch } = parseInput(UpdateTaskInput, input);
+  return ctx.store.write(async (w) => {
+    const before = await mustGet(w, ctx, "task", id);
+    await checkLinks(w, ctx, id, patch);
+    let completion = before.completion;
+    if (patch.status && patch.status !== before.status) {
+      if (patch.status === "done") {
+        throw new BrainError("INVALID_TRANSITION", "Use complete to mark a task done.", {
+          hint: `Run \`brain task complete ${id} --summary … --files …\`.`,
+        });
+      }
+      assertTransition(TASK_TRANSITIONS, "task", before.status, patch.status);
+      if (before.status === "done") completion = null;
+    }
+    return updateWithLog(w, ctx, "task", before, { ...patch, completion }, { expectedVersion });
+  });
+}
+
+/** Marks a task done with a summary and the files touched, and releases its claim. */
+export async function completeTask(ctx: ServiceContext, id: string, input: unknown): Promise<Task> {
+  const { expectedVersion, ...data } = parseInput(CompleteTaskInput, input);
+  return ctx.store.write(async (w) => {
+    const before = await mustGet(w, ctx, "task", id);
+    assertTransition(TASK_TRANSITIONS, "task", before.status, "done");
+    const completion = { ...data, completedAt: nowIso(ctx), completedBy: ctx.actorId };
+    return updateWithLog(
+      w,
+      ctx,
+      "task",
+      before,
+      { status: "done", completion, claim: null },
+      { verb: "complete", expectedVersion },
+    );
+  });
+}
+
+/** Lists tasks; `ready: true` returns todo, unclaimed tasks whose dependencies are done. */
+export async function listTasks(ctx: ServiceContext, input: unknown = {}): Promise<Task[]> {
+  const { ready, ...query } = parseInput(ListTasksInput, input);
+  return ctx.store.read((r) =>
+    ready
+      ? r.readyTasks(ctx.projectId, nowIso(ctx), query.limit ?? 50)
+      : r.list("task", ctx.projectId, query),
+  );
+}
+
+/** Checks that linked feature, parent and dependencies exist and form no cycle. */
+async function checkLinks(
+  r: StorageReader,
+  ctx: ServiceContext,
+  taskId: string,
+  links: {
+    featureId?: string | null | undefined;
+    parentId?: string | null | undefined;
+    dependsOn?: readonly string[] | undefined;
+  },
+): Promise<void> {
+  if (links.featureId) await mustGet(r, ctx, "feature", links.featureId);
+  if (links.parentId) await checkParent(r, ctx, taskId, links.parentId);
+  if (links.dependsOn?.length) {
+    const graph = new Map<string, readonly string[]>();
+    const queue = [...links.dependsOn];
+    for (const dep of links.dependsOn) await mustGet(r, ctx, "task", dep);
+    while (queue.length > 0) {
+      const next = queue.pop();
+      if (next === undefined || next === taskId || graph.has(next)) continue;
+      const deps = (await r.get("task", next))?.dependsOn ?? [];
+      graph.set(next, deps);
+      queue.push(...deps);
+    }
+    const cycle = findDependencyCycle(taskId, links.dependsOn, (id) => graph.get(id));
+    if (cycle) {
+      throw new BrainError("VALIDATION", `Dependency cycle: ${cycle.join(" -> ")}.`, {
+        details: { cycle },
+      });
+    }
+  }
+}
+
+async function checkParent(
+  r: StorageReader,
+  ctx: ServiceContext,
+  taskId: string,
+  parentId: string,
+): Promise<void> {
+  let current: string | null = parentId;
+  const seen = new Set<string>();
+  while (current !== null && !seen.has(current)) {
+    if (current === taskId) {
+      throw new BrainError("VALIDATION", `Task ${taskId} cannot be its own ancestor.`);
+    }
+    seen.add(current);
+    current = (await mustGet(r, ctx, "task", current)).parentId;
+  }
+}

@@ -112,27 +112,28 @@ export const Completion = z.strictObject({
 });
 export type Completion = z.infer<typeof Completion>;
 
-export const Task = z
-  .strictObject({
-    id: TaskId,
-    ...base,
-    title,
-    body,
-    status: z.enum(TASK_STATUSES),
-    priority: Priority,
-    featureId: FeatureId.nullable(),
-    parentId: TaskId.nullable(),
-    dependsOn: list(TaskId),
-    labels: list(label),
-    branch: z.string().max(LIMITS.path).nullable(),
-    worktree: z.string().max(LIMITS.path).nullable(),
-    claim: Claim.nullable(),
-    completion: Completion.nullable(),
-  })
-  .refine((t) => t.status !== "done" || t.completion !== null, {
-    message: "a done task needs a completion summary and files touched",
-    path: ["completion"],
-  });
+/** Task fields without the cross-field rule, so input schemas can `pick` from it. */
+export const TaskShape = z.strictObject({
+  id: TaskId,
+  ...base,
+  title,
+  body,
+  status: z.enum(TASK_STATUSES),
+  priority: Priority,
+  featureId: FeatureId.nullable(),
+  parentId: TaskId.nullable(),
+  dependsOn: list(TaskId),
+  labels: list(label),
+  branch: z.string().max(LIMITS.path).nullable(),
+  worktree: z.string().max(LIMITS.path).nullable(),
+  claim: Claim.nullable(),
+  completion: Completion.nullable(),
+});
+
+export const Task = TaskShape.refine((t) => t.status !== "done" || t.completion !== null, {
+  message: "a done task needs a completion summary and files touched",
+  path: ["completion"],
+});
 export type Task = z.infer<typeof Task>;
 
 export const LOCK_MODES = ["exclusive", "shared"] as const;

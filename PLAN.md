@@ -416,7 +416,7 @@ flowchart LR
 - [x] GitHub Actions: lint, typecheck, test on Linux, macOS and Windows with Node 22 and 24
 - [ ] Changesets, npm scope reserved, two-factor on npm, provenance publishing workflow
 - [ ] Pick the product name and check npm and domain availability
-- [ ] Write `AGENTS.md` and the contribution conventions (conventional commits, ADR template)
+- [x] Write `AGENTS.md` and the contribution conventions (conventional commits, ADR template)
 
 **Gate:** an empty `brain --version` publishes to npm as `0.0.1` from CI.
 

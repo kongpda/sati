@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "turbo run build",
+    "local": "bash scripts/local.sh",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "bench": "turbo run bench",

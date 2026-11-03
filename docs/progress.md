@@ -308,6 +308,35 @@ Status: in progress.
 - `init` used to write the config JSON into every created file before the agent files replaced
   it. It now writes only the config entry.
 
+### Export / import
+
+- New package `packages/sync` (`@brain/sync`, bundled into the CLI like the others). It holds
+  the file I/O, so `core` stays free of I/O: core only has `snapshotRecords` and
+  `importRecords`. This grew the item by one package.
+- Export writes `.brain/<plural>/<id>.json` for milestones, features, tasks, decisions, notes
+  and context, soft-deleted records included as tombstones. Keys are sorted at every depth,
+  2-space indent, trailing newline. A file is rewritten only when its content changed, through a
+  temp file and a rename. Files with no DB record are left alone: they may be a teammate's
+  records not imported yet.
+- Import reads every file first. A file that does not parse, is over 1 MB, has a name that does
+  not match its `id`, fails the schema, or belongs to another project rejects the whole import
+  with VALIDATION naming the file; nothing is written. Otherwise one transaction inserts unknown
+  records and replaces a stored one only when the file has a higher `version`, or the same
+  `version` with a later `updatedAt` (choice on an ambiguous item). Each import writes an
+  `import` activity row.
+- `brain sync export|import` work only in git mode. Stealth and standalone commit nothing, so
+  they exit with USAGE.
+- Debounce: `brain mcp` in git mode exports 2 s after the last write, and once more on
+  shutdown. CLI write commands do not export; the pre-commit hook covers commits. Export errors
+  go to stderr and never fail the write.
+- Hooks: `brain init` writes `pre-commit` (guard, then `brain sync export` and
+  `git add -A -- .brain`) and `post-merge`, `post-checkout`, `post-rewrite`
+  (`brain sync import`) in git mode. Stealth gets the guard-only pre-commit. A hook carrying the
+  "Installed by `brain init`" header is ours and is updated; any other existing hook is skipped.
+  Every hook warns and exits 0 when `brain` is not on PATH.
+- Caveat: `git add` inside pre-commit also stages `.brain/` on a partial commit
+  (`git commit <path>`). That is the intended snapshot, but it is a side effect worth knowing.
+
 ### Fix: full-index scan on every update (schema v4)
 
 The new claim benchmark failed with `SQLITE_BUSY` at 50,000 records. Cause: the FTS update and

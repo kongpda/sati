@@ -221,4 +221,24 @@ describe("pre-commit hook", () => {
     expect(init.data.files).toContainEqual({ path: ".git/hooks/pre-commit", action: "skip" });
     expect(readFileSync(hookFile, "utf8")).toBe("#!/bin/sh\nnpm test\n");
   });
+
+  // A hook an older `brain init` wrote is ours, so it is brought up to date.
+  it("updates a hook written by an older brain init", async () => {
+    const dir = await tempRepo();
+    const hookFile = join(dir, ".git/hooks/pre-commit");
+    mkdirSync(join(dir, ".git/hooks"), { recursive: true });
+    writeFileSync(
+      hookFile,
+      "#!/bin/sh\n# Installed by `brain init`: old\nexec brain guard --staged\n",
+    );
+    const init = brainJson<{ files: { path: string; action: string }[] }>(
+      dir,
+      "init",
+      "--yes",
+      "--tools",
+      "",
+    );
+    expect(init.data.files).toContainEqual({ path: ".git/hooks/pre-commit", action: "update" });
+    expect(readFileSync(hookFile, "utf8")).toContain("brain sync export");
+  });
 });

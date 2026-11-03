@@ -20,7 +20,7 @@ import { type DbLocation, locateDb, SqliteStore, standaloneDbPath } from "@brain
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { selectTools } from "../detect.js";
-import { type PlannedHook, planPreCommit } from "../git.js";
+import { type PlannedHook, planHooks } from "../hooks.js";
 import {
   excludeFileFor,
   type FileAction,
@@ -44,8 +44,8 @@ interface InitPlan {
   tools: string[];
   files: FileChange[];
   agentFiles: PlannedFile[];
-  /** The git pre-commit hook; none in standalone mode. */
-  hook: PlannedHook | undefined;
+  /** Git hooks; none in standalone mode. */
+  hooks: PlannedHook[];
   config: BrainConfig;
 }
 
@@ -156,8 +156,8 @@ async function plan(
     (path) => path === "CLAUDE.local.md" || excluded.has(path),
   );
   files.push(...agentFiles.map(({ path, action }) => ({ path, action })));
-  const hook = mode === "standalone" ? undefined : planPreCommit(root);
-  if (hook) files.push({ path: hook.path, action: hook.action });
+  const hooks = planHooks(root, mode);
+  files.push(...hooks.map(({ path, action }) => ({ path, action })));
   return {
     mode,
     slug: args.slug ?? slugify(name),
@@ -168,7 +168,7 @@ async function plan(
     tools,
     files,
     agentFiles,
-    hook,
+    hooks,
     config: { version: 1, projectId, mode },
   };
 }
@@ -179,10 +179,8 @@ function preview(p: InitPlan): string {
   if (p.mode === "stealth" && p.agentFiles.some((f) => f.action === "skip")) {
     lines.push("(stealth mode skips files that already exist, so nothing tracked changes)");
   }
-  if (p.hook?.action === "skip") {
-    lines.push(
-      `(${p.hook.path} already exists and is left alone; add \`brain guard --staged\` to it)`,
-    );
+  for (const h of p.hooks.filter((h) => h.action === "skip")) {
+    lines.push(`(${h.path} already exists and is left alone; call brain from it yourself)`);
   }
   if (p.files.length === 0) lines.push("files     none");
   lines.push(`tools     ${p.tools.length ? p.tools.join(", ") : "none detected"}`);
@@ -212,10 +210,11 @@ async function apply(p: InitPlan): Promise<InitResult> {
       mkdirSync(join(abs, ".."), { recursive: true });
       writeFileSync(abs, `${JSON.stringify(p.config, null, 2)}\n`, { flag: "wx" });
     }
-    if (p.hook?.action === "create") {
-      mkdirSync(join(p.hook.abs, ".."), { recursive: true });
-      writeFileSync(p.hook.abs, p.hook.content, { flag: "wx" });
-      chmodSync(p.hook.abs, 0o755);
+    for (const h of p.hooks) {
+      if (h.action !== "create" && h.action !== "update") continue;
+      mkdirSync(join(h.abs, ".."), { recursive: true });
+      writeFileSync(h.abs, h.content, { flag: h.action === "create" ? "wx" : "w" });
+      chmodSync(h.abs, 0o755);
     }
     writePlanned(p.root, p.agentFiles, p.mode === "stealth" ? excludeFileFor(p.db) : undefined);
     warnIfNotOnPath(p.tools);
@@ -296,7 +295,9 @@ export default defineCommand({
         const p = await plan(cwd, opts);
         throw new BrainError("USAGE", "brain init needs --yes when it cannot ask questions.", {
           hint: "Run `brain init --yes`, or add `--json` to see what it would write.",
-          details: { preview: { ...p, config: undefined, agentFiles: undefined, hook: undefined } },
+          details: {
+            preview: { ...p, config: undefined, agentFiles: undefined, hooks: undefined },
+          },
         });
       },
       render,

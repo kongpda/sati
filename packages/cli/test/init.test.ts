@@ -42,7 +42,10 @@ describe("brain init", () => {
       { path: ".mcp.json", action: "create" },
       { path: ".claude/settings.json", action: "create" },
       { path: ".claude/skills/brain/SKILL.md", action: "create" },
-      { path: join(".git", "hooks", "pre-commit"), action: "create" },
+      ...["pre-commit", "post-merge", "post-checkout", "post-rewrite"].map((h) => ({
+        path: join(".git", "hooks", h),
+        action: "create",
+      })),
     ]);
     expect(readFileSync(join(dir, "CLAUDE.md"), "utf8")).toBe("# rules\n\n@AGENTS.md\n");
     expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).toContain("<!-- brain:start v1 -->");

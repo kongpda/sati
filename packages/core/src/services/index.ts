@@ -10,4 +10,5 @@ export * from "./note.js";
 export * from "./project.js";
 export * from "./query.js";
 export * from "./similar.js";
+export * from "./sync.js";
 export * from "./task.js";

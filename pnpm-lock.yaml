@@ -60,6 +60,9 @@ importers:
       '@brain/store-sqlite':
         specifier: workspace:*
         version: link:../store-sqlite
+      '@brain/sync':
+        specifier: workspace:*
+        version: link:../sync
       drizzle-orm:
         specifier: 0.45.4
         version: 0.45.4(@types/better-sqlite3@9.6.0)(better-sqlite3@13.0.3)
@@ -120,6 +123,16 @@ importers:
       drizzle-kit:
         specifier: 0.31.11
         version: 0.31.11
+
+  packages/sync:
+    dependencies:
+      '@brain/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@brain/store-sqlite':
+        specifier: workspace:*
+        version: link:../store-sqlite
 
 packages:
 

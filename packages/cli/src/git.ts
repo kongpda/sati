@@ -1,8 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { isAbsolute, relative, resolve } from "node:path";
-import { type ChangeKind, CLI_NAME } from "@brain/core";
-import type { FileChange } from "./integrations.js";
+import type { ChangeKind } from "@brain/core";
 
 export interface Change {
   path: string;
@@ -93,32 +90,4 @@ export function stagedChanges(root: string): Change[] {
     if (lines !== undefined) change.baseLines = lines;
     return change;
   });
-}
-
-const HOOK_MARK = `${CLI_NAME} guard --staged`;
-
-const PRE_COMMIT = `#!/bin/sh
-# Installed by \`${CLI_NAME} init\`: blocks commits that delete or gut a shipped feature.
-# Override once with BRAIN_GUARD=off (logged).
-if command -v ${CLI_NAME} >/dev/null 2>&1; then
-  exec ${HOOK_MARK}
-fi
-echo "${CLI_NAME} is not on PATH, so the ${CLI_NAME} guard did not run." >&2
-`;
-
-export interface PlannedHook extends FileChange {
-  abs: string;
-  content: string;
-}
-
-/**
- * The git `pre-commit` hook for this repo. An existing hook is never overwritten: it is kept if it
- * already runs the guard and skipped otherwise.
- */
-export function planPreCommit(root: string): PlannedHook {
-  const dir = git(root, ["rev-parse", "--git-path", "hooks"]).toString("utf8").trim();
-  const abs = resolve(isAbsolute(dir) ? dir : resolve(root, dir), "pre-commit");
-  const existing = existsSync(abs) ? readFileSync(abs, "utf8") : undefined;
-  const action = existing === undefined ? "create" : existing.includes(HOOK_MARK) ? "keep" : "skip";
-  return { path: relative(root, abs), abs, action, content: PRE_COMMIT };
 }

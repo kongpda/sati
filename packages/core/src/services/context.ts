@@ -74,10 +74,11 @@ export async function listAll<E extends StoredEntity>(
   r: StorageReader,
   ctx: ServiceContext,
   entity: E,
+  opts: { includeDeleted?: boolean } = {},
 ): Promise<EntityMap[E][]> {
   const out: EntityMap[E][] = [];
   for (let offset = 0; ; offset += PAGE) {
-    const page = await r.list(entity, ctx.projectId, { limit: PAGE, offset });
+    const page = await r.list(entity, ctx.projectId, { ...opts, limit: PAGE, offset });
     out.push(...page);
     if (page.length < PAGE) return out;
   }

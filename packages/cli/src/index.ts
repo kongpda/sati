@@ -21,6 +21,7 @@ const root = defineCommand({
     search: lazy(() => import("./commands/search.js")),
     nudge: lazy(() => import("./commands/nudge.js")),
     rules: lazy(() => import("./commands/rules.js")),
+    sync: lazy(() => import("./commands/sync.js")),
     mcp: lazy(() => import("./commands/mcp.js")),
   },
 });

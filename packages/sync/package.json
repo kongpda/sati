@@ -1,0 +1,23 @@
+{
+  "name": "@brain/sync",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@brain/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@brain/store-sqlite": "workspace:*"
+  }
+}

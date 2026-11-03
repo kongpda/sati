@@ -52,6 +52,18 @@ describe("brain CLI", () => {
     expect(brain(dir, "task", "show", handle).stdout).toContain("Added tables");
   });
 
+  // Agents without MCP claim through the CLI; a second actor must be told who holds the task.
+  it("claims a task and refuses another actor with CONFLICT (exit 4)", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = brainJson<Rec>(dir, "task", "create", "x").data;
+    const claimed = brainJson<Rec>(dir, "task", "claim", t.id);
+    expect(claimed.code).toBe(0);
+    expect(claimed.data).toMatchObject({ status: "in_progress" });
+    const other = run(dir, ["task", "claim", t.id, "--json"], { BRAIN_ACTOR: "someone-else" });
+    expect(other.code).toBe(4);
+    expect(JSON.parse(other.stdout).error.message).toContain("tester");
+  });
+
   it("refuses to mark done through update, pointing at `complete` (exit 8)", async () => {
     const dir = await tempRepo({ init: true });
     const t = brainJson<Rec>(dir, "task", "create", "x").data;

@@ -1,4 +1,5 @@
 import {
+  claimTask,
   completeTask,
   createTask,
   getRecord,
@@ -119,6 +120,27 @@ const update = defineCommand({
     ),
 });
 
+const claim = defineCommand({
+  meta: {
+    name: "claim",
+    description: "Claim a task before working on it (moves it to in_progress)",
+  },
+  args: {
+    ...id("Task"),
+    lease: { type: "string", description: "Lease length in minutes (default: project setting)" },
+    ...json,
+  },
+  run: ({ args }) =>
+    execute(
+      args.json,
+      async ({ ctx }) =>
+        claimTask(ctx, await resolveId(ctx, "task", args.id), {
+          leaseMinutes: int(args.lease, "lease"),
+        }),
+      (t: Task) => `Claimed ${row(t)} until ${t.claim?.leaseUntil}`,
+    ),
+});
+
 const complete = defineCommand({
   meta: { name: "complete", description: "Finish a task with a summary of what changed" },
   args: {
@@ -143,5 +165,5 @@ const complete = defineCommand({
 
 export default defineCommand({
   meta: { name: "task", description: "Create, list and finish tasks" },
-  subCommands: { create, list: ls, show, update, complete },
+  subCommands: { create, list: ls, show, update, claim, complete },
 });

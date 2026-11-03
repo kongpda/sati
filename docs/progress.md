@@ -170,7 +170,7 @@ exit: 0
 
 ## Phase 2 — MCP, brief and rules
 
-Status: in progress.
+Status: checklist done; gate waits on real Claude Code and Codex runs (see "Gate remaining").
 
 ### Choices made on ambiguous items
 
@@ -190,3 +190,34 @@ Status: in progress.
 - **Claude Code hooks** go into `.claude/settings.json` (`.claude/settings.local.json` in stealth mode, which Claude Code treats as personal). SessionStart runs `brain brief --format=agent` on `startup|clear` and `brain brief --format=short` on `resume|compact`; Stop runs `brain nudge`. The merge keeps every other setting and hook, and adds a group only when its command is not already there, so a user can reorder or edit ours freely.
 - **`brain nudge`** lists the tasks the caller holds a live claim on (`in_progress`, `review` or `blocked`). As a Stop hook (`hook_event_name: "Stop"` on stdin) it prints `{"decision":"block","reason":...}` so the agent completes or updates them, but only once: with `stop_hook_active` set it prints the reminder as plain text and lets the stop through. With no held tasks it prints nothing. Errors exit 1, not their usual code, because Claude Code reads exit 2 from a Stop hook as "block".
 - **The skill** (`.claude/skills/brain/SKILL.md`) is the same workflow text the MCP server serves as `brain://workflow`, so the text now lives in core and both use it. The skill's description tells Claude Code when to load it.
+- **Dogfood.** Phase 2 was tracked in brain itself: every checklist item was a brain task, claimed before work and completed with a summary and files. This repo now has the rules block in `AGENTS.md`, `@AGENTS.md` in `CLAUDE.md`, the MCP entry in `.mcp.json`, and the hooks and skill under `.claude/`, all written by `brain rules sync`.
+
+### Verify output (local, 2026-11-03, macOS, Node 26.12.1)
+
+```
+$ pnpm lint && pnpm typecheck && pnpm test
+ Tasks:    7 successful, 7 total
+@brain/core:test:       Tests  83 passed (83)
+@brain/core:test: All files      |   98.08 |    90.23 |   95.68 |   99.11 |
+@brain/store-sqlite:test:       Tests  24 passed (24)
+@brain/mcp:test:       Tests  10 passed (10)
+@scope/brain:test:       Tests  36 passed (36)
+ Tasks:    8 successful, 8 total
+```
+
+Brief size: the core test "stays under the token cap on a large project" checks the 1,500-token cap
+on a large fixture. In this repo, `brain brief --json` reports 54 tokens (agent and short formats).
+
+The Stop hook against this repo's DB while holding a claim:
+
+```
+$ echo '{"hook_event_name":"Stop","stop_hook_active":false}' | brain nudge
+{"decision":"block","reason":"You still hold tsk_e25mwf (Claude Code hooks: SessionStart brief (startup, compact, resume) and Stop nudge). If the work is finished, call task_complete with a summary and the files touched; otherwise call task_update with its status and a note."}
+```
+
+### Gate remaining
+
+- **Claude Code and Codex each finish a real task using only brain tools.** This needs a person to
+  start fresh sessions in each tool, with `brain` on PATH, in a project set up by `brain init`. The
+  automated MCP tests cover the same flow (brief, list, claim, update, complete) through a real
+  client over the SDK's in-memory transport, but they are not the gate.

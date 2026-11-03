@@ -447,7 +447,7 @@ Verify: `pnpm typecheck && pnpm test && pnpm bench`, then in a temp git repo: `b
 - [x] Claude Code hooks: `SessionStart` brief (also on `compact` and `resume`, short form — review fix 12), `Stop` nudge
 - [x] Managed rules blocks with `<!-- brain:start v1 -->` markers for AGENTS.md, CLAUDE.md (`@AGENTS.md`), GEMINI.md, `.cursor/rules/brain.mdc`, Copilot, Windsurf, Cline, Kiro; `brain rules sync`; stealth mode writes to git-ignored files
 - [x] Claude Code skill `.claude/skills/brain/SKILL.md` with the full workflow
-- [ ] Dogfood: use brain to build brain from this point on
+- [x] Dogfood: use brain to build brain from this point on
 
 **Gate:** Claude Code and Codex each finish a real task end to end using only brain tools; the brief stays under 1,500 tokens.
 

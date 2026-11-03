@@ -23,9 +23,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "better-sqlite3": "13.0.3",
     "citty": "0.2.2"
   },
   "devDependencies": {
-    "@brain/core": "workspace:*"
+    "@brain/core": "workspace:*",
+    "@brain/store-sqlite": "workspace:*",
+    "drizzle-orm": "0.45.4",
+    "ulid": "3.0.2",
+    "zod": "4.6.7"
   }
 }

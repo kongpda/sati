@@ -61,3 +61,17 @@ Status: in progress.
   their length only, to keep the log small.
 - Core service tests use an in-memory adapter (`test/support/memory-store.ts`); the SQLite
   adapter has its own tests, and the CLI end-to-end tests run services on SQLite.
+- Actor identity: `BRAIN_ACTOR` wins; otherwise an agent is `<tool>@<worktree>#<session8>` and a
+  human is `<user>@<worktree>`. Only Claude Code detection (`CLAUDECODE`,
+  `CLAUDE_CODE_SESSION_ID`) is verified; other tools are picked up from the generic `AI_AGENT`
+  variable, unverified for Codex, Cursor and Gemini CLI.
+- CLI covers `task`, `feature`, `note`, `decision` and `search`. Milestone commands are not in
+  the PLAN's CLI list, so there are none yet; milestones are reachable through `--milestone` ids.
+- List flags are comma-separated (`--labels a,b`, `--files a.ts,b.ts`) because citty keeps only
+  the last value of a repeated flag.
+- No colour output in Phase 1 (so "colour only on a TTY" holds trivially).
+- Bad usage (missing argument, unknown command, non-numeric number) exits 2 (`USAGE`), not
+  citty's default 1. With `--json`, errors print `{"error":{code,message,hint,details}}` on stdout.
+- The CLI bundles drizzle-orm, zod and ulid. Loading them as separate npm files took ~200 ms per
+  command (over the 150 ms budget); bundled, `brain task list` takes ~80 ms. `brain --version`
+  loads only the name constant (~30 ms).

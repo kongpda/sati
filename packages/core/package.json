@@ -7,6 +7,10 @@
     ".": {
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
+    },
+    "./name": {
+      "types": "./dist/name.d.mts",
+      "import": "./dist/name.mjs"
     }
   },
   "scripts": {

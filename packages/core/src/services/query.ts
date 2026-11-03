@@ -3,7 +3,7 @@ import { BrainError } from "../domain/errors.js";
 import { ID_PREFIXES, parseHandle, parseId, shortHandle } from "../domain/ids.js";
 import type { EntityMap, StoredEntity } from "../domain/schemas.js";
 import { FEATURE_STATUSES, MILESTONE_STATUSES, TASK_STATUSES } from "../domain/status.js";
-import type { ListQuery } from "../ports/storage.js";
+import { type ListQuery, SEARCHABLE, type SearchHit } from "../ports/storage.js";
 import { mustGet, parseInput, type ServiceContext } from "./context.js";
 
 const STATUSES: Partial<Record<StoredEntity, readonly [string, ...string[]]>> = {
@@ -89,4 +89,18 @@ export async function resolveId(
     });
   }
   return only.id;
+}
+
+export const SearchInput = z.strictObject({
+  query: z.string().trim().min(1).max(500),
+  entities: z.array(z.enum(SEARCHABLE)).max(SEARCHABLE.length).optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+  match: z.enum(["all", "any"]).optional(),
+});
+export type SearchInput = z.input<typeof SearchInput>;
+
+/** Full-text search across tasks, features, notes and decisions of this project. */
+export async function search(ctx: ServiceContext, input: unknown): Promise<SearchHit[]> {
+  const { query, ...opts } = parseInput(SearchInput, input);
+  return ctx.store.read((r) => r.search(ctx.projectId, query, opts));
 }

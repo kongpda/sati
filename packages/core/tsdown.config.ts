@@ -1,3 +1,4 @@
 import { defineConfig } from "tsdown";
 
-export default defineConfig({ entry: ["src/index.ts"], format: "esm", dts: true });
+// `name` is its own entry so the CLI can print `--version` without loading the core.
+export default defineConfig({ entry: ["src/index.ts", "src/name.ts"], format: "esm", dts: true });

@@ -430,7 +430,7 @@ flowchart LR
 - [x] Prefixed ULIDs and short display handles; dependency-cycle check
 - [x] CLI commands with `--json`, helpful errors and stable exit codes
 - [x] `brain init` wizard (mode, agent tools detected, preview of every file it will write)
-- [ ] Unit tests at 90%+ coverage on `core`
+- [x] Unit tests at 90%+ coverage on `core`
 - [x] `schemaVersion` stored in the DB; older binaries refuse writes; migrations take an exclusive lock and back up first (review fix 10)
 - [x] Actor identity from `BRAIN_ACTOR`, else tool + worktree + session ID (review fix 11)
 - [ ] Benchmarks for the CLI budgets in the Performance section

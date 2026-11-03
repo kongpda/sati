@@ -82,3 +82,6 @@ Status: in progress.
   rules is Phase 2 work, so the preview lists just `.brain/brain.config.json` for now.
 - A committed `.brain/brain.config.json` (as in a fresh clone) is kept, and its project id is
   reused for the new local DB.
+- Core coverage is enforced: `pnpm test` in `packages/core` runs with v8 coverage and fails
+  below 90% statements, branches, functions or lines. Current: 97.7% statements, 92.0%
+  branches, 94.3% functions, 98.5% lines.

@@ -54,13 +54,15 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
 }
 
 describe("MCP server", () => {
-  it("exposes the Phase 2 tools, resources and prompts", async () => {
+  it("exposes the agent tools, resources and prompts", async () => {
     const client = await connect();
     const tools = (await client.listTools()).tools.map((t) => t.name).sort();
     expect(tools).toEqual([
       "brain_brief",
       "decision_record",
       "feature_upsert",
+      "lock_acquire",
+      "lock_release",
       "search",
       "task_claim",
       "task_complete",
@@ -128,6 +130,30 @@ describe("MCP server", () => {
     expect(res.isError).toBe(true);
     expect(res.body.error).toMatchObject({ code: "CONFLICT" });
     expect(res.body.error.message).toContain("claude-code@main#1");
+  });
+
+  // Locks only help if a second agent, in its own session, is actually refused.
+  it("locks paths against another agent until the holder releases them", async () => {
+    const first = await connect();
+    const task = await call(first, "task_create", { title: "Billing" });
+    const lock = await call(first, "lock_acquire", {
+      paths: ["./src/billing/"],
+      taskId: shortHandle(task.body.id),
+      reason: "refactor",
+    });
+    expect(lock.isError).toBe(false);
+    expect(lock.body.lock).toMatchObject({ paths: ["src/billing"], mode: "exclusive" });
+
+    const codex = await ensureActor(ctx, { name: "codex@main#2", kind: "agent", tool: "codex" });
+    const second = await connect({ ...ctx, actorId: codex.id });
+    const refused = await call(second, "lock_acquire", { paths: ["src/billing/**"] });
+    expect(refused.body.error).toMatchObject({ code: "CONFLICT" });
+    expect(refused.body.error.message).toContain("claude-code@main#1");
+    expect((await call(second, "lock_release", { id: lock.body.lock.id })).isError).toBe(true);
+
+    const released = await call(first, "lock_release", { id: shortHandle(lock.body.lock.id) });
+    expect(released.body.deletedAt).not.toBeNull();
+    expect((await call(second, "lock_acquire", { paths: ["src/billing/**"] })).isError).toBe(false);
   });
 
   it("reports validation failures as tool errors instead of crashing", async () => {

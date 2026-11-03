@@ -15,6 +15,7 @@ import {
   type ServiceContext,
   updateWithLog,
 } from "./context.js";
+import { releaseTaskLocks } from "./lock.js";
 import { listInput } from "./query.js";
 
 const fields = TaskShape.pick({
@@ -120,13 +121,14 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
   });
 }
 
-/** Marks a task done with a summary and the files touched, and releases its claim. */
+/** Marks a task done with a summary and the files touched, and releases its claim and locks. */
 export async function completeTask(ctx: ServiceContext, id: string, input: unknown): Promise<Task> {
   const { expectedVersion, ...data } = parseInput(CompleteTaskInput, input);
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "task", id);
     assertTransition(TASK_TRANSITIONS, "task", before.status, "done");
     const completion = { ...data, completedAt: nowIso(ctx), completedBy: ctx.actorId };
+    await releaseTaskLocks(w, ctx, id);
     return updateWithLog(
       w,
       ctx,

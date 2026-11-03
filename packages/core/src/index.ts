@@ -1,5 +1,6 @@
 export * from "./domain/errors.js";
 export * from "./domain/ids.js";
+export * from "./domain/locks.js";
 export * from "./domain/rules.js";
 export * from "./domain/schemas.js";
 export * from "./domain/status.js";

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { shortHandle } from "../domain/ids.js";
 import type { Feature, Task } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
-import { nowIso, parseInput, type ServiceContext } from "./context.js";
+import { actorName, nowIso, parseInput, type ServiceContext } from "./context.js";
 import { releaseExpiredClaims } from "./task.js";
 
 /** PLAN: the brief stays under 1,500 tokens so it is cheap to inject at every session start. */
@@ -43,7 +43,7 @@ interface Section {
 
 /**
  * The session-start brief: who I am, my claimed tasks with their acceptance criteria, ready
- * tasks, recent decisions and protected features. Every line carries an id so the agent can
+ * tasks, paths other agents have locked, recent decisions and protected features. Every line carries an id so the agent can
  * fetch more. Lower sections lose items first when the text would exceed the token cap.
  */
 export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Promise<Brief> {
@@ -78,7 +78,14 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
     const guarded = allFeatures.filter((f) => f.protected && f.status !== "removed");
     // Features tied to my tasks come first: those are the ones I am most likely to touch.
     guarded.sort((a, b) => Number(features.has(b.id)) - Number(features.has(a.id)));
-    return { project, actor, mine, ready, features, decisions, guarded };
+    const locks = short
+      ? []
+      : (await r.list("lock", ctx.projectId, { limit: 500 })).filter(
+          (l) => l.actorId !== ctx.actorId && l.leaseUntil > now,
+        );
+    const held = [];
+    for (const l of locks) held.push({ ...l, holder: await actorName(r, l.actorId) });
+    return { project, actor, mine, ready, features, decisions, guarded, locks: held };
   });
 
   const name = data.project?.name ?? "this project";
@@ -111,6 +118,14 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       title: short ? "Ready (top 3)" : "Ready (top 5)",
       empty: "No ready tasks.",
       items: data.ready.map((t) => taskLine(t)),
+    },
+    {
+      title: "Locked by other agents",
+      empty: null,
+      items: data.locks.map((l) => {
+        const until = l.leaseUntil.slice(11, 16);
+        return `- ${shortHandle(l.id)} ${l.mode} ${clip(l.paths.join(", "), 80)} by ${clip(l.holder, 60)} until ${until}Z`;
+      }),
     },
     {
       title: "Decisions, last 7 days",

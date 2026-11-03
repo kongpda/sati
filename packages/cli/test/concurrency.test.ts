@@ -48,4 +48,18 @@ describe("concurrent claims", () => {
     const stored = brainJson<Rec>(dir, "task", "show", task.id).data;
     expect(stored.claim?.actorId).toBe(winner.claim?.actorId);
   }, 60_000);
+
+  // Same race for locks: the overlap check and the insert must be one transaction.
+  it("10 processes locking overlapping paths: exactly one gets the lock", async () => {
+    const dir = await tempRepo({ init: true });
+    const results = await Promise.all(
+      Array.from({ length: 10 }, (_, i) =>
+        runAsync(dir, ["lock", "acquire", i % 2 ? "src/**" : "src", "--json"], `agent-${i}`),
+      ),
+    );
+    expect(results.filter((r) => r.code === 0)).toHaveLength(1);
+    expect(results.filter((r) => r.code === 4)).toHaveLength(9);
+    for (const r of results) expect(r.stderr).not.toMatch(/SQLITE_BUSY|database is locked/);
+    expect(brainJson<unknown[]>(dir, "lock", "list").data).toHaveLength(1);
+  }, 60_000);
 });

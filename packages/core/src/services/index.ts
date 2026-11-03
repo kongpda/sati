@@ -3,6 +3,7 @@ export * from "./brief.js";
 export * from "./context.js";
 export * from "./decision.js";
 export * from "./feature.js";
+export * from "./lock.js";
 export * from "./milestone.js";
 export * from "./note.js";
 export * from "./project.js";

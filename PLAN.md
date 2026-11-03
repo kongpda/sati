@@ -454,7 +454,7 @@ Verify: `pnpm typecheck && pnpm test && pnpm bench`, then in a temp git repo: `b
 ### Phase 3 — Worktree coordination and git sync (weeks 5–6)
 
 - [x] Claims with leases and heartbeats; atomic claim under concurrency
-- [ ] Path locks (exclusive / shared) with overlap detection
+- [x] Path locks (exclusive / shared) with overlap detection
 - [ ] `brain guard` for staged diffs and single paths; `PreToolUse` hook; `pre-commit` hook
 - [ ] Export / import engine (incremental, atomic, tombstones) and git hooks installer
 - [ ] Merge driver with field-level three-way merge, `needsReview` flag, property tests

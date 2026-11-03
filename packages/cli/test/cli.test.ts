@@ -195,4 +195,27 @@ describe("brain CLI", () => {
     ) as Rec;
     expect(other.createdBy).not.toBe(a.createdBy);
   });
+
+  it("locks paths, refuses an overlapping lock from another agent, and releases", async () => {
+    const dir = await tempRepo({ init: true });
+    const task = brainJson<Rec>(dir, "task", "create", "Billing").data;
+    const held = brainJson<{ lock: Rec & { paths: string[] } }>(
+      dir,
+      "lock",
+      "acquire",
+      "src/billing/**,docs",
+      "--task",
+      task.id,
+    );
+    expect(held.code).toBe(0);
+    expect(held.data.lock.paths).toEqual(["src/billing/**", "docs"]);
+
+    const other = run(dir, ["lock", "acquire", "src/billing/a.ts"], { BRAIN_ACTOR: "codex" });
+    expect(other.code).toBe(4);
+    expect(other.stderr).toContain("locked (exclusive) by tester");
+    expect(brain(dir, "lock", "list").stdout).toContain("src/billing/**, docs");
+
+    expect(brain(dir, "lock", "release", held.data.lock.id).code).toBe(0);
+    expect(brain(dir, "lock", "list").stdout).toContain("No locks.");
+  });
 });

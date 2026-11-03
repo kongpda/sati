@@ -251,6 +251,32 @@ Status: in progress.
   status and only lose the claim. Each release logs a new activity verb, `release`.
 - `brain doctor` does not exist yet; it should call the same service when it is added.
 
+### Path locks
+
+- `brain lock acquire|release|list`, MCP `lock_acquire` and `lock_release`. The overlap check and
+  the insert run in one write transaction. A test with 10 processes requesting overlapping paths
+  shows exactly one gets the lock.
+- Rules: an overlap with another actor's live lock fails with CONFLICT (exit 4), naming the
+  holder, when either side is `exclusive`. `shared` over `shared` succeeds and returns the overlap
+  as a warning. An actor's own locks never conflict. Default mode is `exclusive`.
+- Overlap detection (choice on an ambiguous item): micromatch has no "can two globs match the
+  same file" test, so paths are compared segment by segment after brace expansion. A literal
+  segment must equal or match the other side's glob segment; `**`, or two globs in one segment,
+  count as overlapping. A lock path also covers everything beneath what it matches, so `src`
+  covers `src/a.ts`. This errs towards false overlaps (a refused lock or a warning), never a
+  missed one. Results are cached per path pair in the process.
+- Paths are normalised (`./src/` becomes `src`). Absolute paths and `..` are rejected, since they
+  could never match a repo file and the lock would protect nothing.
+- Release: the holder releases; anyone may release an expired lock; another agent needs `force`.
+  A release is a soft delete with verb `release`, and the activity row names the actor who did it,
+  which is how a forced release is logged. Expired locks are released by the next `lock_acquire`.
+- `task_complete` releases the caller's locks tied to that task (`--task` / `taskId`) in the same
+  transaction. Locks of other actors on the task are left alone; releasing them would be a force.
+- The brief lists other agents' live locks in a "Locked by other agents" section (not in the
+  short format). Locks do not renew task claims.
+- `micromatch` 4.0.8 is a new dependency of core, as the stack names it. The CLI keeps it external
+  (a runtime dependency) rather than bundling it.
+
 ### Fix: full-index scan on every update (schema v4)
 
 The new claim benchmark failed with `SQLITE_BUSY` at 50,000 records. Cause: the FTS update and

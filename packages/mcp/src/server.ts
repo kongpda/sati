@@ -1,4 +1,6 @@
 import {
+  AcquireLockInput,
+  acquireLock,
   BrainError,
   BriefInput,
   buildBrief,
@@ -19,7 +21,9 @@ import {
   listRecords,
   listTasks,
   RecordDecisionInput,
+  ReleaseLockInput,
   recordDecision,
+  releaseLock,
   resolveId,
   SearchInput,
   type ServiceContext,
@@ -152,10 +156,37 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
     "task_complete",
     {
       description:
-        "Mark a task done. Requires a summary and every file touched. Releases the claim.",
+        "Mark a task done. Requires a summary and every file touched. Releases the claim and your locks tied to the task.",
       inputSchema: CompleteTaskInput.extend({ id: Ref }),
     },
     ({ id, ...input }) => run(async () => completeTask(ctx, await task(id), input)),
+  );
+
+  server.registerTool(
+    "lock_acquire",
+    {
+      description:
+        "Lock repo-relative paths or globs before editing a shared area. exclusive (default) blocks other agents; shared only warns. Fails with the holder's name on overlap. Pass taskId so task_complete releases it.",
+      inputSchema: AcquireLockInput.extend({ taskId: Ref.optional() }),
+    },
+    ({ taskId, ...input }) =>
+      run(async () =>
+        acquireLock(ctx, {
+          ...input,
+          taskId: taskId === undefined ? undefined : await task(taskId),
+        }),
+      ),
+  );
+
+  server.registerTool(
+    "lock_release",
+    {
+      description:
+        "Release a lock when done editing. force releases another agent's lock and is logged.",
+      inputSchema: ReleaseLockInput.extend({ id: Ref }),
+    },
+    ({ id, ...input }) =>
+      run(async () => releaseLock(ctx, await resolveId(ctx, "lock", id), input)),
   );
 
   server.registerTool(

@@ -67,6 +67,11 @@ export function baseFields(ctx: ServiceContext, entity: StoredEntity) {
   };
 }
 
+/** An actor's display name, falling back to its id. */
+export async function actorName(r: StorageReader, actorId: string): Promise<string> {
+  return (await r.get("actor", actorId))?.name ?? actorId;
+}
+
 /** A live (not deleted) record of this project, or NOT_FOUND. */
 export async function mustGet<E extends StoredEntity>(
   r: StorageReader,

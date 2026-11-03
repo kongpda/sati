@@ -27,7 +27,8 @@
     "@clack/prompts": "1.8.1",
     "@modelcontextprotocol/sdk": "1.32.2",
     "better-sqlite3": "13.0.3",
-    "citty": "0.2.2"
+    "citty": "0.2.2",
+    "micromatch": "4.0.8"
   },
   "devDependencies": {
     "@brain/core": "workspace:*",

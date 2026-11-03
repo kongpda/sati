@@ -1,0 +1,83 @@
+import type { Activity, EntityMap, Project, StoredEntity, Task } from "../domain/schemas.js";
+
+export interface ListQuery {
+  status?: readonly string[] | undefined;
+  featureId?: string | undefined;
+  milestoneId?: string | undefined;
+  parentId?: string | undefined;
+  label?: string | undefined;
+  includeDeleted?: boolean | undefined;
+  /** Default 50, max 500. */
+  limit?: number | undefined;
+  offset?: number | undefined;
+}
+
+export const SEARCHABLE = ["task", "feature", "note", "decision"] as const;
+export type SearchableEntity = (typeof SEARCHABLE)[number];
+
+export interface SearchHit {
+  entity: SearchableEntity;
+  id: string;
+  title: string;
+  snippet: string;
+  /** BM25 rank; lower is better. */
+  rank: number;
+}
+
+export interface SearchOptions {
+  entities?: readonly SearchableEntity[] | undefined;
+  limit?: number | undefined;
+  /** `all` = every term must match (default); `any` = at least one term. */
+  match?: "all" | "any" | undefined;
+}
+
+export interface ActivityQuery {
+  entityId?: string | undefined;
+  actorId?: string | undefined;
+  limit?: number | undefined;
+}
+
+/** Read access. All methods see one consistent snapshot when used inside `read`/`write`. */
+export interface StorageReader {
+  getProject(): Promise<Project | undefined>;
+  get<E extends StoredEntity>(entity: E, id: string): Promise<EntityMap[E] | undefined>;
+  /** Records whose id ends with `suffix` (case-insensitive), for short handles. */
+  findBySuffix<E extends StoredEntity>(entity: E, suffix: string): Promise<EntityMap[E][]>;
+  list<E extends StoredEntity>(
+    entity: E,
+    projectId: string,
+    query?: ListQuery,
+  ): Promise<EntityMap[E][]>;
+  /** Tasks that are todo, not actively claimed at `now`, and whose dependencies are all done. */
+  readyTasks(projectId: string, now: string, limit: number): Promise<Task[]>;
+  /** Looks up an entity by its unique `key` (actor name, project slug). */
+  getByKey<E extends StoredEntity>(
+    entity: E,
+    projectId: string,
+    key: string,
+  ): Promise<EntityMap[E] | undefined>;
+  search(projectId: string, query: string, opts?: SearchOptions): Promise<SearchHit[]>;
+  listActivity(projectId: string, query?: ActivityQuery): Promise<Activity[]>;
+}
+
+export interface StorageWriter extends StorageReader {
+  insert<E extends StoredEntity>(entity: E, record: EntityMap[E]): Promise<void>;
+  /** Replaces the record if its stored version equals `expectedVersion`; otherwise throws CONFLICT. */
+  update<E extends StoredEntity>(
+    entity: E,
+    record: EntityMap[E],
+    expectedVersion: number,
+  ): Promise<void>;
+  appendActivity(activity: Activity): Promise<void>;
+}
+
+export interface StorageAdapter {
+  /** Runs `fn` against a consistent view. */
+  read<T>(fn: (r: StorageReader) => Promise<T>): Promise<T>;
+  /**
+   * Runs `fn` in one write transaction. Writers across processes queue rather than fail.
+   * If `fn` throws, nothing is written.
+   */
+  write<T>(fn: (w: StorageWriter) => Promise<T>): Promise<T>;
+  close(): Promise<void>;
+}

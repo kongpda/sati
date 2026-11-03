@@ -4,3 +4,5 @@ export * from "./domain/rules.js";
 export * from "./domain/schemas.js";
 export * from "./domain/status.js";
 export { CLI_NAME, PACKAGE_NAME, PRODUCT_NAME } from "./name.js";
+export * from "./ports/clock.js";
+export * from "./ports/storage.js";

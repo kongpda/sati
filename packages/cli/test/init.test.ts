@@ -42,12 +42,23 @@ describe("brain init", () => {
       { path: ".mcp.json", action: "create" },
       { path: ".claude/settings.json", action: "create" },
       { path: ".claude/skills/brain/SKILL.md", action: "create" },
+      { path: ".gitattributes", action: "create" },
       ...["pre-commit", "post-merge", "post-checkout", "post-rewrite"].map((h) => ({
         path: join(".git", "hooks", h),
         action: "create",
       })),
+      { path: join(".git", "config"), action: "create" },
     ]);
     expect(readFileSync(join(dir, "CLAUDE.md"), "utf8")).toBe("# rules\n\n@AGENTS.md\n");
+    // PLAN: the merge driver is registered through .gitattributes and local git config.
+    expect(readFileSync(join(dir, ".gitattributes"), "utf8")).toBe(
+      ".brain/**/*.json merge=brain\n",
+    );
+    const driver = execFileSync("git", ["config", "--get", "merge.brain.driver"], {
+      cwd: dir,
+      encoding: "utf8",
+    });
+    expect(driver).toBe("brain merge-driver %O %A %B\n");
     expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).toContain("<!-- brain:start v1 -->");
     expect(r.data.tools).toContain("claude-code");
     const config = JSON.parse(readFileSync(join(dir, ".brain", "brain.config.json"), "utf8"));

@@ -94,3 +94,42 @@ describe("git hooks", () => {
     expect(brainJson<Rec>(b, "task", "show", task.id).data.title).toBe("From a");
   });
 });
+
+/**
+ * Commits record-only changes. git decides "nothing to commit" for `commit -a` before the
+ * pre-commit hook stages the snapshot, so export and stage first.
+ */
+function commitRecords(dir: string, message: string): void {
+  brain(dir, "sync", "export");
+  gitWithBrain(dir, "add", "-A", "--", ".brain");
+  gitWithBrain(dir, "commit", "-qm", message);
+}
+
+// PLAN: the merge driver merges .brain/ JSON per field; a body conflict never fails the merge.
+describe("merge driver", () => {
+  it("merges two branches' edits to one task and flags a body conflict for review", async () => {
+    const dir = await tempRepo();
+    brain(dir, "init", "--yes", "--tools", "");
+    const task = brainJson<Rec>(dir, "task", "create", "Shared", "--body", "one\ntwo\nthree").data;
+    gitWithBrain(dir, "add", "-A");
+    gitWithBrain(dir, "commit", "-qm", "base");
+
+    gitWithBrain(dir, "checkout", "-qb", "side");
+    brain(dir, "task", "update", task.id, "--title", "Renamed", "--body", "one\nSIDE\nthree");
+    commitRecords(dir, "side");
+    gitWithBrain(dir, "checkout", "-q", "main");
+    brain(dir, "task", "update", task.id, "--labels", "x", "--body", "one\nMAIN\nthree");
+    commitRecords(dir, "main");
+
+    // Plain git would stop with a JSON conflict; the driver merges and post-merge imports.
+    gitWithBrain(dir, "merge", "-q", "--no-edit", "side");
+    const merged = brainJson<Rec & { labels: string[]; body: string; needsReview?: boolean }>(
+      dir,
+      "task",
+      "show",
+      task.id,
+    ).data;
+    expect(merged).toMatchObject({ title: "Renamed", labels: ["x"], needsReview: true });
+    expect(merged.body).toContain("<<<<<<< ours\nMAIN\n=======\nSIDE\n>>>>>>> theirs");
+  });
+});

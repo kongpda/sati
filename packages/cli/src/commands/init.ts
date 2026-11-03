@@ -20,7 +20,14 @@ import { type DbLocation, locateDb, SqliteStore, standaloneDbPath } from "@brain
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { selectTools } from "../detect.js";
-import { type PlannedHook, planHooks } from "../hooks.js";
+import {
+  applyMergeDriver,
+  type PlannedGitConfig,
+  type PlannedHook,
+  planGitAttributes,
+  planHooks,
+  planMergeDriver,
+} from "../hooks.js";
 import {
   excludeFileFor,
   type FileAction,
@@ -46,6 +53,8 @@ interface InitPlan {
   agentFiles: PlannedFile[];
   /** Git hooks; none in standalone mode. */
   hooks: PlannedHook[];
+  /** The merge driver in local git config; git mode only. */
+  mergeDriver: PlannedGitConfig | undefined;
   config: BrainConfig;
 }
 
@@ -155,9 +164,13 @@ async function plan(
     fileReader(root),
     (path) => path === "CLAUDE.local.md" || excluded.has(path),
   );
+  // The snapshot only exists in git mode, so only git mode routes it to the merge driver.
+  if (mode === "git") agentFiles.push(planGitAttributes(fileReader(root)));
   files.push(...agentFiles.map(({ path, action }) => ({ path, action })));
   const hooks = planHooks(root, mode);
   files.push(...hooks.map(({ path, action }) => ({ path, action })));
+  const mergeDriver = mode === "git" ? planMergeDriver(root) : undefined;
+  if (mergeDriver) files.push({ path: mergeDriver.path, action: mergeDriver.action });
   return {
     mode,
     slug: args.slug ?? slugify(name),
@@ -169,6 +182,7 @@ async function plan(
     files,
     agentFiles,
     hooks,
+    mergeDriver,
     config: { version: 1, projectId, mode },
   };
 }
@@ -216,6 +230,7 @@ async function apply(p: InitPlan): Promise<InitResult> {
       writeFileSync(h.abs, h.content, { flag: h.action === "create" ? "wx" : "w" });
       chmodSync(h.abs, 0o755);
     }
+    if (p.mergeDriver) applyMergeDriver(p.root, p.mergeDriver);
     writePlanned(p.root, p.agentFiles, p.mode === "stealth" ? excludeFileFor(p.db) : undefined);
     warnIfNotOnPath(p.tools);
     return { project, actor, db: p.db, tools: p.tools, files: p.files };
@@ -296,7 +311,13 @@ export default defineCommand({
         throw new BrainError("USAGE", "brain init needs --yes when it cannot ask questions.", {
           hint: "Run `brain init --yes`, or add `--json` to see what it would write.",
           details: {
-            preview: { ...p, config: undefined, agentFiles: undefined, hooks: undefined },
+            preview: {
+              ...p,
+              config: undefined,
+              agentFiles: undefined,
+              hooks: undefined,
+              mergeDriver: undefined,
+            },
           },
         });
       },

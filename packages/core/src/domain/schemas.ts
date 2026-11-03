@@ -38,6 +38,8 @@ const base = {
   createdBy: ActorId,
   version: z.number().int().min(1),
   deletedAt: ts.nullable(),
+  /** Set by the git merge driver when a field could not merge cleanly; absent otherwise. */
+  needsReview: z.literal(true).optional(),
 };
 
 export const MODES = ["git", "stealth", "standalone"] as const;

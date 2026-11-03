@@ -337,6 +337,42 @@ Status: in progress.
 - Caveat: `git add` inside pre-commit also stages `.brain/` on a partial commit
   (`git commit <path>`). That is the intended snapshot, but it is a side effect worth knowing.
 
+### Merge driver
+
+- `brain merge-driver %O %A %B` merges one `.brain/` record file and writes the result over
+  `%A`. It only parses JSON; nothing in the files runs. A side that is not a JSON object exits 1,
+  which leaves git's normal conflict. A missing or empty base (both sides added the file) merges
+  with an empty base.
+- Per field: a field changed on one side takes that side. When both changed it:
+  - Markdown fields (`body`, `description`, `context`, `decision`, `consequences`) get a
+    line-level three-way merge (hand-written diff3, no new dependency). A clash keeps both
+    versions between `<<<<<<< ours` / `=======` / `>>>>>>> theirs` markers inside the string.
+  - Every list of strings or numbers is a three-way set merge: additions on either side stay,
+    removals on either side stick. The result is sorted, so it does not depend on the side
+    (choice on an ambiguous item: PLAN says "arrays union", but a plain union would undo
+    removals).
+  - Anything else takes the side with the newer `updatedAt`; a tie is broken by comparing the
+    JSON values, so the merge stays symmetric.
+- The merged record gets `version` one past both sides and the later `updatedAt`, so
+  `sync import` on either clone takes it over the DB copy.
+- `needsReview: true` is a new optional field on every entity (stored in the JSON data column,
+  no migration). It is set on a Markdown clash and kept once set. Nothing clears it yet.
+  The merge never fails on a body clash.
+- Delete vs edit: `deletedAt` follows the one-side rule, so a delete on one side and an edit of
+  other fields on the other gives a deleted record with the edits. Reviving is a later item.
+- Bodies over 4M LCS cells (about 2000 x 2000 lines) are not diffed: a two-sided change of
+  such a body is one conflict chunk. This bounds time and memory.
+- `brain init` in git mode appends `.brain/**/*.json merge=brain` to `.gitattributes` (other
+  lines kept) and sets `merge.brain.name` / `merge.brain.driver` in the local git config. The
+  driver is found by name on PATH; recording an absolute path is the later security item.
+- Property tests (fast-check, 2000 runs each): merge is deterministic; it is symmetric when no
+  field clashes; no one-sided change or added label is lost; separate line edits merge cleanly.
+  An end-to-end test merges two branches through git and the post-merge import.
+- Found while testing: a commit that changes only records (`git commit -a` with no tracked
+  file changed) stops with "nothing to commit". git decides that before the pre-commit hook
+  stages the snapshot. Commits that also change code are fine. Workaround: `brain sync export`
+  and `git add .brain` first. Not fixed in this item.
+
 ### Fix: full-index scan on every update (schema v4)
 
 The new claim benchmark failed with `SQLITE_BUSY` at 50,000 records. Cause: the FTS update and

@@ -18,6 +18,7 @@
     "@brain/core": "workspace:*"
   },
   "devDependencies": {
-    "@brain/store-sqlite": "workspace:*"
+    "@brain/store-sqlite": "workspace:*",
+    "fast-check": "4.10.2"
   }
 }

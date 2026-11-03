@@ -1,8 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
-import { CLI_NAME, type Mode } from "@brain/core";
-import type { FileChange } from "./integrations.js";
+import { CLI_NAME, CONFIG_DIR, type Mode } from "@brain/core";
+import type { FileChange, PlannedFile, ReadFile } from "./integrations.js";
 
 /** Marks a hook as ours, so a later `init` may update it. Foreign hooks are never touched. */
 const OWNER = `# Installed by \`${CLI_NAME} init\``;
@@ -72,4 +72,58 @@ export function planHooks(root: string, mode: Mode): PlannedHook[] {
             : "skip";
     return { path: relative(root, abs), abs, action, content };
   });
+}
+
+const ATTRIBUTE = `${CONFIG_DIR}/**/*.json merge=${CLI_NAME}`;
+
+/** `.gitattributes` routes the snapshot files to the merge driver; other lines are kept. */
+export function planGitAttributes(read: ReadFile): PlannedFile {
+  const path = ".gitattributes";
+  const existing = read(path);
+  if (existing === undefined) return { path, action: "create", content: `${ATTRIBUTE}\n` };
+  if (existing.split("\n").some((l) => l.trim() === ATTRIBUTE)) {
+    return { path, action: "keep", content: existing };
+  }
+  const sep = existing === "" || existing.endsWith("\n") ? "" : "\n";
+  return { path, action: "update", content: `${existing}${sep}${ATTRIBUTE}\n` };
+}
+
+export interface PlannedGitConfig extends FileChange {
+  entries: [key: string, value: string][];
+}
+
+/** git config is local to each clone, so init registers the driver in `.git/config`. */
+export function planMergeDriver(root: string): PlannedGitConfig {
+  const git = (...args: string[]) =>
+    execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+  const common = git("rev-parse", "--git-common-dir").trim();
+  const path = relative(
+    root,
+    resolve(isAbsolute(common) ? common : resolve(root, common), "config"),
+  );
+  const entries: [string, string][] = [
+    [`merge.${CLI_NAME}.name`, `${CLI_NAME} record merge`],
+    [`merge.${CLI_NAME}.driver`, `${CLI_NAME} merge-driver %O %A %B`],
+  ];
+  const current = (key: string) => {
+    try {
+      return git("config", "--local", "--get", key).trim();
+    } catch {
+      return undefined; // git exits 1 when the key is unset
+    }
+  };
+  const values = entries.map(([key]) => current(key));
+  const action = values.every((v, i) => v === entries[i]?.[1])
+    ? "keep"
+    : values.every((v) => v === undefined)
+      ? "create"
+      : "update";
+  return { path, action, entries };
+}
+
+export function applyMergeDriver(root: string, plan: PlannedGitConfig): void {
+  if (plan.action === "keep" || plan.action === "skip") return;
+  for (const [key, value] of plan.entries) {
+    execFileSync("git", ["config", "--local", key, value], { cwd: root, stdio: "ignore" });
+  }
 }

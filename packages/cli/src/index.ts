@@ -22,6 +22,7 @@ const root = defineCommand({
     nudge: lazy(() => import("./commands/nudge.js")),
     rules: lazy(() => import("./commands/rules.js")),
     sync: lazy(() => import("./commands/sync.js")),
+    "merge-driver": lazy(() => import("./commands/merge-driver.js")),
     mcp: lazy(() => import("./commands/mcp.js")),
   },
 });

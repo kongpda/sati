@@ -94,14 +94,20 @@ describe("MCP server", () => {
 
     const claimed = await call(client, "task_claim", { id: handle });
     expect(claimed.body).toMatchObject({ status: "in_progress", claim: { actorId: ctx.actorId } });
+    const token = claimed.body.claim.token;
+    expect(token).toEqual(expect.any(Number));
 
-    const updated = await call(client, "task_update", { id: handle, body: "halfway" });
+    // PLAN review fix 2: writes on a claimed task must present the claim's fencing token.
+    const noToken = await call(client, "task_update", { id: handle, body: "halfway" });
+    expect(noToken).toMatchObject({ isError: true, body: { error: { code: "CONFLICT" } } });
+    const updated = await call(client, "task_update", { id: handle, body: "halfway", token });
     expect(updated.body.body).toBe("halfway");
 
     const done = await call(client, "task_complete", {
       id: handle,
       summary: "Login form and session cookie",
       filesTouched: ["src/login.ts"],
+      token,
     });
     expect(done.body).toMatchObject({ status: "done", claim: null });
 

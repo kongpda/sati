@@ -460,7 +460,7 @@ Verify: `pnpm typecheck && pnpm test && pnpm bench`, then in a temp git repo: `b
 - [x] Merge driver with field-level three-way merge, `needsReview` flag, property tests
 - [x] Context cache with git-hash staleness
 - [x] Secret scanner on export
-- [ ] Fencing tokens: `task_claim` returns a token; writes on the task must present the current one (review fix 2)
+- [x] Fencing tokens: `task_claim` returns a token; writes on the task must present the current one (review fix 2)
 - [ ] Hybrid logical clock (HLC) stamps per field for merge ordering, instead of `updatedAt` (review fix 3)
 - [ ] Delete-vs-edit rule: a newer edit revives the record and flags `needsReview`; otherwise delete wins (review fix 4)
 - [ ] Hook installer detects `core.hooksPath`, husky and lefthook and chains into them; never overwrites (review fix 5)
@@ -475,6 +475,45 @@ Verify: `pnpm typecheck && pnpm test && pnpm bench`, then in a temp git repo: `b
 
 **Gate:** the E2E scenario passes 100 runs in CI; a staged deletion of a protected feature is blocked; `--no-verify` is caught by the CI guard.
 Verify: `pnpm test:e2e --repeat 100` and the guard fixtures in `e2e/guard/`.
+
+### Phase 3b — Daily workspace: agents work the backlog (week 7)
+
+Added 2026-11-03 at the owner's request. Brain becomes the default place where people and agents keep their todos, and an agent works through the plan without being told each step. Most of this exists already (task CRUD over CLI and MCP, ready tasks, the brief); these items close the gaps found when mapping the request against this plan. It moves Phase 4 back by about one week.
+
+**Agent work loop**
+
+- [ ] `brain next` and `task_claim` with no `id`: claim the top ready task in one transaction (highest priority, then oldest), so two agents calling it at once always get different tasks. Returns the task, its acceptance criteria and its fencing token. No new MCP tool.
+- [ ] Review gate: project setting `review` = `agents` (default), `all` or `none`. When it applies, `task_complete` moves the task to `review` instead of `done`; a human moves it to `done`, or back to `todo` with a reason that the next claimer sees in the brief. Humans see "waiting for review" in their brief.
+- [ ] Opt-in auto-continue: project setting `autoContinue` (off by default, so nothing runs unattended unless the owner turns it on). When on and the agent has no claim, the `Stop` nudge tells it to run `brain next`.
+
+**Planning CRUD for agents**
+
+- [ ] Milestone CRUD: `brain milestone create|list|show|update` and one MCP tool `roadmap_upsert` (15 tools; update the Agent integration table). Milestones are in the data model and the roadmap resource, but nothing can write them today.
+- [ ] Bulk planning: `task_create` accepts `subtasks[]` (title, body, `dependsOn` by index) and writes them in one transaction, so an agent turns a feature into a dependency chain in one call; the `plan-feature` prompt uses it.
+- [ ] `brain plan import <file.md>`: one milestone per heading, one task per unchecked `- [ ]` item, matched on a stable key (heading plus item text) so re-running only adds what is new and never deletes. `--dry-run` shows the changes. One-way only: brain does not edit the Markdown file.
+- [ ] Delete and restore: `brain task|note|decision delete <id>` soft-deletes (sets `deletedAt`, writes an activity row); `restore <id>` undoes it. Deleting a shipped feature still goes through `removed` plus a Decision.
+
+**Default workspace**
+
+- [ ] Personal workspace: outside any project, `brain` uses one standalone workspace at `~/.brain/` (created on first use after a prompt), so a todo can be added from any folder. `--project <slug>` targets a known project from anywhere.
+- [ ] `brain projects`: every project this machine knows (recorded by `brain init` in `~/.brain/projects.json`) with counts of ready, in-progress and review tasks. Local only; the hosted multi-project dashboard stays in Phase 6.
+
+**Trust**
+
+- [ ] `brain activity [--actor] [--task] [--since]`: the audit log on the command line, each row with actor, verb, record and field diff, so a person can see exactly what every agent changed.
+- [ ] `brain undo <activityId>`: reverts one write if the record has not changed since (else CONFLICT); the revert is itself an activity row.
+
+**Known bugs found during Phase 3**
+
+- [ ] A record-only `git commit -a` fails: git finds nothing to commit before the pre-commit hook stages `.brain/`. Fix: every CLI write exports, as the MCP server already does (debounced), so `.brain/` is already dirty.
+- [ ] `needsReview` set by the merge driver is never cleared: add `brain task update --reviewed` (and the same for notes and features); the UI clears it in Phase 4.
+- [ ] Hooks and the merge driver find `brain` by name on `PATH`: record the absolute binary path at init (Security checklist item).
+- [ ] `brain init` on an initialised project does not upgrade hooks, the merge driver or `.gitattributes`: add `brain init --upgrade` that shows and applies only the managed changes.
+- [ ] Context staleness sees staged content only: also hash modified and untracked files under the entry's path.
+- [ ] Eight core error hints use the literal `brain` instead of `CLI_NAME`.
+
+**Gate:** an agent given only `brain next`, `task_update` and `task_complete` finishes 5 tasks from a plan imported from Markdown with no human prompt between them, and each waits in `review` until a person approves it; two agents calling `brain next` concurrently 1,000 times never get the same task.
+Verify: an e2e test for the loop and a concurrency test for `brain next`.
 
 ### Phase 4 — Web UI (weeks 7–9)
 

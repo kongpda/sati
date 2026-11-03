@@ -99,6 +99,12 @@ export const Claim = z.strictObject({
   actorId: ActorId,
   leaseUntil: ts,
   heartbeatAt: ts,
+  /**
+   * Fencing token: the task version the claim was written at, so every claim gets a new one and
+   * an old one never matches again. Writes on a claimed task must present it. Claims stored
+   * before tokens existed have none.
+   */
+  token: z.number().int().positive().optional(),
 });
 export type Claim = z.infer<typeof Claim>;
 

@@ -3,6 +3,7 @@ import { BrainError } from "../domain/errors.js";
 import { findDependencyCycle } from "../domain/rules.js";
 import { type Claim, Completion, type Task, TaskShape } from "../domain/schemas.js";
 import { TASK_TRANSITIONS } from "../domain/status.js";
+import { CLI_NAME } from "../name.js";
 import type { StorageReader } from "../ports/storage.js";
 import {
   assertTransition,
@@ -46,10 +47,12 @@ const optional = {
 export const CreateTaskInput = fields
   .partial(optional)
   .extend({ status: z.enum(["backlog", "todo"]).optional() });
-export const UpdateTaskInput = fields.partial().extend(ExpectedVersion);
-export const CompleteTaskInput = Completion.pick({ summary: true, filesTouched: true }).extend(
-  ExpectedVersion,
-);
+/** The fencing token from `claimTask`. Required while the task is claimed. */
+const ClaimToken = { token: z.number().int().positive().optional() };
+export const UpdateTaskInput = fields.partial().extend(ExpectedVersion).extend(ClaimToken);
+export const CompleteTaskInput = Completion.pick({ summary: true, filesTouched: true })
+  .extend(ExpectedVersion)
+  .extend(ClaimToken);
 export const ClaimTaskInput = z.strictObject({
   leaseMinutes: z
     .number()
@@ -93,9 +96,10 @@ export async function createTask(ctx: ServiceContext, input: unknown): Promise<T
 
 /** Edits a task. Use `completeTask` to reach `done`; reopening a done task clears its completion. */
 export async function updateTask(ctx: ServiceContext, id: string, input: unknown): Promise<Task> {
-  const { expectedVersion, ...patch } = parseInput(UpdateTaskInput, input);
+  const { expectedVersion, token, ...patch } = parseInput(UpdateTaskInput, input);
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "task", id);
+    checkToken(before, token);
     await checkLinks(w, ctx, id, patch);
     let completion = before.completion;
     if (patch.status && patch.status !== before.status) {
@@ -109,7 +113,8 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
     }
     let claim = before.claim;
     if (patch.status && UNCLAIMED_STATUSES.includes(patch.status)) claim = null;
-    else if (claim?.actorId === ctx.actorId) claim = await lease(w, ctx);
+    else if (claim?.actorId === ctx.actorId)
+      claim = { ...(await lease(w, ctx)), token: claim.token };
     return updateWithLog(
       w,
       ctx,
@@ -123,9 +128,10 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
 
 /** Marks a task done with a summary and the files touched, and releases its claim and locks. */
 export async function completeTask(ctx: ServiceContext, id: string, input: unknown): Promise<Task> {
-  const { expectedVersion, ...data } = parseInput(CompleteTaskInput, input);
+  const { expectedVersion, token, ...data } = parseInput(CompleteTaskInput, input);
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "task", id);
+    checkToken(before, token);
     assertTransition(TASK_TRANSITIONS, "task", before.status, "done");
     const completion = { ...data, completedAt: nowIso(ctx), completedBy: ctx.actorId };
     await releaseTaskLocks(w, ctx, id);
@@ -144,6 +150,7 @@ export async function completeTask(ctx: ServiceContext, id: string, input: unkno
  * Claims a task for the calling actor and moves it to `in_progress`. The check and the write run
  * in one write transaction, so two agents can never both hold the same task. Fails with CONFLICT,
  * naming the holder, while another actor's lease is live. Claiming again renews the lease.
+ * Every claim returns a new fencing token in `claim.token`; later writes must present it.
  */
 export async function claimTask(
   ctx: ServiceContext,
@@ -175,7 +182,8 @@ export async function claimTask(
         },
       );
     }
-    const claim = await lease(w, ctx, leaseMinutes);
+    // The claim write bumps the version by one; that new version is the token.
+    const claim = { ...(await lease(w, ctx, leaseMinutes)), token: before.version + 1 };
     return updateWithLog(
       w,
       ctx,
@@ -217,6 +225,28 @@ export async function releaseExpiredClaims(ctx: ServiceContext): Promise<Task[]>
     }
     return released;
   });
+}
+
+/**
+ * Fencing: while a task is claimed, a write must present the claim's token. A token from a claim
+ * that was lost (expired, released, or taken by another agent) no longer matches, so a paused
+ * agent that wakes up late cannot overwrite the new holder's work.
+ */
+function checkToken(task: Task, token: number | undefined): void {
+  const current = task.claim?.token;
+  if (token === undefined && current === undefined) return;
+  if (token === current) return;
+  const hint =
+    token === undefined
+      ? `Claim it with \`${CLI_NAME} task claim ${task.id}\` and pass the token it returns.`
+      : `Your claim was lost. Run \`${CLI_NAME} task show ${task.id}\` before changing anything.`;
+  throw new BrainError(
+    "CONFLICT",
+    token === undefined
+      ? `Task ${task.id} is claimed; this write needs the claim's fencing token.`
+      : `Fencing token ${token} is stale for task ${task.id}.`,
+    { hint, details: { token: token ?? null, holder: task.claim?.actorId ?? null } },
+  );
 }
 
 /** A fresh lease for the calling actor, defaulting to the project's lease length. */

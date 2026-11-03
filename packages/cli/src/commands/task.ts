@@ -5,6 +5,7 @@ import {
   getRecord,
   listTasks,
   resolveId,
+  type ServiceContext,
   type Task,
   updateTask,
 } from "@brain/core";
@@ -12,6 +13,28 @@ import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
 import { execute, int, list, ref, refs } from "../runtime.js";
+
+const token = {
+  token: {
+    type: "string",
+    description: "Fencing token from `task claim` (default: yours, if you hold the claim)",
+  },
+} as const;
+
+/**
+ * The fencing token for a write. Each CLI call is a new process with no memory of the claim, so
+ * without `--token` it uses the claim's token only when the caller holds it. If another agent
+ * has taken the task over, the caller is not the holder and the write is refused.
+ */
+async function claimToken(
+  ctx: ServiceContext,
+  taskId: string,
+  flag: string | undefined,
+): Promise<number | undefined> {
+  if (flag !== undefined) return int(flag, "token");
+  const t = await getRecord(ctx, "task", taskId);
+  return t.claim?.actorId === ctx.actorId ? t.claim.token : undefined;
+}
 
 const fields = {
   body: { type: "string", description: "Details in Markdown" },
@@ -97,13 +120,15 @@ const update = defineCommand({
     status: { type: "string", description: "New status" },
     ...fields,
     ...expectedVersion,
+    ...token,
     ...json,
   },
   run: ({ args }) =>
     execute(
       args.json,
-      async ({ ctx }) =>
-        updateTask(ctx, await resolveId(ctx, "task", args.id), {
+      async ({ ctx }) => {
+        const taskId = await resolveId(ctx, "task", args.id);
+        return updateTask(ctx, taskId, {
           title: args.title,
           body: args.body,
           status: args.status,
@@ -115,7 +140,9 @@ const update = defineCommand({
           branch: args.branch,
           worktree: args.worktree,
           expectedVersion: int(args["expected-version"], "expected-version"),
-        }),
+          token: await claimToken(ctx, taskId, args.token),
+        });
+      },
       (t: Task) => `Updated ${row(t)}`,
     ),
 });
@@ -137,7 +164,7 @@ const claim = defineCommand({
         claimTask(ctx, await resolveId(ctx, "task", args.id), {
           leaseMinutes: int(args.lease, "lease"),
         }),
-      (t: Task) => `Claimed ${row(t)} until ${t.claim?.leaseUntil}`,
+      (t: Task) => `Claimed ${row(t)} until ${t.claim?.leaseUntil}, token ${t.claim?.token}`,
     ),
 });
 
@@ -148,17 +175,21 @@ const complete = defineCommand({
     summary: { type: "string", required: true, description: "What was done" },
     files: { type: "string", required: true, description: "Comma-separated files touched" },
     ...expectedVersion,
+    ...token,
     ...json,
   },
   run: ({ args }) =>
     execute(
       args.json,
-      async ({ ctx }) =>
-        completeTask(ctx, await resolveId(ctx, "task", args.id), {
+      async ({ ctx }) => {
+        const taskId = await resolveId(ctx, "task", args.id);
+        return completeTask(ctx, taskId, {
           summary: args.summary,
           filesTouched: list(args.files),
           expectedVersion: int(args["expected-version"], "expected-version"),
-        }),
+          token: await claimToken(ctx, taskId, args.token),
+        });
+      },
       (t: Task) => `Completed ${row(t)}`,
     ),
 });

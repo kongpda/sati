@@ -141,7 +141,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
     "task_claim",
     {
       description:
-        "Claim a task before working on it: moves it to in_progress with a lease. Fails with the holder's name if another agent has it.",
+        "Claim a task before working on it: moves it to in_progress with a lease and returns claim.token. Pass that token to task_update and task_complete. Fails with the holder's name if another agent has it.",
       inputSchema: ClaimTaskInput.extend({ id: Ref }),
     },
     ({ id, ...input }) => run(async () => claimTask(ctx, await task(id), input)),
@@ -151,7 +151,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
     "task_update",
     {
       description:
-        "Update a task's fields or status. Renews your lease. Moving it back to todo releases it.",
+        "Update a task's fields or status. While the task is claimed, pass the token from task_claim; a stale token means your claim was lost, so stop. Renews your lease. Moving it back to todo releases it.",
       inputSchema: UpdateTaskInput.extend({ id: Ref }),
     },
     ({ id, ...input }) => run(async () => updateTask(ctx, await task(id), input)),
@@ -161,7 +161,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
     "task_complete",
     {
       description:
-        "Mark a task done. Requires a summary and every file touched. Releases the claim and your locks tied to the task.",
+        "Mark a task done. Requires a summary, every file touched, and the token from task_claim. Releases the claim and your locks tied to the task.",
       inputSchema: CompleteTaskInput.extend({ id: Ref }),
     },
     ({ id, ...input }) => run(async () => completeTask(ctx, await task(id), input)),

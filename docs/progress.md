@@ -413,6 +413,27 @@ Status: in progress.
   rewording the field. If that proves too strict, an allowlist is an idea for `docs/ideas.md`.
 - The scanner lives in `@brain/sync` (pure functions, `secrets.ts`); only export uses it.
 
+### Fencing tokens (review fix 2)
+
+- The token is the task version the claim writes (`before.version + 1`). Versions only grow, so
+  a token is unique per claim and never reissued. A holder's lease renewal keeps the token.
+- `Claim.token` is optional so claims stored before this change still parse. A legacy claim
+  without a token accepts writes without one until it is released or re-claimed.
+- Rule (`checkToken` in `services/task.ts`): every `updateTask` and `completeTask` on a claimed
+  task must present the current claim's token; a missing or stale token, or a token sent for a
+  task with no claim, fails with CONFLICT. This applies to every actor, not only the holder.
+  Fencing is not authorization: any actor can read the token from `task show`.
+- CLI: each call is a new process and cannot remember a token, so `task update|complete`
+  without `--token` uses the claim's token when the caller holds the claim. `--token` overrides
+  it. `task claim` prints the token. MCP stays explicit: agents pass `claim.token`.
+- The workflow text tells agents to pass the token and to stop on a stale one. The rules block
+  is unchanged, so its version was not bumped.
+- Tests: the core fake-clock test covers the point of fencing (A's lease expires, B claims, A's
+  late update and complete are refused). The CLI test cannot cover expiry: the CLI has no clock
+  override. It covers the holder's implicit token, another actor, and a stale `--token`.
+- Cleanup flagged: seven core hints and one doc comment still say literal `brain` instead of
+  `CLI_NAME` (`grep -rn '`brain ' packages/core/src`). Left alone; the new hints use `CLI_NAME`.
+
 ### Fix: full-index scan on every update (schema v4)
 
 The new claim benchmark failed with `SQLITE_BUSY` at 50,000 records. Cause: the FTS update and

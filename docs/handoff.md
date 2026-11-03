@@ -7,8 +7,9 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
 ## Where things stand
 
 - Phases 0–2: done, except the items under "Owed by the owner" below.
-- Phase 3: 7 of 19 checklist items done (claims and leases, path locks, guard, export/import and
-  hooks, merge driver, context cache, secret scanner). 12 items and the Phase 3 gate remain.
+- Phase 3: 8 of 19 checklist items done (claims and leases, path locks, guard, export/import and
+  hooks, merge driver, context cache, secret scanner, fencing tokens). 11 items and the Phase 3
+  gate remain.
 - Phases 4–6 and the Security checklist: not started (three Security items are met; see below).
 - All checks pass at `002e9a0`: lint, typecheck, and 256 tests (core 143, CLI 55, store 26,
   sync 19, MCP 13). Core coverage: 98.4% statements, 92% branches (threshold 90%).
@@ -58,18 +59,18 @@ both before starting. Keep this file current: tick items here and in `PLAN.md` i
 
 ### 2. Fencing tokens (review fix 2)
 
-- [ ] `claimTask` (`packages/core/src/services/task.ts:148`) returns a token that changes on
+- [x] `claimTask` (`packages/core/src/services/task.ts:148`) returns a token that changes on
       every new claim (for example a counter stored on `task.claim`). Schema: `Task.claim` in
       `packages/core/src/domain/schemas.ts`.
-- [ ] `updateTask` and `completeTask` (lines 95 and 125) take the token; a stale or missing
+- [x] `updateTask` and `completeTask` (lines 95 and 125) take the token; a stale or missing
       token from the claim holder fails with CONFLICT. Decide what non-holders get (they are
       already refused while a lease is live).
-- [ ] Wire through: MCP `task_claim` / `task_update` / `task_complete`
+- [x] Wire through: MCP `task_claim` / `task_update` / `task_complete`
       (`packages/mcp/src/server.ts`), CLI `brain task claim|update|complete`
       (`packages/cli/src/commands/task.ts`, e.g. `--token`), and the workflow text
       (`packages/core/src/workflow.ts`, rules in `domain/rules.ts`; bump the rules block
       version if the managed text changes).
-- [ ] Test the point of fencing: agent A's lease expires, B claims, A's late write is refused.
+- [x] Test the point of fencing: agent A's lease expires, B claims, A's late write is refused.
 
 ### 3. Hybrid logical clock stamps (review fix 3)
 

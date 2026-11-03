@@ -65,6 +65,28 @@ describe("brain CLI", () => {
     expect(JSON.parse(other.stdout).error.message).toContain("tester");
   });
 
+  // PLAN review fix 2: writes on a claimed task need the fencing token. Each CLI call is a new
+  // process, so the holder's own token is used when --token is omitted; nobody else gets it.
+  it("fills in the holder's fencing token, and refuses others and stale tokens", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = brainJson<Rec>(dir, "task", "create", "x").data;
+    const claimed = brainJson<Rec & { claim: { token: number } }>(dir, "task", "claim", t.id).data;
+    expect(brain(dir, "task", "claim", t.id).stdout).toMatch(/, token \d+\n$/);
+
+    const other = run(dir, ["task", "update", t.id, "--body", "theirs", "--json"], {
+      BRAIN_ACTOR: "someone-else",
+    });
+    expect(other.code).toBe(4);
+    expect(JSON.parse(other.stdout).error.message).toContain("fencing token");
+    // The re-claim above issued a new token, so the first one is stale now.
+    const stale = ["task", "update", t.id, "--body", "x", "--token", String(claimed.claim.token)];
+    expect(brain(dir, ...stale).code).toBe(4);
+
+    expect(brain(dir, "task", "update", t.id, "--body", "mine").code).toBe(0);
+    const done = brainJson<Rec>(dir, "task", "complete", t.id, "--summary", "s", "--files", "a");
+    expect(done).toMatchObject({ code: 0, data: { status: "done", body: "mine" } });
+  });
+
   // The SessionStart hook runs `brain brief --format=agent` and injects stdout as is.
   it("prints the brief as Markdown, and as JSON with its token estimate", async () => {
     const dir = await tempRepo({ init: true });

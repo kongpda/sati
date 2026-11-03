@@ -213,6 +213,7 @@ describe("claimTask", () => {
       actorId: actor.id,
       leaseUntil: "2026-11-03T12:30:00.000Z",
       heartbeatAt: START,
+      token: 2,
     });
     expect(store.activity.at(-1)).toMatchObject({ verb: "claim", entityId: t.id });
 
@@ -246,11 +247,12 @@ describe("claimTask", () => {
   it("renews the lease on the holder's updates and drops it when moved back to todo", async () => {
     const { ctx, clock } = await setup();
     const t = await createTask(ctx, { title: "x" });
-    await claimTask(ctx, t.id);
+    const { claim } = await claimTask(ctx, t.id);
+    const token = claim?.token;
     clock.advance(20 * 60_000);
-    const updated = await updateTask(ctx, t.id, { body: "progress" });
-    expect(updated.claim?.leaseUntil).toBe("2026-11-03T12:50:00.000Z");
-    const back = await updateTask(ctx, t.id, { status: "todo" });
+    const updated = await updateTask(ctx, t.id, { body: "progress", token });
+    expect(updated.claim).toMatchObject({ leaseUntil: "2026-11-03T12:50:00.000Z", token });
+    const back = await updateTask(ctx, t.id, { status: "todo", token });
     expect(back.claim).toBeNull();
     expect((await listTasks(ctx, { ready: true })).map((x) => x.id)).toEqual([t.id]);
   });
@@ -260,8 +262,68 @@ describe("claimTask", () => {
     const t = await createTask(ctx, { title: "x" });
     const claimed = await claimTask(ctx, t.id);
     const other = await otherActor(ctx);
-    const updated = await updateTask(other, t.id, { body: "note" });
+    const token = claimed.claim?.token;
+    const updated = await updateTask(other, t.id, { body: "note", token });
     expect(updated.claim).toEqual(claimed.claim);
+  });
+});
+
+describe("fencing tokens", () => {
+  // PLAN review fix 2: a paused agent loses its lease, another claims the task, then the first
+  // resumes. Its late write must be refused, or it overwrites the new holder's work.
+  it("refuses a late write from an agent whose lease expired and was taken over", async () => {
+    const { ctx: a, clock } = await setup();
+    const t = await createTask(a, { title: "x" });
+    const aToken = (await claimTask(a, t.id)).claim?.token;
+    clock.advance(31 * 60_000);
+    const b = await otherActor(a);
+    const bToken = (await claimTask(b, t.id)).claim?.token;
+    expect(bToken).not.toBe(aToken);
+    await updateTask(b, t.id, { body: "B's work", token: bToken });
+
+    await expect(
+      updateTask(a, t.id, { body: "A's stale work", token: aToken }),
+    ).rejects.toMatchObject({ code: "CONFLICT", message: expect.stringContaining("stale") });
+    await expect(
+      completeTask(a, t.id, { summary: "late", filesTouched: ["a.ts"], token: aToken }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(await getRecord(a, "task", t.id)).toMatchObject({
+      body: "B's work",
+      status: "in_progress",
+      claim: { actorId: b.actorId, token: bToken },
+    });
+  });
+
+  it("refuses a write without the token while claimed, and a token once the claim is gone", async () => {
+    const { ctx, clock } = await setup();
+    const t = await createTask(ctx, { title: "x" });
+    const token = (await claimTask(ctx, t.id, { leaseMinutes: 10 })).claim?.token;
+    await expect(updateTask(ctx, t.id, { body: "no token" })).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: expect.stringContaining("needs the claim's fencing token"),
+    });
+
+    // The lease expired and the brief released it: the old token is now stale too.
+    clock.advance(11 * 60_000);
+    await releaseExpiredClaims(ctx);
+    await expect(updateTask(ctx, t.id, { body: "late", token })).rejects.toMatchObject({
+      code: "CONFLICT",
+    });
+    // An unclaimed task needs no token.
+    expect((await updateTask(ctx, t.id, { body: "planning" })).body).toBe("planning");
+  });
+
+  // Every claim gets a new token, even when the same task is claimed again after a release.
+  it("never reissues an old token", async () => {
+    const { ctx } = await setup();
+    const t = await createTask(ctx, { title: "x" });
+    const tokens: (number | undefined)[] = [];
+    for (let i = 0; i < 3; i++) {
+      const { claim } = await claimTask(ctx, t.id);
+      tokens.push(claim?.token);
+      await updateTask(ctx, t.id, { status: "todo", token: claim?.token });
+    }
+    expect(new Set(tokens).size).toBe(3);
   });
 });
 
@@ -275,8 +337,8 @@ describe("releaseExpiredClaims", () => {
     const live = await createTask(ctx, { title: "live" });
     await claimTask(ctx, live.id, { leaseMinutes: 60 });
     const waiting = await createTask(ctx, { title: "waiting" });
-    await claimTask(ctx, waiting.id, { leaseMinutes: 10 });
-    await updateTask(ctx, waiting.id, { status: "review" });
+    const { claim } = await claimTask(ctx, waiting.id, { leaseMinutes: 10 });
+    await updateTask(ctx, waiting.id, { status: "review", token: claim?.token });
     clock.advance(31 * 60_000);
 
     const released = await releaseExpiredClaims(ctx);

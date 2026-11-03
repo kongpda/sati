@@ -157,10 +157,14 @@ describe("locks and tasks", () => {
   it("completing a task releases my locks tied to it, and only those", async () => {
     const { ctx } = await setup();
     const task = await createTask(ctx, { title: "Billing" });
-    await claimTask(ctx, task.id);
+    const { claim } = await claimTask(ctx, task.id);
     await acquireLock(ctx, { paths: ["src/billing"], taskId: task.id });
     const unrelated = await acquireLock(ctx, { paths: ["docs"] });
-    await completeTask(ctx, task.id, { summary: "done", filesTouched: ["src/billing/a.ts"] });
+    await completeTask(ctx, task.id, {
+      summary: "done",
+      filesTouched: ["src/billing/a.ts"],
+      token: claim?.token,
+    });
     expect((await listLocks(ctx)).map((l) => l.id)).toEqual([unrelated.lock.id]);
   });
 

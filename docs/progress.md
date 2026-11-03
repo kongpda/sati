@@ -29,6 +29,10 @@ brain --version 0.0.0   (from dist and from an npm-installed packed tarball)
 changeset status: @scope/brain patch -> 0.0.1
 ```
 
+### Decision 2026-11-03
+
+Owner chose to keep the `brain` / `@scope/brain` placeholder for now. Name, npm scope and the publish gate are deferred.
+
 ### Gate remaining
 
 The gate is "`brain --version` publishes to npm as `0.0.1` from CI". It needs:

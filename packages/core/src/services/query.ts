@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { BrainError } from "../domain/errors.js";
+import { ID_PREFIXES, parseHandle, parseId, shortHandle } from "../domain/ids.js";
 import type { EntityMap, StoredEntity } from "../domain/schemas.js";
 import { FEATURE_STATUSES, MILESTONE_STATUSES, TASK_STATUSES } from "../domain/status.js";
 import type { ListQuery } from "../ports/storage.js";
@@ -44,4 +46,47 @@ export async function listRecords<E extends StoredEntity>(
 ): Promise<EntityMap[E][]> {
   const query: ListQuery = parseInput(listInput(entity), input);
   return ctx.store.read((r) => r.list(entity, ctx.projectId, query));
+}
+
+/**
+ * Turns a full ID or a short handle (`tsk_8f3k2a`) into a full ID of this project.
+ * A handle matching several records fails with AMBIGUOUS and lists them.
+ */
+export async function resolveId(
+  ctx: ServiceContext,
+  entity: StoredEntity,
+  ref: string,
+): Promise<string> {
+  const input = ref.trim();
+  const prefix = ID_PREFIXES[entity];
+  const wrongKind = () =>
+    new BrainError("VALIDATION", `"${input}" is not a ${entity} id.`, {
+      hint: `${entity} ids look like ${prefix}_8f3k2a.`,
+    });
+  const full = parseId(input);
+  if (full) {
+    if (full.prefix !== prefix) throw wrongKind();
+    return input;
+  }
+  const handle = parseHandle(input);
+  if (!handle || handle.prefix !== prefix) throw wrongKind();
+  const matches = await ctx.store.read(async (r) =>
+    (await r.findBySuffix(entity, handle.suffix)).filter(
+      (rec) =>
+        rec.deletedAt === null && ("projectId" in rec ? rec.projectId : rec.id) === ctx.projectId,
+    ),
+  );
+  const [only, ...rest] = matches;
+  if (!only) {
+    throw new BrainError("NOT_FOUND", `No ${entity} matches ${input}.`, {
+      hint: `List them with \`brain ${entity} list\`.`,
+    });
+  }
+  if (rest.length > 0) {
+    throw new BrainError("AMBIGUOUS", `${input} matches ${matches.length} ${entity} records.`, {
+      hint: "Use more characters of the id, or the full id.",
+      details: { candidates: matches.map((m) => ({ id: m.id, handle: shortHandle(m.id) })) },
+    });
+  }
+  return only.id;
 }

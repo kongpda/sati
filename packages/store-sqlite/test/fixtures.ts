@@ -18,7 +18,7 @@ export const project = (): Project => ({
   name: "Demo",
   repoUrl: null,
   mode: "git",
-  settings: { leaseMinutes: 30 },
+  settings: { leaseMinutes: 30, review: "agents", autoContinue: false },
   createdAt: NOW,
   updatedAt: NOW,
   createdBy: ACTOR,

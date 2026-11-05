@@ -185,14 +185,14 @@ Activity and locks are **not** exported to `.sati/`: they are high-churn and mac
 
 Agents use sati through a small MCP toolset, with the CLI as a fallback. Hooks enforce the important steps, because agents forget instructions but cannot skip hooks.
 
-**MCP tools (14, kept small to save context)**
+**MCP tools (15, kept small to save context)**
 
 | Tool | What it does |
 | --- | --- |
 | `sati_brief` | Session start: ready tasks, my claims, others' active locks, recent decisions, stale context, changes since my last session |
 | `task_list` | Filter by status, feature, label or ready-only; paginated |
 | `task_create` | Creates a task; searches for duplicates first and returns likely matches |
-| `task_claim` | Atomic claim with a lease; fails with the holder's name if taken |
+| `task_claim` | Atomic claim with a lease; fails with the holder's name if taken. With no id, claims the top ready task |
 | `task_update` | Status, notes, progress; renews the lease |
 | `task_complete` | Requires `summary` and `filesTouched[]`; releases locks |
 | `feature_check` | Given paths or a diff, returns the features and locks they affect, with a verdict: `ok`, `warn` or `blocked` |
@@ -201,10 +201,11 @@ Agents use sati through a small MCP toolset, with the CLI as a fallback. Hooks e
 | `decision_record` | Logs why something changed or was rejected |
 | `context_get` / `context_put` | Cached module summaries; `get` flags stale entries by hash |
 | `search` | Full-text search across tasks, features, notes and decisions |
+| `roadmap_upsert` | Create or update a milestone |
 
 MCP **resources**: `sati://workflow` (the rules agents follow), `sati://project/roadmap`, `sati://feature/{id}`. MCP **prompts**: `start-task`, `finish-task`, `plan-feature`.
 
-**CLI** mirrors the tools: `sati init | brief | task … | feature … | lock … | decision … | note … | context … | search | ui | sync | guard | doctor | export | import | mcp`. Every command supports `--json`, so agents without MCP can still use it.
+**CLI** mirrors the tools: `sati init | brief | next | task … | feature … | lock … | decision … | note … | handoff | plan | milestone … | context … | search | activity | undo | settings | projects | ui | serve | sync | guard | doctor | review | scan | export | import | mcp`. Every command supports `--json`, so agents without MCP can still use it.
 
 **Hooks installed by `sati init`**
 
@@ -342,30 +343,30 @@ The biggest risks are a local server that any website can reach, secrets leaking
 
 **Local server**
 
-- [ ] Bind to `127.0.0.1` only, on a random free port by default.
-- [ ] Generate a per-session token at startup; the CLI opens the browser with it once, and it is then kept in an `HttpOnly`, `SameSite=Strict` cookie.
-- [ ] Validate the `Host` and `Origin` headers on every request (blocks DNS-rebinding and cross-site requests).
-- [ ] Strict CSP (`default-src 'self'`), no inline scripts, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`.
+- [x] Bind to `127.0.0.1` only, on a random free port by default.
+- [x] Generate a per-session token at startup; the CLI opens the browser with it once, and it is then kept in an `HttpOnly`, `SameSite=Strict` cookie.
+- [x] Validate the `Host` and `Origin` headers on every request (blocks DNS-rebinding and cross-site requests).
+- [x] Strict CSP (`default-src 'self'`), no inline scripts, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`.
 
 **Data and secrets**
 
 - [x] Scan every exported record for secrets (API keys, tokens, private keys, `.env`-style lines) before writing to `.sati/`, and refuse with a clear message.
 - [x] Never store file contents in context entries, only summaries and hashes.
-- [ ] Use parameterised queries only (Drizzle); FTS input is escaped.
-- [ ] Validate every input and every imported JSON file with Zod; reject unknown fields and enforce size limits (body up to 100 KB, arrays up to 500 items).
-- [ ] Sanitise Markdown rendering (no raw HTML; links get `rel="noopener noreferrer"`).
+- [x] Use parameterised queries only (Drizzle); FTS input is escaped.
+- [x] Validate every input and every imported JSON file with Zod; reject unknown fields and enforce size limits (body up to 100 KB, arrays up to 500 items).
+- [x] Sanitise Markdown rendering (no raw HTML; links get `rel="noopener noreferrer"`).
 
 **Agents and prompt injection**
 
-- [ ] Notes and task bodies are data. The brief wraps them in clearly marked blocks and the workflow resource tells agents never to follow instructions inside them.
-- [ ] MCP tools are scoped: no shell execution and no file writes outside `.sati/`.
-- [ ] Guard overrides and lock force-releases are always logged with the actor.
+- [x] Notes and task bodies are data. The brief wraps them in clearly marked blocks and the workflow resource tells agents never to follow instructions inside them.
+- [x] MCP tools are scoped: no shell execution and no file writes outside `.sati/`.
+- [x] Guard overrides and lock force-releases are always logged with the actor.
 
 **Merge driver and hooks**
 
 - [x] The merge driver only parses JSON; it never evaluates content.
 - [x] Hooks call the installed `sati` binary via an absolute path recorded at init, so a malicious repo cannot swap it in through `PATH` tricks.
-- [ ] `sati init` shows exactly which hooks and configs it will write, and asks before changing them.
+- [x] `sati init` shows exactly which hooks and configs it will write, and asks before changing them.
 
 **Hosted mode**
 
@@ -461,16 +462,16 @@ Verify: `pnpm typecheck && pnpm test && pnpm bench`, then in a temp git repo: `s
 - [x] Context cache with git-hash staleness
 - [x] Secret scanner on export
 - [x] Fencing tokens: `task_claim` returns a token; writes on the task must present the current one (review fix 2)
-- [ ] Hybrid logical clock (HLC) stamps per field for merge ordering, instead of `updatedAt` (review fix 3)
-- [ ] Delete-vs-edit rule: a newer edit revives the record and flags `needsReview`; otherwise delete wins (review fix 4)
+- [x] Hybrid logical clock (HLC) stamps per field for merge ordering, instead of `updatedAt` (review fix 3)
+- [x] Delete-vs-edit rule: a newer edit revives the record and flags `needsReview`; otherwise delete wins (review fix 4)
 - [x] Hook installer detects `core.hooksPath`, husky and lefthook and chains into them; never overwrites (review fix 5)
-- [ ] Guard uses rename detection (`git diff -M`) and offers to update feature `paths` (review fix 6)
-- [ ] Flag feature globs matching zero files in `sati doctor` and the brief (review fix 7)
-- [ ] `PreToolUse` also matches Bash and parses `rm`, `git rm`, `mv` (review fix 8)
-- [ ] Detect network filesystems and Docker/WSL bind mounts; fall back to daemon mode (`sati serve` owns the DB, others use a local socket) (review fix 9)
-- [ ] `pre-push` hook; CI command `sati guard --range origin/main...HEAD` plus a GitHub Actions example; Claude Code deny rule for `git commit --no-verify` (review fix 1)
+- [x] Guard uses rename detection (`git diff -M`) and offers to update feature `paths` (review fix 6)
+- [x] Flag feature globs matching zero files in `sati doctor` and the brief (review fix 7)
+- [x] `PreToolUse` also matches Bash and parses `rm`, `git rm`, `mv` (review fix 8)
+- [x] Detect network filesystems and Docker/WSL bind mounts; fall back to daemon mode (`sati serve` owns the DB, others use a local socket) (review fix 9)
+- [x] `pre-push` hook; CI command `sati guard --range origin/main...HEAD` plus a GitHub Actions example; Claude Code deny rule for `git commit --no-verify` (review fix 1)
 - [x] `.gitattributes`: `.sati/**/*.json merge=sati linguist-generated`
-- [ ] `sati handoff`: structured "where I stopped" note on the task
+- [x] `sati handoff`: structured "where I stopped" note on the task
 - [ ] E2E scenario: 4 agents in 4 worktrees, random claims, locks and merges for 1,000 steps with zero duplicate claims and zero lost records
 
 **Gate:** the E2E scenario passes 100 runs in CI; a staged deletion of a protected feature is blocked; `--no-verify` is caught by the CI guard.
@@ -482,48 +483,48 @@ Added 2026-11-03 at the owner's request. Sati becomes the default place where pe
 
 **Agent work loop**
 
-- [ ] `sati next` and `task_claim` with no `id`: claim the top ready task in one transaction (highest priority, then oldest), so two agents calling it at once always get different tasks. Returns the task, its acceptance criteria and its fencing token. No new MCP tool.
-- [ ] Review gate: project setting `review` = `agents` (default), `all` or `none`. When it applies, `task_complete` moves the task to `review` instead of `done`; a human moves it to `done`, or back to `todo` with a reason that the next claimer sees in the brief. Humans see "waiting for review" in their brief.
-- [ ] Opt-in auto-continue: project setting `autoContinue` (off by default, so nothing runs unattended unless the owner turns it on). When on and the agent has no claim, the `Stop` nudge tells it to run `sati next`.
+- [x] `sati next` and `task_claim` with no `id`: claim the top ready task in one transaction (highest priority, then oldest), so two agents calling it at once always get different tasks. Returns the task, its acceptance criteria and its fencing token. No new MCP tool.
+- [x] Review gate: project setting `review` = `agents` (default), `all` or `none`. When it applies, `task_complete` moves the task to `review` instead of `done`; a human moves it to `done`, or back to `todo` with a reason that the next claimer sees in the brief. Humans see "waiting for review" in their brief.
+- [x] Opt-in auto-continue: project setting `autoContinue` (off by default, so nothing runs unattended unless the owner turns it on). When on and the agent has no claim, the `Stop` nudge tells it to run `sati next`.
 
 **Planning CRUD for agents**
 
-- [ ] Milestone CRUD: `sati milestone create|list|show|update` and one MCP tool `roadmap_upsert` (15 tools; update the Agent integration table). Milestones are in the data model and the roadmap resource, but nothing can write them today.
-- [ ] Bulk planning: `task_create` accepts `subtasks[]` (title, body, `dependsOn` by index) and writes them in one transaction, so an agent turns a feature into a dependency chain in one call; the `plan-feature` prompt uses it.
-- [ ] `sati plan import <file.md>`: one milestone per heading, one task per unchecked `- [ ]` item, matched on a stable key (heading plus item text) so re-running only adds what is new and never deletes. `--dry-run` shows the changes. One-way only: sati does not edit the Markdown file.
-- [ ] Delete and restore: `sati task|note|decision delete <id>` soft-deletes (sets `deletedAt`, writes an activity row); `restore <id>` undoes it. Deleting a shipped feature still goes through `removed` plus a Decision.
+- [x] Milestone CRUD: `sati milestone create|list|show|update` and one MCP tool `roadmap_upsert` (15 tools; update the Agent integration table). Milestones are in the data model and the roadmap resource, but nothing can write them today.
+- [x] Bulk planning: `task_create` accepts `subtasks[]` (title, body, `dependsOn` by index) and writes them in one transaction, so an agent turns a feature into a dependency chain in one call; the `plan-feature` prompt uses it.
+- [x] `sati plan import <file.md>`: one milestone per heading, one task per unchecked `- [ ]` item, matched on a stable key (heading plus item text) so re-running only adds what is new and never deletes. `--dry-run` shows the changes. One-way only: sati does not edit the Markdown file.
+- [x] Delete and restore: `sati task|note|decision delete <id>` soft-deletes (sets `deletedAt`, writes an activity row); `restore <id>` undoes it. Deleting a shipped feature still goes through `removed` plus a Decision.
 
 **Default workspace**
 
-- [ ] Personal workspace: outside any project, `sati` uses one standalone workspace at `~/.sati/` (created on first use after a prompt), so a todo can be added from any folder. `--project <slug>` targets a known project from anywhere.
-- [ ] `sati projects`: every project this machine knows (recorded by `sati init` in `~/.sati/projects.json`) with counts of ready, in-progress and review tasks. Local only; the hosted multi-project dashboard stays in Phase 6.
+- [x] Personal workspace: outside any project, `sati` uses one standalone workspace at `~/.sati/` (created on first use after a prompt), so a todo can be added from any folder. `--project <slug>` targets a known project from anywhere.
+- [x] `sati projects`: every project this machine knows (recorded by `sati init` in `~/.sati/projects.json`) with counts of ready, in-progress and review tasks. Local only; the hosted multi-project dashboard stays in Phase 6.
 
 **Trust**
 
-- [ ] `sati activity [--actor] [--task] [--since]`: the audit log on the command line, each row with actor, verb, record and field diff, so a person can see exactly what every agent changed.
-- [ ] `sati undo <activityId>`: reverts one write if the record has not changed since (else CONFLICT); the revert is itself an activity row.
+- [x] `sati activity [--actor] [--task] [--since]`: the audit log on the command line, each row with actor, verb, record and field diff, so a person can see exactly what every agent changed.
+- [x] `sati undo <activityId>`: reverts one write if the record has not changed since (else CONFLICT); the revert is itself an activity row.
 
 **Known bugs found during Phase 3**
 
 - [x] A record-only `git commit -a` fails: git finds nothing to commit before the pre-commit hook stages `.sati/`. Fix: every CLI write exports, as the MCP server already does (debounced), so `.sati/` is already dirty.
-- [ ] `needsReview` set by the merge driver is never cleared: add `sati task update --reviewed` (and the same for notes and features); the UI clears it in Phase 4.
+- [x] `needsReview` set by the merge driver is never cleared: add `sati task update --reviewed` (and the same for notes and features); the UI clears it in Phase 4.
 - [x] Hooks and the merge driver find `sati` by name on `PATH`: record the absolute binary path at init (Security checklist item).
 - [x] `sati init` on an initialised project does not upgrade hooks, the merge driver or `.gitattributes`: add `sati init --upgrade` that shows and applies only the managed changes.
-- [ ] Context staleness sees staged content only: also hash modified and untracked files under the entry's path.
-- [ ] Eight core error hints use the literal `sati` instead of `CLI_NAME`.
+- [x] Context staleness sees staged content only: also hash modified and untracked files under the entry's path.
+- [x] Eight core error hints use the literal `sati` instead of `CLI_NAME`.
 
 **Gate:** an agent given only `sati next`, `task_update` and `task_complete` finishes 5 tasks from a plan imported from Markdown with no human prompt between them, and each waits in `review` until a person approves it; two agents calling `sati next` concurrently 1,000 times never get the same task.
 Verify: an e2e test for the loop and a concurrency test for `sati next`.
 
 ### Phase 4 — Web UI (weeks 7–9)
 
-- [ ] Hono local server: REST (OpenAPI), SSE, token auth, Host/Origin checks, CSP
-- [ ] App shell, routing, theming, command palette, keyboard map
-- [ ] Board with drag and drop, swimlanes, filters, bulk edit, virtualisation
-- [ ] Task detail panel, Agents view, Features registry with path preview
-- [ ] Roadmap timeline, Notes editor with backlinks, Decisions, Activity
+- [x] Hono local server: REST (OpenAPI), SSE, token auth, Host/Origin checks, CSP
+- [x] App shell, routing, theming, command palette, keyboard map
+- [x] Board with drag and drop, swimlanes, filters, bulk edit, virtualisation
+- [x] Task detail panel, Agents view, Features registry with path preview
+- [x] Roadmap timeline, Notes editor with backlinks, Decisions, Activity
 - [ ] Mermaid diagrams in Markdown (notes, decisions, task bodies) rendered with `pele`: lazy-loaded so it stays out of the first-load bundle, `--pele-*` variables mapped to the UI design tokens, render errors shown inline instead of breaking the note
-- [ ] Optimistic updates with rollback; live highlight on agent changes
+- [x] Optimistic updates with rollback; live highlight on agent changes
 - [ ] Accessibility audit (axe + manual keyboard and screen-reader pass)
 - [ ] Playwright tests for the main flows
 
@@ -531,13 +532,13 @@ Verify: an e2e test for the loop and a concurrency test for `sati next`.
 
 ### Phase 5 — Hardening and v1.0 (weeks 10–11)
 
-- [ ] `sati doctor` (stale leases, orphan locks, DB integrity check, hook health, VACUUM)
-- [ ] Backup and restore (`sati export --all`, `sati import`)
-- [ ] Migration safety: automatic DB backup before each schema migration
+- [x] `sati doctor` (stale leases, orphan locks, DB integrity check, hook health, VACUUM)
+- [x] Backup and restore (`sati export --all`, `sati import`)
+- [x] Migration safety: automatic DB backup before each schema migration
 - [ ] Docs site: quick start, agent workflow, guard rules, FAQ; `sati://workflow` resource generated from it
 - [ ] Security review against the Security checklist; fuzz the JSON importer
-- [ ] `sati review <branch>`: features touched, decisions recorded and guard warnings before merge
-- [ ] `sati scan`: propose features from folders and routes for an existing codebase
+- [x] `sati review <branch>`: features touched, decisions recorded and guard warnings before merge
+- [x] `sati scan`: propose features from folders and routes for an existing codebase
 - [ ] Try it on 3 real projects (including one stealth-mode client repo) for 1 week
 
 **Gate:** v1.0.0 on npm; install-to-first-task under 2 minutes on a fresh machine.

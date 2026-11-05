@@ -23,7 +23,7 @@ interface Err {
   error: { code: string; hint: string | null; details: Record<string, unknown> | null };
 }
 
-const HOOKS = ["pre-commit", "post-merge", "post-checkout", "post-rewrite"];
+const HOOKS = ["pre-commit", "post-merge", "post-checkout", "post-rewrite", "pre-push"];
 
 const tempDir = () => realpathSync(mkdtempSync(join(tmpdir(), "sati-init-")));
 
@@ -82,7 +82,9 @@ describe("sati init", () => {
       { path: ".claude/settings.local.json", action: "create" },
       { path: ".claude/skills/sati/SKILL.md", action: "create" },
       { path: join(".git", "sati", "hooks", "pre-commit"), action: "create" },
+      { path: join(".git", "sati", "hooks", "pre-push"), action: "create" },
       { path: join(".git", "hooks", "pre-commit"), action: "create" },
+      { path: join(".git", "hooks", "pre-push"), action: "create" },
     ]);
     expect(readFileSync(join(dir, "CLAUDE.local.md"), "utf8")).toContain("sati:start v1");
     expect(readFileSync(join(dir, "CLAUDE.md"), "utf8")).toBe("# shared\n");
@@ -118,10 +120,12 @@ describe("sati init", () => {
     const dir = await tempRepo();
     const r = satiJson<Init>(dir, "init", "--yes", "--mode", "stealth");
     expect(r.code).toBe(0);
-    // Only the pre-commit hook and its runner, both inside .git.
+    // Guard hooks only, both inside .git. Stealth commits nothing.
     expect(r.data.files).toEqual([
       { path: join(".git", "sati", "hooks", "pre-commit"), action: "create" },
+      { path: join(".git", "sati", "hooks", "pre-push"), action: "create" },
       { path: join(".git", "hooks", "pre-commit"), action: "create" },
+      { path: join(".git", "hooks", "pre-push"), action: "create" },
     ]);
     expect(existsSync(join(dir, ".sati"))).toBe(false);
     expect(execFileSync("git", ["status", "--porcelain"], { cwd: dir, encoding: "utf8" })).toBe("");

@@ -107,11 +107,16 @@ export class MemoryStore implements StorageAdapter {
         }
         return hits;
       },
-      listActivity: async (projectId) =>
+      listActivity: async (projectId, q = {}) =>
         s.activity
           .filter((a) => a.projectId === projectId)
+          .filter((a) => (q.actorId ? a.actorId === q.actorId : true))
+          .filter((a) => (q.entityId ? a.entityId === q.entityId : true))
+          .filter((a) => (q.since ? a.at >= q.since : true))
           .reverse()
+          .slice(0, q.limit ?? Number.POSITIVE_INFINITY)
           .map(clone),
+      getActivity: async (id) => clone(s.activity.find((a) => a.id === id)),
       insert: async (e, rec) => {
         if (table(e).has(rec.id)) throw new SatiError("CONFLICT", `duplicate ${rec.id}`);
         table(e).set(rec.id, clone(rec) as AnyRecord);

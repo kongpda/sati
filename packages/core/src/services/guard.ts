@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { normalizeLockPath, pathsOverlap } from "../domain/locks.js";
 import { type Feature, LIMITS, type Lock } from "../domain/schemas.js";
+import { CLI_NAME } from "../name.js";
 import { actorName, listAll, logActivity, parseInput, type ServiceContext } from "./context.js";
 import { othersLiveLocks } from "./lock.js";
 
-export const CHANGE_KINDS = ["added", "modified", "deleted"] as const;
+export const CHANGE_KINDS = ["added", "modified", "deleted", "renamed"] as const;
 export type ChangeKind = (typeof CHANGE_KINDS)[number];
 
 const RepoPath = z
@@ -20,14 +21,21 @@ const RepoPath = z
     return p;
   });
 
-const Change = z.strictObject({
-  path: RepoPath,
-  kind: z.enum(CHANGE_KINDS).default("modified"),
-  /** Lines this change removes from the file. */
-  removedLines: z.number().int().min(0).optional(),
-  /** Lines the file had before the change. */
-  baseLines: z.number().int().min(0).optional(),
-});
+const Change = z
+  .strictObject({
+    path: RepoPath,
+    kind: z.enum(CHANGE_KINDS).default("modified"),
+    /** Lines this change removes from the file. */
+    removedLines: z.number().int().min(0).optional(),
+    /** Lines the file had before the change. */
+    baseLines: z.number().int().min(0).optional(),
+    /** Previous path. Required when `kind` is `renamed`. */
+    from: RepoPath.optional(),
+  })
+  .refine((c) => c.kind !== "renamed" || c.from !== undefined, {
+    message: "a rename needs from",
+    path: ["from"],
+  });
 
 /** A staged diff can be much larger than an agent's input, so the usual 500-item cap is raised. */
 const MAX_CHANGES = 100_000;
@@ -45,7 +53,8 @@ export type GuardRule =
   | "locked-shared"
   | "protected-delete"
   | "protected-gutted"
-  | "shipped-touched";
+  | "shipped-touched"
+  | "renamed-out";
 
 export interface GuardFinding {
   level: Exclude<GuardVerdict, "ok">;
@@ -67,6 +76,10 @@ export interface GuardResult {
 type ParsedChange = z.output<typeof Change>;
 
 const covers = (globs: readonly string[], path: string) => globs.some((g) => pathsOverlap(g, path));
+
+const touches = (globs: readonly string[], change: ParsedChange) =>
+  covers(globs, change.path) ||
+  (change.kind === "renamed" && change.from !== undefined && covers(globs, change.from));
 
 function lockFinding(lock: Lock, holder: string, paths: string[]): GuardFinding {
   const exclusive = lock.mode === "exclusive";
@@ -103,6 +116,17 @@ function featureFinding(
   const paths = touched.map((c) => c.path);
   const base = { paths, featureId: f.id };
   const name = `"${f.title}"`;
+  const movedOut = touched.filter(
+    (c) =>
+      c.kind === "renamed" &&
+      c.from !== undefined &&
+      covers(f.paths, c.from) &&
+      !covers(f.paths, c.path),
+  );
+  const moveHint =
+    movedOut.length === 0
+      ? ""
+      : ` ${movedOut.map((c) => `${c.from} → ${c.path}`).join(", ")} moved out of the feature. Update its paths with \`${CLI_NAME} feature update ${f.id} --paths <globs>\`.`;
   if (f.protected) {
     const deleted = touched.filter((c) => c.kind === "deleted").map((c) => c.path);
     const ratio = removalRatio(touched);
@@ -119,17 +143,28 @@ function featureFinding(
           level: "warn",
           rule,
           decisionId,
-          message: `This ${what}; allowed by decision ${decisionId}.`,
+          message: `This ${what}; allowed by decision ${decisionId}.${moveHint}`,
         };
       }
-      return { ...base, level: "blocked", rule, message: `This ${what}.` };
+      return { ...base, level: "blocked", rule, message: `This ${what}.${moveHint}` };
     }
+  }
+  if (
+    movedOut.length > 0 &&
+    touched.every((c) => c.kind === "renamed" && !covers(f.paths, c.path))
+  ) {
+    return {
+      ...base,
+      level: "warn",
+      rule: "renamed-out",
+      message: `${movedOut.map((c) => `${c.from} → ${c.path}`).join(", ")} moved out of shipped feature ${name}. Update its paths with \`${CLI_NAME} feature update ${f.id} --paths <globs>\`.`,
+    };
   }
   return {
     ...base,
     level: "warn",
     rule: "shipped-touched",
-    message: `${paths.join(", ")} belong${paths.length > 1 ? "" : "s"} to shipped feature ${name}.`,
+    message: `${paths.join(", ")} belong${paths.length > 1 ? "" : "s"} to shipped feature ${name}.${moveHint}`,
   };
 }
 
@@ -146,7 +181,7 @@ export async function checkChanges(ctx: ServiceContext, input: unknown): Promise
     const findings: GuardFinding[] = [];
 
     for (const lock of await othersLiveLocks(r, ctx)) {
-      const paths = changes.filter((c) => covers(lock.paths, c.path)).map((c) => c.path);
+      const paths = changes.filter((c) => touches(lock.paths, c)).map((c) => c.path);
       if (paths.length > 0)
         findings.push(lockFinding(lock, await actorName(r, lock.actorId), paths));
     }
@@ -159,7 +194,7 @@ export async function checkChanges(ctx: ServiceContext, input: unknown): Promise
         for (const id of d.featureIds) decisions.set(id, d.id);
       }
       for (const f of shipped) {
-        const touched = changes.filter((c) => covers(f.paths, c.path));
+        const touched = changes.filter((c) => touches(f.paths, c));
         if (touched.length === 0) continue;
         findings.push(featureFinding(f, touched, maxRemovalRatio, decisions.get(f.id)));
       }

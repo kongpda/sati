@@ -3,6 +3,7 @@ import { SatiError } from "../domain/errors.js";
 import { ID_PREFIXES, parseHandle, parseId, shortHandle } from "../domain/ids.js";
 import type { EntityMap, StoredEntity } from "../domain/schemas.js";
 import { FEATURE_STATUSES, MILESTONE_STATUSES, TASK_STATUSES } from "../domain/status.js";
+import { CLI_NAME } from "../name.js";
 import { type ListQuery, SEARCHABLE, type SearchHit } from "../ports/storage.js";
 import { mustGet, parseInput, type ServiceContext } from "./context.js";
 
@@ -79,7 +80,7 @@ export async function resolveId(
   const [only, ...rest] = matches;
   if (!only) {
     throw new SatiError("NOT_FOUND", `No ${entity} matches ${input}.`, {
-      hint: `List them with \`sati ${entity} list\`.`,
+      hint: `List them with \`${CLI_NAME} ${entity} list\`.`,
     });
   }
   if (rest.length > 0) {

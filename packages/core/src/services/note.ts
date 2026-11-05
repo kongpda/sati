@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import { z } from "zod";
 import { Note } from "../domain/schemas.js";
 import {
   baseFields,
@@ -17,7 +17,10 @@ export const CreateNoteInput = fields.partial({
   links: true,
   pinned: true,
 });
-export const UpdateNoteInput = fields.partial().extend(ExpectedVersion);
+export const UpdateNoteInput = fields
+  .partial()
+  .extend(ExpectedVersion)
+  .extend({ reviewed: z.literal(true).optional() });
 export type CreateNoteInput = z.input<typeof CreateNoteInput>;
 
 export async function createNote(ctx: ServiceContext, input: unknown): Promise<Note> {
@@ -35,9 +38,12 @@ export async function createNote(ctx: ServiceContext, input: unknown): Promise<N
 }
 
 export async function updateNote(ctx: ServiceContext, id: string, input: unknown): Promise<Note> {
-  const { expectedVersion, ...patch } = parseInput(UpdateNoteInput, input);
+  const { expectedVersion, reviewed, ...patch } = parseInput(UpdateNoteInput, input);
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "note", id);
-    return updateWithLog(w, ctx, "note", before, patch, { expectedVersion });
+    return updateWithLog(w, ctx, "note", before, patch, {
+      expectedVersion,
+      clear: reviewed ? ["needsReview"] : [],
+    });
   });
 }

@@ -1,0 +1,187 @@
+import { describe, expect, it } from "vitest";
+import {
+  acquireLock,
+  buildBrief,
+  claimTask,
+  completeTask,
+  createFeature,
+  createMilestone,
+  createNote,
+  createTask,
+  deleteRecord,
+  dirtyFromPorcelain,
+  doctorChecks,
+  ensureActor,
+  getProject,
+  isSatiError,
+  missingTask,
+  recordDecision,
+  restoreRecord,
+  undoActivity,
+  updateFeature,
+  updateNote,
+  updateSettings,
+  updateTask,
+} from "../src/index.js";
+import { MemoryStore } from "./support/memory-store.js";
+import { setup } from "./support/setup.js";
+
+const code = async (fn: () => Promise<unknown>) => {
+  try {
+    await fn();
+    return "ok";
+  } catch (err) {
+    return isSatiError(err) ? err.code : "other";
+  }
+};
+
+describe("edge branches", () => {
+  it("classifies porcelain, including short records and renames", () => {
+    const rows = dirtyFromPorcelain(
+      " M file.ts\0 D gone.ts\0?? new.ts\0R  old.ts\0renamed.ts\0C  a.ts\0b.ts\0 T typed.ts\0x\0R  lonely",
+    );
+    expect(rows.map((row) => row.kind)).toEqual([
+      "modified",
+      "deleted",
+      "untracked",
+      "modified",
+      "modified",
+      "modified",
+      "modified",
+    ]);
+    expect(rows[3]?.path).toBe("renamed.ts");
+    expect(rows.at(-1)?.path).toBe("lonely");
+  });
+
+  it("refuses bad deletes, restores and undos", async () => {
+    const { ctx, store } = await setup();
+    const task = await createTask(ctx, { title: "One" });
+    expect(await code(() => deleteRecord(ctx, "lock", "lock_x"))).toBe("USAGE");
+    expect(await code(() => deleteRecord(ctx, "task", "tsk_missing"))).toBe("NOT_FOUND");
+    await deleteRecord(ctx, "task", task.id);
+    expect(await code(() => deleteRecord(ctx, "task", task.id))).toBe("NOT_FOUND");
+    await restoreRecord(ctx, "task", task.id);
+    expect(await code(() => restoreRecord(ctx, "task", task.id))).toBe("VALIDATION");
+    expect(await code(() => restoreRecord(ctx, "milestone", "mst_x"))).toBe("USAGE");
+    expect(await code(() => undoActivity(ctx, "act_missing"))).toBe("NOT_FOUND");
+    const created = await store.read((r) => r.listActivity(ctx.projectId, { limit: 50 }));
+    const createRow = created.find((row) => row.verb === "create" && row.entityId === task.id);
+    expect(createRow).toBeDefined();
+    await updateTask(ctx, task.id, { title: "Changed" });
+    expect(await code(() => undoActivity(ctx, createRow?.id ?? ""))).toBe("CONFLICT");
+    await store.write(async (w) => {
+      await w.appendActivity({
+        id: "act_01EDGE000000000000000000",
+        projectId: ctx.projectId,
+        actorId: ctx.actorId,
+        verb: "update",
+        entity: "nope",
+        entityId: task.id,
+        diff: {},
+        branch: null,
+        at: "2026-11-03T12:00:00.000Z",
+      });
+      await w.appendActivity({
+        id: "act_01EDGE000000000000000001",
+        projectId: ctx.projectId,
+        actorId: ctx.actorId,
+        verb: "update",
+        entity: "task",
+        entityId: task.id,
+        diff: { noise: "not-a-pair" },
+        branch: null,
+        at: "2026-11-03T12:00:01.000Z",
+      });
+    });
+    expect(await code(() => undoActivity(ctx, "act_01EDGE000000000000000000"))).toBe("VALIDATION");
+    expect(await code(() => undoActivity(ctx, "act_01EDGE000000000000000001"))).toBe("VALIDATION");
+  });
+
+  it("lets an agent close review once the gate is off", async () => {
+    const { ctx } = await setup();
+    const task = await createTask(ctx, { title: "Gate" });
+    const claimed = await claimTask(ctx, task.id);
+    const review = await completeTask(ctx, task.id, {
+      summary: "shipped",
+      filesTouched: ["a.ts"],
+      token: claimed.claim?.token,
+    });
+    expect(review.status).toBe("review");
+    expect(await code(() => updateTask(ctx, task.id, { status: "done" }))).toBe(
+      "INVALID_TRANSITION",
+    );
+    await updateSettings(ctx, { review: "none" });
+    const done = await updateTask(ctx, task.id, { status: "done" });
+    expect(done.status).toBe("done");
+  });
+
+  it("reports doctor checks and blocks review mistakes", async () => {
+    const { ctx, clock } = await setup();
+    const clean = await doctorChecks(ctx);
+    expect(clean.every((check) => check.ok)).toBe(true);
+    const task = await createTask(ctx, { title: "Claim me" });
+    const claimed = await claimTask(ctx, task.id, { leaseMinutes: 1 });
+    const token = claimed.claim?.token;
+    await acquireLock(ctx, { paths: ["src/**"], leaseMinutes: 1 });
+    clock.advance(2 * 60 * 1000);
+    const stale = await doctorChecks(ctx);
+    expect(stale.find((check) => check.name === "claims")?.ok).toBe(false);
+    expect(stale.find((check) => check.name === "locks")?.ok).toBe(false);
+    const done = await completeTask(ctx, task.id, {
+      summary: "shipped",
+      filesTouched: ["a.ts"],
+      token,
+    });
+    expect(done.status).toBe("review");
+    expect(
+      await code(() => completeTask(ctx, task.id, { summary: "again", filesTouched: ["a.ts"] })),
+    ).toBe("INVALID_TRANSITION");
+    expect(await code(() => updateTask(ctx, task.id, { status: "done" }))).toBe(
+      "INVALID_TRANSITION",
+    );
+    expect(await code(() => updateTask(ctx, task.id, { status: "todo" }))).toBe("VALIDATION");
+    const human = await ensureActor(ctx, { name: "ada@test", kind: "human" });
+    const brief = await buildBrief({ ...ctx, actorId: human.id });
+    expect(brief.markdown).toContain("Waiting for review");
+    expect(missingTask).toThrow();
+  });
+
+  it("checks feature removal, notes and settings", async () => {
+    const { ctx } = await setup();
+    const milestone = await createMilestone(ctx, { title: "M" });
+    expect(
+      await code(() =>
+        createFeature(ctx, { title: "F", milestoneId: "mil_01M6GMFKG0QFF1E44RZG05GC7W" }),
+      ),
+    ).toBe("NOT_FOUND");
+    const feature = await createFeature(ctx, { title: "F", milestoneId: milestone.id });
+    await updateFeature(ctx, feature.id, { status: "building" });
+    await updateFeature(ctx, feature.id, { status: "shipped" });
+    expect(await code(() => updateFeature(ctx, feature.id, { status: "removed" }))).toBe(
+      "VALIDATION",
+    );
+    const other = await recordDecision(ctx, {
+      title: "Why",
+      context: "c",
+      decision: "d",
+      consequences: "k",
+      featureIds: [],
+    });
+    expect(
+      await code(() => updateFeature(ctx, feature.id, { status: "removed", decisionId: other.id })),
+    ).toBe("VALIDATION");
+    const note = await createNote(ctx, { title: "N", body: "b" });
+    await updateNote(ctx, note.id, { reviewed: true, expectedVersion: note.version });
+    await updateFeature(ctx, feature.id, { reviewed: true });
+    const empty = new MemoryStore();
+    expect(await code(() => getProject(empty))).toBe("NOT_INITIALIZED");
+    expect(await code(() => updateSettings({ ...ctx, projectId: "prj_other" }, {}))).toBe(
+      "NOT_INITIALIZED",
+    );
+    expect(
+      await code(() =>
+        createTask(ctx, { title: "Parent", subtasks: [{ title: "A", dependsOn: [3] }] }),
+      ),
+    ).toBe("VALIDATION");
+  });
+});

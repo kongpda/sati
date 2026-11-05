@@ -11,6 +11,7 @@
     "local": "bash scripts/local.sh",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "test:e2e": "pnpm --filter @sati/core exec vitest run test/loop.test.ts",
     "bench": "turbo run bench",
     "lint": "biome check .",
     "format": "biome check --write .",

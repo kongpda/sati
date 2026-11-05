@@ -1,4 +1,13 @@
-import { createNote, getRecord, listRecords, type Note, resolveId, updateNote } from "@sati/core";
+import {
+  createNote,
+  deleteRecord,
+  getRecord,
+  listRecords,
+  type Note,
+  resolveId,
+  restoreRecord,
+  updateNote,
+} from "@sati/core";
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
@@ -65,6 +74,7 @@ const update = defineCommand({
     ...id("Note"),
     title: { type: "string", description: "New title" },
     ...fields,
+    reviewed: { type: "boolean", description: "Clear needsReview" },
     ...expectedVersion,
     ...json,
   },
@@ -78,13 +88,38 @@ const update = defineCommand({
           tags: list(args.tags),
           links: list(args.links),
           pinned: args.pinned,
+          reviewed: args.reviewed ? true : undefined,
           expectedVersion: int(args["expected-version"], "expected-version"),
         }),
       (n: Note) => `Updated ${row(n)}`,
     ),
 });
 
+const remove = defineCommand({
+  meta: { name: "delete", description: "Soft-delete a note" },
+  args: { ...id("Note"), ...json },
+  run: ({ args }) =>
+    execute(
+      args.json,
+      async ({ ctx }) =>
+        deleteRecord(ctx, "note", await resolveId(ctx, "note", args.id)) as Promise<Note>,
+      (n: Note) => `Deleted ${row(n)}`,
+    ),
+});
+
+const restore = defineCommand({
+  meta: { name: "restore", description: "Restore a soft-deleted note" },
+  args: { ...id("Note"), ...json },
+  run: ({ args }) =>
+    execute(
+      args.json,
+      async ({ ctx }) =>
+        restoreRecord(ctx, "note", await resolveId(ctx, "note", args.id)) as Promise<Note>,
+      (n: Note) => `Restored ${row(n)}`,
+    ),
+});
+
 export default defineCommand({
   meta: { name: "note", description: "Keep project notes" },
-  subCommands: { create, list: ls, show, update },
+  subCommands: { create, list: ls, show, update, delete: remove, restore },
 });

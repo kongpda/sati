@@ -27,7 +27,7 @@ export const TASK_TRANSITIONS: Machine<TaskStatus> = {
   backlog: ["todo", "blocked", "cancelled"],
   todo: ["backlog", "in_progress", "blocked", "cancelled"],
   in_progress: ["todo", "review", "done", "blocked", "cancelled"],
-  review: ["in_progress", "done", "blocked", "cancelled"],
+  review: ["todo", "in_progress", "done", "blocked", "cancelled"],
   blocked: ["backlog", "todo", "in_progress", "cancelled"],
   done: ["todo"],
   cancelled: ["backlog", "todo"],

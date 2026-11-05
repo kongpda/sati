@@ -35,6 +35,13 @@ Owner chose to keep the `sati` / `@kongpda/sati` placeholder for now. Name, npm 
 
 ### Gate remaining
 
+On 2026-11-04, the release workflow generated the `0.0.1` branch but GitHub
+Actions could not create its pull request. PR #1 was opened manually. Linux CI
+passed on Node 22 and 24. Windows with Node 24 failed during dependency
+installation when `node-gyp` could not find Visual Studio for `better-sqlite3`.
+The public npm registry still returned 404, the GitHub repository secret list
+was empty, and the local npm CLI had no authenticated user.
+
 The gate is "`sati --version` publishes to npm as `0.0.1` from CI". It needs:
 
 1. Final product name and npm scope (then edit `packages/core/src/name.ts` and the `@kongpda/sati` package name).
@@ -522,3 +529,70 @@ PASS  task_claim under 10 concurrent agents, p95           3.3 ms  (budget 50 ms
 
 The CLI read p95 is close to its budget and varies with machine load (one run on a busy machine
 measured 233 ms on a tiny DB). Watch it in CI.
+
+### Hybrid logical clock and delete-vs-edit (review fixes 3 and 4)
+
+- A stamp is `wall#counter#node`. `updateWithLog` and `insertWithLog` stamp each field they
+  change and store the latest stamp on the actor (`lastHlc`) inside the same transaction, with
+  no activity row: it is bookkeeping so the next write still orders after a slow wall clock.
+  Records written before stamps have no `stamps` map.
+- The merge driver uses a field's stamps when both sides have one, and `updatedAt` otherwise.
+  `lastHlc` merges by taking the greater stamp.
+- A delete on one side and an edit on the other: the edit wins only when it is strictly newer,
+  and then `deletedAt` is cleared and `needsReview` is set. A tie keeps the delete.
+
+### Guard renames, empty globs, Bash, pre-push (review fixes 6, 7, 8 and 1)
+
+- `git diff -M` reports a rename as one change with `from`. A rename is not a delete. When the
+  new path leaves a shipped feature, the guard warns and prints `sati feature update <id> --paths`.
+  No prompt: the hook has nobody to ask.
+- Feature globs that match no tracked file are a brief section. Standalone mode has no file
+  list, so it skips the check. An empty `paths` list is not flagged. `sati doctor` still owns
+  the same check in Phase 5.
+- `PreToolUse` also matches Bash. `rm`, `git rm` and `mv` become delete or rename changes,
+  including flags, quotes and `&&` chains. Any other command is allowed. `sati rules sync`
+  adds the Bash matcher to an existing settings file because groups are matched by matcher,
+  not only by command.
+- Git mode and stealth mode install a `pre-push` hook that runs `sati guard --range
+  origin/main...HEAD`. A clone with no `origin/main` skips the check and still pushes.
+  `.github/workflows/ci.yml` runs the same command. Claude settings gain deny rules
+  `Bash(git commit --no-verify:*)` and `Bash(git commit -n:*)`, keeping any deny list already there.
+
+### Core hints use the product-name constant
+
+The seven core hints and the init/list hints that named the binary now use `CLI_NAME`.
+The comment on the guard error code is documentation, not a hint, and was left as written.
+
+### Local web UI (Phase 4, started before the Phase 3 gate)
+
+The owner asked for the board before the Phase 3 gate. `sati ui` binds `127.0.0.1`, exchanges a
+one-time token for an `HttpOnly` `SameSite=Strict` cookie, and refuses another Host or Origin.
+CSP is `default-src 'self'` with no inline script. The built UI is `packages/ui/dist` (JS about
+93 KB gzipped). A Vitest request covers 401, 403, the cookie, CSP and a snapshot. Dragging a
+card updates status optimistically and rolls back with a toast. Done is not a drag target:
+completion still needs `sati task complete`. A card, note or feature with `needsReview` has a
+"mark reviewed" control that clears the flag. The roadmap page is a date timeline. Notes are a
+Markdown field with a preview and backlinks, not a Tiptap editor. Mermaid stays a code block
+until the `pele` licence is checked. Playwright, axe, and the 2,000-card frame budget are not done.
+
+### Work loop, daemon and Phase 5 commands (2026-11-04)
+
+- `review` defaults to `agents`. An agent `task_complete` lands in `review`; a human complete
+  still lands in `done`. Send-back to `todo` requires `--reason`, stored on `reviewNote` and
+  fenced as data in the brief. `review: none` is the old complete-to-done path.
+- Project and actor updates do not get HLC stamps. Those records have no `stamps` field.
+- `sati next` and `task_claim` with no id call `claimNext`: one write, highest priority, then
+  oldest id. `autoContinue` is off until `sati settings --auto-continue`. The Stop nudge then
+  tells an agent with no claim to run `sati next`.
+- Outside a git repo, a TTY prompt (or `SATI_YES=1`) creates one standalone workspace at
+  `~/.sati/personal` and records it in `~/.sati/projects.json`. `--project <slug>` selects a
+  known project. `sati projects` counts ready, in-progress and review tasks.
+- A network or bind-mount filesystem refuses a direct SQLite open and tells you to run
+  `sati serve`. The daemon owns the file and other processes talk over `sati.sock`. It does
+  not spawn itself.
+- `pnpm test:e2e` runs a single-process claim loop (`packages/core/test/loop.test.ts`, 200
+  steps, 4 actors). It is not the 4-worktree, 1,000-step, 100-repeat gate. That box stays open.
+- Docs site, importer fuzz, Playwright, axe, `pele`, hosted Postgres and the owner items
+  (name, npm two-factor, licence, three-project week) stay open.
+- Biome ignores `.sati/`. Those JSON files are written by sati, and formatting them by hand
+  would rewrite the project memory.

@@ -1,0 +1,364 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #e4eee8;
+  --ink: #14211b;
+  --muted: #4d6256;
+  --panel: #f6faf7;
+  --line: #c5d4cb;
+  --moss: #1b6a44;
+  --clay: #8a3b2c;
+  --live: #c56a2d;
+  --focus: #1b6a44;
+  color-scheme: light;
+  font-family:
+    "Avenir Next", "Segoe UI", "Noto Sans Khmer", "Khmer Sangam MN", "Leelawadee UI", sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #101714;
+    --ink: #e7f0ea;
+    --muted: #9eb0a4;
+    --panel: #18211c;
+    --line: #2a3a32;
+    --moss: #8dcead;
+    --clay: #e7a598;
+    --live: #e39a62;
+    --focus: #8dcead;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+body {
+  background: var(--paper);
+}
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none;
+    animation: none;
+  }
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 196px 1fr;
+  height: 100%;
+}
+.nav {
+  border-right: 1px solid var(--line);
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.brand {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin: 0 8px 12px;
+}
+.nav a,
+.nav button.link {
+  display: block;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: inherit;
+  text-decoration: none;
+}
+.nav a[aria-current="page"] {
+  background: var(--panel);
+}
+.main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.top {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.top input,
+.field,
+select,
+textarea {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+.top input {
+  flex: 1;
+}
+.live {
+  display: flex;
+  gap: 8px;
+  overflow: auto;
+  padding: 0 14px 8px;
+}
+.pill {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pill strong {
+  color: var(--live);
+  font-weight: 600;
+}
+.board {
+  display: flex;
+  gap: 10px;
+  padding: 10px 14px 16px;
+  overflow: auto;
+  flex: 1;
+}
+.column {
+  width: 260px;
+  flex: 0 0 260px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  border-radius: 10px;
+}
+.column h2 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  padding: 10px 10px 4px;
+}
+.column .count {
+  color: var(--muted);
+  font-weight: 400;
+}
+.cards {
+  overflow: auto;
+  padding: 6px;
+  flex: 1;
+  min-height: 80px;
+}
+.lane {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 6px 2px 2px;
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 6px;
+  text-align: left;
+  width: 100%;
+}
+.card.fresh {
+  box-shadow: inset 3px 0 0 var(--live);
+}
+.card.selected {
+  border-color: var(--moss);
+}
+.card .title {
+  display: block;
+  cursor: grab;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+.meta {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.meta button {
+  margin-left: 8px;
+}
+.page {
+  padding: 16px 18px 32px;
+  overflow: auto;
+}
+.timeline {
+  display: flex;
+  gap: 16px;
+  overflow: auto;
+  padding-bottom: 12px;
+}
+.tick {
+  min-width: 140px;
+  border-top: 2px solid var(--moss);
+  padding-top: 6px;
+}
+.tick time {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.page h1 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin: 0 0 12px;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 720px;
+}
+.row {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.sheet {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(440px, 100%);
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  padding: 16px;
+  overflow: auto;
+  box-shadow: -12px 0 40px rgb(0 0 0 / 8%);
+}
+.toast {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 8px 12px;
+  border-radius: 8px;
+  max-width: 420px;
+}
+.bulk {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 0 14px 8px;
+}
+.empty {
+  color: var(--muted);
+  max-width: 46ch;
+  line-height: 1.45;
+}
+.prose {
+  line-height: 1.5;
+}
+.prose pre {
+  overflow: auto;
+  background: var(--paper);
+  padding: 8px;
+  border-radius: 6px;
+}
+.prose a {
+  color: var(--moss);
+}
+.palette {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 35%);
+  display: flex;
+  justify-content: center;
+  padding-top: 12vh;
+}
+.palette button.palette-dismiss {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.palette form {
+  position: relative;
+  z-index: 1;
+  width: min(520px, calc(100% - 24px));
+  background: var(--panel);
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  padding: 8px;
+}
+.palette input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 8px;
+}
+.palette button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+.palette button[aria-selected="true"] {
+  background: var(--paper);
+}
+.mobile-status {
+  display: none;
+}
+@media (max-width: 700px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+  .nav {
+    flex-direction: row;
+    overflow: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand {
+    display: none;
+  }
+  .column {
+    display: none;
+    width: 100%;
+    flex-basis: auto;
+  }
+  .column.show {
+    display: flex;
+  }
+  .mobile-status {
+    display: block;
+    margin: 8px 14px 0;
+  }
+  .sheet {
+    width: 100%;
+  }
+}

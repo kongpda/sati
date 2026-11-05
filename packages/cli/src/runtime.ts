@@ -1,14 +1,19 @@
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { userInfo } from "node:os";
-import { join } from "node:path";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir, userInfo } from "node:os";
+import { dirname, join } from "node:path";
 import {
   type Actor,
   actorIdentity,
+  CLI_NAME,
   CONFIG_DIR,
+  CONFIG_FILE,
   createIdFactory,
+  dirtyFromPorcelain,
   ensureActor,
   getProject,
+  initProject,
   isSatiError,
   type Project,
   type RepoFile,
@@ -16,10 +21,18 @@ import {
   resolveId,
   SatiError,
   type ServiceContext,
+  type StorageAdapter,
   type StoredEntity,
   systemClock,
 } from "@sati/core";
-import { type DbLocation, locateDb, SqliteStore } from "@sati/store-sqlite";
+import {
+  connectStore,
+  type DbLocation,
+  filesystemKind,
+  locateDb,
+  SqliteStore,
+  standaloneDbPath,
+} from "@sati/store-sqlite";
 
 export interface Runtime {
   ctx: ServiceContext;
@@ -28,7 +41,7 @@ export interface Runtime {
   location: DbLocation;
 }
 
-let opened: SqliteStore | undefined;
+let opened: StorageAdapter | undefined;
 
 export function currentBranch(location: DbLocation): string | null {
   if (location.mode !== "git") return null;
@@ -78,6 +91,22 @@ export function gitRepoIndex(root: string): RepoIndex {
         const blob = rec.slice(0, tab).split(" ")[1];
         if (blob) out.push({ path: rec.slice(tab + 1), blob });
       }
+      try {
+        const status = git("status", "--porcelain=v1", "-z");
+        for (const change of dirtyFromPorcelain(status)) {
+          const blob =
+            change.kind === "deleted"
+              ? "wt:deleted"
+              : `wt:${createHash("sha256")
+                  .update(readFileSync(join(root, change.path)))
+                  .digest("hex")}`;
+          const at = out.findIndex((f) => f.path === change.path);
+          if (at >= 0) out[at] = { path: change.path, blob };
+          else out.push({ path: change.path, blob });
+        }
+      } catch {
+        // No worktree (a bare repo, or git status failed). The index hash still stands.
+      }
       return out;
     },
     head: async () => {
@@ -90,15 +119,100 @@ export function gitRepoIndex(root: string): RepoIndex {
   };
 }
 
+async function resolveLocation(cwd: string): Promise<DbLocation> {
+  const slug = process.env.SATI_PROJECT;
+  if (slug) return (await import("./projects.js")).projectLocation(slug);
+  try {
+    return locateDb(cwd);
+  } catch (err) {
+    if (!isSatiError(err) || err.code !== "NOT_INITIALIZED") throw err;
+    return ensurePersonal();
+  }
+}
+
+/** First use outside any repo: one standalone workspace at ~/.sati/personal, after a prompt. */
+async function ensurePersonal(): Promise<DbLocation> {
+  const { readProjects, rememberProject, projectLocation } = await import("./projects.js");
+  const existing = readProjects().find((p) => p.slug === "personal" && existsSync(p.db));
+  if (existing) return projectLocation("personal");
+  if (process.env.SATI_YES !== "1") {
+    if (!process.stdin.isTTY) {
+      throw new SatiError("NOT_INITIALIZED", "No git repository or standalone project found.", {
+        hint: `Run \`${CLI_NAME} init\` in a repository, or \`SATI_YES=1\` to create a personal workspace at ~/.sati/personal.`,
+      });
+    }
+    const clack = await import("@clack/prompts");
+    const ok = await clack.confirm({
+      message: "No project here. Create a personal workspace at ~/.sati/personal?",
+    });
+    if (clack.isCancel(ok) || ok !== true) {
+      throw new SatiError("USAGE", "No project selected.", {
+        hint: `Run \`${CLI_NAME} init\` in a repository.`,
+      });
+    }
+  }
+  const home = homedir();
+  const root = join(home, ".sati", "personal");
+  const ids = createIdFactory();
+  const projectId = ids("project");
+  const db = standaloneDbPath(home, projectId);
+  const store = await SqliteStore.open(db);
+  try {
+    const { project } = await initProject(
+      {
+        store,
+        clock: systemClock,
+        ids: (entity) => (entity === "project" ? projectId : ids(entity)),
+        branch: null,
+      },
+      { slug: "personal", name: "Personal", mode: "standalone" },
+      actorIdentity({ env: process.env, worktree: root, user: osUser() }),
+    );
+    const configPath = join(root, CONFIG_DIR, CONFIG_FILE);
+    mkdirSync(dirname(configPath), { recursive: true });
+    writeFileSync(
+      configPath,
+      `${JSON.stringify({ version: 1, projectId: project.id, mode: "standalone" }, null, 2)}\n`,
+      { flag: "wx" },
+    );
+    rememberProject({
+      slug: project.slug,
+      name: project.name,
+      projectId: project.id,
+      root,
+      mode: "standalone",
+      db,
+    });
+    return { path: db, root, mode: "standalone" };
+  } finally {
+    await store.close();
+  }
+}
+
 /** Opens this project's DB and identifies the caller. Fails with NOT_INITIALIZED before init. */
 export async function openRuntime(cwd: string = process.cwd()): Promise<Runtime> {
-  const location = locateDb(cwd);
+  const location = await resolveLocation(cwd);
   if (!existsSync(location.path)) {
     throw new SatiError("NOT_INITIALIZED", "This project has no sati yet.", {
       hint: "Run `sati init`.",
     });
   }
-  const store = await SqliteStore.open(location.path);
+  const socketPath = join(dirname(location.path), "sati.sock");
+  const kind = filesystemKind(dirname(location.path));
+  const store =
+    process.env.SATI_DAEMON_OWNER === "1"
+      ? await SqliteStore.open(location.path)
+      : kind === "local"
+        ? await SqliteStore.open(location.path)
+        : existsSync(socketPath)
+          ? connectStore(socketPath)
+          : (() => {
+              throw new SatiError(
+                "USAGE",
+                `The database is on a ${kind} filesystem, which is unsafe for SQLite.`,
+                { hint: `Run \`${CLI_NAME} serve\` in this project, then retry.` },
+              );
+            })();
   opened = store;
   const project = await getProject(store);
   const deps = {

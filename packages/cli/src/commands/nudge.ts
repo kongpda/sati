@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { shortHandle, type Task } from "@sati/core";
+import { CLI_NAME, readSettings, shortHandle, type Task } from "@sati/core";
 import { defineCommand } from "citty";
 import { closeRuntime, openRuntime, printError } from "../runtime.js";
 
@@ -19,14 +19,20 @@ function readHookInput(): HookInput {
   }
 }
 
-/** Tasks this caller still holds a live claim on. */
-async function heldTasks(): Promise<Task[]> {
-  const { ctx } = await openRuntime();
+/** Tasks this caller still holds a live claim on, plus the idle hint when auto-continue is on. */
+async function heldTasks(): Promise<{ held: Task[]; idle: string | null }> {
+  const { ctx, project, actor } = await openRuntime();
   const now = ctx.clock.now().toISOString();
   const tasks = await ctx.store.read((r) =>
     r.list("task", ctx.projectId, { status: ["in_progress", "review", "blocked"], limit: 500 }),
   );
-  return tasks.filter((t) => t.claim?.actorId === ctx.actorId && t.claim.leaseUntil > now);
+  const held = tasks.filter((t) => t.claim?.actorId === ctx.actorId && t.claim.leaseUntil > now);
+  const settings = readSettings(project.settings);
+  const idle =
+    held.length === 0 && settings.autoContinue && actor.kind === "agent"
+      ? `No claim. Run \`${CLI_NAME} next\` to take the top ready task.`
+      : null;
+  return { held, idle };
 }
 
 export default defineCommand({
@@ -37,8 +43,11 @@ export default defineCommand({
   run: async () => {
     const input = readHookInput();
     let held: Task[];
+    let idle: string | null = null;
     try {
-      held = await heldTasks();
+      const found = await heldTasks();
+      held = found.held;
+      idle = found.idle;
     } catch (err) {
       // Exit 1, not the usual code: Claude Code treats exit 2 from a Stop hook as "block".
       printError(err, false);
@@ -47,7 +56,15 @@ export default defineCommand({
     } finally {
       await closeRuntime();
     }
-    if (held.length === 0) return;
+    if (held.length === 0) {
+      if (!idle) return;
+      if (input.hook_event_name === "Stop" && !input.stop_hook_active) {
+        process.stdout.write(`${JSON.stringify({ decision: "block", reason: idle })}\n`);
+      } else {
+        process.stdout.write(`${idle}\n`);
+      }
+      return;
+    }
     const list = held.map((t) => `${shortHandle(t.id)} (${t.title})`).join(", ");
     const reason =
       `You still hold ${list}. If the work is finished, call task_complete with a summary ` +

@@ -295,6 +295,15 @@ async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
     }
     writeManaged(p);
     warnIfNotOnPath(p.tools);
+    const { rememberProject } = await import("../projects.js");
+    rememberProject({
+      slug: project.slug,
+      name: project.name,
+      projectId: project.id,
+      root: p.root,
+      mode: project.mode,
+      db: p.db,
+    });
     return { project, actor, db: p.db, tools: p.tools, files: p.files };
   } finally {
     await store.close();

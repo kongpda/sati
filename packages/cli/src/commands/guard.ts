@@ -6,13 +6,14 @@ import {
   checkChanges,
   ERROR_EXIT_CODES,
   type GuardResult,
+  parseShellChanges,
   recordGuard,
   SatiConfigSchema,
   SatiError,
 } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { type Change, stagedChanges } from "../git.js";
+import { type Change, rangeChanges, stagedChanges } from "../git.js";
 import { closeRuntime, list, openRuntime, printError, type Runtime } from "../runtime.js";
 
 /** `SATI_GUARD=off` lets one blocked run through; the override is logged. */
@@ -62,7 +63,7 @@ function render(r: GuardResult): string {
 /** The part of Claude Code's PreToolUse input we read. */
 interface HookInput {
   cwd?: string;
-  tool_input?: { file_path?: unknown; notebook_path?: unknown };
+  tool_input?: { file_path?: unknown; notebook_path?: unknown; command?: unknown };
 }
 
 /**
@@ -73,12 +74,29 @@ async function runHook(): Promise<void> {
   let rt: Runtime | undefined;
   try {
     const input = JSON.parse(readFileSync(0, "utf8")) as HookInput;
+    const cwd = input.cwd ?? process.cwd();
+    const command = input.tool_input?.command;
     const target = input.tool_input?.file_path ?? input.tool_input?.notebook_path;
-    if (typeof target !== "string") return;
-    rt = await openRuntime(input.cwd ?? process.cwd());
-    const path = inRepo(rt.location.root, input.cwd ?? process.cwd(), target);
-    if (path === undefined) return;
-    const result = await check(rt, [{ path, kind: "modified" }], false);
+    rt = await openRuntime(cwd);
+    const changes: Change[] =
+      typeof command === "string"
+        ? parseShellChanges(command).flatMap((change) => {
+            const path = inRepo(rt?.location.root ?? cwd, cwd, change.path);
+            if (path === undefined) return [];
+            const from =
+              change.from === undefined
+                ? undefined
+                : inRepo(rt?.location.root ?? cwd, cwd, change.from);
+            if (change.kind === "renamed" && from === undefined) return [];
+            return [{ path, kind: change.kind, ...(from === undefined ? {} : { from }) }];
+          })
+        : typeof target === "string"
+          ? [
+              { path: inRepo(rt.location.root, cwd, target) ?? "", kind: "modified" as const },
+            ].filter((c) => c.path !== "")
+          : [];
+    if (changes.length === 0) return;
+    const result = await check(rt, changes, false);
     if (result.verdict === "blocked" && !overridden()) {
       process.stderr.write(`${render(result)}\n`);
       process.exitCode = 2;
@@ -104,30 +122,37 @@ export default defineCommand({
     staged: { type: "boolean", description: "Check the staged diff (the pre-commit hook)" },
     paths: { type: "string", description: "Check these comma-separated paths as edits" },
     hook: { type: "boolean", description: "Claude Code PreToolUse hook: read the edit from stdin" },
+    range: {
+      type: "string",
+      description: "Check a commit range, for example origin/main...HEAD",
+    },
     ...json,
   },
   run: async ({ args }) => {
     if (args.hook) return runHook();
     const asJson = args.json ?? false;
     try {
-      if (!args.staged && !args.paths) {
+      const chosen = [args.staged, args.paths, args.range].filter(Boolean).length;
+      if (chosen !== 1) {
         throw new SatiError("USAGE", "Say what to check.", {
-          hint: "Use `sati guard --staged`, or `sati guard --paths src/a.ts`.",
+          hint: "Use `sati guard --staged`, `sati guard --paths src/a.ts`, or `sati guard --range origin/main...HEAD`.",
         });
       }
       const rt = await openRuntime();
-      if (args.staged && rt.location.mode !== "git") {
-        throw new SatiError("USAGE", "`--staged` needs a git repository.", {
+      if ((args.staged || args.range) && rt.location.mode !== "git") {
+        throw new SatiError("USAGE", "A commit range needs a git repository.", {
           hint: "Use `sati guard --paths <file>` instead.",
         });
       }
       const cwd = process.cwd();
       const changes: Change[] = args.staged
         ? stagedChanges(rt.location.root)
-        : (list(args.paths) ?? []).flatMap((p) => {
-            const path = inRepo(rt.location.root, cwd, p);
-            return path === undefined ? [] : [{ path, kind: "modified" as const }];
-          });
+        : args.range
+          ? rangeChanges(rt.location.root, args.range)
+          : (list(args.paths) ?? []).flatMap((p) => {
+              const path = inRepo(rt.location.root, cwd, p);
+              return path === undefined ? [] : [{ path, kind: "modified" as const }];
+            });
       const result = await check(rt, changes, args.staged ?? false);
       process.stdout.write(asJson ? `${JSON.stringify(result, null, 2)}\n` : `${render(result)}\n`);
       if (result.verdict === "blocked" && !overridden()) {

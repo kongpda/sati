@@ -36,6 +36,8 @@ export interface SearchOptions {
 export interface ActivityQuery {
   entityId?: string | undefined;
   actorId?: string | undefined;
+  /** Inclusive lower bound on `at` (UTC ISO). */
+  since?: string | undefined;
   limit?: number | undefined;
 }
 
@@ -60,6 +62,7 @@ export interface StorageReader {
   ): Promise<EntityMap[E] | undefined>;
   search(projectId: string, query: string, opts?: SearchOptions): Promise<SearchHit[]>;
   listActivity(projectId: string, query?: ActivityQuery): Promise<Activity[]>;
+  getActivity(id: string): Promise<Activity | undefined>;
 }
 
 export interface StorageWriter extends StorageReader {

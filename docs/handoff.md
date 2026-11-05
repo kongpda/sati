@@ -1,207 +1,74 @@
-# Handoff: what is not done yet
+# Handoff
 
-Written 2026-11-03 after commit `002e9a0` (context cache). This file is for the next agent picking
-up the work. `PLAN.md` is the spec and `docs/progress.md` records every choice made so far; read
-both before starting. Keep this file current: tick items here and in `PLAN.md` in the same commit.
+Updated 2026-11-04 on `main` (`dbd236b` plus uncommitted work). `PLAN.md` is the spec.
+`docs/progress.md` records the choices. Tick a box in `PLAN.md` in the same commit as the code.
 
 ## Where things stand
 
-- Phases 0–2: done, except the items under "Owed by the owner" below.
-- Phase 3: 8 of 19 checklist items done (claims and leases, path locks, guard, export/import and
-  hooks, merge driver, context cache, secret scanner, fencing tokens). 11 items and the Phase 3
-  gate remain.
-- Phases 4–6 and the Security checklist: not started (three Security items are met; see below).
-- All checks pass at `002e9a0`: lint, typecheck, and 256 tests (core 143, CLI 55, store 26,
-  sync 19, MCP 13). Core coverage: 98.4% statements, 92% branches (threshold 90%).
+- Phases 0–2: checklist done. Phase 0 gate still needs a human (name, npm 2FA, a real publish).
+  Phase 2 gate is still the owner's Claude Code and Codex session.
+- Phase 3 and 3b: implemented, except the 4-worktree e2e gate. `sati serve` owns the database
+  on a network or bind-mount filesystem. `sati handoff`, `sati next`, the review gate, plan
+  import, delete/restore, the personal workspace, activity and undo are in the CLI.
+- Phase 4: the local board is up. The roadmap is a date timeline. Notes have a Markdown field,
+  a preview and backlinks. Still open: Mermaid via `pele` (licence), Playwright, axe, and the
+  2,000-card frame budget.
+- Phase 5: `sati doctor`, `sati export --all` / `sati import`, migration backups, `sati review`
+  and `sati scan` are in. Still open: the docs site, importer fuzz, and a week on three real
+  projects.
+- Phase 6 (hosted Postgres, Better Auth, remote sync) is not started. Do not fake it.
 
-## How to work (rules that are easy to miss)
+`origin/changeset-release/main` is `main` plus `c704d54` ("Version Packages"), which bumps
+`@kongpda/sati` to `0.0.1`. It is not merged. There is no other branch.
 
-- [ ] Read `AGENTS.md` and `AGENT_KICKOFF.md`. One checklist item at a time, top to bottom.
-- [ ] Run commands through `rtk proxy` (plain `pnpm biome` through the rtk hook prints a bogus
-      "terminated abnormally" error):
-      `rtk proxy pnpm biome check --write .`, then `rtk proxy pnpm lint`,
-      `rtk proxy pnpm typecheck`, `rtk proxy pnpm test`. Rebuild (`rtk proxy pnpm build`) before
-      CLI tests: they run `packages/cli/dist/index.mjs`.
-- [ ] Track each item in sati itself:
-      `id=$(sati task create "…" --json | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])')`,
-      `sati task claim $id`, then before the commit
-      `sati task complete $id --summary "…" --files a,b`.
-- [ ] One conventional commit per item; tick `- [x]` in `PLAN.md` in that commit; add a
-      `### <item>` section to `docs/progress.md` (before "### Fix: full-index scan…") listing
-      choices made on ambiguous points.
-- [ ] Core: strict TS, no `any`, Zod on every input, every write in one `store.write`
-      transaction plus an activity row (`insertWithLog` / `updateWithLog` / `logActivity`).
-      Core does no I/O: git and file access come in through ports (`ports/repo.ts` is the
-      newest example) or as input data (the guard takes a change list).
-- [ ] The product name lives only in `packages/core/src/name.ts`; use `CLI_NAME`, never the
-      literal `sati`, in code and generated text.
-- [ ] Tests explain why (a `// PLAN:` comment) and should fail when the rule breaks. Mutate the
-      key line once to prove it.
-- [ ] Never use `--no-verify`; never edit `.sati/` by hand; stack changes need an ADR in
-      `docs/decisions/` and the owner's approval; ideas outside the plan go in `docs/ideas.md`.
+## How to work
 
-## Phase 3: remaining checklist items, in order
+1. One checklist item at a time, top to bottom. One conventional commit per item.
+2. Run `pnpm lint && pnpm typecheck && pnpm test` before that commit. Rebuild before CLI tests
+   that execute `packages/cli/dist/index.mjs`.
+3. Track the item in sati: `task create`, `task claim`, then `task complete` with the files.
+4. Core stays strict TypeScript, Zod on inputs, one `store.write` plus an activity row.
+   The product name stays in `packages/core/src/name.ts` (`CLI_NAME`).
+5. A test should say why (`// PLAN:`) and fail when the rule breaks.
+6. Never use `--no-verify`. Never edit `.sati/` by hand. Stack changes need an ADR and a yes.
+   Ideas that are not in the plan go in `docs/ideas.md`.
 
-### 1. Secret scanner on export
+## Still open, in order
 
-- [x] Before `exportSnapshot` (`packages/sync/src/snapshot.ts`) writes any file, scan every
-      string field of every record for secrets: API keys and tokens (AWS `AKIA…`, GitHub
-      `ghp_`/`github_pat_`, Slack `xox…`, `sk-…`, JWTs), PEM private-key headers, and
-      `.env`-style `NAME=value` lines whose name looks secret (`*_KEY`, `*_TOKEN`, `*SECRET*`,
-      `PASSWORD`).
-- [x] Refuse the whole export with a clear error naming the entity id and field (never print the
-      secret itself). PLAN Security says "refuse with a clear message".
-- [x] Decide and record: does a refused export also fail the pre-commit hook? (Simplest: yes,
-      the hook runs `sati sync export && git add`, so a non-zero exit blocks the commit.)
-- [x] The MCP debounced export (`packages/cli/src/commands/mcp.ts`) must report the refusal on
-      stderr and keep serving.
-- [x] Tick the Security item "Scan every exported record for secrets" too.
+- **E2E gate.** Four git worktrees, 1,000 random steps, merges, zero duplicate claims, zero
+  lost records, repeated 100 times. `pnpm test:e2e` today runs a single-process stand-in
+  (`packages/core/test/loop.test.ts`). The CI guard job in `.github/workflows/ci.yml` already
+  runs `sati guard`.
+- **Phase 4 measurements and licence.** Playwright, axe, the 2,000-card 60 fps check, and
+  Mermaid through `pele` after the licence is checked. The notes editor is a Markdown field.
+- **Phase 5 remainder.** A docs site whose text also feeds `sati://workflow`, and a fuzz of
+  the JSON importer. `SECURITY.md`, Renovate, and `pnpm audit` in CI are still open.
+- **Phase 6.** Hosted Postgres, Better Auth, org isolation, remote MCP, the multi-project
+  dashboard. Leave these until there is a real host.
 
-### 2. Fencing tokens (review fix 2)
+### Production bar for the later phases
 
-- [x] `claimTask` (`packages/core/src/services/task.ts:148`) returns a token that changes on
-      every new claim (for example a counter stored on `task.claim`). Schema: `Task.claim` in
-      `packages/core/src/domain/schemas.ts`.
-- [x] `updateTask` and `completeTask` (lines 95 and 125) take the token; a stale or missing
-      token from the claim holder fails with CONFLICT. Decide what non-holders get (they are
-      already refused while a lease is live).
-- [x] Wire through: MCP `task_claim` / `task_update` / `task_complete`
-      (`packages/mcp/src/server.ts`), CLI `sati task claim|update|complete`
-      (`packages/cli/src/commands/task.ts`, e.g. `--token`), and the workflow text
-      (`packages/core/src/workflow.ts`, rules in `domain/rules.ts`; bump the rules block
-      version if the managed text changes).
-- [x] Test the point of fencing: agent A's lease expires, B claims, A's late write is refused.
+Do not start these until the gates above pass. When they start, these are the acceptance bars
+already written in `PLAN.md`:
 
-### 3. Hybrid logical clock stamps (review fix 3)
+- **Performance.** CLI cold start under 80 ms, read p95 under 150 ms, claim under 50 ms,
+  search under 50 ms. Last local run (2026-11-03) passed, with the read close to its budget.
+  UI first load under 1 s and under 250 KB gzipped. A 2,000-card board stays at 60 fps.
+- **UX.** Keyboard-first, light and dark from the system, WCAG 2.2 AA, 375 px, Khmer-capable
+  fonts, optimistic updates, empty states that name the command to run. Terminal output is
+  coloured only on a TTY, `--json` for machines, and errors name the next command.
+- **Security.** Local server binds `127.0.0.1`, session cookie is `HttpOnly` and
+  `SameSite=Strict`, Host and Origin are checked, CSP is `default-src 'self'`. Markdown has
+  no raw HTML. Hosted mode is Better Auth, hashed scoped tokens, `orgId` on every query,
+  rate limits, TLS. `SECURITY.md` and `pnpm audit` in CI are still open.
+- **Already met.** Secret scan on export, no file contents in context, merge driver parses
+  JSON only, hooks call an absolute binary path, FTS terms are quoted, Drizzle uses
+  parameters, guard overrides and forced lock releases are logged, `sati init` shows a
+  preview and asks.
 
-- [ ] Replace `updatedAt` ordering in the merge driver (`packages/sync/src/merge.ts`,
-      `newer` and the tie break) with per-field HLC stamps.
-- [ ] Needs a stored stamp per field (for example `stamps: Record<field, hlc>` in the record
-      JSON; no migration since entities are a JSON `data` column) set by `updateWithLog` in
-      `packages/core/src/services/context.ts`, and an HLC in core (`ports/clock.ts` has the
-      wall clock).
-- [ ] Records without stamps (written before this item) must still merge: fall back to
-      `updatedAt`.
-- [ ] Keep the existing property tests passing; add one where clock skew (a clone whose wall
-      clock is behind) would have picked the wrong side with `updatedAt`.
+## Owed by the owner
 
-### 4. Delete-vs-edit rule (review fix 4)
-
-- [ ] In `mergeRecord`, when one side set `deletedAt` and the other edited other fields: if the
-      edit is newer (by HLC once item 3 lands), clear `deletedAt` and set `needsReview`;
-      otherwise the delete wins. Today the delete always wins (documented in progress.md
-      "### Merge driver").
-- [ ] Add a property test for both outcomes.
-
-### 5. Hook installer chains into existing managers (review fix 5)
-
-- [x] `planHooks` in `packages/cli/src/hooks.ts` uses `git rev-parse --git-path hooks`, which
-      already follows `core.hooksPath`, but foreign hooks are skipped. Detect husky
-      (`.husky/`), lefthook (`lefthook.yml`) and a custom `core.hooksPath`, and add the sati
-      lines to their config instead of skipping. Never overwrite.
-- [x] `sati init` must show each change before applying it (it prints a plan already).
-
-### 6. Guard rename detection (review fix 6)
-
-- [ ] `packages/cli/src/commands/guard.ts` / `packages/cli/src/git.ts` read the staged diff
-      with `--numstat`; add `-M` so a rename is not a delete plus an add (today it errs towards
-      blocking; see progress.md "### Guard").
-- [ ] Core `checkChanges` (`packages/core/src/services/guard.ts`) needs a `renamed` kind with
-      the old path. Offer to update feature `paths` (CLI prompt or a hint with the
-      `sati feature update` command; pick the simplest and record it).
-
-### 7. Feature globs matching zero files (review fix 7)
-
-- [ ] `sati doctor` does not exist yet (Phase 5). Simplest reading: add the check to the brief
-      now (needs the `repo` port's file list, like the stale-context section in
-      `packages/core/src/services/brief.ts`) and leave doctor to Phase 5. Record the choice.
-
-### 8. PreToolUse matches Bash (review fix 8)
-
-- [ ] The Claude Code hook (written by `packages/cli/src/integrations.ts`, handled by
-      `sati guard --hook`) matches `Edit|MultiEdit|Write|NotebookEdit`. Add `Bash` and parse
-      `rm`, `git rm`, `mv` (with flags, multiple paths, `&&` chains) into delete/rename
-      changes for `checkChanges`. Unknown commands pass.
-- [ ] Existing installs get the new matcher through `sati init` / `sati rules sync` (check
-      which one rewrites `.claude/settings.json`).
-
-### 9. Network filesystems and daemon mode (review fix 9)
-
-- [ ] Detect NFS/SMB and Docker/WSL bind mounts for the DB path
-      (`packages/store-sqlite/src/locate.ts`); SQLite locking is unsafe there.
-- [ ] Fallback is a daemon: `sati serve` owns the DB and other processes talk to it over a
-      local socket. This is large (a new transport behind `StorageAdapter`); tell the owner
-      about the size before starting, per the global "keep effort proportional" rule.
-
-### 10. pre-push hook and CI guard (review fix 1)
-
-- [ ] Add a `pre-push` hook running `sati guard --range origin/main...HEAD` (the `--range`
-      flag is new on `sati guard`).
-- [ ] Add a GitHub Actions example (docs, and optionally `.github/workflows/`) running the same
-      command, so `--no-verify` commits are still caught.
-- [ ] Add a Claude Code deny rule for `git commit --no-verify` in the settings `sati init`
-      writes.
-
-### 11. `.gitattributes` `linguist-generated`
-
-- [x] Change `ATTRIBUTE` in `packages/cli/src/hooks.ts` to
-      `.sati/**/*.json merge=sati linguist-generated`. `planGitAttributes` must then replace
-      the older line in place instead of appending a second one. Update
-      `packages/cli/test/init.test.ts`.
-
-### 12. `sati handoff`
-
-- [ ] A structured "where I stopped" note on a task: done so far, next step, open questions,
-      files in flight. Store it on the task (or as a linked note; pick the simplest and record
-      it), expose it as a CLI command and in the brief for whoever claims the task next.
-      PLAN lists 14 MCP tools, which are all registered now; adding a tool needs a note in
-      progress.md.
-
-### 13. E2E scenario and the Phase 3 gate
-
-- [ ] `e2e/`: 4 agents in 4 git worktrees, random claims, locks and merges for 1,000 steps;
-      assert zero duplicate claims and zero lost records.
-- [ ] Add `pnpm test:e2e` with `--repeat`, and the guard fixtures in `e2e/guard/`.
-- [ ] Gate: the scenario passes 100 runs in CI; a staged delete of a protected feature is
-      blocked; a `--no-verify` commit is caught by the CI guard.
-
-## Known gaps found along the way (not checklist items)
-
-- [x] **Record-only `git commit -a` fails.** If only sati records changed, git says "nothing
-      to commit" before the pre-commit hook stages the snapshot. Commits that also change code
-      work. Workaround: `sati sync export && git add .sati` first. Possible fix: export on
-      CLI writes (like the MCP debounce), so `.sati/` is already dirty. Needs an owner
-      decision. See progress.md "### Merge driver".
-- [ ] **`needsReview` is never cleared.** Set by the merge driver; no command clears it yet.
-      The UI (Phase 4) or a `task update` flag could; record the choice.
-- [x] **Merge driver found by name on PATH.** Hooks and the driver call `sati` by name. The
-      Security item "Hooks call the installed `sati` binary via an absolute path recorded at
-      init" is open.
-- [x] **This repo's own hooks and merge driver are not installed.** `sati init` does not
-      re-run on an initialised project, so `.git/hooks` here predate the sync hooks and the
-      merge driver. Decide whether `sati init` (or `sati rules sync`) should upgrade them.
-- [ ] **Context staleness sees staged content only** (`git ls-files -s`): unstaged edits and
-      untracked files do not mark an entry stale. Documented as a choice.
-- [ ] **Brief deferrals** (progress.md, Phase 2 section): "changes since my last session"
-      needs a per-actor session marker the plan does not define.
-
-## Security checklist
-
-- [x] "Never store file contents in context entries": met by the context cache design.
-- [x] "The merge driver only parses JSON": met (`parseRecord` in `merge.ts`).
-- [x] "Scan every exported record for secrets": done (`packages/sync/src/secrets.ts`).
-- [ ] Everything else in the Security section is open; most of it belongs to Phases 4–6.
-
-## Owed by the owner (do not do these yourself)
-
-- [ ] Phase 2 gate: Claude Code and Codex each finish a real task using only sati tools (waived
-      on 2026-11-03, still owed).
-- [ ] Product name (placeholder `sati` / `@kongpda/sati` stays until then), npm scope,
-      two-factor and provenance publishing (Phase 0 items on PLAN lines 418–419).
-- [ ] `pele` licence check before Phase 4 uses it for Mermaid rendering.
-- [ ] First CI run: there is no GitHub remote yet, so `.github/workflows/ci.yml` has never run.
-
-## After Phase 3
-
-Phase 4 (web UI), Phase 5 (hardening, `sati doctor`, v1.0) and Phase 6 (hosted) are untouched.
-Their checklists in `PLAN.md` are the task list; do not start them before the Phase 3 gate.
+- Final product name, npm scope, npm two-factor, and the first provenance publish.
+- Phase 2 gate: Claude Code and Codex each finish a real task using only sati tools.
+- `pele` licence check before Phase 4 renders Mermaid with it.
+- Licence choice, hosted pricing, and a week on three real projects (Phase 5).

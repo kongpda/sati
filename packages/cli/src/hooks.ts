@@ -50,12 +50,18 @@ ${body}
 const GUARD = `# Override the guard once with SATI_GUARD=off (logged).
 ${CLI_NAME} guard --staged || exit $?`;
 const IMPORT = `${CLI_NAME} sync import`;
+const PUSH = `# A repository with no origin/main can still push.
+if git rev-parse --verify --quiet origin/main >/dev/null 2>&1; then
+  ${CLI_NAME} guard --range origin/main...HEAD || exit $?
+fi`;
 
 /** The runners for each mode. Stealth commits nothing, so it only guards. */
 function runners(mode: Mode, self: string[]): Record<string, string> {
+  const push = runner(self, "checks the commits being pushed against shipped features.", PUSH);
   if (mode === "stealth") {
     return {
       "pre-commit": runner(self, "blocks commits that delete or gut a shipped feature.", GUARD),
+      "pre-push": push,
     };
   }
   const load = runner(self, "loads teammates' records from .sati/ after git changes them.", IMPORT);
@@ -68,6 +74,7 @@ function runners(mode: Mode, self: string[]): Record<string, string> {
     "post-merge": load,
     "post-checkout": load,
     "post-rewrite": load,
+    "pre-push": push,
   };
 }
 
@@ -80,7 +87,7 @@ const runnerPath = (name: string) =>
  * hook, and it does nothing on a machine without sati. Only pre-commit may stop git.
  */
 function chainBlock(name: string): string {
-  const stop = name === "pre-commit" ? " || exit $?" : "";
+  const stop = name === "pre-commit" || name === "pre-push" ? " || exit $?" : "";
   return `${BEGIN}: runs the ${CLI_NAME} hook. Managed by \`${CLI_NAME} init\`.
 ${CLI_NAME}_hook=${runnerPath(name)}
 if [ -x "$${CLI_NAME}_hook" ]; then "$${CLI_NAME}_hook" "$@"${stop}; fi

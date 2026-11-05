@@ -1,10 +1,25 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import type { IdFactory } from "../domain/ids.js";
-import { ACTOR_KINDS, type Actor, Mode, type Project } from "../domain/schemas.js";
+import {
+  ACTOR_KINDS,
+  type Actor,
+  Mode,
+  type Project,
+  type ProjectSettings,
+  type ReviewMode,
+} from "../domain/schemas.js";
+import { CLI_NAME } from "../name.js";
 import type { Clock } from "../ports/clock.js";
 import type { StorageAdapter, StorageWriter } from "../ports/storage.js";
-import { checkRecord, logActivity, nowIso, parseInput, type ServiceContext } from "./context.js";
+import {
+  checkRecord,
+  logActivity,
+  nowIso,
+  parseInput,
+  type ServiceContext,
+  updateWithLog,
+} from "./context.js";
 
 export const DEFAULT_LEASE_MINUTES = 30;
 
@@ -30,6 +45,52 @@ export const InitProjectInput = z.strictObject({
 });
 export type InitProjectInput = z.input<typeof InitProjectInput>;
 
+/** Settings as stored, including rows written before review and autoContinue existed. */
+export function readSettings(raw: Partial<ProjectSettings> | undefined): ProjectSettings {
+  const review: ReviewMode =
+    raw?.review === "all" || raw?.review === "none" || raw?.review === "agents"
+      ? raw.review
+      : "agents";
+  return {
+    leaseMinutes: raw?.leaseMinutes ?? DEFAULT_LEASE_MINUTES,
+    review,
+    autoContinue: raw?.autoContinue === true,
+  };
+}
+
+export const UpdateSettingsInput = z.strictObject({
+  leaseMinutes: z
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 60)
+    .optional(),
+  review: z.enum(["agents", "all", "none"]).optional(),
+  autoContinue: z.boolean().optional(),
+});
+export type UpdateSettingsInput = z.input<typeof UpdateSettingsInput>;
+
+/** Changes project settings. Missing fields keep their current value. */
+export async function updateSettings(ctx: ServiceContext, input: unknown): Promise<Project> {
+  const data = parseInput(UpdateSettingsInput, input);
+  return ctx.store.write(async (w) => {
+    const project = await w.getProject();
+    if (!project || project.id !== ctx.projectId) {
+      throw new SatiError("NOT_INITIALIZED", "This repository has no project.", {
+        hint: `Run \`${CLI_NAME} init\`.`,
+      });
+    }
+    const current = readSettings(project.settings);
+    return updateWithLog(w, ctx, "project", project, {
+      settings: {
+        leaseMinutes: data.leaseMinutes ?? current.leaseMinutes,
+        review: data.review ?? current.review,
+        autoContinue: data.autoContinue ?? current.autoContinue,
+      },
+    });
+  });
+}
+
 interface Deps {
   store: StorageAdapter;
   clock: Clock;
@@ -49,7 +110,7 @@ export async function initProject(
     const existing = await w.getProject();
     if (existing) {
       throw new SatiError("CONFLICT", `This repository already has project "${existing.slug}".`, {
-        hint: "Run `sati doctor` to inspect it; init runs once per repository.",
+        hint: `Run \`${CLI_NAME} doctor\` to inspect it; init runs once per repository.`,
       });
     }
     const at = nowIso(deps);
@@ -61,7 +122,7 @@ export async function initProject(
       name: data.name,
       repoUrl: data.repoUrl,
       mode: data.mode,
-      settings: { leaseMinutes: data.leaseMinutes },
+      settings: { leaseMinutes: data.leaseMinutes, review: "agents", autoContinue: false },
       createdAt: at,
       updatedAt: at,
       createdBy: actorId,
@@ -83,7 +144,7 @@ export async function getProject(store: StorageAdapter): Promise<Project> {
   const project = await store.read((r) => r.getProject());
   if (!project) {
     throw new SatiError("NOT_INITIALIZED", "No project in this database.", {
-      hint: "Run `sati init`.",
+      hint: `Run \`${CLI_NAME} init\`.`,
     });
   }
   return project;

@@ -28,3 +28,76 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+
+  worktree-stress:
+    name: Worktree stress / shard ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    env:
+      SATI_WORKTREE_STRESS: "1"
+      SHARD: ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Run ten seeded scenarios
+        shell: bash
+        run: |
+          for run in {0..9}; do
+            export SATI_WORKTREE_SEED=$((SHARD * 10000 + run * 500))
+            pnpm --filter @kongpda/sati exec vitest run test/concurrency.test.ts -t "shares claims"
+          done
+
+  # Catches a commit that skipped the pre-commit hook with --no-verify.
+  guard:
+    name: Guard changed paths
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Check changes against the base snapshot
+        shell: bash
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.event.after }}
+        run: |
+          if [[ -n "$PR_BASE" ]]; then
+            base=$(git merge-base "$PR_BASE" "$PR_HEAD")
+            head="$PR_HEAD"
+          else
+            base="$PUSH_BEFORE"
+            head="$PUSH_AFTER"
+            if [[ "$base" =~ ^0+$ ]]; then
+              base=$(git hash-object -w -t tree --stdin </dev/null)
+            fi
+          fi
+
+          if git cat-file -e "$base:.sati/sati.config.json" 2>/dev/null; then
+            git restore --source="$base" --worktree -- .sati
+          else
+            echo "The base revision has no Sati protection registry."
+            exit 0
+          fi
+          sati=(node packages/cli/dist/index.mjs)
+          "${sati[@]}" init --mode git --yes --tools ''
+          "${sati[@]}" sync import
+          "${sati[@]}" guard --range "$base..$head"

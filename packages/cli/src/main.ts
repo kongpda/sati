@@ -16,6 +16,17 @@ function words(argv: readonly string[]): string[] {
  */
 export async function main(root: CommandDef): Promise<void> {
   const argv = process.argv.slice(2);
+  const projectAt = argv.indexOf("--project");
+  if (projectAt !== -1) {
+    const slug = argv[projectAt + 1];
+    if (!slug || slug.startsWith("-")) {
+      process.stderr.write("error: --project needs a slug.\nhint: Run `sati projects`.\n");
+      process.exitCode = 2;
+      return;
+    }
+    process.env.SATI_PROJECT = slug;
+    argv.splice(projectAt, 2);
+  }
   if (argv.some((a) => HELP.has(a)) || (argv.length === 1 && argv[0] === "--version")) {
     await runMain(root);
     return;

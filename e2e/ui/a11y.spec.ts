@@ -56,6 +56,11 @@ for (const [device, viewport] of [
         await page.waitForLoadState("networkidle");
         if (path === "/notes")
           await expect(page.locator(".mermaid[data-ready=true]")).toBeVisible();
+        // PLAN: UX works at 375 px. Every control in the top bar stays on screen.
+        const search = await page
+          .getByRole("button", { name: "Search", exact: true })
+          .boundingBox();
+        expect(search && search.x + search.width).toBeLessThanOrEqual(viewport.width);
         const result = await new AxeBuilder({ page }).withTags(TAGS).analyze();
         const best = await new AxeBuilder({ page }).withTags(["best-practice"]).analyze();
         expect(summary(best.violations)).toEqual([]);

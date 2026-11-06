@@ -126,6 +126,11 @@ textarea {
 }
 .top input {
   flex: 1;
+  min-width: 0;
+}
+.top select {
+  min-width: 0;
+  max-width: 40%;
 }
 .live {
   display: flex;

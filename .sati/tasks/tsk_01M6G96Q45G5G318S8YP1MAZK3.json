@@ -1,0 +1,33 @@
+{
+  "body": "",
+  "branch": null,
+  "claim": null,
+  "completion": {
+    "completedAt": "2026-11-03T08:43:02.057Z",
+    "completedBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+    "filesTouched": [
+      "packages/sync",
+      "packages/core/src/services/sync.ts",
+      "packages/cli/src/hooks.ts",
+      "packages/cli/src/commands/sync.ts",
+      "packages/cli/src/commands/mcp.ts",
+      "packages/cli/src/commands/init.ts"
+    ],
+    "summary": "Added @brain/sync (stable JSON export, atomic incremental writes, validated all-or-nothing import, 2s debounce), brain sync export|import, MCP auto-export in git mode, and git hooks installer (pre-commit export+stage, post-merge/checkout/rewrite import)."
+  },
+  "createdAt": "2026-11-03T08:42:54.468Z",
+  "createdBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+  "deletedAt": null,
+  "dependsOn": [],
+  "featureId": null,
+  "id": "tsk_01M6G96Q45G5G318S8YP1MAZK3",
+  "labels": [],
+  "parentId": null,
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "status": "done",
+  "title": "Export / import engine and git sync hooks",
+  "updatedAt": "2026-11-03T08:43:02.058Z",
+  "version": 3,
+  "worktree": null
+}

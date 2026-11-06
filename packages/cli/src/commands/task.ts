@@ -1,10 +1,13 @@
 import {
+  claimNext,
   claimTask,
   completeTask,
   createTask,
+  deleteRecord,
   getRecord,
   listTasks,
   resolveId,
+  restoreRecord,
   type ServiceContext,
   type Task,
   updateTask,
@@ -53,6 +56,10 @@ const create = defineCommand({
     title: { type: "positional", required: true, description: "Task title" },
     status: { type: "string", description: "backlog | todo (default todo)" },
     ...fields,
+    subtasks: {
+      type: "string",
+      description: "JSON array of {title, body?, dependsOn?: number[]}",
+    },
     ...json,
   },
   run: ({ args }) =>
@@ -70,6 +77,7 @@ const create = defineCommand({
           labels: list(args.labels),
           branch: args.branch,
           worktree: args.worktree,
+          subtasks: args.subtasks ? JSON.parse(args.subtasks) : undefined,
         }),
       (t: Task) => `Created ${row(t)}`,
     ),
@@ -121,6 +129,8 @@ const update = defineCommand({
     ...fields,
     ...expectedVersion,
     ...token,
+    reviewed: { type: "boolean", description: "Clear needsReview" },
+    reason: { type: "string", description: "Why a review task is going back to todo" },
     ...json,
   },
   run: ({ args }) =>
@@ -141,6 +151,8 @@ const update = defineCommand({
           worktree: args.worktree,
           expectedVersion: int(args["expected-version"], "expected-version"),
           token: await claimToken(ctx, taskId, args.token),
+          reviewed: args.reviewed ? true : undefined,
+          reason: args.reason,
         });
       },
       (t: Task) => `Updated ${row(t)}`,
@@ -153,18 +165,53 @@ const claim = defineCommand({
     description: "Claim a task before working on it (moves it to in_progress)",
   },
   args: {
-    ...id("Task"),
+    id: {
+      type: "positional",
+      required: false,
+      description: "Task id, or omit to claim the top ready task",
+    },
     lease: { type: "string", description: "Lease length in minutes (default: project setting)" },
     ...json,
   },
   run: ({ args }) =>
     execute(
       args.json,
+      async ({ ctx }) => {
+        const leaseMinutes = int(args.lease, "lease");
+        if (!args.id) {
+          const next = await claimNext(ctx, { leaseMinutes });
+          return { ...next.task, acceptance: next.acceptance };
+        }
+        return claimTask(ctx, await resolveId(ctx, "task", args.id), { leaseMinutes });
+      },
+      (t: Task & { acceptance?: string[] }) =>
+        `Claimed ${row(t)} until ${t.claim?.leaseUntil}, token ${t.claim?.token}${
+          t.acceptance?.length ? `\n${t.acceptance.map((a) => `- ${a}`).join("\n")}` : ""
+        }`,
+    ),
+});
+
+const remove = defineCommand({
+  meta: { name: "delete", description: "Soft-delete a task" },
+  args: { ...id("Task"), ...json },
+  run: ({ args }) =>
+    execute(
+      args.json,
       async ({ ctx }) =>
-        claimTask(ctx, await resolveId(ctx, "task", args.id), {
-          leaseMinutes: int(args.lease, "lease"),
-        }),
-      (t: Task) => `Claimed ${row(t)} until ${t.claim?.leaseUntil}, token ${t.claim?.token}`,
+        deleteRecord(ctx, "task", await resolveId(ctx, "task", args.id)) as Promise<Task>,
+      (t: Task) => `Deleted ${row(t)}`,
+    ),
+});
+
+const restore = defineCommand({
+  meta: { name: "restore", description: "Restore a soft-deleted task" },
+  args: { ...id("Task"), ...json },
+  run: ({ args }) =>
+    execute(
+      args.json,
+      async ({ ctx }) =>
+        restoreRecord(ctx, "task", await resolveId(ctx, "task", args.id)) as Promise<Task>,
+      (t: Task) => `Restored ${row(t)}`,
     ),
 });
 
@@ -196,5 +243,5 @@ const complete = defineCommand({
 
 export default defineCommand({
   meta: { name: "task", description: "Create, list and finish tasks" },
-  subCommands: { create, list: ls, show, update, claim, complete },
+  subCommands: { create, list: ls, show, update, claim, complete, delete: remove, restore },
 });

@@ -66,6 +66,7 @@ describe("MCP server", () => {
       "feature_upsert",
       "lock_acquire",
       "lock_release",
+      "roadmap_upsert",
       "sati_brief",
       "search",
       "task_claim",
@@ -109,7 +110,7 @@ describe("MCP server", () => {
       filesTouched: ["src/login.ts"],
       token,
     });
-    expect(done.body).toMatchObject({ status: "done", claim: null });
+    expect(done.body).toMatchObject({ status: "review", claim: null });
 
     const activity = await store.read((r) => r.listActivity(ctx.projectId));
     const verbs = activity.filter((a) => a.entityId === created.body.id).map((a) => a.verb);

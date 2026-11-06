@@ -1,0 +1,83 @@
+import { expect, test } from "@playwright/test";
+import { startUi, type Ui } from "./server.js";
+
+const CARDS = 2000;
+let ui: Ui;
+
+test.describe.configure({ timeout: 180_000 });
+
+test.beforeAll(async () => {
+  test.setTimeout(180_000);
+  ui = await startUi();
+  const features = ["Search", "Sync", "Board", "CLI"].map(
+    (title) => ui.sati<{ id: string }>("feature", "create", title).id,
+  );
+  // Eight writers at a time: the server still runs each write in its own transaction.
+  let next = 0;
+  const writer = async () => {
+    while (next < CARDS) {
+      const i = next++;
+      await ui.api("POST", "/api/tasks", {
+        title: `Card ${String(i).padStart(4, "0")}`,
+        body: "Seeded for the board performance gate.",
+        ...(i % 3 === 0 ? {} : { featureId: features[i % features.length] }),
+      });
+    }
+  };
+  await Promise.all(Array.from({ length: 8 }, writer));
+});
+test.afterAll(async () => {
+  await ui?.stop();
+});
+
+// PLAN Phase 4 gate: the UI loads in under 1 s with 2,000 cards.
+test("loads a 2,000-card board in under 1 s", async ({ page }) => {
+  await page.goto(ui.signIn);
+  await expect(page.getByRole("heading", { name: `Todo ${CARDS}` })).toBeVisible();
+  const times: number[] = [];
+  for (let i = 0; i < 3; i++) {
+    const start = Date.now();
+    await page.reload();
+    await page.locator(".card").first().waitFor();
+    times.push(Date.now() - start);
+  }
+  const median = [...times].sort((a, b) => a - b)[1] ?? Number.POSITIVE_INFINITY;
+  test.info().annotations.push({ type: "load-ms", description: times.join(", ") });
+  console.log(`load ms: ${times.join(", ")} (median ${median})`);
+  expect(median).toBeLessThan(1000);
+});
+
+// PLAN Phase 4 gate: a 2,000-card board scrolls at 60 fps. Virtualisation keeps the DOM small,
+// so scrolling costs the same at any board size.
+test("scrolls a 2,000-card column at 60 fps", async ({ page }) => {
+  await page.goto(ui.signIn);
+  const todo = page.getByRole("region", { name: "Todo", exact: true });
+  await expect(todo.getByRole("heading", { name: `Todo ${CARDS}` })).toBeVisible();
+  expect(await page.locator(".card").count()).toBeLessThan(150);
+
+  const frames = await todo.locator(".cards").evaluate(
+    (el) =>
+      new Promise<number[]>((resolve) => {
+        const deltas: number[] = [];
+        let last = performance.now();
+        const step = (now: number) => {
+          deltas.push(now - last);
+          last = now;
+          el.scrollTop += 60;
+          if (deltas.length < 240) requestAnimationFrame(step);
+          else resolve(deltas.slice(1));
+        };
+        requestAnimationFrame(step);
+      }),
+  );
+  const avg = frames.reduce((a, b) => a + b, 0) / frames.length;
+  const fps = 1000 / avg;
+  const long = frames.filter((d) => d > 50).length;
+  console.log(
+    `scroll fps ${fps.toFixed(1)}, worst ${Math.max(...frames).toFixed(1)} ms, long ${long}`,
+  );
+  // The test scrolled deep into the column, so later cards were rendered on the way.
+  await expect(todo.getByRole("button", { name: /^Card \d{4}$/u }).first()).toBeVisible();
+  expect(fps).toBeGreaterThanOrEqual(55);
+  expect(long).toBeLessThanOrEqual(2);
+});

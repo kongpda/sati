@@ -1,4 +1,12 @@
-import { type Decision, getRecord, listRecords, recordDecision, resolveId } from "@sati/core";
+import {
+  type Decision,
+  deleteRecord,
+  getRecord,
+  listRecords,
+  recordDecision,
+  resolveId,
+  restoreRecord,
+} from "@sati/core";
 import { defineCommand } from "citty";
 import { id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
@@ -58,7 +66,39 @@ const show = defineCommand({
     ),
 });
 
+const remove = defineCommand({
+  meta: { name: "delete", description: "Soft-delete a decision" },
+  args: { ...id("Decision"), ...json },
+  run: ({ args }) =>
+    execute(
+      args.json,
+      async ({ ctx }) =>
+        deleteRecord(
+          ctx,
+          "decision",
+          await resolveId(ctx, "decision", args.id),
+        ) as Promise<Decision>,
+      (d: Decision) => `Deleted ${row(d)}`,
+    ),
+});
+
+const restore = defineCommand({
+  meta: { name: "restore", description: "Restore a soft-deleted decision" },
+  args: { ...id("Decision"), ...json },
+  run: ({ args }) =>
+    execute(
+      args.json,
+      async ({ ctx }) =>
+        restoreRecord(
+          ctx,
+          "decision",
+          await resolveId(ctx, "decision", args.id),
+        ) as Promise<Decision>,
+      (d: Decision) => `Restored ${row(d)}`,
+    ),
+});
+
 export default defineCommand({
-  meta: { name: "decision", description: "Log decisions (append-only)" },
-  subCommands: { record: create, list: ls, show },
+  meta: { name: "decision", description: "Log decisions" },
+  subCommands: { record: create, list: ls, show, delete: remove, restore },
 });

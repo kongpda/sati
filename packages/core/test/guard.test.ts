@@ -179,6 +179,28 @@ describe("recordGuard", () => {
     ]);
   });
 
+  // PLAN: a rename is not a delete. A move out of a shipped feature asks for a path update.
+  it("warns when a rename leaves a shipped feature and does not block it as a delete", async () => {
+    const { ctx } = await setup();
+    const f = await billing(ctx);
+    const r = await checkChanges(ctx, {
+      changes: [{ path: "src/other/invoice.ts", kind: "renamed", from: "src/billing/invoice.ts" }],
+    });
+    expect(r.verdict).toBe("warn");
+    expect(r.findings[0]).toMatchObject({ rule: "renamed-out", featureId: f.id });
+    expect(r.findings[0]?.message).toContain(`feature update ${f.id}`);
+  });
+
+  it("treats a rename that stays inside the feature as a touch, not a deletion", async () => {
+    const { ctx } = await setup();
+    await billing(ctx);
+    const r = await checkChanges(ctx, {
+      changes: [{ path: "src/billing/new.ts", kind: "renamed", from: "src/billing/invoice.ts" }],
+    });
+    expect(r.verdict).toBe("warn");
+    expect(r.findings[0]?.rule).toBe("shipped-touched");
+  });
+
   it("writes nothing for a clean result", async () => {
     const { ctx, store } = await setup();
     const before = store.activity.length;

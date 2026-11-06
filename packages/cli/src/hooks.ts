@@ -4,6 +4,9 @@ import { isAbsolute, relative, resolve, sep } from "node:path";
 import { CLI_NAME, CONFIG_DIR, type Mode, SatiError } from "@sati/core";
 import type { FileChange, PlannedFile, ReadFile } from "./integrations.js";
 
+/** A repo-relative path for output, with `/` on every platform so `--json` reads the same. */
+export const shownPath = (root: string, abs: string) => relative(root, abs).split(sep).join("/");
+
 /** Marks a file as ours, so a later `init` may update it. Foreign hooks are never replaced. */
 const OWNER = `# Installed by \`${CLI_NAME} init\``;
 /** Our block inside a hook file someone else owns, such as a husky hook. */
@@ -50,12 +53,18 @@ ${body}
 const GUARD = `# Override the guard once with SATI_GUARD=off (logged).
 ${CLI_NAME} guard --staged || exit $?`;
 const IMPORT = `${CLI_NAME} sync import`;
+const PUSH = `# A repository with no origin/main can still push.
+if git rev-parse --verify --quiet origin/main >/dev/null 2>&1; then
+  ${CLI_NAME} guard --range origin/main...HEAD || exit $?
+fi`;
 
 /** The runners for each mode. Stealth commits nothing, so it only guards. */
 function runners(mode: Mode, self: string[]): Record<string, string> {
+  const push = runner(self, "checks the commits being pushed against shipped features.", PUSH);
   if (mode === "stealth") {
     return {
       "pre-commit": runner(self, "blocks commits that delete or gut a shipped feature.", GUARD),
+      "pre-push": push,
     };
   }
   const load = runner(self, "loads teammates' records from .sati/ after git changes them.", IMPORT);
@@ -68,6 +77,7 @@ function runners(mode: Mode, self: string[]): Record<string, string> {
     "post-merge": load,
     "post-checkout": load,
     "post-rewrite": load,
+    "pre-push": push,
   };
 }
 
@@ -80,7 +90,7 @@ const runnerPath = (name: string) =>
  * hook, and it does nothing on a machine without sati. Only pre-commit may stop git.
  */
 function chainBlock(name: string): string {
-  const stop = name === "pre-commit" ? " || exit $?" : "";
+  const stop = name === "pre-commit" || name === "pre-push" ? " || exit $?" : "";
   return `${BEGIN}: runs the ${CLI_NAME} hook. Managed by \`${CLI_NAME} init\`.
 ${CLI_NAME}_hook=${runnerPath(name)}
 if [ -x "$${CLI_NAME}_hook" ]; then "$${CLI_NAME}_hook" "$@"${stop}; fi
@@ -141,7 +151,7 @@ const absFrom = (root: string, p: string) => (isAbsolute(p) ? p : resolve(root, 
 function planFile(root: string, abs: string, content: string): PlannedHook {
   const existing = existsSync(abs) ? readFileSync(abs, "utf8") : undefined;
   const action = existing === undefined ? "create" : existing === content ? "keep" : "update";
-  return { path: relative(root, abs), abs, action, content };
+  return { path: shownPath(root, abs), abs, action, content };
 }
 
 /**
@@ -231,7 +241,7 @@ export interface PlannedGitConfig extends FileChange {
 /** git config is local to each clone, so init registers the driver in `.git/config`. */
 export function planMergeDriver(root: string, self: string[]): PlannedGitConfig {
   const common = absFrom(root, git(root, "rev-parse", "--git-common-dir"));
-  const path = relative(root, resolve(common, "config"));
+  const path = shownPath(root, resolve(common, "config"));
   const entries: [string, string][] = [
     [`merge.${CLI_NAME}.name`, `${CLI_NAME} record merge`],
     [`merge.${CLI_NAME}.driver`, `${self.map(sh).join(" ")} merge-driver %O %A %B`],

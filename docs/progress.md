@@ -35,6 +35,13 @@ Owner chose to keep the `sati` / `@kongpda/sati` placeholder for now. Name, npm 
 
 ### Gate remaining
 
+On 2026-11-04, the release workflow generated the `0.0.1` branch but GitHub
+Actions could not create its pull request. PR #1 was opened manually. Linux CI
+passed on Node 22 and 24. Windows with Node 24 failed during dependency
+installation when `node-gyp` could not find Visual Studio for `better-sqlite3`.
+The public npm registry still returned 404, the GitHub repository secret list
+was empty, and the local npm CLI had no authenticated user.
+
 The gate is "`sati --version` publishes to npm as `0.0.1` from CI". It needs:
 
 1. Final product name and npm scope (then edit `packages/core/src/name.ts` and the `@kongpda/sati` package name).
@@ -522,3 +529,161 @@ PASS  task_claim under 10 concurrent agents, p95           3.3 ms  (budget 50 ms
 
 The CLI read p95 is close to its budget and varies with machine load (one run on a busy machine
 measured 233 ms on a tiny DB). Watch it in CI.
+
+### Hybrid logical clock and delete-vs-edit (review fixes 3 and 4)
+
+- A stamp is `wall#counter#node`. `updateWithLog` and `insertWithLog` stamp each field they
+  change and store the latest stamp on the actor (`lastHlc`) inside the same transaction, with
+  no activity row: it is bookkeeping so the next write still orders after a slow wall clock.
+  Records written before stamps have no `stamps` map.
+- The merge driver uses a field's stamps when both sides have one, and `updatedAt` otherwise.
+  `lastHlc` merges by taking the greater stamp.
+- A delete on one side and an edit on the other: the edit wins only when it is strictly newer,
+  and then `deletedAt` is cleared and `needsReview` is set. A tie keeps the delete.
+
+### Guard renames, empty globs, Bash, pre-push (review fixes 6, 7, 8 and 1)
+
+- `git diff -M` reports a rename as one change with `from`. A rename is not a delete. When the
+  new path leaves a shipped feature, the guard warns and prints `sati feature update <id> --paths`.
+  No prompt: the hook has nobody to ask.
+- Feature globs that match no tracked file are a brief section. Standalone mode has no file
+  list, so it skips the check. An empty `paths` list is not flagged. `sati doctor` still owns
+  the same check in Phase 5.
+- `PreToolUse` also matches Bash. `rm`, `git rm` and `mv` become delete or rename changes,
+  including flags, quotes and `&&` chains. Any other command is allowed. `sati rules sync`
+  adds the Bash matcher to an existing settings file because groups are matched by matcher,
+  not only by command.
+- Git mode and stealth mode install a `pre-push` hook that runs `sati guard --range
+  origin/main...HEAD`. A clone with no `origin/main` skips the check and still pushes.
+  `.github/workflows/ci.yml` runs the same command. Claude settings gain deny rules
+  `Bash(git commit --no-verify:*)` and `Bash(git commit -n:*)`, keeping any deny list already there.
+
+### Core hints use the product-name constant
+
+The seven core hints and the init/list hints that named the binary now use `CLI_NAME`.
+The comment on the guard error code is documentation, not a hint, and was left as written.
+
+### Local web UI (Phase 4, started before the Phase 3 gate)
+
+The owner asked for the board before the Phase 3 gate. `sati ui` binds `127.0.0.1`, exchanges a
+one-time token for an `HttpOnly` `SameSite=Strict` cookie, and refuses another Host or Origin.
+CSP is `default-src 'self'` with no inline script. The built UI is `packages/ui/dist` (JS about
+93 KB gzipped). A Vitest request covers 401, 403, the cookie, CSP and a snapshot. Dragging a
+card updates status optimistically and rolls back with a toast. Done is not a drag target:
+completion still needs `sati task complete`. A card, note or feature with `needsReview` has a
+"mark reviewed" control that clears the flag. The roadmap page is a date timeline. Notes are a
+Markdown field with a preview and backlinks, not a Tiptap editor. Mermaid stays a code block
+until the `pele` licence is checked. Playwright, axe, and the 2,000-card frame budget are not done.
+
+### Work loop, daemon and Phase 5 commands (2026-11-04)
+
+- `review` defaults to `agents`. An agent `task_complete` lands in `review`; a human complete
+  still lands in `done`. Send-back to `todo` requires `--reason`, stored on `reviewNote` and
+  fenced as data in the brief. `review: none` is the old complete-to-done path.
+- Project and actor updates do not get HLC stamps. Those records have no `stamps` field.
+- `sati next` and `task_claim` with no id call `claimNext`: one write, highest priority, then
+  oldest id. `autoContinue` is off until `sati settings --auto-continue`. The Stop nudge then
+  tells an agent with no claim to run `sati next`.
+- Outside a git repo, a TTY prompt (or `SATI_YES=1`) creates one standalone workspace at
+  `~/.sati/personal` and records it in `~/.sati/projects.json`. `--project <slug>` selects a
+  known project. `sati projects` counts ready, in-progress and review tasks.
+- A network or bind-mount filesystem refuses a direct SQLite open and tells you to run
+  `sati serve`. The daemon owns the file and other processes talk over `sati.sock`. It does
+  not spawn itself.
+- `pnpm test:e2e` runs a single-process claim loop (`packages/core/test/loop.test.ts`, 200
+  steps, 4 actors). It is not the 4-worktree, 1,000-step, 100-repeat gate. That box stays open.
+- Docs site, importer fuzz, Playwright, axe, `pele`, hosted Postgres and the owner items
+  (name, npm two-factor, licence, three-project week) stay open.
+- Biome ignores `.sati/`. Those JSON files are written by sati, and formatting them by hand
+  would rewrite the project memory.
+
+### Phase 3 E2E scenario and CI fixes (2026-11-07)
+
+- `packages/cli/test/e2e.test.ts` runs the Phase 3 scenario. A real `sati init` sets up hooks,
+  the merge driver and `.gitattributes`. Four agents in four worktrees then act at once, one
+  process each, for N steps: create, claim, complete, lock, release and edit a shared task. A
+  seeded generator (mulberry32) picks the ops. Between rounds, one agent may commit and merge
+  (main pulls a branch, or a branch pulls main). Git ops run one at a time between rounds,
+  since git serializes ref updates anyway.
+- Each round is checked against the state at its start. Either outcome is allowed only where
+  two ops of that round raced on the same record (a release and an acquire, say). A claim or
+  lock must not win twice in one round. A refusal is wrong when nobody else held the record.
+  At the end, every created task must be in main's tree, and the database must agree with what
+  each agent was told.
+- Mutation check: with the claim conflict check disabled, the scenario fails at step 4.
+- `pnpm test:e2e [--repeat N] [--seed S] [--steps N]` (`scripts/e2e.mjs`) runs the agent loop
+  once, then the scenario once per seed. One 1,000-step run takes about 90 s on an M-series Mac.
+  The normal suite runs a 40-step version.
+- CI: the `e2e` job replaces `worktree-stress`. It has 10 shards. Pushes and PRs run one seed
+  per shard (10 runs). The nightly schedule and `workflow_dispatch` run ten seeds per shard
+  (100 runs, about 150 runner-minutes). `workflow_dispatch` and `schedule` only work once this
+  workflow is on `main`. So the Gate box stays open until a 100-run job passes there.
+- The `SATI_WORKTREE_STRESS` mode of `concurrency.test.ts` is no longer run in CI. The new
+  scenario covers it. It stays for local use; remove it if nobody needs it.
+- PLAN's Verify line names guard fixtures in `e2e/guard/`. There is no such folder. Blocking a
+  staged protected deletion is covered by `packages/cli/test/hooks.test.ts`, and the CI `guard`
+  job checks `--range`.
+- better-sqlite3 13 ships N-API prebuilds for Linux, macOS and Windows (x64 and arm64). It is now
+  in `ignoredBuiltDependencies`, so pnpm does not run node-gyp. node-gyp needs Visual Studio on
+  Windows, which broke the Windows CI jobs. Risk: plain `npm install` still runs node-gyp for any
+  package with a `binding.gyp`. So `npm i -g @kongpda/sati` on Windows without build tools may
+  fail. Check this before the first publish.
+- The 501-lock paging test takes about 1 s locally. It timed out at 5 s on a loaded runner, so
+  it now has 30 s.
+- Bug found by the first CI run (seeds 41 and 51): after a merge, a done task got its old claim
+  back. The branch held the claimed snapshot. Main had completed the task, which put `claim`
+  back to its base value (`null`). The merge driver read "equal to base" as "unchanged" and kept
+  the stale claim, so the next edit was refused. Fix: for plain fields, when both sides carry a
+  stamp, the later stamp wins even if its value matches the base. Text and list fields still
+  merge three-way. Covered by a unit test in `packages/sync/test/merge.test.ts`; both seeds pass
+  at 1,000 steps.
+
+### Mermaid diagrams with pele (2026-11-07)
+
+- `pele` 1.9.1 is MIT licensed and has no runtime dependencies, so the licence blocker is
+  cleared. 1.9.1 is the newest release that is at least two weeks old.
+- A fenced `mermaid` block in a note, decision or task body renders as SVG
+  (`packages/ui/src/mermaid.tsx`). `markdown.tsx` now splits the source by fences first, so a
+  code block keeps its blank lines and an unclosed fence still shows its text.
+- pele loads through a dynamic `import("pele/lazy")` behind `React.lazy`. The entry chunk stays
+  at 93.9 KB gzip, and pele's parser is only in the lazy chunk.
+- The UI CSP has `style-src 'self'`. pele writes `style` attributes, and Chrome blocks them at
+  parse time, even in a `DOMParser` document. So each `style="` inside a tag is renamed to
+  `data-pele-style` before parsing and then set through CSSOM, which the CSP allows. Checked in
+  Chrome: no `securitypolicyviolation` events, and the diagram picks up the theme.
+- The `--pele-*` variables map to the UI tokens in `.mermaid` (`styles.css`), so dark mode
+  follows. A parse error shows inline with the source, as a `role="alert"` caption.
+
+### Windows CI paths (2026-11-07)
+
+- `locateDb` returned git's `--show-toplevel` as printed, which uses `/` on Windows. It now
+  passes through `resolve()`, so `root` is a native path like every other path in the CLI.
+- Test temp folders use `realpathSync.native`. On Windows it expands 8.3 short names such as
+  `RUNNER~1`, which git also expands, so paths compare equal.
+- The sync test now expects `tasks/tsk_bad.json`, since snapshot paths use `/` on every OS.
+
+### Phase 4 UI tests and gate (2026-11-07)
+
+- Playwright 1.64.1 and `@axe-core/playwright` 4.14.0 live in the private `e2e` workspace
+  package. axe-core is MPL-2.0; it is a dev dependency only and is never bundled or published.
+- `pnpm test:ui` runs 23 tests against a real `sati ui --no-open` in a temp git repo: sign-in,
+  create, edit, filter, bulk move, the command palette, Mermaid notes, navigation, an axe audit
+  of every page on desktop and phone, and the performance gate. CI runs them in the `ui` job.
+- Gate results on an M-series Mac, Chromium: a 2,000-card board loads its first card in a median
+  of about 113 ms; scrolling holds 60 fps with a worst frame of 16.8 ms and no long frames; axe
+  reports zero violations of any impact (WCAG 2.2 AA tags and best practice).
+- Accessibility audit: the axe part is done and is in CI. The manual screen-reader pass is still
+  open and needs a person, so that PLAN item stays unticked.
+- Bugs the tests found, all fixed:
+  - `sati ui --no-open` opened a browser. citty reads `--no-open` as `open: false`, but the flag
+    was declared as `no-open`. It is now `open` with a default of `true`.
+  - Stopping the UI server hung while an SSE stream or keep-alive socket was open. `close()` now
+    also calls `closeAllConnections()`.
+  - A plain click on a card did not open it, because the drag sensor took the pointer. A drag now
+    starts only after the pointer moves 6 px.
+  - A refused bulk move restored a stale snapshot of the whole board, so a card could stay in the
+    wrong column. Rollback is now per task.
+  - Virtualisation did not work: the board had no bounded height, so all 2,000 cards rendered.
+    The layout now uses `minmax(0, 1fr)` rows and `min-height: 0`.
+  - axe flagged no main landmark, no `h1` and skipped heading levels. Fixed with `<main>`, a
+    visually hidden `h1` on the board and `h2` row titles.

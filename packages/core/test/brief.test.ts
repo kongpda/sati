@@ -101,5 +101,25 @@ describe("buildBrief", () => {
     const tight = await buildBrief(ctx, { maxTokens: 300 });
     expect(tight.tokens).toBeLessThanOrEqual(300);
     expect(tight.markdown).toContain(shortHandle(mine.id));
+  }, 20_000);
+
+  // PLAN: a feature glob that matches zero tracked files is reported. doctor repeats this in Phase 5.
+  it("names feature globs that match no tracked file", async () => {
+    const { ctx } = await setup();
+    const missing = await createFeature(ctx, {
+      title: "Gone",
+      paths: ["src/gone/**"],
+    });
+    const present = await createFeature(ctx, { title: "Here", paths: ["src/here.ts"] });
+    ctx.repo = {
+      files: async () => [{ path: "src/here.ts", blob: "abc" }],
+      head: async () => "abc",
+    };
+    const md = (await buildBrief(ctx)).markdown;
+    expect(md).toContain(`${shortHandle(missing.id)} Gone: src/gone/**`);
+    expect(md).not.toContain(`${shortHandle(present.id)} Here`);
+    const noRepo = await setup();
+    await createFeature(noRepo.ctx, { title: "Anywhere", paths: ["src/x.ts"] });
+    expect((await buildBrief(noRepo.ctx)).markdown).not.toContain("matching no tracked file");
   });
 });

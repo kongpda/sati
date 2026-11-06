@@ -1,0 +1,31 @@
+{
+  "body": "",
+  "branch": null,
+  "claim": null,
+  "completion": {
+    "completedAt": "2026-11-03T07:20:55.417Z",
+    "completedBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+    "filesTouched": [
+      "packages/mcp/src/server.ts",
+      "packages/cli/src/commands/mcp.ts"
+    ],
+    "summary": "Stdio MCP server with task, feature, decision, search and brief tools, resources and prompts; brain mcp"
+  },
+  "createdAt": "2026-11-03T07:09:43.190Z",
+  "createdBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+  "deletedAt": null,
+  "dependsOn": [],
+  "featureId": null,
+  "id": "tsk_01M6G3W2WP5HJV4ZAYM7PTDM1Y",
+  "labels": [
+    "phase-2"
+  ],
+  "parentId": null,
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "status": "done",
+  "title": "MCP server over stdio with tools, resources and prompts",
+  "updatedAt": "2026-11-03T07:20:55.418Z",
+  "version": 3,
+  "worktree": null
+}

@@ -1,10 +1,30 @@
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
+import { rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { bin, type Result, satiJson, tempRepo } from "./helpers.js";
 
 interface Rec {
   id: string;
   claim: { actorId: string } | null;
+}
+
+const stress = process.env.SATI_WORKTREE_STRESS === "1";
+const rounds = stress ? 125 : 1;
+const seed = Number(process.env.SATI_WORKTREE_SEED ?? 42);
+
+function seededOrder(seed: number): number[] {
+  const slots = [0, 1, 2, 3];
+  for (let index = slots.length - 1; index > 0; index--) {
+    seed = (Math.imul(seed, 1_664_525) + 1_013_904_223) >>> 0;
+    const other = seed % (index + 1);
+    const first = slots[index];
+    const second = slots[other];
+    if (first === undefined || second === undefined) throw new Error("Invalid shuffle index");
+    slots[index] = second;
+    slots[other] = first;
+  }
+  return slots;
 }
 
 /** Like `run`, but async, so many processes can race at once. */
@@ -29,6 +49,94 @@ function runAsync(cwd: string, args: string[], actor: string): Promise<Result> {
 // PLAN: "Duplicate work (two agents, same task): zero". Separate processes share one SQLite
 // file, so only the database lock can make the claim atomic; in-process tests cannot show it.
 describe("concurrent claims", () => {
+  it(
+    "shares claims and exclusive locks across four Git worktrees",
+    async () => {
+      const dir = await tempRepo({ init: true });
+      const gitAt = (cwd: string, ...args: string[]) =>
+        execFileSync(
+          "git",
+          ["-c", "user.name=Tester", "-c", "user.email=test@example.test", ...args],
+          {
+            cwd,
+            encoding: "utf8",
+          },
+        );
+      const git = (...args: string[]) => gitAt(dir, ...args);
+      try {
+        const shared = satiJson<Rec>(dir, "task", "create", "Shared record", "--body", "base");
+        expect(shared.code).toBe(0);
+        git("config", "merge.sati.driver", `"${process.execPath}" "${bin}" merge-driver %O %A %B`);
+        writeFileSync(join(dir, ".gitattributes"), ".sati/**/*.json merge=sati\n");
+        git("add", ".gitattributes", ".sati/tasks");
+        git("commit", "-m", "Initial commit");
+        const worktrees = [dir];
+        for (let index = 1; index < 4; index++) {
+          const path = join(dir, `worktree-${index}`);
+          git("worktree", "add", "-b", `worker-${index}`, path);
+          worktrees.push(path);
+        }
+        const race = (args: string[], seed: number) =>
+          Promise.all(
+            seededOrder(seed).map((index) => {
+              const path = worktrees[index];
+              if (!path) throw new Error(`Missing worktree ${index}`);
+              return runAsync(path, args, `worker-${index}`);
+            }),
+          );
+        const expected = [shared.data.id];
+        for (let round = 0; round < rounds; round++) {
+          const created = satiJson<Rec>(dir, "task", "create", `Cross-worktree claim ${round}`);
+          expect(created.code).toBe(0);
+          expected.push(created.data.id);
+
+          const [claims, locks] = await Promise.all([
+            race(["task", "claim", created.data.id, "--json"], seed + round),
+            race(["lock", "acquire", `src/round-${round}`, "--json"], seed + round + 1),
+          ]);
+          for (const results of [claims, locks]) {
+            expect(results.map((result) => result.code).sort(), `round ${round}`).toEqual([
+              0, 4, 4, 4,
+            ]);
+            for (const result of results) {
+              expect(result.stderr).not.toMatch(/SQLITE_BUSY|database is locked/);
+            }
+          }
+        }
+
+        for (const [index, path] of worktrees.entries()) {
+          const edited = satiJson(
+            path,
+            "task",
+            "update",
+            shared.data.id,
+            "--body",
+            `worker ${index}`,
+          );
+          expect(edited.code).toBe(0);
+          const created = satiJson<Rec>(path, "task", "create", `Worktree ${index} record`);
+          expect(created.code).toBe(0);
+          expected.push(created.data.id);
+          gitAt(path, "add", ".sati/tasks");
+          gitAt(path, "commit", "-m", `Save worktree ${index} records`);
+        }
+        for (const index of seededOrder(seed + 2).filter((index) => index !== 0)) {
+          git("merge", "--no-edit", `worker-${index}`);
+        }
+        const files = git("ls-tree", "-r", "--name-only", "HEAD", ".sati/tasks").trim().split("\n");
+        expect(files.sort()).toEqual(expected.map((id) => `.sati/tasks/${id}.json`).sort());
+        const merged = JSON.parse(git("show", `HEAD:.sati/tasks/${shared.data.id}.json`));
+        expect(merged).toMatchObject({ id: shared.data.id, needsReview: true });
+        for (let index = 0; index < worktrees.length; index++) {
+          expect(merged.body).toContain(`worker ${index}`);
+        }
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+    stress ? 300_000 : 60_000,
+  );
+
   it("20 processes claiming one task: exactly one wins, the rest get CONFLICT, none see BUSY", async () => {
     const dir = await tempRepo({ init: true });
     const task = satiJson<Rec>(dir, "task", "create", "Contested").data;

@@ -10,9 +10,11 @@ import {
   CompleteTaskInput,
   CreateTaskInput,
   checkChanges,
+  claimNext,
   claimTask,
   completeTask,
   createFeature,
+  createMilestone,
   createTask,
   type Feature,
   findSimilarTasks,
@@ -37,8 +39,10 @@ import {
   search,
   shortHandle,
   UpdateFeatureInput,
+  UpdateMilestoneInput,
   UpdateTaskInput,
   updateFeature,
+  updateMilestone,
   updateTask,
   WORKFLOW,
 } from "@sati/core";
@@ -142,9 +146,10 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
     {
       description:
         "Claim a task before working on it: moves it to in_progress with a lease and returns claim.token. Pass that token to task_update and task_complete. Fails with the holder's name if another agent has it.",
-      inputSchema: ClaimTaskInput.extend({ id: Ref }),
+      inputSchema: ClaimTaskInput.extend({ id: Ref.optional() }),
     },
-    ({ id, ...input }) => run(async () => claimTask(ctx, await task(id), input)),
+    ({ id, ...input }) =>
+      run(async () => (id ? claimTask(ctx, await task(id), input) : claimNext(ctx, input))),
   );
 
   server.registerTool(
@@ -273,6 +278,24 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
     },
     (input) => run(() => search(ctx, input)),
   );
+
+  server.registerTool(
+    "roadmap_upsert",
+    {
+      description:
+        "Create a milestone (no id) or update one (with id): title, goal, targetDate, status, order.",
+      inputSchema: UpdateMilestoneInput.extend({
+        id: Ref.optional(),
+        title: UpdateMilestoneInput.shape.title,
+      }),
+    },
+    ({ id, ...input }) =>
+      run(async () =>
+        id === undefined
+          ? createMilestone(ctx, input)
+          : updateMilestone(ctx, await resolveId(ctx, "milestone", id), input),
+      ),
+  );
 }
 
 function registerResources(server: McpServer, ctx: ServiceContext): void {
@@ -385,8 +408,7 @@ function registerPrompts(server: McpServer): void {
           `Plan the feature "${title}".`,
           "1. Call search to check it does not exist already.",
           "2. Call feature_upsert with the title, description, paths and acceptance criteria.",
-          "3. Split the work into small tasks. Call task_create for each with featureId set and",
-          "   dependsOn listing the tasks that must finish first.",
+          "3. Call task_create once with subtasks[]. dependsOn is an index into that array.",
         ].join("\n"),
       ),
   );

@@ -5,6 +5,7 @@ import { mergeRecord, mergeText } from "../src/index.js";
 const T1 = "2026-11-03T12:00:00.000Z";
 const T2 = "2026-11-03T13:00:00.000Z";
 const T3 = "2026-11-03T14:00:00.000Z";
+const STAMP = "2026-11-03T12:00:00.000Z#000000#writer";
 
 const task = {
   id: "tsk_1",
@@ -91,6 +92,106 @@ describe("mergeRecord", () => {
   it("keeps a needsReview flag from either side", () => {
     const r = mergeRecord(task, { ...task, needsReview: true }, task);
     expect(r.record.needsReview).toBe(true);
+  });
+
+  // PLAN: a clone whose wall clock is behind would win under updatedAt. The later HLC wins instead.
+  it("prefers a later field stamp when that side's updatedAt is older", () => {
+    const ahead = "2026-11-03T14:00:00.000Z#000000#clock-ahead";
+    const behind = "2026-11-03T14:00:00.000Z#000001#clock-behind";
+    const r = mergeRecord(
+      task,
+      { ...task, title: "Wall clock ahead", updatedAt: T3, stamps: { title: ahead } },
+      { ...task, title: "Saw the other stamp", updatedAt: T2, stamps: { title: behind } },
+    );
+    expect(r.record.title).toBe("Saw the other stamp");
+    expect(r.record.stamps).toMatchObject({ title: behind });
+  });
+
+  // PLAN Phase 3 e2e (seed 51): a branch saw the claim, main later completed the task and
+  // cleared it. Main's claim matches the base again, but it is the later write, so the stale
+  // claim must not come back on a done task.
+  it("lets a later write win even when it put the base value back", () => {
+    const claimed = "2026-11-03T12:00:00.000Z#000001#agent-2";
+    const cleared = "2026-11-03T13:00:00.000Z#000000#agent-2";
+    const claim = { actorId: "actr_2", token: 1 };
+    const base = { ...task, claim: null };
+    const branch = {
+      ...base,
+      status: "in_progress",
+      claim,
+      stamps: { status: claimed, claim: claimed },
+    };
+    const main = {
+      ...base,
+      status: "done",
+      claim: null,
+      stamps: { status: cleared, claim: cleared },
+    };
+    for (const [ours, theirs] of [
+      [branch, main],
+      [main, branch],
+    ] as const) {
+      const r = mergeRecord(base, ours, theirs);
+      expect(r.record).toMatchObject({ status: "done", claim: null });
+      expect(r.record.stamps).toMatchObject({ claim: cleared });
+    }
+  });
+
+  it("still uses updatedAt when either side has no stamp for the field", () => {
+    const r = mergeRecord(
+      task,
+      { ...task, title: "Stamped but older wall", updatedAt: T2, stamps: { title: STAMP } },
+      { ...task, title: "Unstamped later wall", updatedAt: T3 },
+    );
+    expect(r.record.title).toBe("Unstamped later wall");
+  });
+
+  // PLAN: a newer edit revives a delete and flags review; an older edit stays deleted.
+  it("revives a deleted record when the edit stamp is newer", () => {
+    const r = mergeRecord(
+      task,
+      {
+        ...task,
+        deletedAt: T2,
+        updatedAt: T3,
+        stamps: { deletedAt: "2026-11-03T14:00:00.000Z#000000#delete" },
+      },
+      {
+        ...task,
+        title: "Still needed",
+        updatedAt: T2,
+        stamps: { title: "2026-11-03T14:00:00.000Z#000001#edit" },
+      },
+    );
+    expect(r.record.deletedAt).toBeNull();
+    expect(r.record.title).toBe("Still needed");
+    expect(r.record.needsReview).toBe(true);
+    expect(r.conflict).toBe(true);
+  });
+
+  it("keeps the delete when it is newer than the edit, or the clocks tie", () => {
+    const deleted = {
+      ...task,
+      deletedAt: T3,
+      updatedAt: T2,
+      stamps: { deletedAt: "2026-11-03T14:00:00.000Z#000002#delete" },
+    };
+    const edited = {
+      ...task,
+      title: "Older edit",
+      updatedAt: T3,
+      stamps: { title: "2026-11-03T14:00:00.000Z#000001#edit" },
+    };
+    const r = mergeRecord(task, edited, deleted);
+    expect(r.record.deletedAt).toBe(T3);
+    expect(r.record.needsReview).toBeUndefined();
+    const tie = mergeRecord(
+      task,
+      { ...task, title: "Edit", updatedAt: T2 },
+      { ...task, deletedAt: T2, updatedAt: T2 },
+    );
+    expect(tie.record.deletedAt).toBe(T2);
+    expect(tie.record.needsReview).toBeUndefined();
   });
 });
 

@@ -25,6 +25,25 @@ const root = defineCommand({
     sync: lazy(() => import("./commands/sync.js")),
     "merge-driver": lazy(() => import("./commands/merge-driver.js")),
     mcp: lazy(() => import("./commands/mcp.js")),
+    ui: lazy(() => import("./commands/ui.js")),
+    next: lazy(() => import("./commands/next.js")),
+    handoff: lazy(() => import("./commands/handoff.js")),
+    milestone: lazy(() => import("./commands/milestone.js")),
+    plan: lazy(() => import("./commands/plan.js")),
+    activity: lazy(() => import("./commands/activity.js")),
+    undo: lazy(() => import("./commands/undo.js")),
+    settings: lazy(() => import("./commands/settings.js")),
+    doctor: lazy(() => import("./commands/doctor.js")),
+    projects: lazy(() => import("./commands/projects.js")),
+    export: lazy(() =>
+      import("./commands/snapshot.js").then((m) => ({ default: m.exportCommand })),
+    ),
+    import: lazy(() =>
+      import("./commands/snapshot.js").then((m) => ({ default: m.importCommand })),
+    ),
+    review: lazy(() => import("./commands/review.js")),
+    scan: lazy(() => import("./commands/scan.js")),
+    serve: lazy(() => import("./commands/serve.js")),
   },
 });
 

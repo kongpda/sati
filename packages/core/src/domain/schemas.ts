@@ -31,6 +31,9 @@ export const TaskId = idOf("tsk");
 export const DecisionId = idOf("dec");
 export const NoteId = idOf("note");
 
+/** Per-field hybrid logical clock stamp (`wall#counter#node`). Absent on records written before stamps. */
+const hlcStamp = z.string().min(1).max(80);
+
 const base = {
   projectId: ProjectId,
   createdAt: ts,
@@ -40,11 +43,17 @@ const base = {
   deletedAt: ts.nullable(),
   /** Set by the git merge driver when a field could not merge cleanly; absent otherwise. */
   needsReview: z.literal(true).optional(),
+  /** Which write last set each field. The merge driver orders fields by these, not by `updatedAt`. */
+  stamps: z.record(z.string().max(80), hlcStamp).optional(),
 };
 
 export const MODES = ["git", "stealth", "standalone"] as const;
 export const Mode = z.enum(MODES);
 export type Mode = z.infer<typeof Mode>;
+
+export const REVIEW_MODES = ["agents", "all", "none"] as const;
+export const ReviewMode = z.enum(REVIEW_MODES);
+export type ReviewMode = z.infer<typeof ReviewMode>;
 
 export const ProjectSettings = z.strictObject({
   leaseMinutes: z
@@ -52,6 +61,10 @@ export const ProjectSettings = z.strictObject({
     .int()
     .min(1)
     .max(24 * 60),
+  /** Who must wait in `review` after task_complete. Default: agents. */
+  review: ReviewMode.default("agents"),
+  /** When on, the Stop nudge tells an idle agent to run `sati next`. Default off. */
+  autoContinue: z.boolean().default(false),
 });
 export type ProjectSettings = z.infer<typeof ProjectSettings>;
 
@@ -136,6 +149,8 @@ export const TaskShape = z.strictObject({
   worktree: z.string().max(LIMITS.path).nullable(),
   claim: Claim.nullable(),
   completion: Completion.nullable(),
+  /** Why a reviewer sent the task back to todo. The next claimer sees it in the brief. */
+  reviewNote: shortText.nullable().optional(),
 });
 
 export const Task = TaskShape.refine((t) => t.status !== "done" || t.completion !== null, {
@@ -204,6 +219,11 @@ export const Actor = z.strictObject({
   updatedAt: ts,
   version: z.number().int().min(1),
   deletedAt: ts.nullable(),
+  /**
+   * Latest hybrid logical clock stamp this actor has issued or observed.
+   * Kept so a process with a slow wall clock still stamps new writes after ones it has seen.
+   */
+  lastHlc: hlcStamp.nullable().optional(),
 });
 export type Actor = z.infer<typeof Actor>;
 

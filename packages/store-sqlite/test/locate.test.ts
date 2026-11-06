@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { clearLocateCache, locateDb, SqliteStore } from "../src/index.js";
 
-const tmp = () => realpathSync(mkdtempSync(join(tmpdir(), "sati-locate-")));
+// native: on Windows this expands 8.3 short names (RUNNER~1), as git does.
+const tmp = () => realpathSync.native(mkdtempSync(join(tmpdir(), "sati-locate-")));
 const git = (cwd: string, ...args: string[]) =>
   execFileSync("git", args, {
     cwd,

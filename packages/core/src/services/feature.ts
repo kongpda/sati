@@ -1,7 +1,8 @@
-import type { z } from "zod";
+import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { DecisionId, Feature } from "../domain/schemas.js";
 import { FEATURE_TRANSITIONS, featureRemovalNeedsDecision } from "../domain/status.js";
+import { CLI_NAME } from "../name.js";
 import {
   assertTransition,
   baseFields,
@@ -32,9 +33,11 @@ export const CreateFeatureInput = fields.partial({
   acceptance: true,
   milestoneId: true,
 });
-export const UpdateFeatureInput = fields
-  .partial()
-  .extend({ ...ExpectedVersion, decisionId: DecisionId.optional() });
+export const UpdateFeatureInput = fields.partial().extend({
+  ...ExpectedVersion,
+  decisionId: DecisionId.optional(),
+  reviewed: z.literal(true).optional(),
+});
 export type CreateFeatureInput = z.input<typeof CreateFeatureInput>;
 export type UpdateFeatureInput = z.input<typeof UpdateFeatureInput>;
 
@@ -65,14 +68,14 @@ export async function updateFeature(
   id: string,
   input: unknown,
 ): Promise<Feature> {
-  const { expectedVersion, decisionId, ...patch } = parseInput(UpdateFeatureInput, input);
+  const { expectedVersion, decisionId, reviewed, ...patch } = parseInput(UpdateFeatureInput, input);
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "feature", id);
     if (patch.milestoneId) await mustGet(w, ctx, "milestone", patch.milestoneId);
     if (patch.status) {
       assertTransition(FEATURE_TRANSITIONS, "feature", before.status, patch.status);
       if (featureRemovalNeedsDecision(before.status, patch.status)) {
-        const hint = `Record one first: \`sati decision record --feature ${id}\`, then pass its id.`;
+        const hint = `Record one first: \`${CLI_NAME} decision record --features ${id}\`, then pass its id.`;
         if (!decisionId) {
           throw new SatiError(
             "VALIDATION",
@@ -88,6 +91,9 @@ export async function updateFeature(
         }
       }
     }
-    return updateWithLog(w, ctx, "feature", before, patch, { expectedVersion });
+    return updateWithLog(w, ctx, "feature", before, patch, {
+      expectedVersion,
+      clear: reviewed ? ["needsReview"] : [],
+    });
   });
 }

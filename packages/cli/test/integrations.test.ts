@@ -97,7 +97,10 @@ describe("agent file planning", () => {
       ),
     );
     const settings = JSON.parse(plan[".claude/settings.json"]?.content ?? "");
-    expect(settings.permissions).toEqual(mine.permissions);
+    expect(settings.permissions).toEqual({
+      ...mine.permissions,
+      deny: ["Bash(git commit --no-verify:*)", "Bash(git commit -n:*)"],
+    });
     expect(
       settings.hooks.Stop.map((g: { hooks: { command: string }[] }) => g.hooks[0]?.command),
     ).toEqual(["say done", "sati nudge"]);
@@ -114,6 +117,10 @@ describe("agent file planning", () => {
     expect(settings.hooks.PreToolUse).toEqual([
       {
         matcher: "Edit|MultiEdit|Write|NotebookEdit",
+        hooks: [{ type: "command", command: "sati guard --hook" }],
+      },
+      {
+        matcher: "Bash",
         hooks: [{ type: "command", command: "sati guard --hook" }],
       },
     ]);

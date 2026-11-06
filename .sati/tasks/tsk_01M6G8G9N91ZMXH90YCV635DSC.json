@@ -1,0 +1,33 @@
+{
+  "body": "",
+  "branch": null,
+  "claim": null,
+  "completion": {
+    "completedAt": "2026-11-03T08:31:20.587Z",
+    "completedBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+    "filesTouched": [
+      "packages/core/src/services/guard.ts",
+      "packages/cli/src/commands/guard.ts",
+      "packages/cli/src/git.ts",
+      "packages/cli/src/commands/init.ts",
+      "packages/cli/src/integrations.ts",
+      "packages/mcp/src/server.ts"
+    ],
+    "summary": "brain guard: core checkChanges/recordGuard, CLI --staged/--paths/--hook, pre-commit hook via init, PreToolUse hook, MCP feature_check"
+  },
+  "createdAt": "2026-11-03T08:30:39.784Z",
+  "createdBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+  "deletedAt": null,
+  "dependsOn": [],
+  "featureId": null,
+  "id": "tsk_01M6G8G9N91ZMXH90YCV635DSC",
+  "labels": [],
+  "parentId": null,
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "status": "done",
+  "title": "brain guard: staged diffs, paths, PreToolUse and pre-commit hooks",
+  "updatedAt": "2026-11-03T08:31:20.588Z",
+  "version": 3,
+  "worktree": null
+}

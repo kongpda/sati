@@ -1,0 +1,31 @@
+{
+  "body": "",
+  "branch": null,
+  "claim": null,
+  "completion": {
+    "completedAt": "2026-11-03T07:31:19.485Z",
+    "completedBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+    "filesTouched": [
+      "packages/core/src/workflow.ts",
+      "packages/cli/src/integrations.ts"
+    ],
+    "summary": "Skill written by init and rules sync from core WORKFLOW"
+  },
+  "createdAt": "2026-11-03T07:09:43.875Z",
+  "createdBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+  "deletedAt": null,
+  "dependsOn": [],
+  "featureId": null,
+  "id": "tsk_01M6G3W3J4XQPQ7B6GJ0B3Q9MG",
+  "labels": [
+    "phase-2"
+  ],
+  "parentId": null,
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "status": "done",
+  "title": "Claude Code skill .claude/skills/brain/SKILL.md",
+  "updatedAt": "2026-11-03T07:31:19.486Z",
+  "version": 3,
+  "worktree": null
+}

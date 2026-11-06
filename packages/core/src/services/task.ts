@@ -1,10 +1,17 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { findDependencyCycle } from "../domain/rules.js";
-import { type Claim, Completion, type Task, TaskShape } from "../domain/schemas.js";
+import {
+  type Claim,
+  Completion,
+  LIMITS,
+  type Priority,
+  type Task,
+  TaskShape,
+} from "../domain/schemas.js";
 import { TASK_TRANSITIONS } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
-import type { StorageReader } from "../ports/storage.js";
+import type { StorageReader, StorageWriter } from "../ports/storage.js";
 import {
   assertTransition,
   baseFields,
@@ -17,6 +24,7 @@ import {
   updateWithLog,
 } from "./context.js";
 import { releaseTaskLocks } from "./lock.js";
+import { readSettings } from "./project.js";
 import { listInput } from "./query.js";
 
 const fields = TaskShape.pick({
@@ -43,13 +51,30 @@ const optional = {
   worktree: true,
 } as const;
 
+const Subtask = z.strictObject({
+  title: z.string().trim().min(1).max(LIMITS.title),
+  body: z.string().max(LIMITS.body).optional(),
+  /** Indexes into this same `subtasks` array. Resolved to ids in the one write. */
+  dependsOn: z.array(z.number().int().nonnegative()).max(LIMITS.array).optional(),
+});
+
 /** New tasks start in `backlog` or `todo`; later states need the update and complete flows. */
-export const CreateTaskInput = fields
-  .partial(optional)
-  .extend({ status: z.enum(["backlog", "todo"]).optional() });
+export const CreateTaskInput = fields.partial(optional).extend({
+  status: z.enum(["backlog", "todo"]).optional(),
+  subtasks: z.array(Subtask).max(LIMITS.array).optional(),
+});
 /** The fencing token from `claimTask`. Required while the task is claimed. */
 const ClaimToken = { token: z.number().int().positive().optional() };
-export const UpdateTaskInput = fields.partial().extend(ExpectedVersion).extend(ClaimToken);
+export const UpdateTaskInput = fields
+  .partial()
+  .extend(ExpectedVersion)
+  .extend(ClaimToken)
+  .extend({
+    /** Clear `needsReview` after a person has looked at the merge. */
+    reviewed: z.literal(true).optional(),
+    /** Required when sending a review task back to todo. Shown to the next claimer. */
+    reason: z.string().trim().min(1).max(LIMITS.shortText).optional(),
+  });
 export const CompleteTaskInput = Completion.pick({ summary: true, filesTouched: true })
   .extend(ExpectedVersion)
   .extend(ClaimToken);
@@ -72,11 +97,11 @@ export type ClaimTaskInput = z.input<typeof ClaimTaskInput>;
 const UNCLAIMED_STATUSES: readonly string[] = ["backlog", "todo", "cancelled"];
 
 export async function createTask(ctx: ServiceContext, input: unknown): Promise<Task> {
-  const data = parseInput(CreateTaskInput, input);
+  const { subtasks = [], ...data } = parseInput(CreateTaskInput, input);
   return ctx.store.write(async (w) => {
     const base = baseFields(ctx, "task");
     await checkLinks(w, ctx, base.id, data);
-    return insertWithLog(w, ctx, "task", {
+    const parent = await insertWithLog(w, ctx, "task", {
       ...base,
       body: "",
       status: "todo",
@@ -91,25 +116,74 @@ export async function createTask(ctx: ServiceContext, input: unknown): Promise<T
       completion: null,
       ...data,
     });
+    const childIds = subtasks.map(() => ctx.ids("task"));
+    for (const [index, sub] of subtasks.entries()) {
+      const deps = sub.dependsOn ?? [];
+      if (deps.some((n) => n >= subtasks.length || childIds[n] === undefined)) {
+        throw new SatiError("VALIDATION", `Subtask ${index} depends on a missing index.`, {
+          details: { index, dependsOn: deps },
+        });
+      }
+    }
+    for (const [index, sub] of subtasks.entries()) {
+      const id = childIds[index];
+      if (!id) continue;
+      await insertWithLog(w, ctx, "task", {
+        ...baseFields(ctx, "task"),
+        id,
+        title: sub.title,
+        body: sub.body ?? "",
+        status: "todo",
+        priority: "medium",
+        featureId: parent.featureId,
+        parentId: parent.id,
+        dependsOn: (sub.dependsOn ?? []).map((n) => childIds[n] ?? ""),
+        labels: [],
+        branch: null,
+        worktree: null,
+        claim: null,
+        completion: null,
+      });
+    }
+    return parent;
   });
 }
 
 /** Edits a task. Use `completeTask` to reach `done`; reopening a done task clears its completion. */
 export async function updateTask(ctx: ServiceContext, id: string, input: unknown): Promise<Task> {
-  const { expectedVersion, token, ...patch } = parseInput(UpdateTaskInput, input);
+  const { expectedVersion, token, reviewed, reason, ...patch } = parseInput(UpdateTaskInput, input);
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "task", id);
     checkToken(before, token);
     await checkLinks(w, ctx, id, patch);
+    const settings = readSettings((await w.getProject())?.settings);
     let completion = before.completion;
+    let reviewNote = before.reviewNote ?? null;
     if (patch.status && patch.status !== before.status) {
       if (patch.status === "done") {
-        throw new SatiError("INVALID_TRANSITION", "Use complete to mark a task done.", {
-          hint: `Run \`sati task complete ${id} --summary … --files …\`.`,
-        });
+        if (before.status !== "review" || completion === null) {
+          throw new SatiError("INVALID_TRANSITION", "Use complete to mark a task done.", {
+            hint: `Run \`${CLI_NAME} task complete ${id} --summary … --files …\`.`,
+          });
+        }
+        const actor = await w.get("actor", ctx.actorId);
+        if (settings.review !== "none" && actor?.kind !== "human") {
+          throw new SatiError("INVALID_TRANSITION", "Only a person can approve a task in review.", {
+            hint: `A person runs \`${CLI_NAME} task update ${id} --status done\`, or turn the gate off with \`${CLI_NAME} settings --review none\`.`,
+          });
+        }
+        reviewNote = null;
       }
       assertTransition(TASK_TRANSITIONS, "task", before.status, patch.status);
       if (before.status === "done") completion = null;
+      if (patch.status === "todo" && before.status === "review") {
+        if (!reason) {
+          throw new SatiError("VALIDATION", "Sending a task back needs a reason.", {
+            hint: `Run \`${CLI_NAME} task update ${id} --status todo --reason "what to change"\`.`,
+          });
+        }
+        reviewNote = reason;
+      }
     }
     let claim = before.claim;
     if (patch.status && UNCLAIMED_STATUSES.includes(patch.status)) claim = null;
@@ -120,8 +194,8 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
       ctx,
       "task",
       before,
-      { ...patch, completion, claim },
-      { expectedVersion },
+      { ...patch, completion, claim, reviewNote },
+      { expectedVersion, clear: reviewed ? ["needsReview"] : [] },
     );
   });
 }
@@ -132,7 +206,17 @@ export async function completeTask(ctx: ServiceContext, id: string, input: unkno
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "task", id);
     checkToken(before, token);
-    assertTransition(TASK_TRANSITIONS, "task", before.status, "done");
+    const actor = await w.get("actor", ctx.actorId);
+    const settings = readSettings((await w.getProject())?.settings);
+    const gated =
+      settings.review === "all" || (settings.review === "agents" && actor?.kind !== "human");
+    if (gated && before.status === "review") {
+      throw new SatiError("INVALID_TRANSITION", `Task ${id} is waiting for review.`, {
+        hint: "A person moves it to done, or back to todo with a reason.",
+      });
+    }
+    const status = gated ? "review" : "done";
+    assertTransition(TASK_TRANSITIONS, "task", before.status, status);
     const completion = { ...data, completedAt: nowIso(ctx), completedBy: ctx.actorId };
     await releaseTaskLocks(w, ctx, id);
     return updateWithLog(
@@ -140,7 +224,7 @@ export async function completeTask(ctx: ServiceContext, id: string, input: unkno
       ctx,
       "task",
       before,
-      { status: "done", completion, claim: null },
+      { status, completion, claim: null },
       { verb: "complete", expectedVersion },
     );
   });
@@ -152,46 +236,72 @@ export async function completeTask(ctx: ServiceContext, id: string, input: unkno
  * naming the holder, while another actor's lease is live. Claiming again renews the lease.
  * Every claim returns a new fencing token in `claim.token`; later writes must present it.
  */
+const PRIORITY_RANK: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+
+async function applyClaim(
+  w: StorageWriter,
+  ctx: ServiceContext,
+  before: Task,
+  leaseMinutes: number | undefined,
+): Promise<Task> {
+  const held = before.claim;
+  if (held && held.actorId !== ctx.actorId && held.leaseUntil > nowIso(ctx)) {
+    const holder = await w.get("actor", held.actorId);
+    const name = holder?.name ?? held.actorId;
+    throw new SatiError(
+      "CONFLICT",
+      `Task ${before.id} is claimed by ${name} until ${held.leaseUntil}.`,
+      {
+        hint: `Pick another ready task with \`${CLI_NAME} task list --ready\`.`,
+        details: { holder: held.actorId, holderName: name, leaseUntil: held.leaseUntil },
+      },
+    );
+  }
+  if (before.status !== "todo" && before.status !== "in_progress") {
+    throw new SatiError(
+      "INVALID_TRANSITION",
+      `Only todo tasks can be claimed; ${before.id} is ${before.status}.`,
+      { details: { from: before.status } },
+    );
+  }
+  const claim = { ...(await lease(w, ctx, leaseMinutes)), token: before.version + 1 };
+  return updateWithLog(w, ctx, "task", before, { status: "in_progress", claim }, { verb: "claim" });
+}
+
 export async function claimTask(
   ctx: ServiceContext,
   id: string,
   input: unknown = {},
 ): Promise<Task> {
   const { leaseMinutes } = parseInput(ClaimTaskInput, input);
+  return ctx.store.write(async (w) =>
+    applyClaim(w, ctx, await mustGet(w, ctx, "task", id), leaseMinutes),
+  );
+}
+
+/**
+ * Claims the top ready task in the same transaction that picks it: highest priority, then
+ * oldest id. Two callers queue on the store, so they cannot receive the same task.
+ */
+export async function claimNext(
+  ctx: ServiceContext,
+  input: unknown = {},
+): Promise<{ task: Task; acceptance: string[] }> {
+  const { leaseMinutes } = parseInput(ClaimTaskInput, input);
   return ctx.store.write(async (w) => {
-    const before = await mustGet(w, ctx, "task", id);
-    const held = before.claim;
-    if (held && held.actorId !== ctx.actorId && held.leaseUntil > nowIso(ctx)) {
-      const holder = await w.get("actor", held.actorId);
-      const name = holder?.name ?? held.actorId;
-      throw new SatiError(
-        "CONFLICT",
-        `Task ${id} is claimed by ${name} until ${held.leaseUntil}.`,
-        {
-          hint: "Pick another ready task with `sati task list --ready`.",
-          details: { holder: held.actorId, holderName: name, leaseUntil: held.leaseUntil },
-        },
-      );
-    }
-    if (before.status !== "todo" && before.status !== "in_progress") {
-      throw new SatiError(
-        "INVALID_TRANSITION",
-        `Only todo tasks can be claimed; ${id} is ${before.status}.`,
-        {
-          details: { from: before.status },
-        },
-      );
-    }
-    // The claim write bumps the version by one; that new version is the token.
-    const claim = { ...(await lease(w, ctx, leaseMinutes)), token: before.version + 1 };
-    return updateWithLog(
-      w,
-      ctx,
-      "task",
-      before,
-      { status: "in_progress", claim },
-      { verb: "claim" },
+    const ready = await w.readyTasks(ctx.projectId, nowIso(ctx), 500);
+    ready.sort(
+      (a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || (a.id < b.id ? -1 : 1),
     );
+    const top = ready[0];
+    if (!top) {
+      throw new SatiError("NOT_FOUND", "No ready task.", {
+        hint: `Create one with \`${CLI_NAME} task create\`, or see \`${CLI_NAME} task list\`.`,
+      });
+    }
+    const task = await applyClaim(w, ctx, top, leaseMinutes);
+    const feature = task.featureId ? await w.get("feature", task.featureId) : undefined;
+    return { task, acceptance: feature?.deletedAt ? [] : (feature?.acceptance ?? []) };
   });
 }
 

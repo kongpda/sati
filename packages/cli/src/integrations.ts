@@ -128,6 +128,10 @@ const CLAUDE_HOOKS: Record<string, HookGroup[]> = {
       matcher: "Edit|MultiEdit|Write|NotebookEdit",
       hooks: [{ type: "command", command: `${CLI_NAME} guard --hook` }],
     },
+    {
+      matcher: "Bash",
+      hooks: [{ type: "command", command: `${CLI_NAME} guard --hook` }],
+    },
   ],
   Stop: [{ hooks: [{ type: "command", command: `${CLI_NAME} nudge` }] }],
 };
@@ -149,17 +153,45 @@ const claudeSettings = (path: string) => (existing: string | undefined) => {
   let changed = false;
   for (const [event, groups] of Object.entries(CLAUDE_HOOKS)) {
     const current = hooks[event] ?? [];
-    const has = (cmd: string) =>
-      parsed.data[event]?.some((g) => g.hooks.some((h) => h.command === cmd)) ?? false;
-    const missing = groups.filter((g) => !g.hooks.every((h) => has(h.command)));
+    const sameGroup = (group: HookGroup) =>
+      parsed.data[event]?.some(
+        (g) =>
+          g.matcher === group.matcher &&
+          g.hooks.some((h) => group.hooks.some((wanted) => wanted.command === h.command)),
+      ) ?? false;
+    const missing = groups.filter((g) => !sameGroup(g));
     if (missing.length) {
       hooks[event] = [...current, ...missing];
       changed = true;
     }
   }
+  const permissions = config.permissions;
+  const perms =
+    permissions !== null && typeof permissions === "object" && !Array.isArray(permissions)
+      ? (permissions as Record<string, unknown>)
+      : permissions === undefined
+        ? {}
+        : undefined;
+  const deny = perms?.deny;
+  const denyList = Array.isArray(deny)
+    ? deny.filter((rule): rule is string => typeof rule === "string")
+    : undefined;
+  if (perms && (deny === undefined || denyList)) {
+    const next = [...(denyList ?? [])];
+    for (const rule of DENY_NO_VERIFY) {
+      if (!next.includes(rule)) {
+        next.push(rule);
+        changed = true;
+      }
+    }
+    if (changed) config.permissions = { ...perms, deny: next };
+  }
   if (!changed) return existing ?? "";
   return jsonText({ ...config, hooks }, existing);
 };
+
+/** Blocks the bypass the pre-push hook and CI guard exist to catch. */
+const DENY_NO_VERIFY = [`Bash(git commit --no-verify:*)`, `Bash(git commit -n:*)`];
 
 const SKILL = `---
 name: ${CLI_NAME}

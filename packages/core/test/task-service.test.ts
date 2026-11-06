@@ -9,6 +9,7 @@ import {
   listTasks,
   releaseExpiredClaims,
   type ServiceContext,
+  updateSettings,
   updateTask,
 } from "../src/index.js";
 import { START, setup } from "./support/setup.js";
@@ -147,6 +148,7 @@ describe("completeTask", () => {
 
   it("records who finished it, releases the claim and unblocks dependents", async () => {
     const { ctx, actor, store } = await setup();
+    await updateSettings(ctx, { review: "none" });
     const dep = await createTask(ctx, { title: "dep" });
     const next = await createTask(ctx, { title: "next", dependsOn: [dep.id] });
     expect((await listTasks(ctx, { ready: true })).map((t) => t.id)).toEqual([dep.id]);
@@ -172,6 +174,7 @@ describe("completeTask", () => {
 
   it("clears the completion when a done task is reopened", async () => {
     const { ctx } = await setup();
+    await updateSettings(ctx, { review: "none" });
     const t = await createTask(ctx, { title: "x" });
     await updateTask(ctx, t.id, { status: "in_progress" });
     await completeTask(ctx, t.id, done);

@@ -5,3 +5,6 @@ coverage/
 *.log
 .DS_Store
 .logs/
+.pnpm-store/
+test-results/
+playwright-report/

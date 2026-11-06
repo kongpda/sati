@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { bin, run, sati, satiJson, tempRepo } from "./helpers.js";
 
@@ -23,9 +23,9 @@ interface Err {
   error: { code: string; hint: string | null; details: Record<string, unknown> | null };
 }
 
-const HOOKS = ["pre-commit", "post-merge", "post-checkout", "post-rewrite"];
+const HOOKS = ["pre-commit", "post-merge", "post-checkout", "post-rewrite", "pre-push"];
 
-const tempDir = () => realpathSync(mkdtempSync(join(tmpdir(), "sati-init-")));
+const tempDir = () => realpathSync.native(mkdtempSync(join(tmpdir(), "sati-init-")));
 
 // `sati init` decides where the memory lives and what gets committed, so these tests pin
 // both the files it writes and the files it must not write.
@@ -38,16 +38,16 @@ describe("sati init", () => {
     expect(r.data.project.mode).toBe("git");
     expect(r.data.db).toBe(join(dir, ".git", "sati", "sati.db"));
     expect(r.data.files).toEqual([
-      { path: join(".sati", "sati.config.json"), action: "create" },
+      { path: ".sati/sati.config.json", action: "create" },
       { path: "AGENTS.md", action: "create" },
       { path: "CLAUDE.md", action: "update" },
       { path: ".mcp.json", action: "create" },
       { path: ".claude/settings.json", action: "create" },
       { path: ".claude/skills/sati/SKILL.md", action: "create" },
       { path: ".gitattributes", action: "create" },
-      ...HOOKS.map((h) => ({ path: join(".git", "sati", "hooks", h), action: "create" })),
-      ...HOOKS.map((h) => ({ path: join(".git", "hooks", h), action: "create" })),
-      { path: join(".git", "config"), action: "create" },
+      ...HOOKS.map((h) => ({ path: `.git/sati/hooks/${h}`, action: "create" })),
+      ...HOOKS.map((h) => ({ path: `.git/hooks/${h}`, action: "create" })),
+      { path: ".git/config", action: "create" },
     ]);
     expect(readFileSync(join(dir, "CLAUDE.md"), "utf8")).toBe("# rules\n\n@AGENTS.md\n");
     // PLAN: the merge driver is registered through .gitattributes and local git config.
@@ -81,8 +81,10 @@ describe("sati init", () => {
       { path: ".mcp.json", action: "create" },
       { path: ".claude/settings.local.json", action: "create" },
       { path: ".claude/skills/sati/SKILL.md", action: "create" },
-      { path: join(".git", "sati", "hooks", "pre-commit"), action: "create" },
-      { path: join(".git", "hooks", "pre-commit"), action: "create" },
+      { path: ".git/sati/hooks/pre-commit", action: "create" },
+      { path: ".git/sati/hooks/pre-push", action: "create" },
+      { path: ".git/hooks/pre-commit", action: "create" },
+      { path: ".git/hooks/pre-push", action: "create" },
     ]);
     expect(readFileSync(join(dir, "CLAUDE.local.md"), "utf8")).toContain("sati:start v1");
     expect(readFileSync(join(dir, "CLAUDE.md"), "utf8")).toBe("# shared\n");
@@ -98,17 +100,19 @@ describe("sati init", () => {
   // The MCP config and hooks start `sati` by name; without it on PATH they fail silently,
   // so init must say so (on stderr, keeping --json output clean).
   it("warns when sati is not on PATH, and stays quiet when it is", async () => {
-    const base = `${dirname(process.execPath)}:/usr/bin:/bin`;
+    const base = [dirname(process.execPath), "/usr/bin", "/bin"].join(delimiter);
     const dir = await tempRepo();
     const missing = run(dir, ["init", "--yes", "--tools", "claude-code"], { PATH: base });
     expect(missing.code).toBe(0);
     expect(missing.stderr).toContain("warning: `sati` is not on PATH");
 
-    const binDir = realpathSync(mkdtempSync(join(tmpdir(), "sati-bin-")));
-    symlinkSync(bin, join(binDir, "sati"));
+    const binDir = realpathSync.native(mkdtempSync(join(tmpdir(), "sati-bin-")));
+    // npm installs a `sati.cmd` shim on Windows and a symlink elsewhere.
+    if (process.platform === "win32") writeFileSync(join(binDir, "sati.cmd"), "@echo off\r\n");
+    else symlinkSync(bin, join(binDir, "sati"));
     const other = await tempRepo();
     const found = run(other, ["init", "--yes", "--tools", "claude-code"], {
-      PATH: `${binDir}:${base}`,
+      PATH: `${binDir}${delimiter}${base}`,
     });
     expect(found.code).toBe(0);
     expect(found.stderr).toBe("");
@@ -118,10 +122,12 @@ describe("sati init", () => {
     const dir = await tempRepo();
     const r = satiJson<Init>(dir, "init", "--yes", "--mode", "stealth");
     expect(r.code).toBe(0);
-    // Only the pre-commit hook and its runner, both inside .git.
+    // Guard hooks only, both inside .git. Stealth commits nothing.
     expect(r.data.files).toEqual([
-      { path: join(".git", "sati", "hooks", "pre-commit"), action: "create" },
-      { path: join(".git", "hooks", "pre-commit"), action: "create" },
+      { path: ".git/sati/hooks/pre-commit", action: "create" },
+      { path: ".git/sati/hooks/pre-push", action: "create" },
+      { path: ".git/hooks/pre-commit", action: "create" },
+      { path: ".git/hooks/pre-push", action: "create" },
     ]);
     expect(existsSync(join(dir, ".sati"))).toBe(false);
     expect(execFileSync("git", ["status", "--porcelain"], { cwd: dir, encoding: "utf8" })).toBe("");
@@ -136,7 +142,8 @@ describe("sati init", () => {
     const data = JSON.parse(r.stdout) as Init;
     expect(data.db).toBe(join(home, ".sati", "projects", `${data.project.id}.db`));
     expect(existsSync(data.db)).toBe(true);
-    expect(run(dir, ["task", "list", "--json"], { HOME: home }).code).toBe(0);
+    const list = run(dir, ["task", "list", "--json"], { HOME: home });
+    expect(list.code, list.stderr).toBe(0);
   });
 
   it("reuses the project id from a committed config, as in a fresh clone", async () => {
@@ -181,7 +188,7 @@ describe("sati init", () => {
     );
     expect(r.code).toBe(0);
     expect(r.data.files).toContainEqual({ path: ".gitattributes", action: "update" });
-    expect(r.data.files).toContainEqual({ path: join(".git", "config"), action: "update" });
+    expect(r.data.files).toContainEqual({ path: ".git/config", action: "update" });
     expect(readFileSync(join(dir, ".gitattributes"), "utf8")).toBe(
       "*.png binary\n.sati/**/*.json merge=sati linguist-generated\n",
     );

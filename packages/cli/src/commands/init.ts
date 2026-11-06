@@ -1,6 +1,6 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, join, relative } from "node:path";
+import { basename, join } from "node:path";
 import {
   type Actor,
   actorIdentity,
@@ -28,6 +28,7 @@ import {
   planHooks,
   planMergeDriver,
   selfCommand,
+  shownPath,
 } from "../hooks.js";
 import {
   excludeFileFor,
@@ -168,7 +169,7 @@ async function plan(
   const files: FileChange[] =
     mode === "stealth"
       ? []
-      : [{ path: relative(root, configPath), action: existing ? "keep" : "create" }];
+      : [{ path: shownPath(root, configPath), action: existing ? "keep" : "create" }];
   const tools = selectTools(root, args.tools);
   const excluded = mode === "stealth" ? readExcluded(excludeFileFor(db)) : new Set<string>();
   const agentFiles = planIntegrations(
@@ -287,7 +288,8 @@ async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
       { slug: p.slug, name: p.name, mode: p.mode },
       actorIdentity({ env: process.env, worktree: p.root, user: osUser() }),
     );
-    const config = p.files.find((f) => f.path === join(CONFIG_DIR, CONFIG_FILE));
+    // Planned paths use `/` on every platform (`shownPath`), so compare with `/` too.
+    const config = p.files.find((f) => f.path === `${CONFIG_DIR}/${CONFIG_FILE}`);
     if (config?.action === "create") {
       const abs = join(p.root, config.path);
       mkdirSync(join(abs, ".."), { recursive: true });
@@ -295,6 +297,15 @@ async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
     }
     writeManaged(p);
     warnIfNotOnPath(p.tools);
+    const { rememberProject } = await import("../projects.js");
+    rememberProject({
+      slug: project.slug,
+      name: project.name,
+      projectId: project.id,
+      root: p.root,
+      mode: project.mode,
+      db: p.db,
+    });
     return { project, actor, db: p.db, tools: p.tools, files: p.files };
   } finally {
     await store.close();

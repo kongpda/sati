@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
+import { maxHlc, tickHlc } from "../domain/hlc.js";
 import type { IdFactory } from "../domain/ids.js";
 import {
   type Activity,
@@ -8,6 +9,7 @@ import {
   type StoredEntity,
   type VERBS,
 } from "../domain/schemas.js";
+import { CLI_NAME } from "../name.js";
 import type { Clock } from "../ports/clock.js";
 import type { RepoIndex } from "../ports/repo.js";
 import type { StorageAdapter, StorageReader, StorageWriter } from "../ports/storage.js";
@@ -103,7 +105,7 @@ export async function mustGet<E extends StoredEntity>(
   const projectId = rec && "projectId" in rec ? rec.projectId : rec?.id;
   if (!rec || rec.deletedAt !== null || projectId !== ctx.projectId) {
     throw new SatiError("NOT_FOUND", `No ${entity} with id ${id}.`, {
-      hint: `List them with \`sati ${entity} list\`.`,
+      hint: `List them with \`${CLI_NAME} ${entity} list\`.`,
     });
   }
   return rec;
@@ -118,7 +120,7 @@ export function changes(before: object, after: object): Record<string, unknown> 
   const out: Record<string, unknown> = {};
   const a = after as Record<string, unknown>;
   for (const [key, from] of Object.entries(before)) {
-    if (key === "version" || key === "updatedAt") continue;
+    if (key === "version" || key === "updatedAt" || key === "stamps" || key === "lastHlc") continue;
     const to = a[key];
     if (JSON.stringify(from) !== JSON.stringify(to)) {
       out[key] = { from: compact(from), to: compact(to) };
@@ -149,6 +151,57 @@ export async function logActivity(
   await w.appendActivity(row);
 }
 
+const UNSTAMPED = new Set([
+  "id",
+  "projectId",
+  "createdAt",
+  "updatedAt",
+  "createdBy",
+  "version",
+  "needsReview",
+  "stamps",
+  "lastHlc",
+]);
+
+function stampMap(value: object): Record<string, string> {
+  const raw = (value as { stamps?: unknown }).stamps;
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return Object.fromEntries(
+    Object.entries(raw).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
+}
+
+/**
+ * Issues one stamp for this write and remembers it on the actor. The actor row is bookkeeping:
+ * it shares the transaction, and it does not get its own activity row.
+ */
+async function issueStamp(
+  w: StorageWriter,
+  ctx: ServiceContext,
+  seen: readonly (string | undefined)[],
+): Promise<string> {
+  const actor = await w.get("actor", ctx.actorId);
+  const stamp = tickHlc(ctx.clock.now(), maxHlc([actor?.lastHlc, ...seen]), ctx.actorId);
+  if (actor) {
+    const next = checkRecord("actor", {
+      ...actor,
+      lastHlc: stamp,
+      updatedAt: nowIso(ctx),
+      version: actor.version + 1,
+    });
+    await w.update("actor", next, actor.version);
+  }
+  return stamp;
+}
+
+function withStamps<T extends object>(value: T, keys: readonly string[], stamp: string): T {
+  const stamps = stampMap(value);
+  for (const key of keys) {
+    if (!UNSTAMPED.has(key)) stamps[key] = stamp;
+  }
+  return Object.keys(stamps).length > 0 ? { ...value, stamps } : value;
+}
+
 /** Inserts a validated record and its `create` activity row. Call inside `store.write`. */
 export async function insertWithLog<E extends StoredEntity>(
   w: StorageWriter,
@@ -157,7 +210,11 @@ export async function insertWithLog<E extends StoredEntity>(
   value: unknown,
   verb: Verb = "create",
 ): Promise<EntityMap[E]> {
-  const rec = checkRecord(entity, value);
+  const raw = value !== null && typeof value === "object" ? (value as object) : {};
+  const keys = Object.keys(raw);
+  const stamp =
+    entity === "actor" ? undefined : await issueStamp(w, ctx, Object.values(stampMap(raw)));
+  const rec = checkRecord(entity, stamp ? withStamps(raw, keys, stamp) : value);
   await w.insert(entity, rec);
   const title = "title" in rec ? { title: rec.title } : {};
   await logActivity(w, ctx, verb, entity, rec.id, title);
@@ -174,7 +231,7 @@ export async function updateWithLog<E extends StoredEntity>(
   entity: E,
   before: EntityMap[E],
   patch: object,
-  opts: { verb?: Verb; expectedVersion?: number | undefined } = {},
+  opts: { verb?: Verb; expectedVersion?: number | undefined; clear?: readonly string[] } = {},
 ): Promise<EntityMap[E]> {
   if (opts.expectedVersion !== undefined && opts.expectedVersion !== before.version) {
     throw new SatiError(
@@ -183,11 +240,17 @@ export async function updateWithLog<E extends StoredEntity>(
       { hint: "Re-read the record and apply your change again." },
     );
   }
-  const candidate = { ...before, ...defined(patch) };
+  const candidate: Record<string, unknown> = { ...before, ...defined(patch) };
+  for (const key of opts.clear ?? []) delete candidate[key];
   const diff = changes(before, candidate);
   if (Object.keys(diff).length === 0) return before;
+  const stamp =
+    entity === "actor" || entity === "project"
+      ? undefined
+      : await issueStamp(w, ctx, [maxHlc(Object.values(stampMap(before)))]);
+  const stamped = stamp ? withStamps(candidate, Object.keys(diff), stamp) : candidate;
   const after = checkRecord(entity, {
-    ...candidate,
+    ...stamped,
     updatedAt: nowIso(ctx),
     version: before.version + 1,
   });

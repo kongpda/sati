@@ -1,0 +1,47 @@
+{
+  "body": "Rewrite docs/handoff.md so it matches dbd236b and states the production bar for performance, UX, security and engineering practice.",
+  "branch": null,
+  "claim": null,
+  "completion": {
+    "completedAt": "2026-11-03T17:48:37.231Z",
+    "completedBy": "actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "filesTouched": [
+      "docs/handoff.md",
+      "docs/progress.md",
+      "PLAN.md",
+      ".github/workflows/ci.yml",
+      "packages/core/src/domain/hlc.ts",
+      "packages/core/src/domain/schemas.ts",
+      "packages/core/src/services/context.ts",
+      "packages/core/src/services/brief.ts",
+      "packages/core/src/services/guard.ts",
+      "packages/core/src/services/shell-changes.ts",
+      "packages/sync/src/merge.ts",
+      "packages/cli/src/git.ts",
+      "packages/cli/src/hooks.ts",
+      "packages/cli/src/commands/guard.ts",
+      "packages/cli/src/integrations.ts"
+    ],
+    "summary": "Implemented Phase 3 HLC, delete-vs-edit, rename guard, empty globs, Bash PreToolUse, pre-push and CI guard, and rewrote the handoff. Daemon, sati handoff command, e2e and phases 3b-6 remain."
+  },
+  "createdAt": "2026-11-03T17:13:13.682Z",
+  "createdBy": "actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+  "deletedAt": null,
+  "dependsOn": [],
+  "featureId": null,
+  "id": "tsk_01M6H6D4PT7EH0AXKN3Z7491VG",
+  "labels": [],
+  "parentId": null,
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "claim": "2026-11-03T17:48:37.239Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "completion": "2026-11-03T17:48:37.239Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-03T17:48:37.239Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT"
+  },
+  "status": "done",
+  "title": "Refresh the agent handoff to HEAD",
+  "updatedAt": "2026-11-03T17:48:37.240Z",
+  "version": 3,
+  "worktree": null
+}

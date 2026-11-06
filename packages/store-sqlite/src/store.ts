@@ -90,7 +90,18 @@ export class SqliteStore implements StorageAdapter {
 
   static async open(path: string, opts: OpenOptions = {}): Promise<SqliteStore> {
     if (!opts.readonly) mkdirSync(dirname(path), { recursive: true });
-    const db = new Database(path, { readonly: opts.readonly ?? false });
+    let db: Database.Database;
+    try {
+      db = new Database(path, { readonly: opts.readonly ?? false });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("unable to open database file")) {
+        throw new SatiError("USAGE", `Cannot open the database at ${path}.`, {
+          hint: "This process needs write access to that file and its folder.",
+        });
+      }
+      throw err;
+    }
     if (!opts.readonly) {
       db.pragma("journal_mode = WAL");
       db.pragma("synchronous = NORMAL");
@@ -255,6 +266,7 @@ export class SqliteStore implements StorageAdapter {
       const where: SQL[] = [eq(a.projectId, projectId)];
       if (q.entityId) where.push(eq(a.entityId, q.entityId));
       if (q.actorId) where.push(eq(a.actorId, q.actorId));
+      if (q.since) where.push(sql`${a.at} >= ${q.since}`);
       const rows = this.orm
         .select({ data: a.data })
         .from(a)
@@ -263,6 +275,15 @@ export class SqliteStore implements StorageAdapter {
         .limit(clampLimit(q.limit))
         .all();
       return rows.map((r) => JSON.parse(r.data) as Activity);
+    },
+
+    getActivity: async (id: string) => {
+      const row = this.orm
+        .select({ data: s.activity.data })
+        .from(s.activity)
+        .where(eq(s.activity.id, id))
+        .get();
+      return row ? (JSON.parse(row.data) as Activity) : undefined;
     },
   };
 

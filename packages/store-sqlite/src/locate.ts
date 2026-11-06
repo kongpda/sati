@@ -61,8 +61,8 @@ function fromGit(cwd: string): DbLocation | undefined {
   }
   const [top, common] = out.trim().split(/\r?\n/);
   if (!top || !common) return undefined;
-  // `--git-common-dir` may be relative to cwd.
-  return { path: join(resolve(cwd, common), "sati", "sati.db"), mode: "git", root: top };
+  // `--git-common-dir` may be relative to cwd. git prints `/` on Windows; resolve() gives native paths.
+  return { path: join(resolve(cwd, common), "sati", "sati.db"), mode: "git", root: resolve(top) };
 }
 
 function fromStandalone(cwd: string, home: string): DbLocation | undefined {

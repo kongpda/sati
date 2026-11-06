@@ -89,7 +89,7 @@ describe("acquireLock", () => {
     await acquireLock(ctx, { paths: ["src"] });
     await conflictOf(acquireLock(await otherActor(ctx), { paths: ["src/a.ts"] }));
     expect(await listLocks(ctx)).toHaveLength(501);
-  });
+  }, 30_000); // 501 acquires take about 1 s here; shared CI runners have been 5x slower.
 
   it("my own locks never conflict with each other", async () => {
     const { ctx } = await setup();

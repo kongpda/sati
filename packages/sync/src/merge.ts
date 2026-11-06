@@ -132,7 +132,22 @@ export function mergeRecord(base: Obj | undefined, ours: Obj, theirs: Obj): Reco
     if (key === "lastHlc" && typeof ov === "string" && typeof tv === "string") {
       value = compareHlc(ov, tv) >= 0 ? ov : tv;
       stamp = value;
-    } else if (isDeepStrictEqual(ov, tv) || isDeepStrictEqual(tv, bv)) {
+    } else if (isDeepStrictEqual(ov, tv)) {
+      value = ov;
+      stamp = fieldStamp(ours, key) ?? fieldStamp(theirs, key);
+    } else if (
+      // A side whose value matches the base may still have written it since: a claim that was
+      // set and then cleared looks unchanged. With stamps on both sides, the later write wins.
+      !TEXT_FIELDS.has(key) &&
+      !(isPrimitiveList(ov) && isPrimitiveList(tv)) &&
+      fieldStamp(ours, key) &&
+      fieldStamp(theirs, key) &&
+      laterSide(ours, theirs, key) !== "tie"
+    ) {
+      const winner = laterSide(ours, theirs, key) === "ours" ? ours : theirs;
+      value = winner[key];
+      stamp = fieldStamp(winner, key);
+    } else if (isDeepStrictEqual(tv, bv)) {
       value = ov;
       stamp = fieldStamp(ours, key) ?? fieldStamp(theirs, key);
     } else if (isDeepStrictEqual(ov, bv)) {

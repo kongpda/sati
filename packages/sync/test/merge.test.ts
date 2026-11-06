@@ -107,6 +107,36 @@ describe("mergeRecord", () => {
     expect(r.record.stamps).toMatchObject({ title: behind });
   });
 
+  // PLAN Phase 3 e2e (seed 51): a branch saw the claim, main later completed the task and
+  // cleared it. Main's claim matches the base again, but it is the later write, so the stale
+  // claim must not come back on a done task.
+  it("lets a later write win even when it put the base value back", () => {
+    const claimed = "2026-11-03T12:00:00.000Z#000001#agent-2";
+    const cleared = "2026-11-03T13:00:00.000Z#000000#agent-2";
+    const claim = { actorId: "actr_2", token: 1 };
+    const base = { ...task, claim: null };
+    const branch = {
+      ...base,
+      status: "in_progress",
+      claim,
+      stamps: { status: claimed, claim: claimed },
+    };
+    const main = {
+      ...base,
+      status: "done",
+      claim: null,
+      stamps: { status: cleared, claim: cleared },
+    };
+    for (const [ours, theirs] of [
+      [branch, main],
+      [main, branch],
+    ] as const) {
+      const r = mergeRecord(base, ours, theirs);
+      expect(r.record).toMatchObject({ status: "done", claim: null });
+      expect(r.record.stamps).toMatchObject({ claim: cleared });
+    }
+  });
+
   it("still uses updatedAt when either side has no stamp for the field", () => {
     const r = mergeRecord(
       task,

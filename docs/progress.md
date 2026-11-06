@@ -630,3 +630,10 @@ until the `pele` licence is checked. Playwright, axe, and the 2,000-card frame b
   fail. Check this before the first publish.
 - The 501-lock paging test takes about 1 s locally. It timed out at 5 s on a loaded runner, so
   it now has 30 s.
+- Bug found by the first CI run (seeds 41 and 51): after a merge, a done task got its old claim
+  back. The branch held the claimed snapshot. Main had completed the task, which put `claim`
+  back to its base value (`null`). The merge driver read "equal to base" as "unchanged" and kept
+  the stale claim, so the next edit was refused. Fix: for plain fields, when both sides carry a
+  stamp, the later stamp wins even if its value matches the base. Text and list fields still
+  merge three-way. Covered by a unit test in `packages/sync/test/merge.test.ts`; both seeds pass
+  at 1,000 steps.

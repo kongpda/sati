@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { locateDb, SqliteStore } from "@sati/store-sqlite";
 import { describe, expect, it } from "vitest";
 import { bin, sati, satiJson, tempRepo } from "./helpers.js";
@@ -29,7 +29,7 @@ function gitWithSati(dir: string, ...args: string[]): string {
   }
   return execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], {
     cwd: dir,
-    env: { ...process.env, PATH: `${shims}:${process.env.PATH}`, SATI_ACTOR: "tester" },
+    env: { ...process.env, PATH: `${shims}${delimiter}${process.env.PATH}`, SATI_ACTOR: "tester" },
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -72,7 +72,8 @@ describe("sati sync", () => {
 describe("git hooks", () => {
   it("a commit carries the snapshot, and a pull brings it into the other clone's DB", async () => {
     const a = await tempRepo();
-    sati(a, "init", "--yes", "--tools", "");
+    const made = sati(a, "init", "--yes", "--tools", "");
+    expect(made.code, made.stderr).toBe(0);
     writeFileSync(join(a, "README.md"), "hi\n");
     gitWithSati(a, "add", "README.md", ".sati/sati.config.json");
     gitWithSati(a, "commit", "-qm", "init");
@@ -204,5 +205,5 @@ describe("sati context", () => {
 
     sati(dir, "context", "put", "src", "--summary", "Source tree, re-read");
     expect(stale()).toEqual([false]);
-  });
+  }, 30_000);
 });

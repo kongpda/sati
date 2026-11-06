@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 import { planHooks } from "../src/hooks.js";
 import { sati, satiJson, tempRepo } from "./helpers.js";
@@ -9,9 +9,16 @@ interface Init {
   files: { path: string; action: string }[];
 }
 
-const which = (cmd: string) => dirname(execFileSync("which", [cmd], { encoding: "utf8" }).trim());
+const which = (cmd: string) =>
+  dirname(
+    execFileSync(process.platform === "win32" ? "where" : "which", [cmd], { encoding: "utf8" })
+      .split(/\r?\n/u)[0]
+      ?.trim() ?? "",
+  );
 /** A PATH with node and git but no `sati`, so a hook that looks sati up by name fails. */
-const NO_SATI_PATH = [...new Set([which("node"), which("git"), "/usr/bin", "/bin"])].join(":");
+const NO_SATI_PATH = [
+  ...new Set([dirname(process.execPath), which("git"), "/usr/bin", "/bin"]),
+].join(delimiter);
 
 function commit(dir: string, ...args: string[]): string {
   return execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "commit", ...args], {
@@ -37,7 +44,9 @@ describe("git hooks", () => {
     const dir = await tempRepo();
     const r = init(dir);
     expect(r.data.files).toContainEqual({ path: ".git/hooks/pre-commit", action: "create" });
-    expect(statSync(join(dir, ".git/hooks/pre-commit")).mode & 0o111).not.toBe(0);
+    // Windows has no execute bit; git runs hooks there through its own sh.
+    if (process.platform !== "win32")
+      expect(statSync(join(dir, ".git/hooks/pre-commit")).mode & 0o111).not.toBe(0);
 
     mkdirSync(join(dir, "src/billing"), { recursive: true });
     writeFileSync(join(dir, "src/billing/a.ts"), "a\nb\nc\n");
@@ -138,7 +147,7 @@ describe("git hooks", () => {
   it("lets git go on, with a hint, when the recorded sati is gone", async () => {
     const dir = await tempRepo();
     const hook = planHooks(dir, "git", ["/nonexistent/sati"]).find((h) =>
-      h.path.endsWith(join("sati", "hooks", "pre-commit")),
+      h.path.split(sep).join("/").endsWith("sati/hooks/pre-commit"),
     );
     if (!hook) throw new Error("no pre-commit runner planned");
     const r = spawnSync("sh", ["-c", hook.content], { cwd: dir, encoding: "utf8" });

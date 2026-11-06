@@ -7,17 +7,17 @@ import { defineCommand } from "citty";
 import { closeRuntime, openRuntime, printError } from "../runtime.js";
 import { createUiApp, listenUi, sessionToken } from "../ui/server.js";
 
-function uiDir(): string {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const candidates = [
-    join(here, "../../../ui/dist"),
-    join(here, "../../ui/dist"),
-    join(process.cwd(), "packages/ui/dist"),
-  ];
+/**
+ * The built UI ships next to the bundle in `dist/ui`. In this repo, `src` runs (tests, tsx) fall
+ * back to `packages/ui/dist`. Never look under the working directory: a repo could plant its own
+ * page there and it would run with the session cookie.
+ */
+export function uiDir(here = dirname(fileURLToPath(import.meta.url))): string {
+  const candidates = [join(here, "ui"), join(here, "../../../ui/dist")];
   const found = candidates.find((dir) => existsSync(join(dir, "index.html")));
   if (!found) {
     throw new SatiError("USAGE", "The web UI has not been built.", {
-      hint: "From the repo, run `pnpm --filter @sati/ui build`.",
+      hint: "From the repo, run `pnpm build`.",
     });
   }
   return found;

@@ -71,8 +71,9 @@ export function osUser(): string | undefined {
 const LS_FILES_BUFFER = 512 * 1024 * 1024;
 
 /**
- * The git index as `git ls-files -s` reports it: staged blob ids, no file reads. Untracked files
- * and unstaged edits are not seen, so a context entry goes stale once its files are staged.
+ * The git index as `git ls-files -s` reports it, with staged blob ids. Files that `git status`
+ * reports as changed or untracked are hashed from the working tree instead, so an unstaged edit
+ * still makes a context entry stale.
  */
 export function gitRepoIndex(root: string): RepoIndex {
   const git = (...args: string[]) =>

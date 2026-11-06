@@ -84,6 +84,9 @@ importers:
       '@sati/sync':
         specifier: workspace:*
         version: link:../sync
+      '@sati/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@types/micromatch':
         specifier: 4.0.10
         version: 4.0.10

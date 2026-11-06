@@ -1,0 +1,21 @@
+{
+  "body": "Rewrite docs/handoff.md so it matches current HEAD and states the production bar for performance, UX, security and engineering practice.",
+  "branch": null,
+  "claim": null,
+  "completion": null,
+  "createdAt": "2026-11-03T17:13:17.793Z",
+  "createdBy": "actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+  "deletedAt": null,
+  "dependsOn": [],
+  "featureId": null,
+  "id": "tsk_01M6H6D8Q1D878Q511ZCJVMBH2",
+  "labels": [],
+  "parentId": null,
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "status": "cancelled",
+  "title": "Refresh the agent handoff to HEAD",
+  "updatedAt": "2026-11-03T17:13:47.089Z",
+  "version": 2,
+  "worktree": null
+}

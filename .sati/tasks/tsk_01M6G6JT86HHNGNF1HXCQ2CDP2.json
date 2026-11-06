@@ -1,0 +1,32 @@
+{
+  "body": "",
+  "branch": null,
+  "claim": null,
+  "completion": {
+    "completedAt": "2026-11-03T07:57:05.371Z",
+    "completedBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+    "filesTouched": [
+      "packages/core/src/services/task.ts",
+      "packages/core/src/services/brief.ts",
+      "packages/store-sqlite/drizzle/0003_fts_rowids.sql",
+      "packages/cli/test/concurrency.test.ts",
+      "packages/cli/bench/bench.ts"
+    ],
+    "summary": "releaseExpiredClaims (brief clears expired leases), 20-process claim race test, claim bench, FTS rowid fix (schema v4)"
+  },
+  "createdAt": "2026-11-03T07:57:05.158Z",
+  "createdBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+  "deletedAt": null,
+  "dependsOn": [],
+  "featureId": null,
+  "id": "tsk_01M6G6JT86HHNGNF1HXCQ2CDP2",
+  "labels": [],
+  "parentId": null,
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "status": "done",
+  "title": "Phase 3: claims with leases, heartbeats, atomic claim under concurrency",
+  "updatedAt": "2026-11-03T07:57:05.371Z",
+  "version": 3,
+  "worktree": null
+}

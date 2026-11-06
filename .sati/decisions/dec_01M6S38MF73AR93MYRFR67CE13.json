@@ -1,0 +1,24 @@
+{
+  "consequences": "",
+  "context": "",
+  "createdAt": "2026-11-06T18:52:15.718Z",
+  "createdBy": "actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
+  "decision": "y",
+  "deletedAt": "2026-11-06T18:53:19.956Z",
+  "featureIds": [],
+  "id": "dec_01M6S38MF73AR93MYRFR67CE13",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "consequences": "2026-11-06T18:52:15.721Z#000000#actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
+    "context": "2026-11-06T18:52:15.721Z#000000#actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
+    "decision": "2026-11-06T18:52:15.721Z#000000#actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
+    "deletedAt": "2026-11-06T18:53:19.957Z#000000#actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
+    "featureIds": "2026-11-06T18:52:15.721Z#000000#actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
+    "supersedes": "2026-11-06T18:52:15.721Z#000000#actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
+    "title": "2026-11-06T18:52:15.721Z#000000#actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE"
+  },
+  "supersedes": null,
+  "title": "x",
+  "updatedAt": "2026-11-06T18:53:19.959Z",
+  "version": 2
+}

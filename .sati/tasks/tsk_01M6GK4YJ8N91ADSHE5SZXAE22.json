@@ -1,0 +1,35 @@
+{
+  "body": "",
+  "branch": null,
+  "claim": null,
+  "completion": {
+    "completedAt": "2026-11-03T11:36:42.526Z",
+    "completedBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+    "filesTouched": [
+      "packages/sync/src/secrets.ts",
+      "packages/sync/src/snapshot.ts",
+      "packages/sync/src/index.ts",
+      "packages/sync/test/secrets.test.ts",
+      "packages/cli/test/sync.test.ts",
+      "PLAN.md",
+      "docs/progress.md",
+      "docs/handoff.md"
+    ],
+    "summary": "exportSnapshot refuses the whole export when any record field looks like a secret; message names entity, id, field, never the secret. Pre-commit and MCP need no change."
+  },
+  "createdAt": "2026-11-03T11:36:42.311Z",
+  "createdBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+  "deletedAt": null,
+  "dependsOn": [],
+  "featureId": null,
+  "id": "tsk_01M6GK4YJ8N91ADSHE5SZXAE22",
+  "labels": [],
+  "parentId": null,
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "status": "done",
+  "title": "Secret scanner on export",
+  "updatedAt": "2026-11-03T11:36:42.526Z",
+  "version": 3,
+  "worktree": null
+}

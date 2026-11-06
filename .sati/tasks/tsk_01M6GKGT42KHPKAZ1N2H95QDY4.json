@@ -1,0 +1,39 @@
+{
+  "body": "",
+  "branch": null,
+  "claim": null,
+  "completion": {
+    "completedAt": "2026-11-03T11:43:11.247Z",
+    "completedBy": "actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
+    "filesTouched": [
+      "packages/core/src/domain/schemas.ts",
+      "packages/core/src/services/task.ts",
+      "packages/core/src/workflow.ts",
+      "packages/cli/src/commands/task.ts",
+      "packages/mcp/src/server.ts",
+      "packages/core/test/task-service.test.ts",
+      "packages/core/test/lock-service.test.ts",
+      "packages/cli/test/cli.test.ts",
+      "packages/mcp/test/server.test.ts",
+      "docs/progress.md",
+      "docs/handoff.md",
+      "PLAN.md"
+    ],
+    "summary": "Claims carry a fencing token (task version at claim). update/complete on a claimed task need the current token or fail with CONFLICT. CLI fills in the holder's token; MCP passes it explicitly."
+  },
+  "createdAt": "2026-11-03T11:43:10.978Z",
+  "createdBy": "actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
+  "deletedAt": null,
+  "dependsOn": [],
+  "featureId": null,
+  "id": "tsk_01M6GKGT42KHPKAZ1N2H95QDY4",
+  "labels": [],
+  "parentId": null,
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "status": "done",
+  "title": "Fencing tokens",
+  "updatedAt": "2026-11-03T11:43:11.248Z",
+  "version": 3,
+  "worktree": null
+}

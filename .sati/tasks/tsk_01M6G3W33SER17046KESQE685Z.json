@@ -1,0 +1,31 @@
+{
+  "body": "",
+  "branch": null,
+  "claim": null,
+  "completion": {
+    "completedAt": "2026-11-03T07:22:24.851Z",
+    "completedBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+    "filesTouched": [
+      "packages/core/src/services/similar.ts",
+      "packages/mcp/src/server.ts"
+    ],
+    "summary": "findSimilarTasks (FTS candidates, Dice >= 0.5 on title words); task_create returns similar"
+  },
+  "createdAt": "2026-11-03T07:09:43.417Z",
+  "createdBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+  "deletedAt": null,
+  "dependsOn": [],
+  "featureId": null,
+  "id": "tsk_01M6G3W33SER17046KESQE685Z",
+  "labels": [
+    "phase-2"
+  ],
+  "parentId": null,
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "status": "done",
+  "title": "Duplicate detection in task_create (FTS similarity)",
+  "updatedAt": "2026-11-03T07:22:24.852Z",
+  "version": 3,
+  "worktree": null
+}

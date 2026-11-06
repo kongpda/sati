@@ -1,0 +1,31 @@
+{
+  "body": "",
+  "branch": null,
+  "claim": null,
+  "completion": {
+    "completedAt": "2026-11-03T07:20:55.617Z",
+    "completedBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+    "filesTouched": [
+      "packages/core/src/services/brief.ts",
+      "packages/cli/src/commands/brief.ts"
+    ],
+    "summary": "Brief service with 1,500-token cap, brain_brief tool, brain brief command"
+  },
+  "createdAt": "2026-11-03T07:09:43.294Z",
+  "createdBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
+  "deletedAt": null,
+  "dependsOn": [],
+  "featureId": null,
+  "id": "tsk_01M6G3W2ZZ8G10Z5WA4YEY55W4",
+  "labels": [
+    "phase-2"
+  ],
+  "parentId": null,
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "status": "done",
+  "title": "brain_brief generator with token cap and large-fixture tests",
+  "updatedAt": "2026-11-03T07:20:55.617Z",
+  "version": 3,
+  "worktree": null
+}

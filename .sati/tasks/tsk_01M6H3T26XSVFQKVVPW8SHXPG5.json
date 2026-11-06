@@ -1,0 +1,35 @@
+{
+  "body": "",
+  "branch": null,
+  "claim": null,
+  "completion": {
+    "completedAt": "2026-11-03T16:27:51.875Z",
+    "completedBy": "actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
+    "filesTouched": [
+      "packages/cli/src/hooks.ts",
+      "packages/cli/src/commands/init.ts",
+      "packages/cli/test/hooks.test.ts",
+      "packages/cli/test/init.test.ts",
+      "packages/cli/test/guard.test.ts"
+    ],
+    "summary": "Runners in .git/sati/hooks hold the absolute binary path; hooks get a marked chain block (core.hooksPath, husky .husky/<name>, lefthook-local.yml); init --upgrade applies managed git files; .gitattributes adds linguist-generated."
+  },
+  "createdAt": "2026-11-03T16:27:51.388Z",
+  "createdBy": "actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
+  "deletedAt": null,
+  "dependsOn": [],
+  "featureId": null,
+  "id": "tsk_01M6H3T26XSVFQKVVPW8SHXPG5",
+  "labels": [
+    "cli",
+    "hooks"
+  ],
+  "parentId": null,
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "status": "done",
+  "title": "Hook installer: absolute sati path, chain into husky/lefthook/existing hooks, init --upgrade, linguist-generated",
+  "updatedAt": "2026-11-03T16:27:51.875Z",
+  "version": 3,
+  "worktree": null
+}

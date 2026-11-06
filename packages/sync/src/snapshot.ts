@@ -8,7 +8,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { join, posix } from "node:path";
 import {
   type ImportRecordsInput,
   type ImportResult,
@@ -68,7 +68,8 @@ export async function exportSnapshot(ctx: ServiceContext, dir: string): Promise<
   refuseSecrets(records.flatMap(({ entity, record }) => scanRecord(entity, record)));
   const result: ExportResult = { written: [], unchanged: 0 };
   for (const { entity, record } of records) {
-    const rel = join(SNAPSHOT_DIRS[entity], `${record.id}.json`);
+    // Reported paths use `/` on every OS, like git does.
+    const rel = posix.join(SNAPSHOT_DIRS[entity], `${record.id}.json`);
     const file = join(dir, rel);
     const content = stableJson(record);
     if (existsSync(file) && readFileSync(file, "utf8") === content) {
@@ -113,7 +114,7 @@ export function readSnapshot(dir: string): ImportRecordsInput {
     if (!existsSync(folder)) continue;
     for (const name of readdirSync(folder).sort()) {
       if (!name.endsWith(".json")) continue;
-      const source = join(SNAPSHOT_DIRS[entity], name);
+      const source = posix.join(SNAPSHOT_DIRS[entity], name);
       const file = join(folder, name);
       const fail = (why: string) => {
         throw new SatiError("VALIDATION", `Invalid snapshot file ${source}: ${why}`, {

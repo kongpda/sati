@@ -79,7 +79,9 @@ export function App() {
     const item = current?.tasks.find((t) => t.id === id);
     if (!item || item.status === status) return;
     if (status === "done") {
-      setToast("Done needs `sati task complete`, so the summary and files are recorded.");
+      setToast(
+        `Done needs \`${__CLI_NAME__} task complete\`, so the summary and files are recorded.`,
+      );
       return;
     }
     client.setQueryData<Snapshot>(["snapshot"], (snap) =>
@@ -197,20 +199,29 @@ export function App() {
       </nav>
       <main className="main">
         <div className="top">
-          <input
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filter tasks"
-            aria-label="Filter tasks"
-          />
-          <select value={feature} onChange={(e) => setFeature(e.target.value)} aria-label="Feature">
-            <option value="">All features</option>
-            {data?.features.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.title}
-              </option>
-            ))}
-          </select>
+          {/* The filters only narrow the board, so other pages do not show them. */}
+          {path === "/" ? (
+            <>
+              <input
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder="Filter tasks"
+                aria-label="Filter tasks"
+              />
+              <select
+                value={feature}
+                onChange={(e) => setFeature(e.target.value)}
+                aria-label="Feature"
+              >
+                <option value="">All features</option>
+                {data?.features.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.title}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : null}
           <button type="button" onClick={() => setPalette(true)}>
             Search
           </button>
@@ -275,7 +286,11 @@ export function App() {
                 {query.error instanceof ApiError ? query.error.message : "Reload this page."}
               </p>
             ) : data && data.tasks.length === 0 ? (
-              <p className="empty">No tasks yet. Press c, or run sati task create "First task".</p>
+              <p className="empty">
+                No tasks yet. Press c, or run {__CLI_NAME__} task create "First task".
+              </p>
+            ) : tasks.length === 0 ? (
+              <p className="empty">No tasks match the filter.</p>
             ) : (
               <Board
                 tasks={tasks}

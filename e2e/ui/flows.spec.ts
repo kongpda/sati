@@ -55,6 +55,9 @@ test("creates, edits, filters and bulk-moves tasks", async ({ page }) => {
   await page.getByLabel("Filter tasks").fill("flaky");
   await expect(page.getByRole("button", { name: "Fix the flaky import test" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Audit dependencies" })).toHaveCount(0);
+  // A filter that hides every task says so, instead of showing a blank board.
+  await page.getByLabel("Filter tasks").fill("no task has this title");
+  await expect(page.getByText("No tasks match the filter.")).toBeVisible();
   await page.getByLabel("Filter tasks").fill("");
 
   const pick = async (title: string) => {
@@ -146,6 +149,10 @@ test("every page loads and marks itself current", async ({ page }) => {
     );
     if (name !== "Board") {
       await expect(page.getByRole("heading", { level: 1, name, exact: true })).toBeVisible();
+      // PLAN: UX. The task filters only narrow the board, so other pages must not offer them.
+      await expect(page.getByLabel("Filter tasks")).toHaveCount(0);
+    } else {
+      await expect(page.getByLabel("Filter tasks")).toBeVisible();
     }
   }
   await page.goBack();

@@ -124,9 +124,7 @@ export function Roadmap({ data }: { data: Snapshot }) {
           );
         })}
         {data.milestones.length === 0 ? (
-          <p className="empty">
-            No milestones yet. The command is sati milestone create, once that checklist item lands.
-          </p>
+          <p className="empty">No milestones yet. Run {__CLI_NAME__} milestone create "Name".</p>
         ) : null}
       </div>
     </div>
@@ -219,7 +217,7 @@ export function Decisions({ data }: { data: Snapshot }) {
           </article>
         ))}
         {data.decisions.length === 0 ? (
-          <p className="empty">No decisions yet. Record one with sati decision record.</p>
+          <p className="empty">No decisions yet. Record one with {__CLI_NAME__} decision record.</p>
         ) : null}
       </div>
     </div>

@@ -105,6 +105,7 @@ function Column({
         {isOver ? " · drop" : ""}
       </h2>
       <div className="cards" ref={parent}>
+        {tasks.length === 0 ? <p className="column-empty">No tasks</p> : null}
         <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
           {virtual.getVirtualItems().map((row) => {
             const item = rows[row.index];

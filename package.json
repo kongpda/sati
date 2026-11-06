@@ -12,6 +12,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:e2e": "node scripts/e2e.mjs",
+    "test:ui": "pnpm --filter @sati/e2e test:ui",
     "bench": "turbo run bench",
     "lint": "biome check .",
     "format": "biome check --write .",

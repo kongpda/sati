@@ -661,3 +661,29 @@ until the `pele` licence is checked. Playwright, axe, and the 2,000-card frame b
 - Test temp folders use `realpathSync.native`. On Windows it expands 8.3 short names such as
   `RUNNER~1`, which git also expands, so paths compare equal.
 - The sync test now expects `tasks/tsk_bad.json`, since snapshot paths use `/` on every OS.
+
+### Phase 4 UI tests and gate (2026-11-07)
+
+- Playwright 1.64.1 and `@axe-core/playwright` 4.14.0 live in the private `e2e` workspace
+  package. axe-core is MPL-2.0; it is a dev dependency only and is never bundled or published.
+- `pnpm test:ui` runs 23 tests against a real `sati ui --no-open` in a temp git repo: sign-in,
+  create, edit, filter, bulk move, the command palette, Mermaid notes, navigation, an axe audit
+  of every page on desktop and phone, and the performance gate. CI runs them in the `ui` job.
+- Gate results on an M-series Mac, Chromium: a 2,000-card board loads its first card in a median
+  of about 113 ms; scrolling holds 60 fps with a worst frame of 16.8 ms and no long frames; axe
+  reports zero violations of any impact (WCAG 2.2 AA tags and best practice).
+- Accessibility audit: the axe part is done and is in CI. The manual screen-reader pass is still
+  open and needs a person, so that PLAN item stays unticked.
+- Bugs the tests found, all fixed:
+  - `sati ui --no-open` opened a browser. citty reads `--no-open` as `open: false`, but the flag
+    was declared as `no-open`. It is now `open` with a default of `true`.
+  - Stopping the UI server hung while an SSE stream or keep-alive socket was open. `close()` now
+    also calls `closeAllConnections()`.
+  - A plain click on a card did not open it, because the drag sensor took the pointer. A drag now
+    starts only after the pointer moves 6 px.
+  - A refused bulk move restored a stale snapshot of the whole board, so a card could stay in the
+    wrong column. Rollback is now per task.
+  - Virtualisation did not work: the board had no bounded height, so all 2,000 cards rendered.
+    The layout now uses `minmax(0, 1fr)` rows and `min-height: 0`.
+  - axe flagged no main landmark, no `h1` and skipped heading levels. Fixed with `<main>`, a
+    visually hidden `h1` on the board and `h2` row titles.

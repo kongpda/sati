@@ -526,7 +526,7 @@ Verify: an e2e test for the loop and a concurrency test for `sati next`.
 - [x] Mermaid diagrams in Markdown (notes, decisions, task bodies) rendered with `pele`: lazy-loaded so it stays out of the first-load bundle, `--pele-*` variables mapped to the UI design tokens, render errors shown inline instead of breaking the note
 - [x] Optimistic updates with rollback; live highlight on agent changes
 - [ ] Accessibility audit (axe + manual keyboard and screen-reader pass)
-- [ ] Playwright tests for the main flows
+- [x] Playwright tests for the main flows
 
 **Gate:** a 2,000-card board scrolls at 60 fps; axe reports zero serious issues; UI loads in under 1 s.
 

@@ -288,7 +288,8 @@ async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
       { slug: p.slug, name: p.name, mode: p.mode },
       actorIdentity({ env: process.env, worktree: p.root, user: osUser() }),
     );
-    const config = p.files.find((f) => f.path === join(CONFIG_DIR, CONFIG_FILE));
+    // Planned paths use `/` on every platform (`shownPath`), so compare with `/` too.
+    const config = p.files.find((f) => f.path === `${CONFIG_DIR}/${CONFIG_FILE}`);
     if (config?.action === "create") {
       const abs = join(p.root, config.path);
       mkdirSync(join(abs, ".."), { recursive: true });

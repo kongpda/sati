@@ -86,6 +86,25 @@ jobs:
             e2e/test-results
           retention-days: 7
 
+  # PLAN Security: supply chain. Production dependencies must have no known advisories; dev
+  # tooling advisories are accepted only through the lists in osv-scanner.toml and package.json.
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: pnpm audit --prod
+      - run: pnpm audit
+      - uses: google/osv-scanner-action/osv-scanner-action@v2.7.0
+        with:
+          scan-args: |-
+            --config=osv-scanner.toml
+            --lockfile=pnpm-lock.yaml
+
   # Catches a commit that skipped the pre-commit hook with --no-verify.
   guard:
     name: Guard changed paths

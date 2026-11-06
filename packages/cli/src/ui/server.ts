@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { serve } from "@hono/node-server";
@@ -18,10 +18,21 @@ import {
 } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { getCookie, setCookie } from "hono/cookie";
 import micromatch from "micromatch";
 
 const COOKIE = "sati_session";
+/** Largest request body the API reads. Records are capped at 100 KB, so this is generous. */
+const MAX_BODY_BYTES = 1024 * 1024;
+
+/** Compares in constant time, so response timing does not reveal how much of a guess matched. */
+function sameToken(given: string | undefined, token: string): boolean {
+  if (given === undefined) return false;
+  const a = Buffer.from(given);
+  const b = Buffer.from(token);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 const CSP = [
   "default-src 'self'",
   "script-src 'self'",
@@ -169,18 +180,30 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   });
 
   app.get("/session", (c) => {
-    if (c.req.query("token") !== token) return c.text("Sign-in token refused.", 401);
+    if (!sameToken(c.req.query("token"), token)) return c.text("Sign-in token refused.", 401);
     setCookie(c, COOKIE, token, { httpOnly: true, sameSite: "Strict", path: "/", secure: false });
     return c.redirect("/");
   });
 
   app.use("*", async (c, next) => {
-    if (getCookie(c, COOKIE) === token) return next();
+    if (sameToken(getCookie(c, COOKIE), token)) return next();
     return c.json(
       { error: { code: "USAGE", message: "Open this board from `sati ui`.", hint: null } },
       401,
     );
   });
+
+  app.use(
+    "/api/*",
+    bodyLimit({
+      maxSize: MAX_BODY_BYTES,
+      onError: (c) =>
+        c.json(
+          { error: { code: "VALIDATION", message: "The request body is over 1 MB.", hint: null } },
+          413,
+        ),
+    }),
+  );
 
   app.get("/api/openapi.json", (c) => c.json(openApi()));
   app.get("/api/snapshot", async (c) => c.json(await snapshot(rt)));

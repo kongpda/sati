@@ -1,0 +1,6 @@
+# Advisories accepted on purpose. Each needs a reason and an end date; see SECURITY.md.
+
+[[IgnoredVulns]]
+id = "GHSA-67mh-4wv8-2f99"
+ignoreUntil = 2027-05-01T00:00:00Z
+reason = "esbuild dev-server CORS. Only reached through drizzle-kit, a dev tool that never starts esbuild's server. Not shipped to users."

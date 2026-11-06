@@ -378,9 +378,9 @@ The biggest risks are a local server that any website can reach, secrets leaking
 
 **Supply chain**
 
-- [ ] Minimal dependencies; Renovate for updates; `pnpm audit` and OSV scanning in CI.
+- [x] Minimal dependencies; Renovate for updates; `pnpm audit` and OSV scanning in CI.
 - [ ] npm publishing with provenance from GitHub Actions only; two-factor on the npm account; lockfile committed.
-- [ ] A `SECURITY.md` with a disclosure contact.
+- [x] A `SECURITY.md` with a disclosure contact.
 
 ## Performance budgets
 
@@ -536,7 +536,7 @@ Verify: an e2e test for the loop and a concurrency test for `sati next`.
 - [x] Backup and restore (`sati export --all`, `sati import`)
 - [x] Migration safety: automatic DB backup before each schema migration
 - [ ] Docs site: quick start, agent workflow, guard rules, FAQ; `sati://workflow` resource generated from it
-- [ ] Security review against the Security checklist; fuzz the JSON importer
+- [x] Security review against the Security checklist; fuzz the JSON importer
 - [x] `sati review <branch>`: features touched, decisions recorded and guard warnings before merge
 - [x] `sati scan`: propose features from folders and routes for an existing codebase
 - [ ] Try it on 3 real projects (including one stealth-mode client repo) for 1 week

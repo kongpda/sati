@@ -38,6 +38,12 @@ describe("ui server", () => {
   it("rejects a missing session, a foreign host and a foreign origin", async () => {
     const open = await app.request("http://127.0.0.1/api/snapshot");
     expect(open.status).toBe(401);
+    const guessed = await app.request("http://127.0.0.1/session?token=" + "x".repeat(token.length));
+    expect(guessed.status).toBe(401);
+    const forged = await app.request("http://127.0.0.1/api/snapshot", {
+      headers: { cookie: `sati_session=${token.slice(0, -1)}` },
+    });
+    expect(forged.status).toBe(401);
 
     const foreign = await app.request("http://evil.test/api/snapshot");
     expect(foreign.status).toBe(403);
@@ -55,8 +61,27 @@ describe("ui server", () => {
 
     const snap = await app.request("http://127.0.0.1/api/snapshot", { headers: { cookie } });
     expect(snap.status).toBe(200);
-    expect(snap.headers.get("content-security-policy")).toContain("default-src 'self'");
+    // PLAN Security: strict CSP with no inline scripts or styles, nosniff and no referrer.
+    const csp = snap.headers.get("content-security-policy") ?? "";
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).not.toContain("unsafe-inline");
+    expect(csp).not.toContain("unsafe-eval");
+    expect(snap.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(snap.headers.get("referrer-policy")).toBe("no-referrer");
+    expect(session.headers.get("set-cookie")).toContain("SameSite=Strict");
     const body = (await snap.json()) as { tasks: { title: string }[] };
     expect(body.tasks.map((t) => t.title)).toEqual(["Paint the board"]);
+  });
+
+  // PLAN Security: request size limits. A huge body must be refused before it is parsed.
+  it("refuses a request body over 1 MB", async () => {
+    const session = await app.request(`http://127.0.0.1/session?token=${token}`);
+    const res = await app.request("http://127.0.0.1/api/tasks", {
+      method: "POST",
+      headers: { cookie: cookieOf(session), "content-type": "application/json" },
+      body: JSON.stringify({ title: "Big", body: "x".repeat(1024 * 1024 + 1) }),
+    });
+    expect(res.status).toBe(413);
   });
 });

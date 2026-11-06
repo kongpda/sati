@@ -1,6 +1,6 @@
 {
   "name": "@kongpda/sati",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Local-first memory, task and feature manager for AI coding agents",
   "type": "module",
   "license": "UNLICENSED",

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import {
+  CLI_NAME,
   CONFIG_DIR,
   CONFIG_FILE,
   checkChanges,
@@ -54,7 +55,7 @@ function render(r: GuardResult): string {
     lines.push(
       overridden()
         ? "Blocked changes let through by SATI_GUARD=off; the override is logged."
-        : "Record a decision on the feature (`sati decision record --feature <id>`), ask the lock holder, or override once with SATI_GUARD=off (logged).",
+        : `Record a decision on the feature (\`${CLI_NAME} decision record --features <id>\`), ask the lock holder, or override once with SATI_GUARD=off (logged).`,
     );
   }
   return lines.join("\n");

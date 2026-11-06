@@ -36,7 +36,7 @@ export async function deleteRecord(
           `A ${feature.status} feature is removed with a Decision.`,
           {
             hint:
-              `Run \`${CLI_NAME} decision record --feature ${id}\`, then ` +
+              `Run \`${CLI_NAME} decision record --features ${id}\`, then ` +
               `\`${CLI_NAME} feature update ${id} --status removed --decision <id>\`.`,
           },
         );

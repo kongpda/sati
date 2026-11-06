@@ -75,7 +75,7 @@ export async function updateFeature(
     if (patch.status) {
       assertTransition(FEATURE_TRANSITIONS, "feature", before.status, patch.status);
       if (featureRemovalNeedsDecision(before.status, patch.status)) {
-        const hint = `Record one first: \`${CLI_NAME} decision record --feature ${id}\`, then pass its id.`;
+        const hint = `Record one first: \`${CLI_NAME} decision record --features ${id}\`, then pass its id.`;
         if (!decisionId) {
           throw new SatiError(
             "VALIDATION",

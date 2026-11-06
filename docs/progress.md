@@ -596,3 +596,37 @@ until the `pele` licence is checked. Playwright, axe, and the 2,000-card frame b
   (name, npm two-factor, licence, three-project week) stay open.
 - Biome ignores `.sati/`. Those JSON files are written by sati, and formatting them by hand
   would rewrite the project memory.
+
+### Phase 3 E2E scenario and CI fixes (2026-11-07)
+
+- `packages/cli/test/e2e.test.ts` runs the Phase 3 scenario. A real `sati init` sets up hooks,
+  the merge driver and `.gitattributes`. Four agents in four worktrees then act at once, one
+  process each, for N steps: create, claim, complete, lock, release and edit a shared task. A
+  seeded generator (mulberry32) picks the ops. Between rounds, one agent may commit and merge
+  (main pulls a branch, or a branch pulls main). Git ops run one at a time between rounds,
+  since git serializes ref updates anyway.
+- Each round is checked against the state at its start. Either outcome is allowed only where
+  two ops of that round raced on the same record (a release and an acquire, say). A claim or
+  lock must not win twice in one round. A refusal is wrong when nobody else held the record.
+  At the end, every created task must be in main's tree, and the database must agree with what
+  each agent was told.
+- Mutation check: with the claim conflict check disabled, the scenario fails at step 4.
+- `pnpm test:e2e [--repeat N] [--seed S] [--steps N]` (`scripts/e2e.mjs`) runs the agent loop
+  once, then the scenario once per seed. One 1,000-step run takes about 90 s on an M-series Mac.
+  The normal suite runs a 40-step version.
+- CI: the `e2e` job replaces `worktree-stress`. It has 10 shards. Pushes and PRs run one seed
+  per shard (10 runs). The nightly schedule and `workflow_dispatch` run ten seeds per shard
+  (100 runs, about 150 runner-minutes). `workflow_dispatch` and `schedule` only work once this
+  workflow is on `main`. So the Gate box stays open until a 100-run job passes there.
+- The `SATI_WORKTREE_STRESS` mode of `concurrency.test.ts` is no longer run in CI. The new
+  scenario covers it. It stays for local use; remove it if nobody needs it.
+- PLAN's Verify line names guard fixtures in `e2e/guard/`. There is no such folder. Blocking a
+  staged protected deletion is covered by `packages/cli/test/hooks.test.ts`, and the CI `guard`
+  job checks `--range`.
+- better-sqlite3 13 ships N-API prebuilds for Linux, macOS and Windows (x64 and arm64). It is now
+  in `ignoredBuiltDependencies`, so pnpm does not run node-gyp. node-gyp needs Visual Studio on
+  Windows, which broke the Windows CI jobs. Risk: plain `npm install` still runs node-gyp for any
+  package with a `binding.gyp`. So `npm i -g @kongpda/sati` on Windows without build tools may
+  fail. Check this before the first publish.
+- The 501-lock paging test takes about 1 s locally. It timed out at 5 s on a loaded runner, so
+  it now has 30 s.

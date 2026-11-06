@@ -472,7 +472,7 @@ Verify: `pnpm typecheck && pnpm test && pnpm bench`, then in a temp git repo: `s
 - [x] `pre-push` hook; CI command `sati guard --range origin/main...HEAD` plus a GitHub Actions example; Claude Code deny rule for `git commit --no-verify` (review fix 1)
 - [x] `.gitattributes`: `.sati/**/*.json merge=sati linguist-generated`
 - [x] `sati handoff`: structured "where I stopped" note on the task
-- [ ] E2E scenario: 4 agents in 4 worktrees, random claims, locks and merges for 1,000 steps with zero duplicate claims and zero lost records
+- [x] E2E scenario: 4 agents in 4 worktrees, random claims, locks and merges for 1,000 steps with zero duplicate claims and zero lost records
 
 **Gate:** the E2E scenario passes 100 runs in CI; a staged deletion of a protected feature is blocked; `--no-verify` is caught by the CI guard.
 Verify: `pnpm test:e2e --repeat 100` and the guard fixtures in `e2e/guard/`.

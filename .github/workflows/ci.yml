@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -29,17 +32,17 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
 
-  worktree-stress:
-    name: Worktree stress / shard ${{ matrix.shard }}
+  # PLAN Phase 3 gate: the four-worktree scenario passes 100 seeded 1,000-step runs. Each shard
+  # takes about 15 minutes, so pushes and PRs run one seed per shard (10 runs); the nightly and
+  # manual runs do ten per shard (100 runs).
+  e2e:
+    name: E2E / shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-    env:
-      SATI_WORKTREE_STRESS: "1"
-      SHARD: ${{ matrix.shard }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -49,13 +52,14 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - name: Run ten seeded scenarios
+      - name: Run seeded scenarios
         shell: bash
+        env:
+          SHARD: ${{ matrix.shard }}
+          FULL: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
         run: |
-          for run in {0..9}; do
-            export SATI_WORKTREE_SEED=$((SHARD * 10000 + run * 500))
-            pnpm --filter @kongpda/sati exec vitest run test/concurrency.test.ts -t "shares claims"
-          done
+          if [ "$FULL" = "true" ]; then repeat=10; else repeat=1; fi
+          pnpm test:e2e --repeat "$repeat" --seed $((SHARD * 10 + 1))
 
   # Catches a commit that skipped the pre-commit hook with --no-verify.
   guard:

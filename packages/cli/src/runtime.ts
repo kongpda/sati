@@ -31,6 +31,7 @@ import {
   filesystemKind,
   locateDb,
   SqliteStore,
+  socketPath as socketPathFor,
   standaloneDbPath,
 } from "@sati/store-sqlite";
 
@@ -197,7 +198,7 @@ export async function openRuntime(cwd: string = process.cwd()): Promise<Runtime>
       hint: "Run `sati init`.",
     });
   }
-  const socketPath = join(dirname(location.path), "sati.sock");
+  const socketPath = socketPathFor(location.path);
   const kind = filesystemKind(dirname(location.path));
   const store =
     process.env.SATI_DAEMON_OWNER === "1"

@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import { createConnection, createServer, type Server, type Socket } from "node:net";
+import { dirname, join } from "node:path";
 import {
   ERROR_EXIT_CODES,
   type ErrorCode,
@@ -49,6 +51,16 @@ function fail(error: Message["error"]): Error {
     });
   }
   return new Error(error?.message ?? "The database daemon failed.");
+}
+
+/**
+ * Where `sati serve` listens for a database. Windows has no Unix sockets in the file system, so
+ * there it is a named pipe keyed by a hash of the database path.
+ */
+export function socketPath(dbPath: string, platform: NodeJS.Platform = process.platform): string {
+  if (platform !== "win32") return join(dirname(dbPath), "sati.sock");
+  const key = createHash("sha256").update(dbPath.toLowerCase()).digest("hex").slice(0, 16);
+  return `\\\\.\\pipe\\sati-${key}`;
 }
 
 /** One process owns the SQLite file. Others send storage calls over this socket. */

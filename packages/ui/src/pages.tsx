@@ -55,7 +55,7 @@ export function Features({
       <div className="list">
         {data.features.map((f) => (
           <article key={f.id} className="row">
-            <strong>{f.title}</strong>
+            <h2 className="row-title">{f.title}</h2>
             <div className="meta">
               {f.status}
               {f.protected ? " · protected" : ""}
@@ -173,7 +173,7 @@ export function Notes({
       <div className="list" style={{ marginTop: 16 }}>
         {data.notes.map((n) => (
           <article key={n.id} className="row">
-            <strong>{n.title}</strong>
+            <h2 className="row-title">{n.title}</h2>
             <div className="meta">
               <time dateTime={n.updatedAt} title={n.updatedAt}>
                 {ago(n.updatedAt)}
@@ -208,7 +208,7 @@ export function Decisions({ data }: { data: Snapshot }) {
       <div className="list">
         {data.decisions.map((d) => (
           <article key={d.id} className="row">
-            <strong>{d.title}</strong>
+            <h2 className="row-title">{d.title}</h2>
             <div className="meta">
               <time dateTime={d.createdAt} title={d.createdAt}>
                 {ago(d.createdAt)}

@@ -1,4 +1,13 @@
-import { DndContext, type DragEndEvent, useDraggable, useDroppable } from "@dnd-kit/core";
+import {
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef } from "react";
 import { ago, COLUMNS, type Feature, type Task } from "./api.js";
@@ -25,12 +34,17 @@ export function Board({
   onMove: (id: string, status: string) => void;
 }) {
   const byFeature = new Map(features.map((f) => [f.id, f.title]));
+  // A drag starts only after the pointer moves, so a plain click still opens the card.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor),
+  );
   function onDragEnd(event: DragEndEvent) {
     const over = event.over?.id;
     if (typeof over === "string" && event.active.id !== over) onMove(String(event.active.id), over);
   }
   return (
-    <DndContext onDragEnd={onDragEnd}>
+    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <div className="board">
         {COLUMNS.map(([status, label]) => (
           <Column

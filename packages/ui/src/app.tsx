@@ -89,8 +89,18 @@ export function App() {
       await api.patchTask(id, { status, expectedVersion: item.version });
       await client.invalidateQueries({ queryKey: ["snapshot"] });
     } catch (err) {
-      client.setQueryData(["snapshot"], current);
+      // Revert only this task: other moves may be in flight, and a whole-snapshot restore
+      // would undo them or bring back their refused state.
+      client.setQueryData<Snapshot>(["snapshot"], (snap) =>
+        snap
+          ? {
+              ...snap,
+              tasks: snap.tasks.map((t) => (t.id === id ? { ...t, status: item.status } : t)),
+            }
+          : snap,
+      );
       fail(err);
+      await client.invalidateQueries({ queryKey: ["snapshot"] });
     }
   }
 
@@ -185,7 +195,7 @@ export function App() {
           </a>
         ))}
       </nav>
-      <div className="main">
+      <main className="main">
         <div className="top">
           <input
             value={filter}
@@ -207,6 +217,7 @@ export function App() {
         </div>
         {path === "/" ? (
           <>
+            <h1 className="sr-only">Board</h1>
             {(data?.tasks ?? []).some((t) => t.claim) ? (
               <div className="live">
                 {(data?.tasks ?? [])
@@ -348,7 +359,7 @@ export function App() {
         ) : null}
         {data && path === "/decisions" ? <Decisions data={data} /> : null}
         {data && path === "/activity" ? <Activity data={data} /> : null}
-      </div>
+      </main>
       {data && task ? (
         <TaskSheet
           data={data}

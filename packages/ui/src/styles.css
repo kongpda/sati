@@ -68,6 +68,8 @@ button {
 .app {
   display: grid;
   grid-template-columns: 196px 1fr;
+  /* One bounded row, so each board column scrolls on its own and virtualisation can work. */
+  grid-template-rows: minmax(0, 1fr);
   height: 100%;
 }
 .nav {
@@ -98,6 +100,8 @@ button {
 }
 .main {
   min-width: 0;
+  min-height: 0;
+  overflow: auto;
   display: flex;
   flex-direction: column;
 }
@@ -141,6 +145,7 @@ textarea {
   padding: 10px 14px 16px;
   overflow: auto;
   flex: 1;
+  min-height: 0;
 }
 .column {
   width: 260px;
@@ -242,6 +247,14 @@ textarea {
   border-radius: 8px;
   padding: 10px 12px;
 }
+
+/* A heading for outline and screen-reader navigation, styled like the bold title it replaced. */
+.row-title {
+  display: inline;
+  margin: 0;
+  font-size: inherit;
+  font-weight: 700;
+}
 .sheet {
   position: fixed;
   inset: 0 0 0 auto;
@@ -336,6 +349,7 @@ textarea {
 @media (max-width: 700px) {
   .app {
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
   }
   .nav {
     flex-direction: row;
@@ -385,4 +399,14 @@ textarea {
 .mermaid-error figcaption {
   color: var(--clay);
   font-size: 0.875rem;
+}
+
+/* Read by screen readers, not shown. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

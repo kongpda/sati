@@ -1,6 +1,6 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, join, relative } from "node:path";
+import { basename, join } from "node:path";
 import {
   type Actor,
   actorIdentity,
@@ -28,6 +28,7 @@ import {
   planHooks,
   planMergeDriver,
   selfCommand,
+  shownPath,
 } from "../hooks.js";
 import {
   excludeFileFor,
@@ -168,7 +169,7 @@ async function plan(
   const files: FileChange[] =
     mode === "stealth"
       ? []
-      : [{ path: relative(root, configPath), action: existing ? "keep" : "create" }];
+      : [{ path: shownPath(root, configPath), action: existing ? "keep" : "create" }];
   const tools = selectTools(root, args.tools);
   const excluded = mode === "stealth" ? readExcluded(excludeFileFor(db)) : new Set<string>();
   const agentFiles = planIntegrations(

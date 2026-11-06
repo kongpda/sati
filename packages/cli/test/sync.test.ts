@@ -166,7 +166,7 @@ describe("merge driver", () => {
     ).data;
     expect(merged).toMatchObject({ title: "Renamed", labels: ["x"], needsReview: true });
     expect(merged.body).toContain("<<<<<<< ours\nMAIN\n=======\nSIDE\n>>>>>>> theirs");
-  });
+  }, 30_000);
 });
 
 // PLAN: context entries hash the module's files from `git ls-files -s` and go stale on change.

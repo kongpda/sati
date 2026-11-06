@@ -4,6 +4,9 @@ import { isAbsolute, relative, resolve, sep } from "node:path";
 import { CLI_NAME, CONFIG_DIR, type Mode, SatiError } from "@sati/core";
 import type { FileChange, PlannedFile, ReadFile } from "./integrations.js";
 
+/** A repo-relative path for output, with `/` on every platform so `--json` reads the same. */
+export const shownPath = (root: string, abs: string) => relative(root, abs).split(sep).join("/");
+
 /** Marks a file as ours, so a later `init` may update it. Foreign hooks are never replaced. */
 const OWNER = `# Installed by \`${CLI_NAME} init\``;
 /** Our block inside a hook file someone else owns, such as a husky hook. */
@@ -148,7 +151,7 @@ const absFrom = (root: string, p: string) => (isAbsolute(p) ? p : resolve(root, 
 function planFile(root: string, abs: string, content: string): PlannedHook {
   const existing = existsSync(abs) ? readFileSync(abs, "utf8") : undefined;
   const action = existing === undefined ? "create" : existing === content ? "keep" : "update";
-  return { path: relative(root, abs), abs, action, content };
+  return { path: shownPath(root, abs), abs, action, content };
 }
 
 /**
@@ -238,7 +241,7 @@ export interface PlannedGitConfig extends FileChange {
 /** git config is local to each clone, so init registers the driver in `.git/config`. */
 export function planMergeDriver(root: string, self: string[]): PlannedGitConfig {
   const common = absFrom(root, git(root, "rev-parse", "--git-common-dir"));
-  const path = relative(root, resolve(common, "config"));
+  const path = shownPath(root, resolve(common, "config"));
   const entries: [string, string][] = [
     [`merge.${CLI_NAME}.name`, `${CLI_NAME} record merge`],
     [`merge.${CLI_NAME}.driver`, `${self.map(sh).join(" ")} merge-driver %O %A %B`],

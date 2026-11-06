@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { bin, run, sati, satiJson, tempRepo } from "./helpers.js";
 
@@ -100,17 +100,19 @@ describe("sati init", () => {
   // The MCP config and hooks start `sati` by name; without it on PATH they fail silently,
   // so init must say so (on stderr, keeping --json output clean).
   it("warns when sati is not on PATH, and stays quiet when it is", async () => {
-    const base = `${dirname(process.execPath)}:/usr/bin:/bin`;
+    const base = [dirname(process.execPath), "/usr/bin", "/bin"].join(delimiter);
     const dir = await tempRepo();
     const missing = run(dir, ["init", "--yes", "--tools", "claude-code"], { PATH: base });
     expect(missing.code).toBe(0);
     expect(missing.stderr).toContain("warning: `sati` is not on PATH");
 
     const binDir = realpathSync.native(mkdtempSync(join(tmpdir(), "sati-bin-")));
-    symlinkSync(bin, join(binDir, "sati"));
+    // npm installs a `sati.cmd` shim on Windows and a symlink elsewhere.
+    if (process.platform === "win32") writeFileSync(join(binDir, "sati.cmd"), "@echo off\r\n");
+    else symlinkSync(bin, join(binDir, "sati"));
     const other = await tempRepo();
     const found = run(other, ["init", "--yes", "--tools", "claude-code"], {
-      PATH: `${binDir}:${base}`,
+      PATH: `${binDir}${delimiter}${base}`,
     });
     expect(found.code).toBe(0);
     expect(found.stderr).toBe("");

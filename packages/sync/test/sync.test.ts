@@ -119,7 +119,8 @@ describe("exportSnapshot / importSnapshot", () => {
     writeFileSync(join(dir, "tasks/tsk_bad.json"), "{ nope");
     await expect(importSnapshot(b, dir)).rejects.toMatchObject({
       code: "VALIDATION",
-      message: expect.stringContaining(join("tasks", "tsk_bad.json")),
+      // Reported paths use `/` on every OS.
+      message: expect.stringContaining("tasks/tsk_bad.json"),
     });
     expect(await listTasks(b)).toEqual([]);
 

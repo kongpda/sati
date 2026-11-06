@@ -10,7 +10,7 @@ export const bin = fileURLToPath(new URL("../dist/index.mjs", import.meta.url));
 
 /** A temp git repo. `init: true` also creates the project through core, skipping `sati init`. */
 export async function tempRepo(opts: { init?: boolean } = {}): Promise<string> {
-  const dir = realpathSync(mkdtempSync(join(tmpdir(), "sati-cli-")));
+  const dir = realpathSync.native(mkdtempSync(join(tmpdir(), "sati-cli-")));
   execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir });
   if (opts.init) {
     clearLocateCache();

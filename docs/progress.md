@@ -653,3 +653,11 @@ until the `pele` licence is checked. Playwright, axe, and the 2,000-card frame b
   Chrome: no `securitypolicyviolation` events, and the diagram picks up the theme.
 - The `--pele-*` variables map to the UI tokens in `.mermaid` (`styles.css`), so dark mode
   follows. A parse error shows inline with the source, as a `role="alert"` caption.
+
+### Windows CI paths (2026-11-07)
+
+- `locateDb` returned git's `--show-toplevel` as printed, which uses `/` on Windows. It now
+  passes through `resolve()`, so `root` is a native path like every other path in the CLI.
+- Test temp folders use `realpathSync.native`. On Windows it expands 8.3 short names such as
+  `RUNNER~1`, which git also expands, so paths compare equal.
+- The sync test now expects `tasks/tsk_bad.json`, since snapshot paths use `/` on every OS.

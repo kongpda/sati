@@ -25,7 +25,7 @@ interface Err {
 
 const HOOKS = ["pre-commit", "post-merge", "post-checkout", "post-rewrite", "pre-push"];
 
-const tempDir = () => realpathSync(mkdtempSync(join(tmpdir(), "sati-init-")));
+const tempDir = () => realpathSync.native(mkdtempSync(join(tmpdir(), "sati-init-")));
 
 // `sati init` decides where the memory lives and what gets committed, so these tests pin
 // both the files it writes and the files it must not write.
@@ -106,7 +106,7 @@ describe("sati init", () => {
     expect(missing.code).toBe(0);
     expect(missing.stderr).toContain("warning: `sati` is not on PATH");
 
-    const binDir = realpathSync(mkdtempSync(join(tmpdir(), "sati-bin-")));
+    const binDir = realpathSync.native(mkdtempSync(join(tmpdir(), "sati-bin-")));
     symlinkSync(bin, join(binDir, "sati"));
     const other = await tempRepo();
     const found = run(other, ["init", "--yes", "--tools", "claude-code"], {

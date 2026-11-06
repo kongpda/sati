@@ -3,6 +3,8 @@ import { CLI_NAME } from "./name.js";
 /**
  * The full agent workflow: served as `sati://workflow` over MCP and written as the Claude Code
  * skill. The rules block in AGENTS.md points here.
+ *
+ * Generated from docs/guide/agent-workflow.md by scripts/gen-workflow.mjs. Edit the doc, not this.
  */
 export const WORKFLOW = `# ${CLI_NAME} workflow
 

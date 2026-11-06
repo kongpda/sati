@@ -535,7 +535,7 @@ Verify: an e2e test for the loop and a concurrency test for `sati next`.
 - [x] `sati doctor` (stale leases, orphan locks, DB integrity check, hook health, VACUUM)
 - [x] Backup and restore (`sati export --all`, `sati import`)
 - [x] Migration safety: automatic DB backup before each schema migration
-- [ ] Docs site: quick start, agent workflow, guard rules, FAQ; `sati://workflow` resource generated from it
+- [x] Docs site: quick start, agent workflow, guard rules, FAQ; `sati://workflow` resource generated from it
 - [x] Security review against the Security checklist; fuzz the JSON importer
 - [x] `sati review <branch>`: features touched, decisions recorded and guard warnings before merge
 - [x] `sati scan`: propose features from folders and routes for an existing codebase

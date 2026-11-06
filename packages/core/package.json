@@ -16,7 +16,8 @@
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage"
+    "test": "vitest run --coverage",
+    "gen:workflow": "node scripts/gen-workflow.mjs"
   },
   "dependencies": {
     "micromatch": "4.0.8",

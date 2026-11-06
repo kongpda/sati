@@ -637,3 +637,19 @@ until the `pele` licence is checked. Playwright, axe, and the 2,000-card frame b
   stamp, the later stamp wins even if its value matches the base. Text and list fields still
   merge three-way. Covered by a unit test in `packages/sync/test/merge.test.ts`; both seeds pass
   at 1,000 steps.
+
+### Mermaid diagrams with pele (2026-11-07)
+
+- `pele` 1.9.1 is MIT licensed and has no runtime dependencies, so the licence blocker is
+  cleared. 1.9.1 is the newest release that is at least two weeks old.
+- A fenced `mermaid` block in a note, decision or task body renders as SVG
+  (`packages/ui/src/mermaid.tsx`). `markdown.tsx` now splits the source by fences first, so a
+  code block keeps its blank lines and an unclosed fence still shows its text.
+- pele loads through a dynamic `import("pele/lazy")` behind `React.lazy`. The entry chunk stays
+  at 93.9 KB gzip, and pele's parser is only in the lazy chunk.
+- The UI CSP has `style-src 'self'`. pele writes `style` attributes, and Chrome blocks them at
+  parse time, even in a `DOMParser` document. So each `style="` inside a tag is renamed to
+  `data-pele-style` before parsing and then set through CSSOM, which the CSP allows. Checked in
+  Chrome: no `securitypolicyviolation` events, and the diagram picks up the theme.
+- The `--pele-*` variables map to the UI tokens in `.mermaid` (`styles.css`), so dark mode
+  follows. A parse error shows inline with the source, as a `role="alert"` caption.

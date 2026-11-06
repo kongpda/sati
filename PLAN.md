@@ -523,7 +523,7 @@ Verify: an e2e test for the loop and a concurrency test for `sati next`.
 - [x] Board with drag and drop, swimlanes, filters, bulk edit, virtualisation
 - [x] Task detail panel, Agents view, Features registry with path preview
 - [x] Roadmap timeline, Notes editor with backlinks, Decisions, Activity
-- [ ] Mermaid diagrams in Markdown (notes, decisions, task bodies) rendered with `pele`: lazy-loaded so it stays out of the first-load bundle, `--pele-*` variables mapped to the UI design tokens, render errors shown inline instead of breaking the note
+- [x] Mermaid diagrams in Markdown (notes, decisions, task bodies) rendered with `pele`: lazy-loaded so it stays out of the first-load bundle, `--pele-*` variables mapped to the UI design tokens, render errors shown inline instead of breaking the note
 - [x] Optimistic updates with rollback; live highlight on agent changes
 - [ ] Accessibility audit (axe + manual keyboard and screen-reader pass)
 - [ ] Playwright tests for the main flows

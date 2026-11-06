@@ -157,6 +157,9 @@ importers:
       '@tanstack/react-virtual':
         specifier: 3.13.12
         version: 3.13.12(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      pele:
+        specifier: 1.9.1
+        version: 1.9.1
       react:
         specifier: 19.2.0
         version: 19.2.0
@@ -2287,6 +2290,10 @@ packages:
   path-to-regexp@8.4.2:
     resolution: {integrity: sha512-qRcuIdP69NPm4qbACK+aDogI5CBDMi1jKe0ry5rSQJz8JVLsC7jV8XpiJjGRLLol3N+R5ihGYcrPLTno6pAdBA==}
 
+  pele@1.9.1:
+    resolution: {integrity: sha512-fZTPmzJrle/O605TlBM36TrWStof07+TzaXRIQWoxqRgds34MMpNXbaXGzGwQc3f86Xavdc/TJtM2fZIZPe+qQ==}
+    engines: {node: '>=20'}
+
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
@@ -4369,6 +4376,8 @@ snapshots:
   path-key@3.1.1: {}
 
   path-to-regexp@8.4.2: {}
+
+  pele@1.9.1: {}
 
   picocolors@1.1.1: {}
 

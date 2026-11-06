@@ -264,6 +264,8 @@ export function listenUi(
         close: () =>
           new Promise((done, fail) => {
             (server as Server).close((err) => (err ? fail(err) : done()));
+            // Open event streams and keep-alive sockets would hold close() open forever.
+            (server as Server).closeAllConnections();
           }),
       });
     });

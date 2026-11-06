@@ -37,7 +37,12 @@ export default defineCommand({
   meta: { name: "ui", description: "Open the local board in a browser" },
   args: {
     port: { type: "string", description: "Port on 127.0.0.1 (default: a free port)" },
-    "no-open": { type: "boolean", description: "Print the URL without opening a browser" },
+    // citty reads `--no-open` as `open: false`, so the flag is declared as `open`.
+    open: {
+      type: "boolean",
+      default: true,
+      description: "Open a browser (--no-open prints the URL only)",
+    },
   },
   run: async ({ args }) => {
     try {
@@ -51,7 +56,7 @@ export default defineCommand({
       const server = await listenUi(app, port);
       const url = `http://127.0.0.1:${server.port}/session?token=${token}`;
       process.stdout.write(`${CLI_NAME} ui on ${url}\n`);
-      if (!args["no-open"]) openBrowser(url);
+      if (args.open !== false) openBrowser(url);
       const stop = () => {
         void server.close().finally(() => closeRuntime());
       };

@@ -462,6 +462,10 @@ textarea {
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
+  /* The bar scrolls sideways; a two-word label must not wrap and make it taller. */
+  .nav a {
+    white-space: nowrap;
+  }
   .brand {
     display: none;
   }
@@ -785,5 +789,45 @@ button.danger {
 }
 .sheet form.checklist-add .field {
   flex: 1;
+  min-width: 0;
+}
+
+/* My work: three short lists, each task a link with its state under it. */
+.my-section {
+  margin-bottom: 20px;
+}
+.my-section h2 {
+  font-size: 15px;
+  font-weight: 650;
+  margin: 0 0 8px;
+}
+.my-section .count {
+  color: var(--muted);
+  font-weight: 400;
+}
+.row button.row-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-weight: 700;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.row button.row-link:hover {
+  text-decoration: underline;
+}
+.row .summary {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+.approval-actions,
+.send-back {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.my-section form.send-back .field {
+  flex: 1 1 200px;
   min-width: 0;
 }

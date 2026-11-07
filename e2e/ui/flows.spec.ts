@@ -171,7 +171,16 @@ test("renders Mermaid in notes without CSP violations", async ({ page }) => {
 test("every page loads and marks itself current", async ({ page }) => {
   const problems = await watch(page);
   await page.goto(ui.signIn);
-  for (const name of ["Agents", "Roadmap", "Features", "Notes", "Decisions", "Activity", "Board"]) {
+  for (const name of [
+    "My work",
+    "Agents",
+    "Roadmap",
+    "Features",
+    "Notes",
+    "Decisions",
+    "Activity",
+    "Board",
+  ]) {
     await page.getByRole("link", { name, exact: true }).click();
     await expect(page.getByRole("link", { name, exact: true })).toHaveAttribute(
       "aria-current",
@@ -369,5 +378,55 @@ test("plans a task with a due date, an assignee and a checklist", async ({ page 
     ],
   });
   expect(ui.sati<unknown[]>("task", "list", "--due-by", "2026-12-31")).toEqual([]);
+  expect(await problems()).toEqual([]);
+});
+
+// PLAN Phase 7a: "My work" lists what waits for me: approvals, my tasks, then what is due.
+test("My work lists approvals, my tasks and this week's, and approves or sends back", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  const { you } = await ui.api<{ you: string }>("GET", "/api/snapshot");
+  ui.sati("settings", "--review", "all");
+  const reviewed: string[] = [];
+  for (const title of ["Proof the flyer", "Check the guest list"]) {
+    const t = await ui.api<{ id: string }>("POST", "/api/tasks", { title });
+    ui.sati("task", "claim", t.id);
+    ui.sati("task", "complete", t.id, "--summary", `Did ${title}`, "--files", "notes/a.md");
+    reviewed.push(t.id);
+  }
+  ui.sati("settings", "--review", "agents");
+  await ui.api("POST", "/api/tasks", { title: "Call the caterer", assigneeIds: [you] });
+  const soon = new Date();
+  const day = `${soon.getFullYear()}-${String(soon.getMonth() + 1).padStart(2, "0")}-${String(soon.getDate()).padStart(2, "0")}`;
+  await ui.api("POST", "/api/tasks", { title: "Pay the deposit", dueDate: day });
+  await ui.api("POST", "/api/tasks", { title: "Plan next year", dueDate: "2099-01-01" });
+
+  await page.goto(ui.signIn);
+  await page.getByRole("link", { name: "My work", exact: true }).click();
+  const approval = page.getByRole("region", { name: "Waiting for your approval" });
+  const assigned = page.getByRole("region", { name: "Assigned to you" });
+  const due = page.getByRole("region", { name: /^Due by / });
+  await expect(approval).toContainText("Did Proof the flyer");
+  await expect(assigned).toContainText("Call the caterer");
+  await expect(due).toContainText("Pay the deposit");
+  await expect(page.getByText("Plan next year")).toHaveCount(0);
+
+  await approval.getByRole("button", { name: "Approve Proof the flyer" }).click();
+  await expect(page.getByRole("status")).toContainText("Approved Proof the flyer.");
+  await expect(approval).not.toContainText("Proof the flyer");
+
+  // Sending back needs a reason; the next claimer sees it.
+  await approval.getByRole("button", { name: "Send back Check the guest list" }).click();
+  await approval.getByLabel("Why Check the guest list needs more work").fill("Add the press list.");
+  await approval.getByRole("button", { name: "Send back", exact: true }).click();
+  await expect(approval).toContainText("Nothing to approve.");
+  const back = ui.sati<{ status: string; reviewNote: string }>("task", "show", reviewed[1] ?? "");
+  expect(back).toMatchObject({ status: "todo", reviewNote: "Add the press list." });
+  expect(ui.sati<{ status: string }>("task", "show", reviewed[0] ?? "").status).toBe("done");
+
+  // A title opens the task panel over the page.
+  await assigned.getByRole("button", { name: "Call the caterer" }).click();
+  await expect(page.getByRole("dialog", { name: "Call the caterer" })).toBeVisible();
   expect(await problems()).toEqual([]);
 });

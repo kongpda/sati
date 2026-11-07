@@ -891,3 +891,20 @@ fixed the same bug (undo of shortened text, subtask cycles, 400 for bad JSON, th
   checklist, where ticks show at once and revert if the save is refused. Cards show
   "due Tue, Dec 1" (clay with "late" once it passed and the task is open) and "1/3 steps".
 - Checked in Chrome at 1280 and 375 px.
+
+### Phase 7a: My work page (2026-11-07)
+
+- `/my-work`, second in the nav. Three lists, each task shown once in the first it fits.
+- Order choice: approvals come first, not last as the plan listed them. They are the only
+  list where work is blocked on this person, and an agent waits on each one.
+- "Waiting for your approval": tasks in review assigned to you or to nobody. Any person may
+  approve in core, so an unassigned review task is everyone's; one assigned to someone else is
+  theirs. Your own completed work is not left out: with `--review all` a solo owner asked for it.
+  Each row shows who finished it, the summary and the file count, with Approve (review → done)
+  and Send back, which needs a reason that becomes the task's review note for the next claimer.
+- "Assigned to you": open tasks, soonest due first, undated last, then priority.
+- "Due by Sunday": open tasks due on or before the coming Sunday in local time (late ones
+  included); the heading names the day.
+- The phone nav kept "My work" on two lines, which made the bar taller and made the Activity
+  page scroll, so axe flagged it; nav labels now stay on one line.
+- Checked in Chrome at 1280 and 375 px.

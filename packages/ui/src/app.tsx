@@ -3,10 +3,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, api, COLUMNS, type Deletable, type Snapshot } from "./api.js";
 import { Board } from "./board.js";
 import { NewTask } from "./forms.js";
+import { MyWork } from "./my-work.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
 
 const PAGES = [
   ["/", "Board"],
+  ["/my-work", "My work"],
   ["/agents", "Agents"],
   ["/roadmap", "Roadmap"],
   ["/features", "Features"],
@@ -424,6 +426,27 @@ export function App() {
               />
             )}
           </>
+        ) : null}
+        {data && path === "/my-work" ? (
+          <MyWork
+            data={data}
+            onOpen={(id) => go(path, id)}
+            onApprove={(t) =>
+              void api
+                .patchTask(t.id, { status: "done", expectedVersion: t.version })
+                .then(() => saved(`Approved ${t.title}.`))
+                .catch(fail)
+            }
+            onSendBack={(t, reason) =>
+              api
+                .patchTask(t.id, { status: "todo", reason, expectedVersion: t.version })
+                .then(() => saved(`Sent ${t.title} back to todo.`))
+                .catch((err: unknown) => {
+                  fail(err);
+                  throw err;
+                })
+            }
+          />
         ) : null}
         {data && path === "/agents" ? (
           <Agents

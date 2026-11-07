@@ -14,7 +14,7 @@ export interface Task {
   updatedAt: string;
   claim: Claim | null;
   needsReview?: boolean;
-  completion: { summary: string; filesTouched: string[] } | null;
+  completion: { summary: string; filesTouched: string[]; completedBy: string } | null;
   dueDate?: string | null;
   assigneeIds?: string[];
   checklist?: { text: string; done: boolean }[];

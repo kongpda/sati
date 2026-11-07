@@ -36,7 +36,16 @@ test.afterAll(async () => {
   await ui?.stop();
 });
 
-const PAGES = ["/", "/agents", "/roadmap", "/features", "/notes", "/decisions", "/activity"];
+const PAGES = [
+  "/",
+  "/my-work",
+  "/agents",
+  "/roadmap",
+  "/features",
+  "/notes",
+  "/decisions",
+  "/activity",
+];
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
 for (const [device, viewport] of [
@@ -110,7 +119,7 @@ for (const [device, viewport] of [
 }
 
 function navName(path: string): string {
-  const name = path.slice(1);
+  const name = path.slice(1).replaceAll("-", " ");
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 

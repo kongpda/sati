@@ -544,6 +544,51 @@ Verify: an e2e test for the loop and a concurrency test for `sati next`.
 
 **Gate:** v1.0.0 on npm; install-to-first-task under 2 minutes on a fresh machine.
 
+### Phase 5b — Deep review fixes (2026-11-07)
+
+Added 2026-11-07 at the owner's request, after a full review of core, store, CLI, sync, MCP and UI. It builds on the polish pass in `d42377f`; items that commit already fixed are marked as such. Items marked done have a regression test that fails without the fix; the rest are still open. Details are in `docs/progress.md`.
+
+**Fixed**
+
+- [x] CLI and UI tests wrote sati hooks into the developer's global `core.hooksPath` folder; tests now ignore the global and system git config
+- [x] `sati undo` replaced text over 200 characters with the placeholder `<N chars>` from the activity log; it now refuses (fixed in `d42377f`)
+- [x] `sati undo` could replay a claim, release, completion or lock, or edit a task another actor holds, skipping fencing and overlap checks; it now refuses
+- [x] `task_create` with `subtasks[]` accepted dependency cycles; it now rejects them (fixed in `d42377f`)
+- [x] The Bash `PreToolUse` guard missed `git mv`, `/bin/rm`, `(rm …)`, `cd dir && rm`, `mv -t`, `unlink`, `sh -c "…"`, `git -C dir rm` and moves out of the repo; it now reads them, and `git rm --cached` no longer counts as a delete
+- [x] The `PreToolUse` hook now blocks `git commit --no-verify` / `-n`, `git push --no-verify` and `-c core.hooksPath=…`, which the prefix deny rule missed
+- [x] `sati settings --no-auto-continue` did nothing (citty flag naming; fixed in `d42377f`)
+- [x] Comma-separated flags split brace globs such as `src/{a,b}/**`
+- [x] The merge driver turned `needsReview` back on after a teammate had cleared it
+- [x] The UI API returned 500 for a body that is not JSON; it now returns 400 (fixed in `d42377f`). `/api/search` now caps `q` at 500 characters
+- [x] Live updates missed writes made through the same `sati ui` server, so a second tab or phone never refreshed
+- [x] The task panel kept the previous task's fields after `j`/`k`, and could overwrite an agent's newer edit (fixed in `d42377f`)
+- [x] Ctrl/Cmd/Alt chords such as Ctrl+C fired board shortcuts (Esc in a field was fixed in `d42377f`)
+- [x] A person could not approve work in review from the UI; review → done now works from the board and the panel
+- [x] Markdown: bold and italic (headings, numbered lists and styling were fixed in `d42377f`)
+- [x] UI tests in `flows.spec.ts` broke on the new card buttons, toast and kept selection; updated
+- [x] The secret scanner blocked `MAX_TOKENS=100000` and `SORT_KEY=created_at_desc`, and missed passwords in URLs, npm and GitLab tokens
+
+**Still open**
+
+- [ ] Normalise timestamps to millisecond precision on parse; several lease and claim checks compare ISO strings, which breaks for `…T00:00:00Z`
+- [ ] Fencing token is the task version and readable by anyone; bind it to the claiming actor and refuse completion under an expired claim
+- [ ] A person cannot move or edit a claimed task in the UI (no token); add per-task "take over" and "release", logged with the actor
+- [ ] Moving a task to `in_progress` through `task update` leaves it with no claim; claim it for the caller instead
+- [ ] Owner decision: a deleted or cancelled dependency blocks its dependents forever (PLAN requires `done`); options are in `docs/ideas.md`
+- [ ] `importRecords` skips dependency-cycle and link checks
+- [ ] Size limits count characters, not bytes (100,000 Khmer characters is about 300 KB), and a `subtasks[]` batch has no total cap
+- [ ] The brief can exceed `maxTokens` with long actor names and many sections; clip the header and drop empty sections
+- [ ] FTS drops punctuation inside a term (`v1.2` searches `v12`); split on it instead
+- [ ] MCP `feature_upsert` advertises the update schema for creates; `feature_check` rejects absolute and `./` paths
+- [ ] `sati init` chains into a global `core.hooksPath`, which changes every repo on the machine; say so in the plan and ask first. It also re-sorts the keys of an existing `.claude/settings.json`
+- [ ] `chainInto` adds an sh block to hooks with another interpreter (`#!/usr/bin/env node`)
+- [ ] UI: `j`/`k` follows snapshot order, not board order, and does not update `?task=`; the Features path field has the same lost-edit problem as the task panel had
+- [ ] UI: bundle a Noto Sans Khmer subset (the CSP blocks web fonts, so it is named but never loads), add "Khmer UI", and set `lang` from the content
+- [ ] UI at 375 px: the single-column default is chosen only at load, "All columns" scrolls sideways, and the nav hides Notes, Decisions and Activity with no hint
+- [ ] UI: serve an HTML page (not JSON) for a stale session
+
+**Gate:** every open item above is fixed with a regression test, or moved to `docs/ideas.md` with a reason.
+
 ### Phase 6 — Hosted mode (deferred to v2)
 
 Deferred by the owner on 2026-11-07: v1 stays local-first. See `docs/progress.md`.
@@ -556,6 +601,41 @@ Deferred by the owner on 2026-11-07: v1 stays local-first. See `docs/progress.md
 - [ ] Load test: 50 agents across 10 projects writing concurrently
 
 **Gate:** two machines and two people work on one project through the hosted server with no lost updates.
+
+### Phase 7 — Team brain: sati for developers, office, events and marketing
+
+Added 2026-11-07 at the owner's request: sati should be the shared brain of the whole team, not only of developers and their agents. The full reasoning, personas and examples are in [`docs/team-brain.md`](docs/team-brain.md). Phase 7a and 7b build on the local app and need no server; Phase 7c needs Phase 6.
+
+**Positioning.** sati stays the team's *memory*: what we decided and why, what we know, who (person or agent) is doing what, and what is due. It does not become a full project-management suite: no Gantt dependencies, time tracking, budgets or invoicing. That keeps the non-goal of not replacing Linear and GitHub Issues for client work.
+
+**Phase 7a — People first in the local app**
+
+- [ ] Project kind `code` (default) or `general`. A general project hides Features, path locks, the guard and the Agents page, and needs no git; it uses the standalone store
+- [ ] People: a human actor gets a display name, initials and a colour, editable in Settings; the UI never shows `user@worktree`
+- [ ] Task fields `dueDate` (date), `assigneeIds[]` (people or agents, separate from the claim) and `checklist[]` (text, done); MCP and CLI accept them; the snapshot `schemaVersion` goes up with a migration
+- [ ] Comments: a new `comment` entity on tasks, notes and decisions (author, Markdown body), exported to `.sati/` and searchable; `sati handoff` writes one
+- [ ] Create and edit everything in the UI: a visible "New task" button with priority, labels, due date and assignees; milestone create and edit on the Roadmap; decision create; note edit, tags and pin
+- [ ] "My work" page: tasks assigned to me, then due this week, then waiting for my approval
+- [ ] Plain words in the UI: "working on it" for a claim, "waiting for approval" for review, "until 14:32" in local time; one glossary in the docs, with no change to CLI or MCP terms
+- [ ] Khmer and English UI strings (`Intl` dates and numbers, `lang` per note), the bundled Khmer font, and line-height for Khmer script
+
+**Phase 7b — The brain for every agent**
+
+- [ ] MCP `note_upsert` and `note_get`, so agents can write and read the memory, not only search it (17 tools; update the Agent integration table)
+- [ ] `sati ask "<question>"` and MCP `ask`: return the most relevant notes, decisions and tasks with their IDs, ranked by FTS, for any assistant to answer from. No model is bundled; the caller's agent writes the answer
+- [ ] Templates: `sati template apply event|campaign|release` creates a milestone with a task chain from a Markdown file in `.sati/templates/`; ship three starters (event, marketing campaign, product release)
+- [ ] Weekly digest: `sati digest --since 7d` in Markdown — done, decided, due next and blocked — to paste into email or chat
+- [ ] Calendar export: `sati calendar export` writes an `.ics` of due dates and milestone targets (read-only; no two-way sync)
+
+**Phase 7c — Without a terminal (needs Phase 6)**
+
+- [ ] Team server: the Phase 6 Docker image serves the UI to signed-in teammates, with email sign-in for people who have no GitHub account
+- [ ] Remote MCP (Streamable HTTP) with a per-person token, so Claude Desktop, ChatGPT and other assistants can use the team brain from a laptop with no repo
+- [ ] Notifications: an in-app inbox for mentions, assignments, approvals and due dates, then email and Telegram
+- [ ] Desktop launcher: a signed app or `npx sati app` that starts the local server and opens it, for one-person use without a terminal
+- [ ] Attachments as links (Drive, Figma, Canva) with a preview title; no file storage in v1 of the team server
+
+**Gate:** a non-developer, given only a URL and a sign-in email, plans a 20-task event from the `event` template, assigns tasks to three people and one agent, approves the agent's work and finds last month's decision about the venue by asking in Khmer or English, without opening a terminal. The developer flows (claims, locks, guard, brief size, all performance budgets) still pass unchanged.
 
 ## Testing, CI and release
 

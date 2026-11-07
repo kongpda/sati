@@ -735,3 +735,40 @@ until the `pele` licence is checked. Playwright, axe, and the 2,000-card frame b
 - Deferred: Windows paths in guard, a `--no-verify` deny-list, UI token rotation, project registry
   slug collisions, a guard hook pre-filter, lefthook-local overwrite, `findBySuffix` project
   scoping, card memoisation, routing 404s, and tests for the new markdown and shortcut behaviour.
+## Deep review and fixes (2026-11-07)
+
+The owner asked for a full review, bug fixes and a plan for non-developer users. Three review
+passes covered core and store, CLI, sync and MCP, and the UI. Each fix below has a regression
+test that fails on the old code. The open bugs and the team plan are PLAN Phase 5b and Phase 7;
+the reasoning is in `docs/team-brain.md`. Rebased onto the polish pass (`d42377f`): where both
+fixed the same bug (undo of shortened text, subtask cycles, 400 for bad JSON, the
+`--no-auto-continue` flag) the polish pass's version is kept.
+
+- **Test isolation.** In an orb whose `~/.gitconfig` sets `core.hooksPath`, `pnpm test` chained
+  sati hooks into that global folder and 6 tests failed. `packages/cli/vitest.config.ts` and the
+  Playwright harness now set `GIT_CONFIG_GLOBAL` to the null device and `GIT_CONFIG_NOSYSTEM=1`,
+  with a git identity from the environment.
+- **Undo.** On top of the refusal of shortened text, undo now refuses claim, release, complete
+  and lock activities, and a task another actor holds, because replaying them skips the fencing
+  and overlap checks.
+- **Bash guard.** `parseShellChanges` now resolves the command word's basename, strips subshell
+  parentheses, follows `cd`/`pushd` (an unknown target such as `cd -` resets to the start
+  folder), reads `git mv`, `git -C`, `mv -t`, `unlink` and `sh -c`, and skips `git rm --cached`.
+  The hook treats a move out of the repo as a delete. `hookBypass` blocks `--no-verify`, `-n` in
+  a `git commit` short-flag group (stopping at a value flag such as `-m`, so `-mnew` passes) and
+  `-c core.hooksPath=`; `git push -n` is a dry run and passes. `SATI_GUARD=off` still overrides.
+- **Merge.** `needsReview` merges three-way: a side that cleared it after review wins over a side
+  that left it, unless the merge itself conflicts.
+- **UI server.** Writes made through the server bump an in-process counter added to
+  `PRAGMA data_version`, so `/events` fires for them. Checked in Chrome with two sessions: the
+  second tab showed a status change made in the first within 1.5 s.
+- **UI.** A task in review can be moved to done by a person, on the board and in the panel (the
+  server already allowed it). Chords with Ctrl, Cmd or Alt no longer fire board letters, and
+  contentEditable counts as typing. Markdown gained bold and italic.
+- **UI tests.** `flows.spec.ts` failed on `d42377f` itself: the new drag handle and select
+  buttons made card locators match three buttons (now `exact: true`), the bulk-move toast is now
+  a summary, and refused tasks stay selected. `pnpm test:ui` passes 23/23 (axe clean, 2,000-card
+  board at 60 fps).
+- **Secret scanner.** All-digit values and identifier-like `*_KEY` values pass; URL passwords
+  (except placeholders and the literal words password, pass and secret), npm and GitLab tokens
+  are found.

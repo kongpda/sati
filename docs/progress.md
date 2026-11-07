@@ -1126,7 +1126,8 @@ notes only when the caller holds a task; handoffs stay out of it, as before.
 - Hooks: init leaves a global `core.hooksPath` outside the repo alone unless asked (wizard
   question, or `--global-hooks`), and says so in its output; a hook in another language is left
   byte-identical with a note. `.claude/settings.json` keeps its key order: the merge checks the
-  shape with Zod but edits the original objects, since Zod output puts known keys first.- UI: the board's columns and lanes come from one function (`boardColumns`), which j/k reads
+  shape with Zod but edits the original objects, since Zod output puts known keys first.
+- UI: the board's columns and lanes come from one function (`boardColumns`), which j/k reads
   too, so keyboard order is screen order. j/k open cards through the URL, so Back and Forward
   work, and they work from the open panel's heading. The Features paths field is keyed by its
   paths, as the task panel's form is by its fields: typing survives refreshes, and a change made
@@ -1134,3 +1135,36 @@ notes only when the caller holds a task; handoffs stay out of it, as before.
   old text back). Phones switch between one and all columns with a width listener; the stale
   session page is a 401 HTML page for page requests only.
 
+## 2026-11-07 — Phase 7b: what changed, changelogs and feature lists
+
+- `task_complete` takes an optional `releaseNote` (one line, at most a title's length). It lives
+  in the task's completion, which the snapshot already carries, so `.sati/` files gain the key
+  only on tasks that use it.
+- `listChanges` (core) reads the records, not the activity log: done tasks by `completedAt`,
+  features by the clock stamp on `status`, decisions by `createdAt`, notes by `updatedAt`
+  (comments and handoffs left out). Activity rows stay machine-local, so a log-based list would
+  miss everything a teammate pushed; the records come through git with their stamps. A new
+  `updatedSince` list filter uses the existing `(project_id, updated_at)` index.
+- `since`: a day, a UTC time, `24h`/`7d`/`2w`, `last-session`, or a done milestone (from when
+  its status became done). Anything else is a VALIDATION error naming the forms.
+- Last session (decision recorded in sati): the caller's previous last write, from activity, not
+  counting sati's own writes (`import`, `release`, `init`). An agent gets a new actor per session
+  (`claude-code@repo#a1b2`), so its sessions are the actors with the same name before `#`, and
+  its current session is skipped. No new field or `brief` verb: every input already exists, and
+  a brief that wrote a row would move the mark on every read. The brief reads the mark before it
+  releases expired claims, which are writes in the holder's name.
+- The brief's "Since your last session" shows up to 5 changes by others, with who and when, and a
+  pointer to `sati changes --since last-session` for the rest. It sits above recent decisions,
+  so the fit drops it before the task sections. With no earlier session it is left out.
+- Formats are text renderers of one result (`formatChanges`): `plain` grouped by milestone with
+  blocked and overdue tasks; `changelog` as Added / Changed / Fixed / Removed from labels
+  (`bug`/`fix` → Fixed, `feature`/`new` → Added, `removed` → Removed, else Changed) and feature
+  status (shipped → Added, removed → Removed, deprecated → Changed), oldest first, without
+  tasks labelled `internal`; `digest` as counts, shipped features, top 5 done, top 3 decisions
+  and what needs attention. Each list is capped so a long window stays readable.
+- `sati feature list --format md` prints shipped and deprecated features with the first paragraph
+  of the description and the acceptance criteria, by milestone.
+- MCP `changes` returns text, like the brief (18 tools). The board's Changes page calls
+  `GET /api/changes` and `GET /api/feature-list`, which run the same core functions, and groups
+  the timeline by the reader's local day. Copy uses the Clipboard API (127.0.0.1 is a secure
+  context); a refusal shows in the toast.

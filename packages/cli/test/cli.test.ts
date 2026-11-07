@@ -100,6 +100,40 @@ describe("sati CLI", () => {
     expect(satiJson(dir, "brief", "--format", "long").code).toBe(5);
   });
 
+  it("writes a changelog from release notes and a feature list from shipped features", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = satiJson<Rec>(dir, "task", "create", "Card crash", "--labels", "bug").data;
+    sati(dir, "task", "update", t.id, "--status", "in_progress");
+    const done = satiJson<Rec>(
+      dir,
+      "task",
+      "complete",
+      t.id,
+      "--summary",
+      "Guarded null card",
+      "--release-note",
+      "Paying by card no longer crashes",
+      "--files",
+      "src/pay.ts",
+    );
+    expect(done.data.completion).toMatchObject({ releaseNote: "Paying by card no longer crashes" });
+    const log = sati(dir, "changes", "--format", "changelog");
+    expect(log.code).toBe(0);
+    expect(log.stdout).toContain("### Fixed\n- Paying by card no longer crashes");
+    // A person's last session ends at their last write; a teammate's work after it is news.
+    run(dir, ["decision", "record", "Ship on Friday", "--decision", "x"], { SATI_ACTOR: "kong" });
+    const news = sati(dir, "changes", "--since", "last-session").stdout;
+    expect(news).toContain("Ship on Friday");
+    expect(news).not.toContain("Guarded null card");
+    expect(sati(dir, "changes", "--since", "soon").code).toBe(5);
+    expect(sati(dir, "changes", "--format", "pdf").code).toBe(5);
+
+    sati(dir, "feature", "create", "Search", "--status", "shipped", "--acceptance", "Typos match");
+    const md = sati(dir, "feature", "list", "--format", "md");
+    expect(md.stdout).toBe("# Demo features\n\n### Search\n\n- Typos match\n");
+    expect(sati(dir, "feature", "list", "--format", "csv").code).toBe(2);
+  });
+
   // The Stop hook blocks once while the agent holds a claim, then lets the stop through.
   it("nudge blocks a stop while the caller holds a task, once", async () => {
     const dir = await tempRepo({ init: true });

@@ -25,6 +25,9 @@ scripts and agents do not break. This table maps one to the other; the board's w
 | Software project, General project | `kind: code`, `kind: general` (`sati settings --kind`) | A general project (an event, a campaign) has no features, file reservations or guard. |
 | Due date, Assigned to, Checklist | `dueDate`, `assigneeIds`, `checklist` | Planning fields on a task. |
 | Comments | a note tagged `comment`, linked to the record (`sati comment add`) | A reply on a task, note or decision. Agents see the newest one by someone else on their task in the brief. |
+| Changes, Copy changelog | `sati changes --format changelog`, MCP `changes` | What changed in a time range. The changelog uses each task's release note (`--release-note`), falling back to its summary, and leaves out tasks labelled `internal`. |
+| Since my last visit | `--since last-session` | From your previous session's last write; for an agent, its previous session with the same name. |
+| Copy feature list | `sati feature list --format md` | Shipped features with their acceptance criteria, by plan. |
 
 Times on the board are in your own time zone and clock style, with the full date in the
 tooltip. Due dates are calendar days ("by Friday") and never shift between time zones.

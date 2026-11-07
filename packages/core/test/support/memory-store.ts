@@ -92,6 +92,8 @@ export class MemoryStore implements StorageAdapter {
           rows = rows.filter((r) =>
             ((r.assigneeIds as string[] | undefined) ?? []).includes(q.assigneeId ?? ""),
           );
+        if (q.updatedSince)
+          rows = rows.filter((r) => String(r.updatedAt) >= (q.updatedSince ?? ""));
         if (q.newestFirst) rows = rows.reverse();
         const start = q.offset ?? 0;
         return rows.slice(start, start + (q.limit ?? 50)).map(clone) as never;

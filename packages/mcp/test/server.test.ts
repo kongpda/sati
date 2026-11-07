@@ -14,6 +14,7 @@ import {
   initProject,
   type ServiceContext,
   shortHandle,
+  updateSettings,
   updateTask,
   WORKFLOW,
 } from "@sati/core";
@@ -68,6 +69,7 @@ describe("MCP server", () => {
     const client = await connect();
     const tools = (await client.listTools()).tools.map((t) => t.name).sort();
     expect(tools).toEqual([
+      "changes",
       "context_get",
       "context_put",
       "decision_record",
@@ -225,6 +227,32 @@ describe("MCP server", () => {
     const activity = await store.read((r) => r.listActivity(ctx.projectId));
     const verbs = activity.filter((a) => a.entityId === created.body.id).map((a) => a.verb);
     expect(verbs.sort()).toEqual(["claim", "complete", "create", "update"]);
+  });
+
+  // PLAN Phase 7b: "write the changelog for v1" is one call, with the release note first.
+  it("answers what changed as text, as a changelog when asked", async () => {
+    await updateSettings(ctx, { review: "none" });
+    const v1 = await createMilestone(ctx, { title: "v1" });
+    const t = await createTask(ctx, { title: "Export", milestoneId: v1.id, labels: ["feature"] });
+    const client = await connect();
+    const claimed = await call(client, "task_claim", { id: t.id });
+    await call(client, "task_complete", {
+      id: t.id,
+      summary: "CSV writer",
+      releaseNote: "Export tasks to CSV",
+      filesTouched: ["src/csv.ts"],
+      token: claimed.body.claim.token,
+    });
+    const text = async (args: Record<string, unknown>) => {
+      const res = await client.callTool({ name: "changes", arguments: args });
+      return { isError: res.isError === true, text: (res.content as { text: string }[])[0]?.text };
+    };
+    const log = await text({ milestoneId: shortHandle(v1.id), format: "changelog" });
+    expect(log.text).toBe("## v1\n\n### Added\n- Export tasks to CSV\n");
+    expect((await text({})).text).toContain("CSV writer");
+    const bad = await text({ since: "whenever" });
+    expect(bad.isError).toBe(true);
+    expect(bad.text).toContain("VALIDATION");
   });
 
   // Two agents must never hold one task; the loser needs the holder's name to coordinate.

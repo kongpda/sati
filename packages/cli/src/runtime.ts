@@ -15,6 +15,7 @@ import {
   getProject,
   initProject,
   isSatiError,
+  listAll,
   type Project,
   type ProjectKind,
   type RepoFile,
@@ -301,6 +302,16 @@ export async function ref(
   value: string | undefined,
 ): Promise<string | undefined> {
   return value === undefined ? undefined : resolveId(ctx, entity, value);
+}
+
+/** An actor id, or the id of the actor with this name; an unknown name is passed through. */
+export async function actorRef(
+  ctx: ServiceContext,
+  value: string | undefined,
+): Promise<string | undefined> {
+  if (!value || value.startsWith("actr_")) return value;
+  const actors = await ctx.store.read((r) => listAll(r, ctx, "actor"));
+  return actors.find((a) => a.name === value || a.displayName === value)?.id ?? value;
 }
 
 export async function refs(

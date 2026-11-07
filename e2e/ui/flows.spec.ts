@@ -178,6 +178,7 @@ test("every page loads and marks itself current", async ({ page }) => {
     "Features",
     "Notes",
     "Decisions",
+    "Changes",
     "Activity",
     "Settings",
     "Board",
@@ -751,5 +752,68 @@ test("the Features paths field keeps typed text across a refresh and shows chang
     expectedVersion: saved?.version,
   });
   await expect(typed).toHaveValue("src/quay/**");
+  expect(await problems()).toEqual([]);
+});
+
+// PLAN Phase 7b: a person reads what changed and copies the changelog without a terminal.
+test("Changes shows done work by day, filters it and copies the changelog", async ({
+  page,
+  context,
+}) => {
+  const problems = await watch(page);
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: ui.origin });
+  ui.sati("settings", "--review", "none");
+  const plan = ui.sati<{ id: string }>("milestone", "create", "Spring fair");
+  const done = (title: string, note: string, extra: string[] = []) => {
+    const t = ui.sati<{ id: string }>("task", "create", title, ...extra);
+    ui.sati("task", "claim", t.id);
+    ui.sati(
+      "task",
+      "complete",
+      t.id,
+      "--summary",
+      `Did ${title}`,
+      "--release-note",
+      note,
+      "--files",
+      "fair/plan.md",
+    );
+    return t.id;
+  };
+  done("Print the flyers", "Flyers are at the front desk", [
+    "--milestone",
+    plan.id,
+    "--labels",
+    "feature",
+  ]);
+  done("Fix the ticket link", "The ticket link works again", ["--labels", "bug"]);
+  done("Rotate keys", "Keys rotated", ["--labels", "internal"]);
+
+  await page.goto(ui.signIn);
+  await page.getByRole("link", { name: "Changes", exact: true }).click();
+  const today = page.getByRole("region", { name: "Today" });
+  await expect(today.getByText("Flyers are at the front desk")).toBeVisible();
+  await expect(today.getByText("The ticket link works again")).toBeVisible();
+
+  // The plan filter keeps only that plan's work, and the changelog follows it.
+  await page.getByLabel("Plan").selectOption({ label: "Spring fair" });
+  await expect(today.getByText("The ticket link works again")).toHaveCount(0);
+  await page.getByRole("button", { name: "Copy changelog" }).click();
+  await expect(page.getByRole("status")).toContainText("Copied the changelog.");
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toBe("## Spring fair\n\n### Added\n- Flyers are at the front desk\n");
+
+  // Without the filter the changelog has both, and never the internal task.
+  await page.getByLabel("Plan").selectOption({ label: "All plans" });
+  await expect(today.getByText("The ticket link works again")).toBeVisible();
+  await page.getByRole("button", { name: "Copy changelog" }).click();
+  const all = await page.evaluate(() => navigator.clipboard.readText());
+  expect(all).toContain("### Fixed\n- The ticket link works again");
+  expect(all).not.toContain("Keys rotated");
+
+  // A done task opens in the task panel.
+  await today.getByRole("button", { name: "Fix the ticket link" }).click();
+  await expect(page.getByRole("dialog", { name: "Fix the ticket link" })).toBeVisible();
+  ui.sati("settings", "--review", "agents");
   expect(await problems()).toEqual([]);
 });

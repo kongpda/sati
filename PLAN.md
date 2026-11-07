@@ -185,7 +185,7 @@ Activity and locks are **not** exported to `.sati/`: they are high-churn and mac
 
 Agents use sati through a small MCP toolset, with the CLI as a fallback. Hooks enforce the important steps, because agents forget instructions but cannot skip hooks.
 
-**MCP tools (17, kept small to save context)**
+**MCP tools (18, kept small to save context)**
 
 | Tool | What it does |
 | --- | --- |
@@ -194,7 +194,7 @@ Agents use sati through a small MCP toolset, with the CLI as a fallback. Hooks e
 | `task_create` | Creates a task; searches for duplicates first and returns likely matches |
 | `task_claim` | Atomic claim with a lease; fails with the holder's name if taken. With no id, claims the top ready task |
 | `task_update` | Status, notes, progress; renews the lease |
-| `task_complete` | Requires `summary` and `filesTouched[]`; releases locks |
+| `task_complete` | Requires `summary` and `filesTouched[]` (code projects); optional `releaseNote` for changelogs; releases locks |
 | `feature_check` | Given paths or a diff, returns the features and locks they affect, with a verdict: `ok`, `warn` or `blocked` |
 | `feature_upsert` | Create or update a feature, its paths and acceptance criteria |
 | `lock_acquire` / `lock_release` | Path-glob locks with a lease |
@@ -204,6 +204,7 @@ Agents use sati through a small MCP toolset, with the CLI as a fallback. Hooks e
 | `note_upsert` | Create a note (no id) or update one (id, `expectedVersion`): title, Markdown body, tags, pinned; a new note tagged `comment` with one link is a comment on that task, note or decision |
 | `note_get` | Read one note in full by id or short handle |
 | `roadmap_upsert` | Create or update a milestone |
+| `changes` | What changed since a time, `last-session` or a done milestone; `format` plain, changelog or digest |
 
 MCP **resources**: `sati://workflow` (the rules agents follow), `sati://project/roadmap`, `sati://feature/{id}`. MCP **prompts**: `start-task`, `finish-task`, `plan-feature`.
 
@@ -666,12 +667,12 @@ A capability is not done until both ways have it, with tests on both. sati itsel
 
 **Phase 7b — Review what changed, write changelogs and feature lists**
 
-- [ ] `task_complete` takes an optional `releaseNote`: one user-facing line, separate from the developer `summary`; tasks labelled `internal` stay out of changelogs
-- [ ] Changes: `sati changes --since <date|7d|last-session|milestone>` and MCP `changes`: done tasks (summary, release note, files touched), features that moved status, decisions, new and edited notes, and what is now blocked or overdue, grouped by milestone or feature, compact, with ids
-- [ ] The brief's "Since your last session" section, which PLAN promises and the brief does not have yet: up to 5 changes by other actors since the caller's last brief, inside the 1,500-token cap
-- [ ] Changelog and digest are formats of `changes`, not commands of their own: `sati changes --since … --format changelog|digest|plain` (MCP `changes` takes `format`). `changelog` is Markdown built from release notes (falling back to summaries), grouped Added / Changed / Fixed / Removed by task label and feature status; `digest` is a short weekly summary to paste into email or chat. It prints to stdout; the agent or person decides where it goes (`> CHANGELOG.md`), because sati writes no user files
-- [ ] Feature list: `sati features --format md` prints what the product does today, from shipped features with their acceptance criteria and milestone, for READMEs, sales sheets or release pages
-- [ ] UI "Changes" page: a timeline by day (done, decided, shipped, changed), filters by date, milestone, person or agent, and "Copy changelog" / "Copy feature list" buttons using the same generators
+- [x] `task_complete` takes an optional `releaseNote`: one user-facing line, separate from the developer `summary`; tasks labelled `internal` stay out of changelogs
+- [x] Changes: `sati changes --since <date|7d|last-session|milestone>` and MCP `changes`: done tasks (summary, release note, files touched), features that moved status, decisions, new and edited notes, and what is now blocked or overdue, grouped by milestone or feature, compact, with ids
+- [x] The brief's "Since your last session" section, which PLAN promises and the brief does not have yet: up to 5 changes by other actors since the caller's last brief, inside the 1,500-token cap
+- [x] Changelog and digest are formats of `changes`, not commands of their own: `sati changes --since … --format changelog|digest|plain` (MCP `changes` takes `format`). `changelog` is Markdown built from release notes (falling back to summaries), grouped Added / Changed / Fixed / Removed by task label and feature status; `digest` is a short weekly summary to paste into email or chat. It prints to stdout; the agent or person decides where it goes (`> CHANGELOG.md`), because sati writes no user files
+- [x] Feature list: `sati features --format md` prints what the product does today, from shipped features with their acceptance criteria and milestone, for READMEs, sales sheets or release pages
+- [x] UI "Changes" page: a timeline by day (done, decided, shipped, changed), filters by date, milestone, person or agent, and "Copy changelog" / "Copy feature list" buttons using the same generators
 
 **Phase 7c — The brain for every agent**
 
@@ -695,7 +696,7 @@ Added 2026-11-07 at the owner's request. sati is the memory, not a file reader: 
 - [ ] Cards: context entries gain optional `facts[]`, `tags[]`, `sourceSeen` (the file version the agent saw) and `sourceTokens` (its estimate of reading the file); migration and snapshot `schemaVersion` bump; git-mode staleness unchanged
 - [ ] Secret scan on write for cards and notes, not only on export
 - [ ] Search covers cards (summary, facts, tags, path)
-- [ ] `recall` in core, CLI (`sati recall`) and MCP: the best cards, notes, decisions and open tasks for a question, with ids and sources, capped at 1,000 tokens; no model inside sati (18 tools; update the Agent integration table)
+- [ ] `recall` in core, CLI (`sati recall`) and MCP: the best cards, notes, decisions and open tasks for a question, with ids and sources, capped at 1,000 tokens; no model inside sati (19 tools; update the Agent integration table)
 - [ ] `private: true` on notes and cards: kept in the local database, never exported to `.sati/` or synced
 - [ ] Pinned notes (up to 3, clipped) in the brief's Knowledge section, inside the 1,500-token cap, with the cards linked to the claimed task
 - [ ] Rules block and `sati://workflow`: check a file's card before opening it; save a card after reading one

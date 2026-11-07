@@ -32,6 +32,7 @@ const root = defineCommand({
     milestone: lazy(() => import("./commands/milestone.js")),
     plan: lazy(() => import("./commands/plan.js")),
     activity: lazy(() => import("./commands/activity.js")),
+    changes: lazy(() => import("./commands/changes.js")),
     undo: lazy(() => import("./commands/undo.js")),
     settings: lazy(() => import("./commands/settings.js")),
     doctor: lazy(() => import("./commands/doctor.js")),

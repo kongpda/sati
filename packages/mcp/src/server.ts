@@ -7,6 +7,8 @@ import {
   addComment,
   BriefInput,
   buildBrief,
+  CHANGE_FORMATS,
+  ChangesInput,
   CLI_NAME,
   ClaimTaskInput,
   COMMENT_TAG,
@@ -22,6 +24,7 @@ import {
   createTask,
   type Feature,
   findSimilarTasks,
+  formatChanges,
   GENERAL_WORKFLOW,
   GetContextInput,
   getContext,
@@ -31,6 +34,7 @@ import {
   LIMITS,
   ListTasksInput,
   listAll,
+  listChanges,
   listRecords,
   listTasks,
   type ProjectKind,
@@ -237,7 +241,7 @@ function registerTools(server: McpServer, ctx: ServiceContext, kind: ProjectKind
     `${CLI_NAME}_brief`,
     {
       description:
-        "Call first in every session. Markdown: your claimed tasks with acceptance criteria, ready tasks, others' locks, recent decisions, stale context, protected features.",
+        "Call first in every session. Markdown: your claimed tasks with acceptance criteria, ready tasks, others' locks, what others changed since your last session, recent decisions, stale context, protected features.",
       inputSchema: BriefInput,
       annotations: { readOnlyHint: true },
     },
@@ -246,6 +250,29 @@ function registerTools(server: McpServer, ctx: ServiceContext, kind: ProjectKind
         // Markdown, not JSON: the agent reads it as is.
         const brief = await buildBrief(ctx, input);
         return { content: [{ type: "text", text: brief.markdown }] };
+      } catch (err) {
+        return fail(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    "changes",
+    {
+      description:
+        "What changed since a time (default 7d; also a day, 24h, 2w, last-session or a done milestone): done tasks with summary, release note and files, features that moved status, decisions, new and edited notes, and what is blocked or overdue now. format changelog gives Added/Changed/Fixed/Removed Markdown from release notes (tasks labelled internal left out); digest is a short summary to paste into chat. Print it to the person or into a file they asked for.",
+      inputSchema: ChangesInput.extend({
+        milestoneId: Ref.optional(),
+        format: z.enum(CHANGE_FORMATS).optional(),
+      }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ format, ...input }) => {
+      try {
+        // Text, like the brief: every format is meant to be read or pasted as is.
+        return {
+          content: [{ type: "text", text: formatChanges(await listChanges(ctx, input), format) }],
+        };
       } catch (err) {
         return fail(err);
       }
@@ -313,8 +340,8 @@ function registerTools(server: McpServer, ctx: ServiceContext, kind: ProjectKind
     {
       description:
         kind === "code"
-          ? "Mark a task done. Requires a summary, every file touched, and the token from task_claim. Releases the claim and your locks tied to the task."
-          : "Mark a task done. Requires a summary and the token from task_claim; list any files you touched. Releases the claim.",
+          ? "Mark a task done. Requires a summary, every file touched, and the token from task_claim. Add releaseNote, one line for users, when the change is worth a changelog entry. Releases the claim and your locks tied to the task."
+          : "Mark a task done. Requires a summary and the token from task_claim; list any files you touched. Add releaseNote, one line for users, when the change is worth a changelog entry. Releases the claim.",
       inputSchema: CompleteTaskInput.extend({ id: Ref }),
     },
     ({ id, ...input }) => run(async () => completeTask(ctx, await task(id), input)),

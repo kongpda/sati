@@ -10,7 +10,10 @@ import {
   createNote,
   createTask,
   deleteRecord,
+  featureList,
+  formatChanges,
   isSatiError,
+  listChanges,
   ProjectKind,
   readSettings,
   recordDecision,
@@ -142,6 +145,12 @@ function openApi() {
       "/api/search": {
         get: { summary: "Full-text search", parameters: [{ name: "q", in: "query" }] },
       },
+      "/api/changes": {
+        get: {
+          summary: "What changed (query: since, milestoneId, actorId), with changelog and digest",
+        },
+      },
+      "/api/feature-list": { get: { summary: "Shipped features as Markdown" } },
       "/api/tasks": { post: { summary: "Create a task" } },
       "/api/tasks/{id}": { patch: { summary: "Update a task" }, delete: { summary: "Delete" } },
       "/api/tasks/{id}/restore": { post: { summary: "Restore a deleted task" } },
@@ -322,6 +331,22 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
     const hits = await rt.ctx.store.read((r) => r.search(rt.ctx.projectId, q, { limit: 20 }));
     return c.json({ hits });
   });
+
+  // The Changes page: the same generators as `sati changes` and `sati feature list --format md`.
+  app.get("/api/changes", async (c) => {
+    const q = (name: string) => c.req.query(name) || undefined;
+    const changes = await listChanges(rt.ctx, {
+      since: q("since"),
+      milestoneId: q("milestoneId"),
+      actorId: q("actorId"),
+    });
+    return c.json({
+      changes,
+      changelog: formatChanges(changes, "changelog"),
+      digest: formatChanges(changes, "digest"),
+    });
+  });
+  app.get("/api/feature-list", async (c) => c.json({ markdown: await featureList(rt.ctx) }));
 
   app.post("/api/tasks", async (c) => c.json(await createTask(rt.ctx, await body(c))));
   app.patch("/api/tasks/:id", async (c) => {

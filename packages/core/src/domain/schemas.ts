@@ -180,6 +180,11 @@ export type Priority = z.infer<typeof Priority>;
 
 export const Completion = z.strictObject({
   summary: z.string().trim().min(1).max(LIMITS.shortText),
+  /**
+   * One line for the people who use the product ("Export now includes due dates"), separate
+   * from the summary written for developers. Changelogs use it, falling back to the summary.
+   */
+  releaseNote: z.string().trim().min(1).max(LIMITS.title).optional(),
   /** At least one in a code project (checked by `completeTask`); a general one may touch none. */
   filesTouched: list(pathGlob),
   completedAt: ts,

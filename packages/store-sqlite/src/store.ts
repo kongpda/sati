@@ -228,6 +228,7 @@ export class SqliteStore implements StorageAdapter {
         );
       }
       if (q.dueBy) where.push(sql`json_extract(${t.data}, '$.dueDate') <= ${q.dueBy}`);
+      if (q.updatedSince) where.push(sql`${t.updatedAt} >= ${q.updatedSince}`);
       if (q.assigneeId) {
         where.push(
           sql`exists (select 1 from json_each(${t.data}, '$.assigneeIds') where value = ${q.assigneeId})`,

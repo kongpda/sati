@@ -119,6 +119,41 @@ export interface Snapshot {
   locks: Lock[];
 }
 
+interface ChangeBase {
+  id: string;
+  title: string;
+  at: string;
+  by: string | null;
+  milestoneId: string | null;
+  featureId: string | null;
+}
+/** One entry of `sati changes`: built by core, shared with the CLI and MCP. */
+export type ChangeItem =
+  | (ChangeBase & {
+      kind: "done";
+      labels: string[];
+      summary: string;
+      releaseNote: string | null;
+      filesTouched: string[];
+    })
+  | (ChangeBase & { kind: "feature"; status: string })
+  | (ChangeBase & { kind: "decision" })
+  | (ChangeBase & { kind: "note"; edited: boolean });
+
+export interface Changes {
+  since: string;
+  basis: string;
+  items: ChangeItem[];
+  blocked: { id: string; title: string }[];
+  overdue: { id: string; title: string; dueDate: string }[];
+}
+
+export interface ChangesFilter {
+  since: string;
+  milestoneId: string;
+  actorId: string;
+}
+
 /** Records a person can delete from the board and bring back with Undo. */
 export type Deletable = "task" | "note" | "decision";
 
@@ -190,6 +225,11 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ kind }),
     }),
+  changes: (filter: ChangesFilter) =>
+    request<{ changes: Changes; changelog: string; digest: string }>(
+      `/api/changes?${new URLSearchParams(Object.entries(filter).filter(([, v]) => v !== ""))}`,
+    ),
+  featureList: () => request<{ markdown: string }>("/api/feature-list"),
   patchFeature: (id: string, body: Record<string, unknown>) =>
     request<Feature>(`/api/features/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
 };

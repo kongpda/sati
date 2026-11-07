@@ -2,9 +2,11 @@ import {
   CLI_NAME,
   createFeature,
   type Feature,
+  featureList,
   getRecord,
   listRecords,
   resolveId,
+  SatiError,
   updateFeature,
 } from "@sati/core";
 import { defineCommand } from "citty";
@@ -52,21 +54,35 @@ const ls = defineCommand({
   args: {
     status: { type: "string", description: "Comma-separated statuses" },
     milestone: { type: "string", description: "Only features of this milestone" },
+    format: {
+      type: "string",
+      description:
+        "md: what the product does today (shipped features, acceptance criteria, milestone)",
+    },
     ...pagination,
     ...json,
   },
   run: ({ args }) =>
     execute(
       args.json,
-      async ({ ctx }) =>
-        listRecords(ctx, "feature", {
+      async ({ ctx }): Promise<string | Feature[]> => {
+        if (args.format === "md") return featureList(ctx);
+        if (args.format !== undefined) {
+          throw new SatiError("USAGE", `Unknown format "${args.format}".`, {
+            hint: "Use --format md, or leave it out for the list.",
+          });
+        }
+        return listRecords(ctx, "feature", {
           status: list(args.status),
           milestoneId: await ref(ctx, "milestone", args.milestone),
           limit: int(args.limit, "limit"),
           offset: int(args.offset, "offset"),
-        }),
-      (items: Feature[]) =>
-        rows(items, `No features. Create one with \`${CLI_NAME} feature create "title"\`.`),
+        });
+      },
+      (out) =>
+        typeof out === "string"
+          ? out.trimEnd()
+          : rows(out, `No features. Create one with \`${CLI_NAME} feature create "title"\`.`),
     ),
 });
 

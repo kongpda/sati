@@ -4,6 +4,7 @@ import { shortHandle } from "../domain/ids.js";
 import { isGuardedFeature } from "../domain/rules.js";
 import type { Feature, Note, Task } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
+import { type ChangeItem, lastSession, readChanges } from "./changes.js";
 import { COMMENT_TAG } from "./comment.js";
 import { actorName, listAll, nowIso, parseInput, type ServiceContext } from "./context.js";
 import { getContext } from "./context-cache.js";
@@ -16,6 +17,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const LINE_CHARS = 160;
 /** No section shows more lines than this, which also bounds the work in `fit`. */
 const SECTION_LINES = 40;
+/** PLAN: "Since your last session" lists up to 5 changes by others. */
+const SINCE_LINES = 5;
 
 export const BriefInput = z.strictObject({
   /**
@@ -51,14 +54,17 @@ interface Section {
 
 /**
  * The session-start brief: who I am, my claimed tasks with their acceptance criteria, ready
- * tasks, paths other agents have locked, recent decisions, stale context entries and protected features. Every line carries an id so the agent can
- * fetch more. Lower sections lose items first when the text would exceed the token cap.
+ * tasks, paths other agents have locked, what others changed since my last session, recent
+ * decisions, stale context entries and protected features. Every line carries an id so the
+ * agent can fetch more. Lower sections lose items first when the text would exceed the token cap.
  */
 export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Promise<Brief> {
   const { format = "agent", maxTokens = BRIEF_TOKEN_CAP } = parseInput(BriefInput, input);
   const short = format === "short";
   const now = nowIso(ctx);
   const since = new Date(ctx.clock.now().getTime() - 7 * DAY_MS).toISOString();
+  // Before releasing leases below: that release is a write of ours, not the end of a session.
+  const session = short ? null : await ctx.store.read((r) => lastSession(r, ctx));
   // "Every brief clears expired leases" (PLAN), so abandoned tasks show up as ready again.
   await releaseExpiredClaims(ctx);
 
@@ -123,9 +129,24 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
             (t) => t.claim === null || t.claim.leaseUntil <= now,
           )
         : [];
+    // What others did since your last session; your own work you already know.
+    const others: (ChangeItem & { who: string })[] = [];
+    let othersTotal = 0;
+    if (session?.at) {
+      const changed = (await readChanges(r, ctx, { since: session.at })).items.filter(
+        (i) => i.by === null || !session.selves.has(i.by),
+      );
+      othersTotal = changed.length;
+      for (const i of changed.slice(0, SINCE_LINES)) {
+        const by = i.by ? await r.get("actor", i.by) : undefined;
+        others.push({ ...i, who: by ? (by.displayName ?? by.name) : "someone" });
+      }
+    }
     return {
       project,
       actor,
+      others,
+      othersTotal,
       mine,
       ready,
       features,
@@ -226,6 +247,30 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
         const until = l.leaseUntil.slice(11, 16);
         return `- ${shortHandle(l.id)} ${l.mode} ${clip(l.paths.join(", "), 80)} by ${clip(l.holder, 60)} until ${until}Z`;
       }),
+    },
+    {
+      title: `Since your last session (${session?.at?.slice(0, 16).replace("T", " ")} UTC)`,
+      empty: null,
+      items: [
+        ...data.others.map((i) => {
+          const what =
+            i.kind === "done"
+              ? "done"
+              : i.kind === "feature"
+                ? `feature ${i.status}`
+                : i.kind === "decision"
+                  ? "decided"
+                  : i.edited
+                    ? "note edited"
+                    : "new note";
+          return `- ${shortHandle(i.id)} ${what}: ${clip(i.title, 100)} (${clip(i.who, 40)}, ${i.at.slice(5, 10)})`;
+        }),
+        ...(data.othersTotal > SINCE_LINES
+          ? [
+              `- … ${data.othersTotal - SINCE_LINES} more: \`${CLI_NAME} changes --since last-session\``,
+            ]
+          : []),
+      ],
     },
     {
       title: "Decisions, last 7 days",

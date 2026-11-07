@@ -44,6 +44,7 @@ const PAGES = [
   "/features",
   "/notes",
   "/decisions",
+  "/changes",
   "/activity",
   "/settings",
 ];

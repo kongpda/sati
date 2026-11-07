@@ -95,7 +95,11 @@ export const UpdateTaskInput = fields
     /** Required when sending a review task back to todo. Shown to the next claimer. */
     reason: z.string().trim().min(1).max(LIMITS.shortText).optional(),
   });
-export const CompleteTaskInput = Completion.pick({ summary: true, filesTouched: true })
+export const CompleteTaskInput = Completion.pick({
+  summary: true,
+  releaseNote: true,
+  filesTouched: true,
+})
   .partial({ filesTouched: true })
   .extend(ExpectedVersion)
   .extend(ClaimToken);

@@ -1,7 +1,7 @@
 import type { Activity } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { execute, int, ref } from "../runtime.js";
+import { actorRef, execute, int, ref } from "../runtime.js";
 
 export default defineCommand({
   meta: { name: "activity", description: "Show the audit log" },
@@ -17,13 +17,7 @@ export default defineCommand({
       args.json,
       async ({ ctx }) => {
         const entityId = await ref(ctx, "task", args.task);
-        let actorId = args.actor;
-        if (actorId && !actorId.startsWith("actr_")) {
-          const actors = await ctx.store.read((r) =>
-            r.list("actor", ctx.projectId, { limit: 200 }),
-          );
-          actorId = actors.find((a) => a.name === args.actor)?.id ?? actorId;
-        }
+        const actorId = await actorRef(ctx, args.actor);
         return ctx.store.read((r) =>
           r.listActivity(ctx.projectId, {
             actorId,

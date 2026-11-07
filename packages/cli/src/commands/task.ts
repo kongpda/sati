@@ -406,6 +406,10 @@ const complete = defineCommand({
   args: {
     ...id("Task"),
     summary: { type: "string", required: true, description: "What was done" },
+    "release-note": {
+      type: "string",
+      description: "One line for users, for the changelog (default: the summary)",
+    },
     files: {
       type: "string",
       description: "Comma-separated files touched (required in a code project)",
@@ -421,6 +425,7 @@ const complete = defineCommand({
         const taskId = await resolveId(ctx, "task", args.id);
         return completeTask(ctx, taskId, {
           summary: args.summary,
+          releaseNote: args["release-note"],
           filesTouched: list(args.files),
           expectedVersion: int(args["expected-version"], "expected-version"),
           token: await claimToken(ctx, taskId, args.token),

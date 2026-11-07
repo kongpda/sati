@@ -1,5 +1,6 @@
 export * from "./actor.js";
 export * from "./brief.js";
+export * from "./changes.js";
 export * from "./comment.js";
 export * from "./context.js";
 export * from "./context-cache.js";

@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, api, COLUMNS, type Deletable, type Snapshot, type Task } from "./api.js";
 import { Board, boardOrder } from "./board.js";
+import { Changes } from "./changes.js";
 import { NewTask } from "./forms.js";
 import { MyWork } from "./my-work.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
@@ -18,6 +19,7 @@ const PAGES = [
   ["/features", "Features"],
   ["/notes", "Notes"],
   ["/decisions", "Decisions"],
+  ["/changes", "Changes"],
   ["/activity", "Activity"],
   ["/settings", "Settings"],
 ] as const;
@@ -623,6 +625,14 @@ export function App() {
             onSaved={saved}
             onDelete={(id, title) => remove("decision", id, title)}
             thread={thread}
+          />
+        ) : null}
+        {data && path === "/changes" ? (
+          <Changes
+            data={data}
+            onOpenTask={(id) => go(path, id)}
+            onGo={(next) => go(next)}
+            onCopied={(message) => setToast(message)}
           />
         ) : null}
         {data && path === "/activity" ? <Activity data={data} /> : null}

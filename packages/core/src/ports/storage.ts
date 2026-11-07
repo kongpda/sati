@@ -12,6 +12,8 @@ export interface ListQuery {
   dueBy?: string | undefined;
   /** Tasks with this actor in `assigneeIds`. */
   assigneeId?: string | undefined;
+  /** Records changed at or after this UTC time (`updatedAt`, which every write moves). */
+  updatedSince?: string | undefined;
   includeDeleted?: boolean | undefined;
   /** Reverse the usual order (rank, then id); with equal ranks this means newest first. */
   newestFirst?: boolean | undefined;

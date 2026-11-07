@@ -45,7 +45,7 @@ describe("ui server", () => {
   it("rejects a missing session, a foreign host and a foreign origin", async () => {
     const open = await app.request("http://127.0.0.1/api/snapshot");
     expect(open.status).toBe(401);
-    const guessed = await app.request("http://127.0.0.1/session?token=" + "x".repeat(token.length));
+    const guessed = await app.request(`http://127.0.0.1/session?token=${"x".repeat(token.length)}`);
     expect(guessed.status).toBe(401);
     const forged = await app.request("http://127.0.0.1/api/snapshot", {
       headers: { cookie: `sati_session_80=${token.slice(0, -1)}` },

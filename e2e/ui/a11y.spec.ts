@@ -68,7 +68,7 @@ for (const [device, viewport] of [
       });
     }
 
-    test("axe: task sheet and search palette", async ({ page }) => {
+    test("axe: task sheet, search palette and new task form", async ({ page }) => {
       await page.goto(ui.signIn);
       await page.goto(`${ui.origin}/?task=${taskId}`);
       await expect(page.getByRole("dialog", { name: "Index note bodies" })).toBeVisible();
@@ -79,6 +79,11 @@ for (const [device, viewport] of [
       await expect(page.getByRole("dialog", { name: "Search" })).toBeVisible();
       const palette = await new AxeBuilder({ page }).withTags(TAGS).analyze();
       expect(summary(palette.violations)).toEqual([]);
+      await page.keyboard.press("Escape");
+      await page.getByRole("button", { name: "New task" }).click();
+      await expect(page.getByRole("dialog", { name: "New task" })).toBeVisible();
+      const form = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+      expect(summary(form.violations)).toEqual([]);
     });
   });
 }

@@ -135,8 +135,8 @@ export const api = {
     request<{ hits: { entity: string; id: string; title: string }[] }>(
       `/api/search?q=${encodeURIComponent(q)}`,
     ),
-  createTask: (title: string) =>
-    request<Task>("/api/tasks", { method: "POST", body: JSON.stringify({ title }) }),
+  createTask: (input: { title: string } & Record<string, unknown>) =>
+    request<Task>("/api/tasks", { method: "POST", body: JSON.stringify(input) }),
   patchTask: (id: string, body: Record<string, unknown>) =>
     request<Task>(`/api/tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   releaseTask: (id: string, force: boolean) =>

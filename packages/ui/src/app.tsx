@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, api, COLUMNS, type Snapshot } from "./api.js";
 import { Board } from "./board.js";
+import { NewTask } from "./new-task.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
 
 const PAGES = [
@@ -30,6 +31,7 @@ export function App() {
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<string | null>(null);
   const [palette, setPalette] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [queryText, setQueryText] = useState("");
   const [hits, setHits] = useState<{ entity: string; id: string; title: string }[]>([]);
   const [searching, setSearching] = useState(false);
@@ -158,7 +160,7 @@ export function App() {
         return;
       }
       // Ctrl+C, Cmd+X and other chords belong to the browser, not to the board's letters.
-      if (palette || typing || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (palette || creating || typing || event.metaKey || event.ctrlKey || event.altKey) return;
       // Buttons and links use these keys themselves, and the sheet is a dialog of its own.
       if (target?.closest(".sheet, button, a")) return;
       if (event.key === "j" || event.key === "k") {
@@ -177,12 +179,9 @@ export function App() {
       }
       if (event.key === "Enter" && task) go("/", task);
       if (event.key === "c") {
-        const title = window.prompt("Task title");
-        if (title)
-          void api
-            .createTask(title)
-            .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
-            .catch(fail);
+        // Keep the "c" from being typed into the title field the dialog focuses.
+        event.preventDefault();
+        setCreating(true);
       }
       if (event.key === "x" && task) {
         setSelected((cur) => {
@@ -195,7 +194,7 @@ export function App() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [client, closePalette, fail, feature, filter, go, palette, path, task]);
+  }, [client, closePalette, creating, feature, filter, go, palette, path, task]);
 
   useEffect(() => {
     if (!palette) return;
@@ -265,6 +264,14 @@ export function App() {
           ) : null}
           <button type="button" onClick={() => setPalette(true)}>
             Search
+          </button>
+          <button
+            type="button"
+            className="primary"
+            onClick={() => setCreating(true)}
+            aria-keyshortcuts="c"
+          >
+            New task
           </button>
         </div>
         {offline ? (
@@ -345,7 +352,8 @@ export function App() {
             ) : null}
             {!data ? null : data.tasks.length === 0 ? (
               <p className="empty">
-                No tasks yet. Press c, or run {__CLI_NAME__} task create "First task".
+                No tasks yet. Use New task (or press c), ask your agent, or run {__CLI_NAME__} task
+                create "First task".
               </p>
             ) : tasks.length === 0 ? (
               <p className="empty">No tasks match the filter.</p>
@@ -473,6 +481,17 @@ export function App() {
               .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
               .catch(fail)
           }
+        />
+      ) : null}
+      {creating && data ? (
+        <NewTask
+          data={data}
+          onClose={() => setCreating(false)}
+          onCreated={(created) => {
+            setCreating(false);
+            setToast(`Created ${created.title}.`);
+            void client.invalidateQueries({ queryKey: ["snapshot"] });
+          }}
         />
       ) : null}
       {palette ? (

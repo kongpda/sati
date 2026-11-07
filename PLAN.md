@@ -185,7 +185,7 @@ Activity and locks are **not** exported to `.sati/`: they are high-churn and mac
 
 Agents use sati through a small MCP toolset, with the CLI as a fallback. Hooks enforce the important steps, because agents forget instructions but cannot skip hooks.
 
-**MCP tools (15, kept small to save context)**
+**MCP tools (17, kept small to save context)**
 
 | Tool | What it does |
 | --- | --- |
@@ -201,6 +201,8 @@ Agents use sati through a small MCP toolset, with the CLI as a fallback. Hooks e
 | `decision_record` | Logs why something changed or was rejected |
 | `context_get` / `context_put` | Cached module summaries; `get` flags stale entries by hash |
 | `search` | Full-text search across tasks, features, notes and decisions |
+| `note_upsert` | Create a note (no id) or update one (id, `expectedVersion`): title, Markdown body, tags, pinned |
+| `note_get` | Read one note in full by id or short handle |
 | `roadmap_upsert` | Create or update a milestone |
 
 MCP **resources**: `sati://workflow` (the rules agents follow), `sati://project/roadmap`, `sati://feature/{id}`. MCP **prompts**: `start-task`, `finish-task`, `plan-feature`.
@@ -628,8 +630,10 @@ A capability is not done until both ways have it, with tests on both. sati itsel
 
 **Phase 7a — Two ways to work**
 
-- [ ] UI parity: a visible "New task" button and form (body, priority, labels, due date, assignees, milestone); milestone create and edit on the Roadmap; decision create; note edit, tags, pin and delete; delete and restore for tasks, notes and decisions, each with an undo toast
-- [ ] Agent parity: MCP `note_upsert` and `note_get`, and `task_list` filters by milestone, label and due date, so "what is left for the launch?" is one call (update the Agent integration table)
+- [x] UI: a visible "New task" button and form (title, details, priority, list, feature, labels); `c` opens it; a refused save keeps what was typed (due date, assignees and milestone join it with the task fields below)
+- [ ] UI parity: milestone create and edit on the Roadmap; decision create; note edit, tags, pin and delete; delete and restore for tasks, notes and decisions, each with an undo toast
+- [x] Agent parity: MCP `note_upsert` and `note_get` (Agent integration table updated)
+- [ ] Agent parity: `task_list` filters by milestone, label and due date, so "what is left for the launch?" is one call
 - [ ] Project kind `code` (default) or `general`. A general project hides Features, path locks, the guard and the Agents page, and needs no git; it uses the standalone store
 - [ ] People: a human actor gets a display name, initials and a colour, editable in Settings; the UI never shows `user@worktree`
 - [ ] Task fields `dueDate` (date), `assigneeIds[]` (people or agents, separate from the claim) and `checklist[]` (text, done); MCP, CLI and UI accept them; the snapshot `schemaVersion` goes up with a migration
@@ -675,7 +679,7 @@ Added 2026-11-07 at the owner's request. sati is the memory, not a file reader: 
 - [ ] Secret scan on write for cards and notes, not only on export
 - [ ] Search covers cards (summary, facts, tags, path)
 - [ ] Compact answers: `search` and `task_list` return short rows by default, `detail: "full"` on request
-- [ ] `recall` in core, CLI (`sati recall`) and MCP: the best cards, notes, decisions and open tasks for a question, with ids and sources, capped at 1,000 tokens; no model inside sati (19 tools; update the Agent integration table)
+- [ ] `recall` in core, CLI (`sati recall`) and MCP: the best cards, notes, decisions and open tasks for a question, with ids and sources, capped at 1,000 tokens; no model inside sati (18 tools; update the Agent integration table)
 - [ ] `private: true` on notes and cards: kept in the local database, never exported to `.sati/` or synced
 - [ ] Pinned notes (up to 3, clipped) in the brief's Knowledge section, inside the 1,500-token cap, with the cards linked to the claimed task
 - [ ] Rules block and `sati://workflow`: check a file's card before opening it; save a card after reading one

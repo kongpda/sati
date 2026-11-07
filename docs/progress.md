@@ -806,3 +806,19 @@ fixed the same bug (undo of shortened text, subtask cycles, 400 for bad JSON, th
   in SQL, and `…:00Z` sorted after `…:00.500Z`, so such a lease looked live after it ran out.
 - `pnpm test:e2e --repeat 3` (4 agents, 4 worktrees, 1,000 steps each) passes.
 
+
+### Phase 7a: New task form and note tools (2026-11-07)
+
+- The board's top bar has a "New task" button and `c` opens the same form; it replaces the
+  `window.prompt` title box. Fields: title, details, priority, list (Todo or Backlog), feature
+  (only shown when features exist) and comma-separated labels, deduplicated. A refused save
+  shows the server's message in the dialog and keeps what was typed.
+- Due date, assignees and milestone wait for the 7a task fields item, so the form has no fields
+  that the server would refuse.
+- MCP `note_upsert` (no id creates, id updates with `expectedVersion`) and `note_get` bring the
+  toolset to 17. One upsert tool, matching `feature_upsert` and `roadmap_upsert`, instead of
+  separate create and update tools, to keep the toolset small.
+- Checked in Chrome at 1280 and 375 px: filled form, inline error for a 301-character title,
+  the new card in Todo with its toast. The palette's input reset was hiding the text fields'
+  borders; the form now sets them. The toast's Dismiss button was ink on ink and now inherits
+  the toast colour.

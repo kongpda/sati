@@ -333,6 +333,12 @@ textarea {
   border-radius: 8px;
   max-width: 420px;
 }
+.toast button {
+  margin-left: 8px;
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+}
 .bulk {
   display: flex;
   gap: 8px;
@@ -587,4 +593,61 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+/* New task dialog: reuses the palette overlay, with a form laid out as fields. */
+.palette form.new-task {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+.new-task h2 {
+  font-size: 1.1rem;
+  font-weight: 650;
+  margin: 0;
+}
+.new-task label {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+form.new-task .field,
+form.new-task select {
+  color: var(--ink);
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 6px 8px;
+}
+.new-task-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+.palette form.new-task .new-task-actions button {
+  display: inline-block;
+  width: auto;
+  text-align: center;
+  border: 1px solid var(--line);
+  padding: 4px 14px;
+}
+.new-task-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.form-error {
+  margin: 0;
+  color: var(--clay);
+}
+button.primary,
+.palette form.new-task .new-task-actions button.primary {
+  background: var(--moss);
+  border-color: var(--moss);
+  color: var(--panel);
+}
+button.primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }

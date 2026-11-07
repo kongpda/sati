@@ -27,6 +27,7 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
 ## Record why
 - `decision_record` for any removal, revert or rejected approach, with the features it affects.
 - `feature_upsert` when you add a feature or change its paths or acceptance criteria.
+- `note_upsert` for knowledge worth keeping (facts, research, meeting notes); `note_get` reads one.
 
 ## Finish
 - `task_complete` with a one-paragraph summary, every file you touched, and your token.

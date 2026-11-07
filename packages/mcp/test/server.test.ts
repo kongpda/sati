@@ -67,6 +67,8 @@ describe("MCP server", () => {
       "feature_upsert",
       "lock_acquire",
       "lock_release",
+      "note_get",
+      "note_upsert",
       "roadmap_upsert",
       "sati_brief",
       "search",
@@ -82,6 +84,31 @@ describe("MCP server", () => {
     expect(templates.map((t) => t.uriTemplate)).toEqual(["sati://feature/{id}"]);
     const prompts = (await client.listPrompts()).prompts.map((p) => p.name).sort();
     expect(prompts).toEqual(["finish-task", "plan-feature", "start-task"]);
+  });
+
+  // PLAN Phase 7a: agents write and read notes, not only search them.
+  it("creates, updates and reads a note, and refuses a stale update", async () => {
+    const client = await connect();
+    const created = await call(client, "note_upsert", {
+      title: "Brand voice",
+      body: "Warm, short sentences.",
+      tags: ["brand"],
+    });
+    expect(created).toMatchObject({ isError: false, body: { version: 1, pinned: false } });
+    const handle = shortHandle(created.body.id);
+    const updated = await call(client, "note_upsert", {
+      id: handle,
+      pinned: true,
+      body: "Warm, short sentences. No jargon.",
+      expectedVersion: 1,
+    });
+    expect(updated.body).toMatchObject({ version: 2, pinned: true, title: "Brand voice" });
+    const stale = await call(client, "note_upsert", { id: handle, body: "x", expectedVersion: 1 });
+    expect(stale).toMatchObject({ isError: true, body: { error: { code: "CONFLICT" } } });
+    const read = await call(client, "note_get", { id: handle });
+    expect(read.body).toMatchObject({ body: "Warm, short sentences. No jargon.", tags: ["brand"] });
+    const untitled = await call(client, "note_upsert", { body: "no title" });
+    expect(untitled).toMatchObject({ isError: true, body: { error: { code: "VALIDATION" } } });
   });
 
   // The gate: an agent finishes a real task end to end using only sati tools.

@@ -27,11 +27,32 @@ test("creates, edits, filters and bulk-moves tasks", async ({ page }) => {
   await page.goto(ui.signIn);
   await expect(page.getByText("No tasks yet.")).toBeVisible();
 
-  // `c` asks for a title and creates the task.
-  page.once("dialog", (d) => void d.accept("Write the release notes"));
-  await page.keyboard.press("c");
+  // The New task form creates a task with its details; a blank title cannot be sent.
+  await page.getByRole("button", { name: "New task" }).click();
+  const form = page.getByRole("dialog", { name: "New task" });
+  await expect(form.getByLabel("Title")).toBeFocused();
+  await expect(form.getByRole("button", { name: "Create task" })).toBeDisabled();
+  await form.getByLabel("Title").fill("Write the release notes");
+  await form.getByLabel("Priority").selectOption("high");
+  await form.getByLabel("Labels").fill("launch, docs, launch");
+  await form.getByRole("button", { name: "Create task" }).click();
+  await expect(form).toHaveCount(0);
   const card = page.getByRole("button", { name: "Write the release notes", exact: true });
   await expect(card).toBeVisible();
+  const created = ui
+    .sati<{ title: string; priority: string; labels: string[] }[]>("task", "list")
+    .find((t) => t.title === "Write the release notes");
+  expect(created).toMatchObject({ priority: "high", labels: ["launch", "docs"] });
+
+  // `c` opens the same form without typing the letter into it; Esc closes it unsaved. Focus went
+  // back to the New task button, and shortcuts skip a focused button, so leave it first.
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press("c");
+  await expect(form.getByLabel("Title")).toHaveValue("");
+  await form.getByLabel("Title").fill("Not saved");
+  await page.keyboard.press("Escape");
+  await expect(form).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Not saved", exact: true })).toHaveCount(0);
 
   // The sheet saves an edit to title, body and status.
   await card.click();

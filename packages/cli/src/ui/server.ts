@@ -10,6 +10,8 @@ import {
   createTask,
   deleteRecord,
   isSatiError,
+  ProjectKind,
+  readSettings,
   recordDecision,
   releaseExpiredClaims,
   releaseTask,
@@ -22,6 +24,7 @@ import {
   updateMilestone,
   updateNote,
   updateProfile,
+  updateSettings,
   updateTask,
 } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
@@ -112,6 +115,7 @@ function openApi() {
       "/api/milestones": { post: { summary: "Create a milestone" } },
       "/api/milestones/{id}": { patch: { summary: "Update a milestone" } },
       "/api/actors/{id}": { patch: { summary: "Set a person's display name, initials, colour" } },
+      "/api/settings": { patch: { summary: "Set the project kind: code or general" } },
       "/events": { get: { summary: "Server-sent events when the database changes" } },
     },
   };
@@ -169,7 +173,14 @@ async function snapshot(rt: UiRuntime) {
   });
   const project = await ctx.store.read((r) => r.getProject());
   return {
-    project: project ? { id: project.id, name: project.name, slug: project.slug } : null,
+    project: project
+      ? {
+          id: project.id,
+          name: project.name,
+          slug: project.slug,
+          kind: readSettings(project.settings).kind,
+        }
+      : null,
     you: ctx.actorId,
     version: dataVersion(rt),
     tasks,
@@ -184,6 +195,7 @@ async function snapshot(rt: UiRuntime) {
 }
 
 const SearchQuery = z.string().max(500);
+const SettingsPatch = z.strictObject({ kind: ProjectKind });
 
 export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   const app = new Hono();
@@ -300,6 +312,14 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   app.patch("/api/milestones/:id", async (c) =>
     c.json(await updateMilestone(rt.ctx, c.req.param("id"), await body(c))),
   );
+
+  // Only the kind: the review gate and lease stay CLI settings.
+  app.patch("/api/settings", async (c) => {
+    const patch = SettingsPatch.safeParse(await body(c));
+    if (!patch.success) throw new SatiError("VALIDATION", "Send { kind: code | general }.");
+    const project = await updateSettings(rt.ctx, patch.data);
+    return c.json({ kind: readSettings(project.settings).kind });
+  });
 
   app.patch("/api/actors/:id", async (c) =>
     c.json(await updateProfile(rt.ctx, c.req.param("id"), await body(c))),

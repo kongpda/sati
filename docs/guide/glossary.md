@@ -22,6 +22,7 @@ scripts and agents do not break. This table maps one to the other; the board's w
 | File summary | context entry | An agent's note about a file or folder. |
 | Edited in two places · Looks right | `needsReview`, `--reviewed` | A sync merged two copies; check the result and confirm. |
 | Person, AI agent | actor `kind: human`, `agent` | Who did something. |
+| Software project, General project | `kind: code`, `kind: general` (`sati settings --kind`) | A general project (an event, a campaign) has no features, file reservations or guard. |
 | Due date, Assigned to, Checklist | `dueDate`, `assigneeIds`, `checklist` | Planning fields on a task. |
 
 Times on the board are in your own time zone and clock style, with the full date in the

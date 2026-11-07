@@ -16,7 +16,7 @@ import { describe, expect, it } from "vitest";
 import { bin, run, sati, satiJson, tempRepo } from "./helpers.js";
 
 interface Init {
-  project: { id: string; slug: string; mode: string };
+  project: { id: string; slug: string; mode: string; settings?: Record<string, unknown> };
   db: string;
   tools: string[];
   files: { path: string; action: string }[];
@@ -196,6 +196,21 @@ describe("sati init", () => {
     expect(existsSync(data.db)).toBe(true);
     const list = run(dir, ["task", "list", "--json"], { HOME: home });
     expect(list.code, list.stderr).toBe(0);
+  });
+
+  it("--kind general sets up a project without feature, lock or guard rules", () => {
+    const dir = tempDir();
+    const home = tempDir();
+    const r = run(dir, ["init", "--yes", "--kind", "general", "--tools", "", "--json"], {
+      HOME: home,
+    });
+    expect(r.code, r.stderr).toBe(0);
+    expect((JSON.parse(r.stdout) as Init).project.settings).toMatchObject({ kind: "general" });
+    const rules = readFileSync(join(dir, "AGENTS.md"), "utf8");
+    expect(rules).toContain("plans, todos, notes and decisions");
+    expect(rules).not.toMatch(/feature_check|lock_acquire|--no-verify/u);
+    const bad = run(dir, ["init", "--yes", "--kind", "office", "--json"], { HOME: tempDir() });
+    expect(bad.code).toBe(2);
   });
 
   it("reuses the project id from a committed config, as in a fresh clone", async () => {

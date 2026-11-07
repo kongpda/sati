@@ -212,6 +212,18 @@ describe("daily workspace", () => {
     expect(checks.find((c) => c.name === "needsReview")?.ok).toBe(true);
   });
 
+  it("stores the project kind only while it is general", async () => {
+    const { ctx, store } = await setup();
+    const general = await updateSettings(ctx, { kind: "general" });
+    expect(general.settings.kind).toBe("general");
+    // Other settings keep their values, and back to code leaves no `kind` key behind.
+    const code = await updateSettings(ctx, { kind: "code", review: "none" });
+    expect(code.settings).toEqual({ leaseMinutes: 30, review: "none", autoContinue: false });
+    const stored = await store.read((r) => r.getProject());
+    expect(stored?.settings).not.toHaveProperty("kind");
+    await expect(updateSettings(ctx, { kind: "office" })).rejects.toThrow();
+  });
+
   it("turns review off so an agent completes straight to done", async () => {
     const { ctx } = await setup();
     await updateSettings(ctx, { review: "none" });

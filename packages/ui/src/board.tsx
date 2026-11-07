@@ -72,7 +72,7 @@ export function Board({
             label={label}
             show={column === "all" || column === status}
             tasks={tasks.filter((t) => t.status === status)}
-            featureName={featureName}
+            featureName={features.length > 0 ? featureName : null}
             people={people}
             fresh={fresh}
             selected={selected}
@@ -116,7 +116,8 @@ function Column({
   label: string;
   show: boolean;
   tasks: Task[];
-  featureName: (id: string | null) => string;
+  /** null when there are no features: no lane headings, so no "No feature" in every column. */
+  featureName: ((id: string | null) => string) | null;
   people: Map<string, Actor>;
   fresh: Set<string>;
   selected: Set<string>;
@@ -126,7 +127,9 @@ function Column({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const parent = useRef<HTMLDivElement>(null);
-  const rows = laneRows(tasks, featureName);
+  const rows: LaneRow[] = featureName
+    ? laneRows(tasks, featureName)
+    : tasks.map((task) => ({ kind: "task", task }));
   const virtual = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parent.current,
@@ -174,7 +177,7 @@ function Column({
               >
                 <Card
                   task={item.task}
-                  feature={featureName(item.task.featureId)}
+                  feature={featureName?.(item.task.featureId) ?? ""}
                   people={people}
                   fresh={fresh.has(item.task.id)}
                   selected={selected.has(item.task.id)}

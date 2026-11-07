@@ -43,9 +43,12 @@ afterEach(async () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-async function connect(as: ServiceContext = ctx): Promise<Client> {
+async function connect(
+  as: ServiceContext = ctx,
+  kind: "code" | "general" = "code",
+): Promise<Client> {
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-  await createServer(as).connect(serverSide);
+  await createServer(as, undefined, kind).connect(serverSide);
   const client = new Client({ name: "test", version: "0" });
   await client.connect(clientSide);
   return client;
@@ -87,6 +90,19 @@ describe("MCP server", () => {
     expect(templates.map((t) => t.uriTemplate)).toEqual(["sati://feature/{id}"]);
     const prompts = (await client.listPrompts()).prompts.map((p) => p.name).sort();
     expect(prompts).toEqual(["finish-task", "plan-feature", "start-task"]);
+  });
+
+  it("leaves the feature and lock tools out of a general project", async () => {
+    const client = await connect(ctx, "general");
+    const tools = (await client.listTools()).tools.map((t) => t.name);
+    expect(tools).toContain("task_create");
+    expect(tools).toContain("note_upsert");
+    for (const name of ["feature_check", "feature_upsert", "lock_acquire", "lock_release"]) {
+      expect(tools).not.toContain(name);
+    }
+    expect((await client.listResourceTemplates()).resourceTemplates).toEqual([]);
+    const prompts = (await client.listPrompts()).prompts.map((p) => p.name).sort();
+    expect(prompts).toEqual(["finish-task", "start-task"]);
   });
 
   // PLAN Phase 7a: agents write and read notes, not only search them.

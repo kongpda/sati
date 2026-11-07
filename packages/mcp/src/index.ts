@@ -1,12 +1,16 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import type { ServiceContext } from "@sati/core";
+import type { ProjectKind, ServiceContext } from "@sati/core";
 import { createServer } from "./server.js";
 
 export { createServer } from "./server.js";
 
 /** Serves MCP over stdin/stdout until the client disconnects. */
-export async function serveStdio(ctx: ServiceContext, version?: string): Promise<void> {
-  const server = createServer(ctx, version);
+export async function serveStdio(
+  ctx: ServiceContext,
+  version?: string,
+  kind?: ProjectKind,
+): Promise<void> {
+  const server = createServer(ctx, version, kind);
   let stop: () => void = () => undefined;
   const closed = new Promise<void>((resolve) => {
     stop = resolve;

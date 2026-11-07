@@ -832,6 +832,40 @@ button.danger {
   min-width: 0;
 }
 
+/* Project kind: two radio cards. */
+.kind-choices {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+.kind-choices legend {
+  margin-bottom: 8px;
+}
+.kind-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  cursor: pointer;
+}
+.kind-option.chosen {
+  border-color: var(--moss);
+  box-shadow: 0 0 0 1px var(--moss);
+}
+.kind-radio {
+  margin-top: 3px;
+}
+.kind-choices strong,
+.kind-choices .meta {
+  display: block;
+}
+
 /* People: avatars in eight colours that keep white text readable in both themes. */
 .avatar,
 .swatch {

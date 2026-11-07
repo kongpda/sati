@@ -27,6 +27,7 @@ import {
   ListTasksInput,
   listRecords,
   listTasks,
+  type ProjectKind,
   PutContextInput,
   putContext,
   RecordDecisionInput,
@@ -83,16 +84,22 @@ async function run(fn: () => Promise<unknown>): Promise<CallToolResult> {
  * Builds the MCP server for one project and caller. Tools are thin wrappers over core services,
  * which validate input again and run each write in one transaction with an activity row.
  */
-export function createServer(ctx: ServiceContext, version: string = VERSION): McpServer {
+export function createServer(
+  ctx: ServiceContext,
+  version: string = VERSION,
+  kind: ProjectKind = "code",
+): McpServer {
   const server = new McpServer(
     { name: CLI_NAME, version },
     {
-      instructions: `Shared project memory for agents. Start with ${CLI_NAME}_brief, claim a task before coding, finish with task_complete. Full rules: ${CLI_NAME}://workflow.`,
+      instructions: `Shared project memory for agents. Start with ${CLI_NAME}_brief, claim a task before ${kind === "code" ? "coding" : "working on it"}, finish with task_complete. Full rules: ${CLI_NAME}://workflow.`,
     },
   );
   registerTools(server, ctx);
-  registerResources(server, ctx);
-  registerPrompts(server);
+  // A general project leaves them out, so agents never see them and their schemas cost no tokens.
+  if (kind === "code") registerCodeTools(server, ctx);
+  registerResources(server, ctx, kind);
+  registerPrompts(server, kind);
   return server;
 }
 
@@ -176,74 +183,6 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
       inputSchema: CompleteTaskInput.extend({ id: Ref }),
     },
     ({ id, ...input }) => run(async () => completeTask(ctx, await task(id), input)),
-  );
-
-  server.registerTool(
-    "feature_check",
-    {
-      description:
-        "Before deleting, moving or rewriting code: returns the shipped features and other agents' locks the paths affect, with a verdict ok, warn or blocked. If blocked, stop and ask.",
-      inputSchema: z.strictObject({
-        paths: z.array(z.string().min(1)).min(1).max(500),
-        change: z
-          .enum(["modify", "delete"])
-          .default("modify")
-          .describe("delete when the paths will be removed"),
-      }),
-      annotations: { readOnlyHint: true },
-    },
-    ({ paths, change }) =>
-      run(async () =>
-        checkChanges(ctx, {
-          changes: paths.map((path) => ({
-            path,
-            kind: change === "delete" ? "deleted" : "modified",
-          })),
-        }),
-      ),
-  );
-
-  server.registerTool(
-    "lock_acquire",
-    {
-      description:
-        "Lock repo-relative paths or globs before editing a shared area. exclusive (default) blocks other agents; shared only warns. Fails with the holder's name on overlap. Pass taskId so task_complete releases it.",
-      inputSchema: AcquireLockInput.extend({ taskId: Ref.optional() }),
-      annotations: { destructiveHint: false },
-    },
-    ({ taskId, ...input }) =>
-      run(async () =>
-        acquireLock(ctx, {
-          ...input,
-          taskId: taskId === undefined ? undefined : await task(taskId),
-        }),
-      ),
-  );
-
-  server.registerTool(
-    "lock_release",
-    {
-      description:
-        "Release a lock when done editing. force releases another agent's lock and is logged.",
-      inputSchema: ReleaseLockInput.extend({ id: Ref }),
-    },
-    ({ id, ...input }) =>
-      run(async () => releaseLock(ctx, await resolveId(ctx, "lock", id), input)),
-  );
-
-  server.registerTool(
-    "feature_upsert",
-    {
-      description:
-        "Create a feature (no id) or update one (with id): title, description, status, protected, paths, tests, acceptance criteria.",
-      inputSchema: UpdateFeatureInput.extend({ id: Ref.optional() }),
-    },
-    ({ id, ...input }) =>
-      run(async () =>
-        id === undefined
-          ? createFeature(ctx, input)
-          : updateFeature(ctx, await resolveId(ctx, "feature", id), input),
-      ),
   );
 
   server.registerTool(
@@ -334,7 +273,80 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
   );
 }
 
-function registerResources(server: McpServer, ctx: ServiceContext): void {
+/** Features, file locks and the guard's check: only `code` projects have them. */
+function registerCodeTools(server: McpServer, ctx: ServiceContext): void {
+  const task = (ref: string) => resolveId(ctx, "task", ref);
+
+  server.registerTool(
+    "feature_check",
+    {
+      description:
+        "Before deleting, moving or rewriting code: returns the shipped features and other agents' locks the paths affect, with a verdict ok, warn or blocked. If blocked, stop and ask.",
+      inputSchema: z.strictObject({
+        paths: z.array(z.string().min(1)).min(1).max(500),
+        change: z
+          .enum(["modify", "delete"])
+          .default("modify")
+          .describe("delete when the paths will be removed"),
+      }),
+      annotations: { readOnlyHint: true },
+    },
+    ({ paths, change }) =>
+      run(async () =>
+        checkChanges(ctx, {
+          changes: paths.map((path) => ({
+            path,
+            kind: change === "delete" ? "deleted" : "modified",
+          })),
+        }),
+      ),
+  );
+
+  server.registerTool(
+    "lock_acquire",
+    {
+      description:
+        "Lock repo-relative paths or globs before editing a shared area. exclusive (default) blocks other agents; shared only warns. Fails with the holder's name on overlap. Pass taskId so task_complete releases it.",
+      inputSchema: AcquireLockInput.extend({ taskId: Ref.optional() }),
+      annotations: { destructiveHint: false },
+    },
+    ({ taskId, ...input }) =>
+      run(async () =>
+        acquireLock(ctx, {
+          ...input,
+          taskId: taskId === undefined ? undefined : await task(taskId),
+        }),
+      ),
+  );
+
+  server.registerTool(
+    "lock_release",
+    {
+      description:
+        "Release a lock when done editing. force releases another agent's lock and is logged.",
+      inputSchema: ReleaseLockInput.extend({ id: Ref }),
+    },
+    ({ id, ...input }) =>
+      run(async () => releaseLock(ctx, await resolveId(ctx, "lock", id), input)),
+  );
+
+  server.registerTool(
+    "feature_upsert",
+    {
+      description:
+        "Create a feature (no id) or update one (with id): title, description, status, protected, paths, tests, acceptance criteria.",
+      inputSchema: UpdateFeatureInput.extend({ id: Ref.optional() }),
+    },
+    ({ id, ...input }) =>
+      run(async () =>
+        id === undefined
+          ? createFeature(ctx, input)
+          : updateFeature(ctx, await resolveId(ctx, "feature", id), input),
+      ),
+  );
+}
+
+function registerResources(server: McpServer, ctx: ServiceContext, kind: ProjectKind): void {
   const scheme = `${CLI_NAME}://`;
   const text = (uri: URL, body: string, mimeType = "text/markdown") => ({
     contents: [{ uri: uri.href, mimeType, text: body }],
@@ -354,6 +366,7 @@ function registerResources(server: McpServer, ctx: ServiceContext): void {
     async (uri) => text(uri, await roadmap(ctx)),
   );
 
+  if (kind !== "code") return;
   server.registerResource(
     "feature",
     new ResourceTemplate(`${scheme}feature/{id}`, { list: undefined }),
@@ -388,7 +401,7 @@ async function roadmap(ctx: ServiceContext): Promise<string> {
   return `${out.join("\n")}\n`;
 }
 
-function registerPrompts(server: McpServer): void {
+function registerPrompts(server: McpServer, kind: ProjectKind): void {
   const user = (body: string) => ({
     messages: [{ role: "user" as const, content: { type: "text" as const, text: body } }],
   });
@@ -431,6 +444,7 @@ function registerPrompts(server: McpServer): void {
       ),
   );
 
+  if (kind !== "code") return;
   server.registerPrompt(
     "plan-feature",
     {

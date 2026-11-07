@@ -6,6 +6,7 @@ import {
   type Actor,
   Mode,
   type Project,
+  ProjectKind,
   type ProjectSettings,
   type ReviewMode,
 } from "../domain/schemas.js";
@@ -36,6 +37,7 @@ export const InitProjectInput = z.strictObject({
   name: z.string().trim().min(1).max(300),
   repoUrl: z.string().max(1000).nullable().default(null),
   mode: Mode.default("git"),
+  kind: ProjectKind.default("code"),
   leaseMinutes: z
     .number()
     .int()
@@ -45,8 +47,10 @@ export const InitProjectInput = z.strictObject({
 });
 export type InitProjectInput = z.input<typeof InitProjectInput>;
 
-/** Settings as stored, including rows written before review and autoContinue existed. */
-export function readSettings(raw: Partial<ProjectSettings> | undefined): ProjectSettings {
+/** Settings as stored, including rows written before review, autoContinue and kind existed. */
+export function readSettings(
+  raw: Partial<ProjectSettings> | undefined,
+): ProjectSettings & { kind: ProjectKind } {
   const review: ReviewMode =
     raw?.review === "all" || raw?.review === "none" || raw?.review === "agents"
       ? raw.review
@@ -55,7 +59,14 @@ export function readSettings(raw: Partial<ProjectSettings> | undefined): Project
     leaseMinutes: raw?.leaseMinutes ?? DEFAULT_LEASE_MINUTES,
     review,
     autoContinue: raw?.autoContinue === true,
+    kind: raw?.kind === "general" ? "general" : "code",
   };
+}
+
+/** The stored form: `kind` only when it is not the default. */
+function storedSettings(s: ProjectSettings & { kind: ProjectKind }): ProjectSettings {
+  const { kind, ...rest } = s;
+  return kind === "general" ? { ...rest, kind } : rest;
 }
 
 export const UpdateSettingsInput = z.strictObject({
@@ -67,6 +78,7 @@ export const UpdateSettingsInput = z.strictObject({
     .optional(),
   review: z.enum(["agents", "all", "none"]).optional(),
   autoContinue: z.boolean().optional(),
+  kind: ProjectKind.optional(),
 });
 export type UpdateSettingsInput = z.input<typeof UpdateSettingsInput>;
 
@@ -82,11 +94,12 @@ export async function updateSettings(ctx: ServiceContext, input: unknown): Promi
     }
     const current = readSettings(project.settings);
     return updateWithLog(w, ctx, "project", project, {
-      settings: {
+      settings: storedSettings({
         leaseMinutes: data.leaseMinutes ?? current.leaseMinutes,
         review: data.review ?? current.review,
         autoContinue: data.autoContinue ?? current.autoContinue,
-      },
+        kind: data.kind ?? current.kind,
+      }),
     });
   });
 }
@@ -122,7 +135,12 @@ export async function initProject(
       name: data.name,
       repoUrl: data.repoUrl,
       mode: data.mode,
-      settings: { leaseMinutes: data.leaseMinutes, review: "agents", autoContinue: false },
+      settings: storedSettings({
+        leaseMinutes: data.leaseMinutes,
+        review: "agents",
+        autoContinue: false,
+        kind: data.kind,
+      }),
       createdAt: at,
       updatedAt: at,
       createdBy: actorId,

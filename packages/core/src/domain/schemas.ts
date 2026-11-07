@@ -60,6 +60,11 @@ export const REVIEW_MODES = ["agents", "all", "none"] as const;
 export const ReviewMode = z.enum(REVIEW_MODES);
 export type ReviewMode = z.infer<typeof ReviewMode>;
 
+/** `code` projects track features, file reservations and the guard; `general` ones are plans, todos and notes only. */
+export const PROJECT_KINDS = ["code", "general"] as const;
+export const ProjectKind = z.enum(PROJECT_KINDS);
+export type ProjectKind = z.infer<typeof ProjectKind>;
+
 export const ProjectSettings = z.strictObject({
   leaseMinutes: z
     .number()
@@ -70,6 +75,8 @@ export const ProjectSettings = z.strictObject({
   review: ReviewMode.default("agents"),
   /** When on, the Stop nudge tells an idle agent to run `sati next`. Default off. */
   autoContinue: z.boolean().default(false),
+  /** Written only for `general`, so existing projects and their `.sati/` files stay unchanged. */
+  kind: ProjectKind.optional(),
 });
 export type ProjectSettings = z.infer<typeof ProjectSettings>;
 

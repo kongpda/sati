@@ -12,7 +12,10 @@ import {
   isSatiError,
   MODES,
   type Mode,
+  PROJECT_KINDS,
   type Project,
+  type ProjectKind,
+  readSettings,
   type SatiConfig,
   SatiConfigSchema,
   SatiError,
@@ -50,6 +53,7 @@ import { currentBranch, osUser, output, parseJson } from "../runtime.js";
 
 interface InitPlan {
   mode: Mode;
+  kind: ProjectKind;
   slug: string;
   name: string;
   root: string;
@@ -125,6 +129,7 @@ async function plan(
   cwd: string,
   args: {
     mode?: string | undefined;
+    kind?: string | undefined;
     slug?: string | undefined;
     name?: string | undefined;
     tools?: string | undefined;
@@ -147,6 +152,12 @@ async function plan(
   if (mode === "standalone" && inGit) {
     throw new SatiError("VALIDATION", "Standalone mode is for folders outside git.", {
       hint: `Use \`${CLI_NAME} init --mode git\`, or \`--mode stealth\` to commit nothing.`,
+    });
+  }
+  const kind = (args.kind ?? "code") as ProjectKind;
+  if (!PROJECT_KINDS.includes(kind)) {
+    throw new SatiError("USAGE", `Unknown project kind "${args.kind}".`, {
+      hint: "Use code for software, or general for plans, todos and notes.",
     });
   }
   const root = loc?.root ?? cwd;
@@ -185,6 +196,7 @@ async function plan(
     fileReader(root),
     (path) => path === "CLAUDE.local.md" || excluded.has(path),
     isLocalInstall(root),
+    kind,
   );
   // The snapshot only exists in git mode, so only git mode routes it to the merge driver.
   if (mode === "git") agentFiles.push(planGitAttributes(fileReader(root)));
@@ -192,6 +204,7 @@ async function plan(
   const { hooks, mergeDriver } = planGit(root, mode, files);
   return {
     mode,
+    kind,
     slug: args.slug ?? slugify(name),
     name,
     root,
@@ -225,6 +238,7 @@ function upgradePlan(root: string, db: string, project: Project): InitPlan {
   const { hooks, mergeDriver } = planGit(root, mode, files);
   return {
     mode,
+    kind: readSettings(project.settings).kind,
     slug: project.slug,
     name: project.name,
     root,
@@ -241,7 +255,12 @@ function upgradePlan(root: string, db: string, project: Project): InitPlan {
 }
 
 function preview(p: InitPlan): string {
-  const lines = [`mode      ${p.mode}`, `project   ${p.slug} (${p.name})`, `database  ${p.db}`];
+  const lines = [
+    `mode      ${p.mode}`,
+    `kind      ${p.kind}`,
+    `project   ${p.slug} (${p.name})`,
+    `database  ${p.db}`,
+  ];
   for (const f of p.files) lines.push(`${f.action.padEnd(9)} ${f.path}`);
   if (p.mode === "stealth" && p.agentFiles.some((f) => f.action === "skip")) {
     lines.push("(stealth mode skips files that already exist, so nothing tracked changes)");
@@ -307,7 +326,7 @@ async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
   try {
     const { project, actor } = await initProject(
       deps,
-      { slug: p.slug, name: p.name, mode: p.mode },
+      { slug: p.slug, name: p.name, mode: p.mode, kind: p.kind },
       actorIdentity({ env: process.env, worktree: p.root, user: osUser() }),
     );
     // Planned paths use `/` on every platform (`shownPath`), so compare with `/` too.
@@ -362,10 +381,19 @@ async function wizard(cwd: string, args: Parameters<typeof plan>[1]): Promise<In
         ],
   });
   if (clack.isCancel(mode)) return null;
-  const draft = await plan(cwd, { ...args, mode });
+  const kind = await clack.select<ProjectKind>({
+    message: "What is this project?",
+    initialValue: (args.kind as ProjectKind | undefined) ?? "code",
+    options: [
+      { value: "code", label: "code", hint: "software: features, file locks and the guard" },
+      { value: "general", label: "general", hint: "plans, todos and notes, such as an event" },
+    ],
+  });
+  if (clack.isCancel(kind)) return null;
+  const draft = await plan(cwd, { ...args, mode, kind });
   const name = await clack.text({ message: "Project name", initialValue: draft.name });
   if (clack.isCancel(name)) return null;
-  const final = await plan(cwd, { ...args, mode, name, slug: args.slug ?? slugify(name) });
+  const final = await plan(cwd, { ...args, mode, kind, name, slug: args.slug ?? slugify(name) });
   clack.note(preview(final), `${CLI_NAME} will write`);
   const ok = await clack.confirm({ message: "Create the project?" });
   if (clack.isCancel(ok) || !ok) return null;
@@ -388,7 +416,7 @@ function render(r: InitResult | UpgradeResult | null): string {
     return [...lines, ...r.notes.map((n) => `  ${n}`)].join("\n");
   }
   const lines = [
-    `Initialized "${r.project.slug}" in ${r.project.mode} mode.`,
+    `Initialized "${r.project.slug}" in ${r.project.mode} mode${readSettings(r.project.settings).kind === "general" ? " as a general project" : ""}.`,
     `  database  ${r.db}`,
   ];
   for (const f of r.files) lines.push(`  ${LABEL[f.action].padEnd(9)} ${f.path}`);
@@ -406,6 +434,10 @@ export default defineCommand({
   meta: { name: "init", description: `Set up ${CLI_NAME} for this project` },
   args: {
     mode: { type: "string", description: "git | stealth | standalone" },
+    kind: {
+      type: "string",
+      description: "code (default) | general: plans, todos and notes without features or locks",
+    },
     name: { type: "string", description: "Project name (default: folder name)" },
     slug: { type: "string", description: "Project slug (default: from the name)" },
     tools: {
@@ -427,6 +459,7 @@ export default defineCommand({
         const cwd = process.cwd();
         const opts = {
           mode: args.mode,
+          kind: args.kind,
           name: args.name,
           slug: args.slug,
           tools: args.tools,

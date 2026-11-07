@@ -1,3 +1,4 @@
+import { readSettings } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { selectTools } from "../detect.js";
@@ -40,6 +41,7 @@ const sync = defineCommand({
           fileReader(location.root),
           (path) => path === "CLAUDE.local.md" || excluded.has(path),
           local,
+          readSettings(project.settings).kind,
         );
         writePlanned(location.root, files, exclude);
         warnIfNotOnPath(tools, local);

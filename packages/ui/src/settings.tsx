@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { type Actor, api, type Snapshot } from "./api.js";
+import { type Actor, api, type ProjectKind, type Snapshot } from "./api.js";
 import { FormDialog } from "./forms.js";
 import { Avatar, COLORS, colorOf, initialsOf, personName } from "./people.js";
 
@@ -20,14 +20,31 @@ function place(actor: Actor): string {
   return parts.at(-1) ?? "this folder";
 }
 
-/** Settings: how the people on this project are shown. Agents keep their session names. */
+const KINDS: [ProjectKind, string, string][] = [
+  [
+    "code",
+    "Software project",
+    "Tasks, notes and plans, plus features, file reservations and the commit guard.",
+  ],
+  [
+    "general",
+    "General project",
+    "Tasks, notes and plans only, for events, marketing or office work. Features and the Agents page are hidden.",
+  ],
+];
+
+/** Settings: the project kind, and how the people on this project are shown. */
 export function Settings({
   data,
   onSaved,
+  onError,
 }: {
   data: Snapshot;
   onSaved: (message: string) => void;
+  onError: (err: unknown) => void;
 }) {
+  const kind = data.project?.kind ?? "code";
+  const [saving, setSaving] = useState<ProjectKind | null>(null);
   const [editing, setEditing] = useState<Actor | null>(null);
   const people = data.actors
     .filter((a) => a.kind === "human")
@@ -35,6 +52,40 @@ export function Settings({
   return (
     <div className="page">
       <h1>Settings</h1>
+      <section className="my-section" aria-labelledby="kind-title">
+        <h2 id="kind-title">Project kind</h2>
+        <fieldset className="kind-choices" disabled={saving !== null}>
+          <legend className="dialog-note">
+            What this project is for. Agents see the matching tools the next time they start.
+          </legend>
+          {KINDS.map(([value, label, hint]) => (
+            <label
+              key={value}
+              className={(saving ?? kind) === value ? "kind-option chosen" : "kind-option"}
+            >
+              <input
+                className="kind-radio"
+                type="radio"
+                name="kind"
+                value={value}
+                checked={(saving ?? kind) === value}
+                onChange={() => {
+                  setSaving(value);
+                  api
+                    .setKind(value)
+                    .then(() => onSaved(`This is now a ${label.toLowerCase()}.`))
+                    .catch(onError)
+                    .finally(() => setSaving(null));
+                }}
+              />
+              <span>
+                <strong>{label}</strong>
+                <span className="meta">{hint}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      </section>
       <section className="my-section" aria-labelledby="people-title">
         <h2 id="people-title">People</h2>
         <p className="dialog-note">

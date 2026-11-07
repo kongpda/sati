@@ -72,6 +72,15 @@ describe("sati guard --staged", () => {
     expect(allowed).toMatchObject({ code: 0, data: { verdict: "warn" } });
   });
 
+  it("is off in a general project, and back on when it is a code project again", async () => {
+    const { dir } = await billingRepo();
+    git(dir, "rm", "-q", "src/billing/invoice.ts");
+    sati(dir, "settings", "--kind", "general");
+    expect(sati(dir, "guard", "--staged")).toMatchObject({ code: 0, stdout: "Guard: ok.\n" });
+    sati(dir, "settings", "--kind", "code");
+    expect(sati(dir, "guard", "--staged").code).toBe(10);
+  });
+
   it("blocks gutting a protected feature, warns on a small edit, passes unrelated files", async () => {
     const { dir } = await billingRepo();
     writeFileSync(join(dir, "README.md"), "changed\n");

@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { CONFIG_DIR } from "@sati/core";
+import { CONFIG_DIR, readSettings } from "@sati/core";
 import { defineCommand } from "citty";
 import pkg from "../../package.json" with { type: "json" };
 import { openRuntime, printError } from "../runtime.js";
@@ -14,9 +14,10 @@ export default defineCommand({
       const { ctx, project, location } = await openRuntime();
       // Loaded here so the MCP SDK never slows down the other commands.
       const { serveStdio } = await import("@sati/mcp");
+      const { kind } = readSettings(project.settings);
       if (project.mode !== "git") {
         try {
-          await serveStdio(ctx, pkg.version);
+          await serveStdio(ctx, pkg.version, kind);
         } finally {
           await ctx.store.close();
         }
@@ -34,7 +35,7 @@ export default defineCommand({
         (err) => printError(err, false),
       );
       try {
-        await serveStdio({ ...ctx, store: synced.store }, pkg.version);
+        await serveStdio({ ...ctx, store: synced.store }, pkg.version, kind);
       } finally {
         await synced.flush();
         await ctx.store.close();

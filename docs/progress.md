@@ -951,3 +951,27 @@ fixed the same bug (undo of shortened text, subtask cycles, 400 for bad JSON, th
 - The longer Activity sentences made the page scroll at 375 px with nothing focusable, so axe
   flagged it; the Activity page is now a focusable region.
 - Checked in Chrome at 1280 px: board, task panel, Agents and Activity.
+
+### Phase 7a: project kind (2026-11-07)
+
+- `kind` lives in project settings (`code` | `general`) and is written only for `general`, so
+  existing projects, their rows and their `.sati/` files are unchanged; switching back to code
+  removes the key. Set with `sati init --kind`, `sati settings --kind`, or Settings in the UI
+  (`PATCH /api/settings`, kind only; review and lease stay CLI settings).
+- General: the UI hides Features and Agents in the nav (a deep link says why), the feature
+  filter, feature names on cards and file reservations. Features and locks left over from a code
+  project stay in the store and come back if the project switches back.
+- General: `sati guard` (staged, range, paths and the Claude Code hook) passes without checking,
+  since there are no features or locks to protect. The hooks stay installed, so switching back
+  turns the guard on again with nothing to reinstall.
+- General: MCP leaves out the four feature and lock tools, the feature resource and the
+  plan-feature prompt, so agents never see them and their schemas cost no tokens. The server
+  reads the kind when it starts; an agent picks up a change on its next session.
+- General: init and `sati rules sync` write a six-rule block without feature, lock, context or
+  `--no-verify` rules (text in PLAN). After `settings --kind`, run `sati rules sync` to swap it.
+- Board, both kinds: a board with no features no longer shows a "No feature" heading in every
+  column.
+- Found: tasks join a milestone only through their feature, so a general project cannot group
+  todos under a plan yet. Added to 7a as `milestoneId` on tasks. The workflow resource and skill
+  still describe feature steps; a general variant is added to 7a too.
+- Checked in Chrome at 1280 and 375 px: Settings with each kind, the board and the nav.

@@ -21,6 +21,9 @@ const PAGES = [
   ["/settings", "Settings"],
 ] as const;
 
+/** Pages a general project does without: it has no features, file reservations or guard. */
+const CODE_ONLY = new Set<string>(["/agents", "/features"]);
+
 export function App() {
   const query = useQuery({ queryKey: ["snapshot"], queryFn: api.snapshot });
   const client = useQueryClient();
@@ -256,7 +259,15 @@ export function App() {
     return () => window.clearTimeout(id);
   }, [toast, setToast]);
 
-  const data = query.data;
+  const general = query.data?.project?.kind === "general";
+  // A general project shows no features or file reservations anywhere, even ones left over
+  // from when it was a code project; they stay in the store and come back if it switches back.
+  const data = query.data && general ? { ...query.data, features: [], locks: [] } : query.data;
+  const pages = PAGES.filter(([href]) => !(general && CODE_ONLY.has(href)));
+  // The feature filter is hidden in a general project, so it must not keep narrowing the board.
+  useEffect(() => {
+    if (general) setFeature("");
+  }, [general]);
   const tasks = (data?.tasks ?? []).filter((t) => {
     if (feature && t.featureId !== feature) return false;
     if (filter && !`${t.title} ${t.body}`.toLowerCase().includes(filter.toLowerCase()))
@@ -268,7 +279,7 @@ export function App() {
     <div className="app">
       <nav className="nav">
         <p className="brand">{data?.project?.name ?? "Sati"}</p>
-        {PAGES.map(([href, label]) => (
+        {pages.map(([href, label]) => (
           <a
             key={href}
             href={href}
@@ -293,18 +304,20 @@ export function App() {
                 placeholder="Filter tasks"
                 aria-label="Filter tasks"
               />
-              <select
-                value={feature}
-                onChange={(e) => setFeature(e.target.value)}
-                aria-label="Feature"
-              >
-                <option value="">All features</option>
-                {data?.features.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.title}
-                  </option>
-                ))}
-              </select>
+              {data && data.features.length === 0 ? null : (
+                <select
+                  value={feature}
+                  onChange={(e) => setFeature(e.target.value)}
+                  aria-label="Feature"
+                >
+                  <option value="">All features</option>
+                  {data?.features.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.title}
+                    </option>
+                  ))}
+                </select>
+              )}
             </>
           ) : null}
           <button type="button" onClick={() => setPalette(true)}>
@@ -450,7 +463,13 @@ export function App() {
             }
           />
         ) : null}
-        {data && path === "/agents" ? (
+        {data && general && CODE_ONLY.has(path) ? (
+          <p className="empty page">
+            A general project has no features or file reservations. Switch the project kind in
+            Settings to see this page.
+          </p>
+        ) : null}
+        {data && !general && path === "/agents" ? (
           <Agents
             data={data}
             onRelease={() =>
@@ -475,7 +494,7 @@ export function App() {
             }}
           />
         ) : null}
-        {data && path === "/features" ? (
+        {data && !general && path === "/features" ? (
           <Features
             data={data}
             onSavePaths={(id, paths, version) =>
@@ -530,7 +549,9 @@ export function App() {
           />
         ) : null}
         {data && path === "/activity" ? <Activity data={data} /> : null}
-        {data && path === "/settings" ? <Settings data={data} onSaved={saved} /> : null}
+        {data && path === "/settings" ? (
+          <Settings data={data} onSaved={saved} onError={fail} />
+        ) : null}
       </main>
       {data && task ? (
         <TaskSheet

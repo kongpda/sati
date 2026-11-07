@@ -96,8 +96,11 @@ export interface Activity {
   diff: Record<string, unknown>;
 }
 
+/** `general`: plans, todos and notes, with no features, file reservations or guard. */
+export type ProjectKind = "code" | "general";
+
 export interface Snapshot {
-  project: { id: string; name: string; slug: string } | null;
+  project: { id: string; name: string; slug: string; kind: ProjectKind } | null;
   you: string;
   version: number;
   tasks: Task[];
@@ -174,6 +177,11 @@ export const api = {
     request<unknown>(`/api/${entity}s/${id}/restore`, { method: "POST", body: "{}" }),
   patchProfile: (id: string, body: Record<string, unknown>) =>
     request<Actor>(`/api/actors/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  setKind: (kind: ProjectKind) =>
+    request<{ kind: ProjectKind }>("/api/settings", {
+      method: "PATCH",
+      body: JSON.stringify({ kind }),
+    }),
   patchFeature: (id: string, body: Record<string, unknown>) =>
     request<Feature>(`/api/features/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
 };

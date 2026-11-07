@@ -502,3 +502,37 @@ test("uses plain words for statuses, activity and times", async ({ page }) => {
   expect(ui.sati<{ status: string }>("task", "show", t.id).status).toBe("in_progress");
   expect(await problems()).toEqual([]);
 });
+
+// PLAN Phase 7a: a general project (an event, a campaign) has no features or file reservations.
+test("a general project hides features and the Agents page, and switches back", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  const f = ui.sati<{ id: string }>("feature", "create", "Ticketing", "--paths", "src/tickets/**");
+  await ui.api("POST", "/api/tasks", { title: "Book the venue", featureId: f.id });
+  await page.goto(ui.signIn);
+  const nav = page.getByRole("navigation");
+  await expect(nav.getByRole("link", { name: "Features", exact: true })).toBeVisible();
+
+  await nav.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.getByRole("radio", { name: /General project/u }).check();
+  await expect(page.getByRole("status")).toContainText("This is now a general project.");
+  await expect(nav.getByRole("link", { name: "Features", exact: true })).toHaveCount(0);
+  await expect(nav.getByRole("link", { name: "Agents", exact: true })).toHaveCount(0);
+  expect(ui.sati<{ kind: string }>("settings").kind).toBe("general");
+
+  // The board drops the feature filter and the feature on the card; the task is still there.
+  await nav.getByRole("link", { name: "Board", exact: true }).click();
+  await expect(page.getByLabel("Feature", { exact: true })).toHaveCount(0);
+  const card = page.locator(".card").filter({ hasText: "Book the venue" });
+  await expect(card).toBeVisible();
+  await expect(card).not.toContainText("Ticketing");
+  await page.goto(`${ui.origin}/features`);
+  await expect(page.getByText("A general project has no features")).toBeVisible();
+
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.getByRole("radio", { name: /Software project/u }).check();
+  await expect(nav.getByRole("link", { name: "Features", exact: true })).toBeVisible();
+  expect(ui.sati<{ kind: string }>("settings").kind).toBe("code");
+  expect(await problems()).toEqual([]);
+});

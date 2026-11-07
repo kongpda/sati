@@ -9,6 +9,7 @@ import {
   type GuardResult,
   hookBypass,
   parseShellChanges,
+  readSettings,
   recordGuard,
   SatiConfigSchema,
   SatiError,
@@ -64,8 +65,11 @@ export function inRepo(root: string, cwd: string, path: string): string | undefi
   return rel.split(sep).join("/");
 }
 
+/** A general project has no features or file locks to protect, so the guard has nothing to do. */
+const guardOff = (rt: Runtime) => readSettings(rt.project.settings).kind === "general";
+
 async function check(rt: Runtime, changes: Change[], record: boolean): Promise<GuardResult> {
-  if (changes.length === 0) return { verdict: "ok", findings: [] };
+  if (changes.length === 0 || guardOff(rt)) return { verdict: "ok", findings: [] };
   const ratio = maxRemovalRatio(rt.location.root);
   const result = await checkChanges(rt.ctx, {
     changes,
@@ -109,6 +113,7 @@ async function runHook(): Promise<void> {
     const command = input.tool_input?.command;
     const target = input.tool_input?.file_path ?? input.tool_input?.notebook_path;
     rt = await openRuntime(cwd);
+    if (guardOff(rt)) return;
     const bypass = typeof command === "string" ? hookBypass(command) : undefined;
     if (bypass && !overridden()) {
       process.stderr.write(

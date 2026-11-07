@@ -13,6 +13,10 @@ export default defineCommand({
       description: `Tell an idle agent to run ${CLI_NAME} next (--no-auto-continue turns it off)`,
     },
     lease: { type: "string", description: "Claim lease in minutes" },
+    kind: {
+      type: "string",
+      description: "code | general (general hides features, file locks and the guard)",
+    },
     ...json,
   },
   run: ({ args }) =>
@@ -22,16 +26,18 @@ export default defineCommand({
         const changing =
           args.review !== undefined ||
           args["auto-continue"] !== undefined ||
-          args.lease !== undefined;
+          args.lease !== undefined ||
+          args.kind !== undefined;
         if (!changing) return readSettings(project.settings);
         const updated = await updateSettings(ctx, {
           review: args.review,
           autoContinue: args["auto-continue"],
           leaseMinutes: int(args.lease, "lease"),
+          kind: args.kind,
         });
         return readSettings(updated.settings);
       },
       (settings) =>
-        `review ${settings.review}\nautoContinue ${settings.autoContinue}\nlease ${settings.leaseMinutes} min`,
+        `kind ${settings.kind}\nreview ${settings.review}\nautoContinue ${settings.autoContinue}\nlease ${settings.leaseMinutes} min`,
     ),
 });

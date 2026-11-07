@@ -1,4 +1,4 @@
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { serve } from "@hono/node-server";
@@ -62,6 +62,46 @@ const CSP = [
   "base-uri 'none'",
   "form-action 'self'",
 ].join("; ");
+
+const STALE_STYLE =
+  "body{font:16px/1.5 system-ui,sans-serif;max-width:34rem;margin:15vh auto;padding:0 1.25rem}" +
+  "code{font-size:1.05em;padding:0 .25em;border:1px solid #8888;border-radius:4px}";
+/** The page's own policy: the same, but its one inline style is allowed by hash. */
+const STALE_CSP = CSP.replace(
+  "style-src 'self'",
+  `style-src 'sha256-${createHash("sha256").update(STALE_STYLE).digest("base64")}'`,
+);
+/** What a browser gets when its session is gone: the server restarted or the link is old. */
+const STALE_PAGE = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>This board link has expired</title>
+<style>${STALE_STYLE}</style>
+</head>
+<body>
+<h1>This board link has expired</h1>
+<p>The board opens only from the link that <code>${CLI_NAME} ui</code> prints, and each link stops working when <code>${CLI_NAME} ui</code> stops or starts again.</p>
+<p>To get a new link, run <code>${CLI_NAME} ui</code> again in your project folder.</p>
+</body>
+</html>
+`;
+
+/** A browser opening a page, not the board's own API calls or event stream. */
+function wantsPage(c: Context): boolean {
+  const path = c.req.path;
+  if (path.startsWith("/api/") || path === "/api" || path === "/events") return false;
+  if (c.req.method !== "GET" && c.req.method !== "HEAD") return false;
+  return c.req.header("accept")?.includes("text/html") ?? false;
+}
+
+function stalePage(c: Context): Response {
+  c.header("Content-Security-Policy", STALE_CSP);
+  c.header("Cache-Control", "no-store");
+  return c.html(STALE_PAGE, 401);
+}
 
 export interface UiRuntime {
   ctx: ServiceContext;
@@ -234,7 +274,9 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   });
 
   app.get("/session", (c) => {
-    if (!sameToken(c.req.query("token"), token)) return c.text("Sign-in token refused.", 401);
+    if (!sameToken(c.req.query("token"), token)) {
+      return wantsPage(c) ? stalePage(c) : c.text("Sign-in token refused.", 401);
+    }
     setCookie(c, cookieName(hostOf(c)), token, {
       httpOnly: true,
       sameSite: "Strict",
@@ -246,6 +288,7 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
 
   app.use("*", async (c, next) => {
     if (sameToken(getCookie(c, cookieName(hostOf(c))), token)) return next();
+    if (wantsPage(c)) return stalePage(c);
     return c.json(
       { error: { code: "USAGE", message: `Open this board from \`${CLI_NAME} ui\`.`, hint: null } },
       401,

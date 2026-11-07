@@ -2,6 +2,7 @@ import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { ENTITY_SCHEMAS, type EntityMap, LIMITS } from "../domain/schemas.js";
 import { listAll, logActivity, parseInput, type ServiceContext } from "./context.js";
+import { linkProblems } from "./doctor.js";
 
 /** The records the git snapshot carries. Actors, locks and activity stay machine-local. */
 export const SNAPSHOT_ENTITIES = [
@@ -59,6 +60,11 @@ export type ImportRecordsInput = z.input<typeof ImportRecordsInput>;
 export interface ImportResult {
   imported: { entity: SnapshotEntity; id: string; version: number }[];
   unchanged: number;
+  /**
+   * Cycles and broken links among the imported tasks. A merge can make them, so the import does
+   * not refuse (that would stop every git hook until someone edited `.sati/` by hand); it says so.
+   */
+  problems: string[];
 }
 
 /** True when `incoming` should replace `stored`: a higher version, or the same one edited later. */
@@ -97,7 +103,7 @@ export async function importRecords(ctx: ServiceContext, input: unknown): Promis
   }
 
   return ctx.store.write(async (w) => {
-    const result: ImportResult = { imported: [], unchanged: 0 };
+    const result: ImportResult = { imported: [], unchanged: 0, problems: [] };
     for (const { entity, record } of parsed) {
       const stored = await w.get(entity, record.id);
       if (stored && !isNewer(record, stored)) {
@@ -112,6 +118,8 @@ export async function importRecords(ctx: ServiceContext, input: unknown): Promis
       });
       result.imported.push({ entity, id: record.id, version: record.version });
     }
+    const tasks = result.imported.filter((i) => i.entity === "task").map((i) => i.id);
+    if (tasks.length > 0) result.problems = await linkProblems(w, ctx, tasks);
     return result;
   });
 }

@@ -3,9 +3,11 @@ import {
   claimTask,
   createNote,
   createTask,
+  doctorChecks,
   ensureActor,
   importRecords,
   snapshotRecords,
+  updateTask,
 } from "../src/index.js";
 import { setup } from "./support/setup.js";
 
@@ -39,7 +41,11 @@ describe("importRecords", () => {
     const r = await importRecords(ctx, [
       { entity: "task", source: "tasks/a.json", record: { ...task, projectId: ctx.projectId } },
     ]);
-    expect(r).toEqual({ imported: [{ entity: "task", id: task.id, version: 1 }], unchanged: 0 });
+    expect(r).toEqual({
+      imported: [{ entity: "task", id: task.id, version: 1 }],
+      unchanged: 0,
+      problems: [],
+    });
     expect(store.activity.slice(before)).toEqual([
       expect.objectContaining({
         verb: "import",
@@ -49,6 +55,39 @@ describe("importRecords", () => {
         diff: { version: 1, from: null },
       }),
     ]);
+  });
+
+  // PLAN Phase 5b: a merge can make a cycle or a dangling link that a write would refuse. The
+  // import keeps going (hooks must not wedge) and reports them; doctor reports them too.
+  it("imports a merged dependency cycle and a dangling link, and reports both", async () => {
+    const { ctx } = await setup();
+    const a = await createTask(ctx, { title: "A" });
+    const b = await createTask(ctx, { title: "B", dependsOn: [a.id] });
+    const r = await importRecords(ctx, [
+      {
+        entity: "task",
+        source: "tasks/a.json",
+        record: {
+          ...a,
+          dependsOn: [b.id],
+          featureId: "feat_01JC0000000000000000000ZZZ",
+          version: 2,
+          updatedAt: LATER,
+        },
+      },
+    ]);
+    expect(r.imported).toHaveLength(1);
+    expect(r.problems).toEqual([
+      expect.stringMatching(/links to feature feat_\w+, which is missing/u),
+      expect.stringMatching(/^Dependency cycle: tsk_\w+ -> tsk_\w+ -> tsk_\w+\.$/u),
+    ]);
+    const links = (await doctorChecks(ctx)).find((c) => c.name === "links");
+    expect(links).toMatchObject({ ok: false, detail: expect.stringContaining("Dependency cycle") });
+    // Cancelling one of them breaks the cycle: cancelled work blocks nothing.
+    await updateTask(ctx, b.id, { status: "cancelled" });
+    expect((await doctorChecks(ctx)).find((c) => c.name === "links")?.detail).not.toContain(
+      "cycle",
+    );
   });
 
   // PLAN: import upserts records whose version or updatedAt is newer. A stale snapshot file

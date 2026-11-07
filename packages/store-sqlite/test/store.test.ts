@@ -235,9 +235,13 @@ describe("queries", () => {
     const stillBlocked = await store.read((r) => r.readyTasks(PROJECT_ID, NOW, 10));
     expect(stillBlocked.map((t) => t.id)).not.toContain(blockedByDep.id);
 
-    // Deleting the dependency unblocks the task; a dependency that was never there still blocks.
+    // Cancelling the dependency unblocks the task, and so does deleting it; a dependency that
+    // was never there still blocks.
+    await store.write((w) => w.update("task", { ...dep, status: "cancelled", version: 3 }, 2));
+    const cancelled = await store.read((r) => r.readyTasks(PROJECT_ID, NOW, 10));
+    expect(cancelled.map((t) => t.id)).toContain(blockedByDep.id);
     await store.write((w) =>
-      w.update("task", { ...dep, status: "review", deletedAt: NOW, version: 3 }, 2),
+      w.update("task", { ...dep, status: "review", deletedAt: NOW, version: 4 }, 3),
     );
     const missing = task({ dependsOn: ["tsk_01JC0000000000000000000ZZZ"] });
     await store.write((w) => w.insert("task", missing));
@@ -259,6 +263,22 @@ describe("search", () => {
     expect(hits[0]?.title).toBe("Merge driver for JSON");
     const onlyNotes = await store.read((r) => r.search(PROJECT_ID, "merg", { entities: ["note"] }));
     expect(onlyNotes.map((h) => h.entity)).toEqual(["note"]);
+  });
+
+  // PLAN Phase 5b: punctuation inside a word splits it the way the index does, so a version, a
+  // file name or a date finds the record, and a different one does not.
+  it("finds words with punctuation inside them, such as v1.2 and auth.ts", async () => {
+    await store.write(async (w) => {
+      await w.insert("note", note({ title: "Release v1.2 notes", body: "Touches src/auth.ts" }));
+      await w.insert("note", note({ title: "Release v1.3 notes" }));
+    });
+    const titles = async (q: string) =>
+      (await store.read((r) => r.search(PROJECT_ID, q))).map((h) => h.title);
+    expect(await titles("v1.2")).toEqual(["Release v1.2 notes"]);
+    expect(await titles("auth.ts")).toEqual(["Release v1.2 notes"]);
+    expect(await titles("v1.")).toHaveLength(2);
+    // Quotes and operators stay plain text.
+    expect(await titles('v1.2" OR "v1.3')).toEqual([]);
   });
 
   it("drops soft-deleted records from the index", async () => {

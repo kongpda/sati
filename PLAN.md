@@ -131,7 +131,7 @@ Ten entities cover tasks, features, roadmap, memory and coordination. Every reco
 **Rules enforced in the core**
 
 - A task can be claimed only if it is unclaimed, its lease expired, or the caller already holds it. This check-and-set runs inside one `BEGIN IMMEDIATE` transaction, so two agents can never claim the same task.
-- A task is "ready" when it is `todo`, unclaimed and all `dependsOn` tasks are `done` or deleted (a deleted dependency no longer blocks; a missing one still does). Dependency cycles are rejected on write.
+- A task is "ready" when it is `todo`, unclaimed and all `dependsOn` tasks are `done`, `cancelled` or deleted (work that will not happen no longer blocks; a missing dependency still does). Dependency cycles are rejected on write.
 - Leases default to 30 minutes and renew on any write by the holder. `sati doctor` and every brief clear expired leases.
 - Full-text search (FTS5) indexes task, feature, note and decision text.
 
@@ -303,6 +303,8 @@ Live coordination happens in the shared DB. Git only carries the durable record 
 - Soft-deleted records keep a tombstone (`deletedAt`) so the deletion merges correctly.
 
 **Import (`.sati/` → DB)** runs after merge, checkout and rebase. It upserts records whose `version` or `updatedAt` is newer and records the import in the activity log.
+
+**Hooks.** `sati init` never writes into a global `core.hooksPath` (shared by every repo on the machine) without asking; `--yes` skips it with a warning unless `--global-hooks` is given. A hook that is not a shell script is reported, not edited.
 
 **Merge driver (`sati merge-driver %O %A %B`)**
 
@@ -591,18 +593,18 @@ Added 2026-11-07 at the owner's request, after a full review of core, store, CLI
 
 **Still open**
 
-- [ ] Moving a task to `in_progress` through `task update` leaves it with no claim; claim it for the caller instead
-- [ ] Owner decision: a deleted or cancelled dependency blocks its dependents forever (PLAN requires `done`); options are in `docs/ideas.md`
-- [ ] `importRecords` skips dependency-cycle and link checks
-- [ ] Size limits count characters, not bytes (100,000 characters of a non-Latin script such as Khmer is about 300 KB), and a `subtasks[]` batch has no total cap
-- [ ] The brief can exceed `maxTokens` with long actor names and many sections; clip the header and drop empty sections
-- [ ] FTS drops punctuation inside a term (`v1.2` searches `v12`); split on it instead
-- [ ] MCP `feature_upsert` advertises the update schema for creates; `feature_check` rejects absolute and `./` paths
-- [ ] `sati init` chains into a global `core.hooksPath`, which changes every repo on the machine; say so in the plan and ask first. It also re-sorts the keys of an existing `.claude/settings.json`
-- [ ] `chainInto` adds an sh block to hooks with another interpreter (`#!/usr/bin/env node`)
-- [ ] UI: `j`/`k` follows snapshot order, not board order, and does not update `?task=`; the Features path field has the same lost-edit problem as the task panel had
-- [ ] UI at 375 px: the single-column default is chosen only at load, "All columns" scrolls sideways, and the nav hides Notes, Decisions and Activity with no hint
-- [ ] UI: serve an HTML page (not JSON) for a stale session
+- [x] Moving a task to `in_progress` through `task update` claims it for the caller (with a fencing token), so it no longer looks free with no lease
+- [x] A cancelled dependency no longer blocks its dependents, like a deleted one (decided 2026-11-07: cancelled work will never be done, so blocking for good helps no one); a missing dependency still blocks
+- [x] `importRecords` checks the tasks it brings in for dependency cycles and missing features, milestones, parents and dependencies, in the same transaction. A merge can make these, so it reports them (`sync import` prints them, even with `--quiet`) instead of refusing, which would stop every git hook; `sati doctor` has the same check over all tasks
+- [x] Bodies are capped at 100 KB of UTF-8, not 100,000 characters (100,000 Khmer characters is about 300 KB), and a `subtasks[]` batch at 1 MB in total
+- [x] The brief stays within `maxTokens`: the actor name in the header is clipped to 60 characters, and when the cap still does not hold, sections left with no items fold into one closing line
+- [x] Search splits a word on its punctuation into a phrase of the same tokens the index holds, so `v1.2` and `auth.ts` find their records
+- [x] MCP `feature_upsert` says which fields only an update takes, and refuses them on a create with that reason; `feature_check` and `lock_acquire` accept an absolute path inside the repo as its repo-relative path (`./` was already accepted)
+- [x] `sati init` no longer writes into a global `core.hooksPath` without asking: the wizard asks, `--yes` skips it with a warning, and `--global-hooks` opts in. An existing `.claude/settings.json` keeps its key order
+- [x] A hook in another language (`#!/usr/bin/env node`) is left byte-identical, with a note saying which sati runner to call from it
+- [x] UI: `j`/`k` step through the cards in board order (columns, lanes, filters, the phone column), work from an open panel and update `?task=`; the Features paths field keeps typed text across refreshes and shows a change made elsewhere
+- [x] UI at 375 px: one column or all columns follows the window across 700 px, "All columns" snaps one column at a time, and the nav fades at its right edge and scrolls the current page into view
+- [x] UI: a browser with a stale session or an old sign-in link gets a plain page saying to run `sati ui` again (no scripts; its style allowed by hash in the CSP); API calls and the event stream keep their JSON 401
 
 **Gate:** every open item above is fixed with a regression test, or moved to `docs/ideas.md` with a reason.
 

@@ -3,7 +3,10 @@ import { FEATURE_STATUSES, MILESTONE_STATUSES, TASK_STATUSES } from "./status.js
 
 /** Limits from the Security section: bodies up to 100 KB, arrays up to 500 items. */
 export const LIMITS = {
+  /** Bytes of UTF-8, not characters: 100,000 Khmer characters would be about 300 KB. */
   body: 100_000,
+  /** Bytes of UTF-8 across one write's batch, such as all of a task's `subtasks[]`. */
+  batch: 1_000_000,
   title: 300,
   shortText: 2_000,
   array: 500,
@@ -19,7 +22,34 @@ export const SNAPSHOT_SCHEMA_VERSION = 1;
  */
 const ts = z.iso.datetime({ offset: false }).transform((v) => new Date(v).toISOString());
 const title = z.string().trim().min(1).max(LIMITS.title);
-const body = z.string().max(LIMITS.body);
+/** UTF-8 length without allocating: 1 byte for ASCII, 2 to 3 per other unit, 4 per pair. */
+export function utf8Bytes(text: string): number {
+  let n = 0;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    n +=
+      c < 0x80
+        ? 1
+        : c < 0x800
+          ? 2
+          : c >= 0xd800 && c <= 0xdbff
+            ? 4
+            : c >= 0xdc00 && c <= 0xdfff
+              ? 0
+              : 3;
+  }
+  return n;
+}
+
+/**
+ * Markdown text up to 100 KB. The character cap is checked first so a huge string is refused
+ * before it is measured; UTF-8 is never shorter than its character count.
+ */
+export const BodyText = z
+  .string()
+  .max(LIMITS.body)
+  .refine((v) => utf8Bytes(v) <= LIMITS.body, "is over 100 KB");
+const body = BodyText;
 const shortText = z.string().max(LIMITS.shortText);
 const list = <T extends z.ZodType>(item: T) => z.array(item).max(LIMITS.array);
 const pathGlob = z.string().min(1).max(LIMITS.path);

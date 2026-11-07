@@ -39,8 +39,7 @@ export function Board({
   onReviewed: (id: string) => void;
   onMove: (id: string, status: string) => void;
 }) {
-  const byFeature = new Map(features.map((f) => [f.id, f.title]));
-  const featureName = (id: string | null) => (id ? (byFeature.get(id) ?? "") : "");
+  const { featureName, columns } = boardColumns(tasks, features);
   const people = new Map(actors.map((a) => [a.id, a]));
   // A drag starts only after the pointer moves, so a plain click still opens the card.
   const sensors = useSensors(
@@ -65,13 +64,14 @@ export function Board({
       onDragCancel={() => setDragging(null)}
     >
       <div className="board">
-        {COLUMNS.map(([status, label]) => (
+        {columns.map(({ status, label, count, rows }) => (
           <Column
             key={status}
             status={status}
             label={label}
-            show={column === "all" || column === status}
-            tasks={tasks.filter((t) => t.status === status)}
+            show={shows(column, status)}
+            count={count}
+            rows={rows}
             featureName={features.length > 0 ? featureName : null}
             people={people}
             fresh={fresh}
@@ -103,7 +103,8 @@ function Column({
   status,
   label,
   show,
-  tasks,
+  count,
+  rows,
   featureName,
   people,
   fresh,
@@ -115,7 +116,8 @@ function Column({
   status: string;
   label: string;
   show: boolean;
-  tasks: Task[];
+  count: number;
+  rows: LaneRow[];
   /** null when there are no features: no lane headings, so no "No feature" in every column. */
   featureName: ((id: string | null) => string) | null;
   people: Map<string, Actor>;
@@ -127,9 +129,6 @@ function Column({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const parent = useRef<HTMLDivElement>(null);
-  const rows: LaneRow[] = featureName
-    ? laneRows(tasks, featureName)
-    : tasks.map((task) => ({ kind: "task", task }));
   const virtual = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parent.current,
@@ -139,11 +138,11 @@ function Column({
   return (
     <section className={show ? "column show" : "column"} ref={setNodeRef} aria-label={label}>
       <h2>
-        {label} <span className="count">{tasks.length}</span>
+        {label} <span className="count">{count}</span>
         {isOver ? " · drop" : ""}
       </h2>
       <div className="cards" ref={parent}>
-        {tasks.length === 0 ? <p className="column-empty">No tasks</p> : null}
+        {count === 0 ? <p className="column-empty">No tasks</p> : null}
         <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
           {virtual.getVirtualItems().map((row) => {
             const item = rows[row.index];
@@ -327,6 +326,30 @@ function CardBody({
 }
 
 type LaneRow = { kind: "lane"; key: string; title: string } | { kind: "task"; task: Task };
+
+/** One function for the board's layout, so the board and j/k agree on the order. */
+function boardColumns(tasks: Task[], features: Feature[]) {
+  const byFeature = new Map(features.map((f) => [f.id, f.title]));
+  const featureName = (id: string | null) => (id ? (byFeature.get(id) ?? "") : "");
+  const columns = COLUMNS.map(([status, label]) => {
+    const own = tasks.filter((t) => t.status === status);
+    const rows: LaneRow[] =
+      features.length > 0
+        ? laneRows(own, featureName)
+        : own.map((task) => ({ kind: "task", task }));
+    return { status, label, count: own.length, rows };
+  });
+  return { featureName, columns };
+}
+
+const shows = (column: string, status: string) => column === "all" || column === status;
+
+/** The cards in the order the person sees them: column by column, top to bottom. */
+export function boardOrder(tasks: Task[], features: Feature[], column: string): Task[] {
+  return boardColumns(tasks, features)
+    .columns.filter((c) => shows(column, c.status))
+    .flatMap((c) => c.rows.flatMap((row) => (row.kind === "task" ? [row.task] : [])));
+}
 
 function laneRows(tasks: Task[], featureName: (id: string | null) => string): LaneRow[] {
   // Named features first, alphabetically; tasks without a feature go last.

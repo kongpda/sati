@@ -512,12 +512,27 @@ textarea {
   .nav {
     flex-direction: row;
     overflow: auto;
+    /* The fade below is the end padding, so it reaches the screen edge. The current page
+       scrolls into view clear of it. */
+    padding-inline-end: 0;
+    scroll-padding-inline-end: 32px;
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
   /* The bar scrolls sideways; a two-word label must not wrap and make it taller. */
   .nav a {
     white-space: nowrap;
+  }
+  /* A fade pinned to the right edge says more pages are off screen. It sits in its own space
+     after the last link, so once the bar is scrolled to the end nothing is faded. */
+  .nav::after {
+    content: "";
+    position: sticky;
+    right: 0;
+    flex: 0 0 32px;
+    margin-left: -4px;
+    background: linear-gradient(to right, transparent, var(--paper) 70%);
+    pointer-events: none;
   }
   .brand {
     display: none;
@@ -529,10 +544,16 @@ textarea {
   .top input {
     flex-basis: 100%;
   }
+  /* "All columns" pages through the columns one screen at a time instead of stopping midway. */
+  .board {
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 14px;
+  }
   .column {
     display: none;
     width: 100%;
     flex-basis: auto;
+    scroll-snap-align: start;
   }
   .column.show {
     display: flex;

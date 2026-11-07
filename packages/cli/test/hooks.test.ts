@@ -1,12 +1,22 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { delimiter, dirname, join, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 import { planHooks } from "../src/hooks.js";
-import { sati, satiJson, tempRepo } from "./helpers.js";
+import { run, sati, satiJson, tempRepo } from "./helpers.js";
 
 interface Init {
   files: { path: string; action: string }[];
+  notes: string[];
 }
 
 const which = (cmd: string) =>
@@ -176,5 +186,65 @@ describe("git hooks", () => {
     writeFileSync(join(other, "lefthook-local.yml"), "pre-commit: {}\n");
     expect(init(other).data.files).toContainEqual({ path: "lefthook-local.yml", action: "skip" });
     expect(read(other, "lefthook-local.yml")).toBe("pre-commit: {}\n");
+  });
+
+  // PLAN Git sync: a global core.hooksPath is the hooks folder of every repo on the machine, so
+  // `init --yes` never writes there; it says so, and `--global-hooks` opts in.
+  it("leaves a global core.hooksPath alone unless --global-hooks is given", async () => {
+    const dir = await tempRepo();
+    const home = realpathSync.native(mkdtempSync(join(tmpdir(), "sati-global-")));
+    const folder = join(home, "hooks").split(sep).join("/");
+    mkdirSync(folder);
+    const theirs = "#!/bin/sh\necho global\n";
+    writeFileSync(join(folder, "pre-commit"), theirs);
+    writeFileSync(join(home, "gitconfig"), `[core]\n\thooksPath = ${folder}\n`);
+    const env = { GIT_CONFIG_GLOBAL: join(home, "gitconfig") };
+    const json = (...args: string[]) => {
+      const r = run(dir, [...args, "--json"], env);
+      expect(r.code).toBe(0);
+      return JSON.parse(r.stdout) as Init;
+    };
+
+    const first = json("init", "--yes", "--tools", "");
+    expect(first.files).toContainEqual({ path: `${folder}/pre-commit`, action: "skip" });
+    expect(first.files).toContainEqual({ path: `${folder}/pre-push`, action: "skip" });
+    expect(first.files.some((f) => f.path.startsWith(".git/hooks/"))).toBe(false);
+    expect(first.notes).toEqual([
+      `(${folder}/pre-commit: git uses the global core.hooksPath ${folder} for every repo on this machine, so sati did not write there and its git hooks will not run in this repo. To chain them into that folder (they do nothing in repos without sati), run \`sati init --upgrade --global-hooks\`)`,
+    ]);
+    expect(read(folder, "pre-commit")).toBe(theirs);
+    expect(existsSync(join(folder, "post-merge"))).toBe(false);
+    // The human output prints the warning too.
+    const upgrade = run(dir, ["init", "--upgrade", "--yes"], env);
+    expect(upgrade.stdout).toContain(`git uses the global core.hooksPath ${folder}`);
+    expect(read(folder, "pre-commit")).toBe(theirs);
+
+    const opted = json("init", "--upgrade", "--yes", "--global-hooks");
+    expect(opted.files).toContainEqual({ path: `${folder}/pre-commit`, action: "update" });
+    expect(opted.files).toContainEqual({ path: `${folder}/post-merge`, action: "create" });
+    expect(opted.notes).toEqual([]);
+    expect(read(folder, "pre-commit")).toMatch(
+      /^#!\/bin\/sh\n# >>> sati[\s\S]*# <<< sati\necho global\n$/,
+    );
+  });
+
+  // A block of sh lines would break a hook written for another interpreter, so it is reported.
+  it("leaves a hook in another language byte-identical and says how to call sati from it", async () => {
+    const dir = await tempRepo();
+    mkdirSync(join(dir, ".git/hooks"), { recursive: true });
+    const theirs =
+      "#!/usr/bin/env node\nrequire('node:fs').writeFileSync('.git/theirs-ran', '');\n";
+    writeFileSync(join(dir, ".git/hooks/pre-commit"), theirs);
+    const r = init(dir);
+    expect(r.data.files).toContainEqual({ path: ".git/hooks/pre-commit", action: "skip" });
+    expect(r.data.files).toContainEqual({ path: ".git/hooks/post-merge", action: "create" });
+    expect(r.data.notes).toEqual([
+      "(.git/hooks/pre-commit: this hook runs with node, not sh, so sati left it unchanged. Have it run .git/sati/hooks/pre-commit with the same arguments, and stop when it fails)",
+    ]);
+    expect(read(dir, ".git/hooks/pre-commit")).toBe(theirs);
+
+    const again = satiJson<Init>(dir, "init", "--upgrade", "--yes");
+    expect(again.data.files).toContainEqual({ path: ".git/hooks/pre-commit", action: "skip" });
+    expect(read(dir, ".git/hooks/pre-commit")).toBe(theirs);
   });
 });

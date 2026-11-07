@@ -17,7 +17,7 @@ export default defineCommand({
       const { kind } = readSettings(project.settings);
       if (project.mode !== "git") {
         try {
-          await serveStdio(ctx, pkg.version, kind);
+          await serveStdio(ctx, pkg.version, kind, location.root);
         } finally {
           await ctx.store.close();
         }
@@ -35,7 +35,7 @@ export default defineCommand({
         (err) => printError(err, false),
       );
       try {
-        await serveStdio({ ...ctx, store: synced.store }, pkg.version, kind);
+        await serveStdio({ ...ctx, store: synced.store }, pkg.version, kind, location.root);
       } finally {
         await synced.flush();
         await ctx.store.close();

@@ -1,4 +1,4 @@
-import { type ImportResult, readSettings, updateSettings } from "@sati/core";
+import { CLI_NAME, type ImportResult, readSettings, updateSettings } from "@sati/core";
 import { type ExportResult, exportSnapshot, importSnapshot } from "@sati/sync";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
@@ -45,10 +45,14 @@ export const importCmd = defineCommand({
         }
         return result;
       },
-      (r: ImportResult) =>
-        args.quiet && r.imported.length === 0
-          ? ""
-          : `Imported ${r.imported.length} newer, ${r.unchanged} unchanged.`,
+      (r: ImportResult) => {
+        // Problems need a person even in quiet mode: they come from a merge nobody saw.
+        const problems = r.problems.length
+          ? `\nwarning: ${r.problems.join("\nwarning: ")}\nhint: Run \`${CLI_NAME} doctor\`, then fix the links with \`${CLI_NAME} task update\`.`
+          : "";
+        if (args.quiet && r.imported.length === 0) return problems.trimStart();
+        return `Imported ${r.imported.length} newer, ${r.unchanged} unchanged.${problems}`;
+      },
     ),
 });
 

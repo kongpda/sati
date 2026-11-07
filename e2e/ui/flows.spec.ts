@@ -613,3 +613,143 @@ test("a general project hides features and the Agents page, and switches back", 
   expect(ui.sati<{ kind: string }>("settings").kind).toBe("code");
   expect(await problems()).toEqual([]);
 });
+
+// PLAN Phase 5b: j/k walked the snapshot, not the board, and left `?task=` behind. It must step
+// through the cards as shown (column by column, lanes by feature, filters and the phone's column
+// choice) and keep the URL in step, as a click does.
+test("j and k step through the cards in board order and keep ?task= in step", async ({ page }) => {
+  const problems = await watch(page);
+  const alpha = ui.sati<{ id: string }>("feature", "create", "Alpha", "--paths", "src/alpha/**");
+  const beta = ui.sati<{ id: string }>("feature", "create", "Beta", "--paths", "src/beta/**");
+  const make = (title: string, status: string, featureId?: string) =>
+    ui.api<{ id: string; title: string }>("POST", "/api/tasks", { title, status, featureId });
+  // Created in an order unlike the board's, which sorts by column, then by feature lane.
+  const todoPlain = await make("Kestrel todo plain", "todo");
+  const backlogBeta = await make("Kestrel backlog Beta", "backlog", beta.id);
+  const todoAlpha = await make("Kestrel todo Alpha", "todo", alpha.id);
+  const backlogAlpha = await make("Kestrel backlog Alpha", "backlog", alpha.id);
+  await page.goto(ui.signIn);
+  await page.getByLabel("Filter tasks").fill("Kestrel");
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  const at = async (key: string, task: { id: string; title: string } | null) => {
+    await page.keyboard.press(key);
+    if (task === null) {
+      await expect(page).toHaveURL(`${ui.origin}/`);
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      return;
+    }
+    await expect(page).toHaveURL(`${ui.origin}/?task=${task.id}`);
+    await expect(page.getByRole("dialog", { name: task.title })).toBeVisible();
+  };
+  // Backlog (Alpha lane, then Beta), then To do (Alpha, then No feature); then it wraps.
+  await at("j", backlogAlpha);
+  await at("j", backlogBeta);
+  await at("j", todoAlpha);
+  await at("j", todoPlain);
+  await at("j", backlogAlpha);
+  await at("k", todoPlain);
+  // The URL opens the same panel, and Back returns to the card before.
+  await page.goBack();
+  await expect(page).toHaveURL(`${ui.origin}/?task=${backlogAlpha.id}`);
+  await page.goForward();
+  await expect(page.getByRole("dialog", { name: "Kestrel todo plain" })).toBeVisible();
+  await at("Escape", null);
+  // After closing, j carries on from the card that was open.
+  await at("j", backlogAlpha);
+  await at("Escape", null);
+
+  // The feature filter narrows the walk too.
+  await page.getByLabel("Feature", { exact: true }).selectOption({ label: "Beta" });
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await at("j", backlogBeta);
+  await at("j", backlogBeta);
+  await at("Escape", null);
+  await page.getByLabel("Feature", { exact: true }).selectOption("");
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+
+  // On a phone (the switch follows a resize, not just the first load) only the chosen column.
+  const choice = page.getByLabel("Column", { exact: true });
+  await page.setViewportSize({ width: 375, height: 760 });
+  await expect(choice).toHaveValue("in_progress");
+  await choice.selectOption("todo");
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await at("j", todoAlpha);
+  await at("j", todoPlain);
+  await at("j", todoAlpha);
+  await at("Escape", null);
+  // "All columns" snaps a column at a time instead of stopping midway.
+  await choice.selectOption("all");
+  await expect(page.locator(".board")).toHaveCSS("scroll-snap-type", "x mandatory");
+  await expect(column(page, "To do")).toHaveCSS("scroll-snap-align", "start");
+  // The nav hints at the pages off its right edge.
+  const fade = await page
+    .getByRole("navigation")
+    .evaluate((nav) => getComputedStyle(nav, "::after").backgroundImage);
+  expect(fade).toContain("linear-gradient");
+  // Back to a wide screen: every column again, and k steps from To do back into Backlog.
+  await choice.selectOption("todo");
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await expect(choice).toHaveValue("all");
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await at("k", backlogBeta);
+  await at("Escape", null);
+  expect(await problems()).toEqual([]);
+});
+
+// PLAN Phase 5b: a feature's paths field must keep unsaved typing through refreshes caused by
+// other records, and still show a change made elsewhere once nothing is typed in it.
+test("the Features paths field keeps typed text across a refresh and shows changes made elsewhere", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  const harbour = ui.sati<{ id: string; version: number }>(
+    "feature",
+    "create",
+    "Harbour",
+    "--paths",
+    "src/harbour/**",
+  );
+  const light = ui.sati<{ id: string; version: number }>(
+    "feature",
+    "create",
+    "Lighthouse",
+    "--paths",
+    "src/light/**",
+  );
+  await page.goto(ui.signIn);
+  await page.getByRole("link", { name: "Features", exact: true }).click();
+  const typed = page.getByLabel("Paths for Harbour, one per line");
+  const other = page.getByLabel("Paths for Lighthouse, one per line");
+  await typed.fill("src/harbour/**\nsrc/docks/**");
+
+  // Writes elsewhere refresh the page: one to another feature, one to a task.
+  await ui.api("PATCH", `/api/features/${light.id}`, {
+    paths: ["src/lamp/**"],
+    expectedVersion: light.version,
+  });
+  await ui.api("POST", "/api/tasks", { title: "Paint the lighthouse" });
+  // The untouched field shows the new paths (before, it kept showing the old ones).
+  await expect(other).toHaveValue("src/lamp/**");
+  await expect(typed).toHaveValue("src/harbour/**\nsrc/docks/**");
+  await expect(typed).toBeFocused();
+
+  const pathsOf = (id: string) =>
+    ui
+      .sati<{ id: string; paths: string[]; version: number }[]>("feature", "list")
+      .find((f) => f.id === id);
+  await page
+    .locator("article")
+    .filter({ hasText: "Harbour" })
+    .getByRole("button", { name: "Save paths" })
+    .click();
+  await expect.poll(() => pathsOf(harbour.id)?.paths).toEqual(["src/harbour/**", "src/docks/**"]);
+
+  // Once saved, a change made elsewhere shows in the field.
+  const saved = pathsOf(harbour.id);
+  await ui.api("PATCH", `/api/features/${harbour.id}`, {
+    paths: ["src/quay/**"],
+    expectedVersion: saved?.version,
+  });
+  await expect(typed).toHaveValue("src/quay/**");
+  expect(await problems()).toEqual([]);
+});

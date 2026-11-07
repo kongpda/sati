@@ -1,7 +1,16 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { findDependencyCycle, PRIORITY_RANK } from "../domain/rules.js";
-import { type Claim, Completion, IsoDay, LIMITS, type Task, TaskShape } from "../domain/schemas.js";
+import {
+  BodyText,
+  type Claim,
+  Completion,
+  IsoDay,
+  LIMITS,
+  type Task,
+  TaskShape,
+  utf8Bytes,
+} from "../domain/schemas.js";
 import { TASK_TRANSITIONS } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
 import type { StorageReader, StorageWriter } from "../ports/storage.js";
@@ -55,7 +64,7 @@ const optional = {
 
 const Subtask = z.strictObject({
   title: z.string().trim().min(1).max(LIMITS.title),
-  body: z.string().max(LIMITS.body).optional(),
+  body: BodyText.optional(),
   /** Indexes into this same `subtasks` array. Resolved to ids in the one write. */
   dependsOn: z.array(z.number().int().nonnegative()).max(LIMITS.array).optional(),
 });
@@ -63,7 +72,16 @@ const Subtask = z.strictObject({
 /** New tasks start in `backlog` or `todo`; later states need the update and complete flows. */
 export const CreateTaskInput = fields.partial(optional).extend({
   status: z.enum(["backlog", "todo"]).optional(),
-  subtasks: z.array(Subtask).max(LIMITS.array).optional(),
+  subtasks: z
+    .array(Subtask)
+    .max(LIMITS.array)
+    // 500 subtasks of 100 KB each would be a 50 MB write; the whole batch stays under 1 MB.
+    .refine(
+      (subs) =>
+        subs.reduce((n, s) => n + utf8Bytes(s.title) + utf8Bytes(s.body ?? ""), 0) <= LIMITS.batch,
+      "subtasks are over 1 MB together; split them across several calls",
+    )
+    .optional(),
 });
 /** The fencing token from `claimTask`. Required while the task is claimed. */
 const ClaimToken = { token: z.number().int().positive().optional() };
@@ -226,6 +244,11 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
     if (patch.status && UNCLAIMED_STATUSES.includes(patch.status)) claim = null;
     else if (claim?.actorId === ctx.actorId)
       claim = { ...(await lease(w, ctx)), token: claim.token };
+    else if (patch.status === "in_progress" && claim === null) {
+      // Starting work is claiming it: an in_progress task with no claim would look free to
+      // others and never time out. The token is the new version, as in applyClaim.
+      claim = { ...(await lease(w, ctx)), token: before.version + 1 };
+    }
     return updateWithLog(
       w,
       ctx,

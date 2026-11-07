@@ -82,6 +82,67 @@ describe("ui server", () => {
     expect(body.tasks.map((t) => t.title)).toEqual(["Paint the board"]);
   });
 
+  // PLAN Phase 5b: a browser with a stale session got raw JSON; a person needs to be told what
+  // to do. The page is the only thing it gets: no board, no data, and a CSP as strict as before.
+  it("shows a browser a plain page when its session is stale", async () => {
+    const html = { accept: "text/html,application/xhtml+xml,*/*;q=0.8" };
+    const stale = [
+      await app.request("http://127.0.0.1/", { headers: html }),
+      await app.request("http://127.0.0.1/features?task=tsk_1", {
+        headers: { ...html, cookie: `sati_session_80=${token.slice(0, -1)}` },
+      }),
+      // An old sign-in link, from a `sati ui` that has since restarted with a new token.
+      await app.request(`http://127.0.0.1/session?token=${"x".repeat(token.length)}`, {
+        headers: html,
+      }),
+    ];
+    for (const res of stale) {
+      expect(res.status).toBe(401);
+      expect(res.headers.get("content-type")).toContain("text/html");
+      expect(res.headers.get("set-cookie")).toBeNull();
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      const page = await res.text();
+      expect(page).toContain("This board link has expired");
+      expect(page).toContain("sati ui</code> again");
+      expect(page).not.toContain("<script");
+      expect(page).not.toMatch(/(?:src|href)=/u);
+      const csp = res.headers.get("content-security-policy") ?? "";
+      expect(csp).toContain("default-src 'self'");
+      expect(csp).toContain("script-src 'self'");
+      expect(csp).toMatch(/style-src 'sha256-[\w+/=]+'/u);
+      expect(csp).not.toContain("unsafe-inline");
+    }
+    // The checks before the session still come first.
+    const foreign = await app.request("http://evil.test/", { headers: html });
+    expect(foreign.status).toBe(403);
+    const crossSite = await app.request("http://127.0.0.1/", {
+      headers: { ...html, origin: "http://evil.test" },
+    });
+    expect(crossSite.status).toBe(403);
+  });
+
+  it("keeps a JSON 401 for API calls and the event stream, even when they accept HTML", async () => {
+    for (const path of ["/api/snapshot", "/api/nothing-here", "/events"]) {
+      for (const accept of ["application/json", "text/html,*/*"]) {
+        const res = await app.request(`http://127.0.0.1${path}`, { headers: { accept } });
+        expect(res.status).toBe(401);
+        expect(res.headers.get("content-type")).toContain("application/json");
+        expect(((await res.json()) as { error: { code: string } }).error.code).toBe("USAGE");
+      }
+    }
+    const write = await app.request("http://127.0.0.1/api/tasks", {
+      method: "POST",
+      headers: { accept: "text/html", "content-type": "application/json" },
+      body: JSON.stringify({ title: "No session" }),
+    });
+    expect(write.status).toBe(401);
+    expect(write.headers.get("content-type")).toContain("application/json");
+    // A script fetching a page without asking for HTML gets the JSON as before.
+    const plain = await app.request("http://127.0.0.1/");
+    expect(plain.status).toBe(401);
+    expect(plain.headers.get("content-type")).toContain("application/json");
+  });
+
   // PLAN Security: request size limits. A huge body must be refused before it is parsed.
   it("refuses a request body over 1 MB", async () => {
     const session = await app.request(`http://127.0.0.1/session?token=${token}`);

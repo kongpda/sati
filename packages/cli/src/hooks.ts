@@ -1,8 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { accessSync, constants, existsSync, readFileSync } from "node:fs";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { basename, isAbsolute, relative, resolve, sep } from "node:path";
 import { CLI_NAME, CONFIG_DIR, type Mode, SatiError } from "@sati/core";
-import { isLocalInstall, localBin } from "./install.js";
+import { isLocalInstall, localBin, runHint } from "./install.js";
 import type { FileChange, PlannedFile, ReadFile } from "./integrations.js";
 
 /** A repo-relative path for output, with `/` on every platform so `--json` reads the same. */
@@ -106,6 +106,30 @@ ${END}
 `;
 }
 
+/** Shells that run our POSIX block; a hook with no `#!` line runs with sh too. */
+const SHELLS = ["sh", "bash", "dash", "zsh", "ksh", "ash"];
+
+/** The program a hook's `#!` line names (`#!/usr/bin/env node` → node); undefined without one. */
+function interpreter(text: string): string | undefined {
+  if (!text.startsWith("#!")) return undefined;
+  const eol = text.indexOf("\n");
+  const words = text
+    .slice(2, eol < 0 ? undefined : eol)
+    .trim()
+    .split(/\s+/);
+  const program = basename(words[0] ?? "");
+  if (program !== "env") return program;
+  // `env -S node --flag` or `env VAR=1 node`: the first word that is not an option or a variable.
+  return basename(words.slice(1).find((w) => !w.startsWith("-") && !w.includes("=")) ?? "");
+}
+
+/** The interpreter of someone else's hook when it is not a shell, so our sh block would break it. */
+function foreignInterpreter(existing: string | undefined): string | undefined {
+  if (existing === undefined || existing.includes(BEGIN) || existing.includes(OWNER)) return;
+  const program = interpreter(existing);
+  return program !== undefined && !SHELLS.includes(program) ? program : undefined;
+}
+
 /** Puts our block into a hook file: replaces an old block, else goes right after the shebang. */
 function chainInto(existing: string | undefined, name: string): string {
   const block = chainBlock(name);
@@ -144,6 +168,8 @@ export interface PlannedHook extends FileChange {
   content: string;
   /** Why a hook was skipped, or what the user must do next. */
   note?: string;
+  /** In a global `core.hooksPath` outside the repo, which every repo on the machine uses. */
+  global?: boolean;
 }
 
 function git(root: string, ...args: string[]): string {
@@ -156,6 +182,22 @@ function git(root: string, ...args: string[]): string {
 
 const absFrom = (root: string, p: string) => (isAbsolute(p) ? p : resolve(root, p));
 
+/**
+ * True when `dir` comes from a `core.hooksPath` set outside this repo's own config (global,
+ * system or `-c`) and lies outside the repo, so writing there changes every repo that uses it.
+ */
+function isGlobalHooksDir(root: string, dir: string): boolean {
+  let scope: string;
+  try {
+    scope = git(root, "config", "--show-scope", "--get", "core.hooksPath").split("\t")[0] ?? "";
+  } catch {
+    return false; // git exits 1 when the key is unset
+  }
+  if (scope === "local" || scope === "worktree") return false;
+  const rel = relative(root, dir);
+  return rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel);
+}
+
 function planFile(root: string, abs: string, content: string): PlannedHook {
   const existing = existsSync(abs) ? readFileSync(abs, "utf8") : undefined;
   const action = existing === undefined ? "create" : existing === content ? "keep" : "update";
@@ -166,9 +208,16 @@ function planFile(root: string, abs: string, content: string): PlannedHook {
  * The git hooks for this repo. The runners live in `<git-common-dir>/sati/hooks/`. Each hook git
  * calls (in `core.hooksPath`, husky's folder or `.git/hooks`) gets a short marked block that
  * calls its runner; the rest of an existing hook is kept as is. lefthook gets
- * `lefthook-local.yml`. Stealth mode never touches a file inside the working tree.
+ * `lefthook-local.yml`. Stealth mode never touches a file inside the working tree. A global
+ * `core.hooksPath` outside the repo is shared by every repo on the machine, so it is only written
+ * with `globalHooks`; a hook in another language than sh is reported, never edited.
  */
-export function planHooks(root: string, mode: Mode, self: string[]): PlannedHook[] {
+export function planHooks(
+  root: string,
+  mode: Mode,
+  self: string[],
+  globalHooks = false,
+): PlannedHook[] {
   if (mode === "standalone") return [];
   const common = absFrom(root, git(root, "rev-parse", "--git-common-dir"));
   const scripts = runners(mode, self);
@@ -206,15 +255,38 @@ export function planHooks(root: string, mode: Mode, self: string[]): PlannedHook
   // husky 9 points core.hooksPath at `.husky/_`, whose files it regenerates; ours go in `.husky/`.
   let dir = absFrom(root, git(root, "rev-parse", "--git-path", "hooks"));
   if (relative(root, dir) === `.husky${sep}_`) dir = resolve(root, ".husky");
+  const global = isGlobalHooksDir(root, dir);
+  const slashed = (abs: string) => abs.split(sep).join("/");
   for (const name of Object.keys(scripts)) {
     const abs = resolve(dir, name);
     const existing = existsSync(abs) ? readFileSync(abs, "utf8") : undefined;
-    const hook = planFile(root, abs, chainInto(existing, name));
-    if (mode === "stealth" && inTree(abs) && hook.action !== "keep") {
+    const program = foreignInterpreter(existing);
+    let hook: PlannedHook;
+    if (global && !globalHooks) {
+      hook = { path: "", abs, action: "skip", content: existing ?? "" };
+    } else if (program !== undefined) {
+      const stop = name === "pre-commit" || name === "pre-push" ? ", and stop when it fails" : "";
+      hook = {
+        path: "",
+        abs,
+        action: "skip",
+        content: existing ?? "",
+        note: `this hook runs with ${program}, not sh, so ${CLI_NAME} left it unchanged. Have it run ${shownPath(root, resolve(common, CLI_NAME, "hooks", name))} with the same arguments${stop}`,
+      };
+    } else {
+      hook = planFile(root, abs, chainInto(existing, name));
+    }
+    hook.path = global ? slashed(abs) : shownPath(root, abs);
+    if (global) hook.global = true;
+    if (mode === "stealth" && inTree(abs) && hook.action !== "keep" && hook.action !== "skip") {
       hook.action = "skip";
       hook.note = "stealth mode does not edit hooks inside the working tree";
     }
     planned.push(hook);
+  }
+  const first = planned.find((h) => h.global);
+  if (first && !globalHooks) {
+    first.note = `git uses the global core.hooksPath ${slashed(dir)} for every repo on this machine, so ${CLI_NAME} did not write there and its git hooks will not run in this repo. To chain them into that folder (they do nothing in repos without ${CLI_NAME}), run \`${runHint(root, "init --upgrade --global-hooks")}\``;
   }
   return planned;
 }

@@ -9,8 +9,9 @@ export async function serveStdio(
   ctx: ServiceContext,
   version?: string,
   kind?: ProjectKind,
+  root?: string,
 ): Promise<void> {
-  const server = createServer(ctx, version, kind);
+  const server = createServer(ctx, version, kind, root);
   let stop: () => void = () => undefined;
   const closed = new Promise<void>((resolve) => {
     stop = resolve;

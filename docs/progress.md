@@ -1099,3 +1099,38 @@ The resume and compact hooks run `brief --format=short`, which read no notes, so
 resumed mid-task missed a person's new comment until its next fresh session. The short brief now
 shows the newest comment by someone else on each claimed task, as the full brief does. It reads
 notes only when the caller holds a task; handoffs stay out of it, as before.
+
+## 2026-11-07 — Phase 5b closed
+
+- `task update --status in_progress` on an unclaimed task claims it for the caller with a
+  fencing token (the new version, as `task claim` does). Later writes need the token; the CLI and
+  the board fill it in for the holder. A claim held by someone else is still refused first.
+- A cancelled dependency no longer blocks, like a deleted one (decision recorded in sati). A
+  missing dependency id still blocks, and doctor now names it.
+- `importRecords` runs `linkProblems` on the tasks it imported, inside the same transaction:
+  cycles among waiting tasks (done, cancelled and deleted ones break a cycle) and links to
+  missing features, milestones, parents and dependencies. It reports instead of refusing,
+  because a merge can produce them and a refused import would stop every git hook until someone
+  edited `.sati/` by hand. `sync import` prints them even with `--quiet`; doctor has a `links`
+  check over every task.
+- Limits: bodies are 100 KB of UTF-8, measured without allocating (`utf8Bytes`); the character
+  cap is still checked first so a huge string is refused before it is measured. A `subtasks[]`
+  batch is capped at 1 MB in total.
+- Brief: the actor name is clipped to 60 characters. When dropping items is not enough,
+  sections left empty fold into one closing line, bottom up. With all eight sections present at
+  the 200-token minimum it came to 216 tokens before and fits now.
+- Search: punctuation inside a word becomes a phrase of the indexed tokens (`v1.2` → `"v1 2"*`).
+- MCP: the server takes the repo root; `feature_check` and `lock_acquire` turn an absolute path
+  inside it into the repo-relative one (the lock tool's schema takes plain strings, since the
+  SDK validates before the handler runs). `feature_upsert` names update-only fields on a create.
+- Hooks: init leaves a global `core.hooksPath` outside the repo alone unless asked (wizard
+  question, or `--global-hooks`), and says so in its output; a hook in another language is left
+  byte-identical with a note. `.claude/settings.json` keeps its key order: the merge checks the
+  shape with Zod but edits the original objects, since Zod output puts known keys first.- UI: the board's columns and lanes come from one function (`boardColumns`), which j/k reads
+  too, so keyboard order is screen order. j/k open cards through the URL, so Back and Forward
+  work, and they work from the open panel's heading. The Features paths field is keyed by its
+  paths, as the task panel's form is by its fields: typing survives refreshes, and a change made
+  elsewhere shows when nobody is typing (before, the field never picked one up and Save sent the
+  old text back). Phones switch between one and all columns with a width listener; the stale
+  session page is a 401 HTML page for page requests only.
+

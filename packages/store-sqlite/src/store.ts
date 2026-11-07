@@ -255,11 +255,13 @@ export class SqliteStore implements StorageAdapter {
             eq(t.status, "todo"),
             isNull(t.deletedAt),
             sql`(${t.claimLeaseUntil} IS NULL OR ${t.claimLeaseUntil} <= ${now})`,
-            // A deleted dependency no longer blocks; a missing one still does.
+            // A done, cancelled or deleted dependency no longer blocks; a missing one still does
+            // (dep.status is NULL for it, and NULL is not in the list).
             sql`NOT EXISTS (
               SELECT 1 FROM json_each(${t.data}, '$.dependsOn') d
               LEFT JOIN tasks dep ON dep.id = d.value
-              WHERE dep.status IS NOT 'done' AND dep.deleted_at IS NULL)`,
+              WHERE (dep.status IS NULL OR dep.status NOT IN ('done', 'cancelled'))
+                AND dep.deleted_at IS NULL)`,
           ),
         )
         .orderBy(asc(t.rank), asc(t.id))

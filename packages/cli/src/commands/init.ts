@@ -1,6 +1,6 @@
 import { chmodSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import {
   type Actor,
   actorIdentity,
@@ -78,6 +78,8 @@ export interface InitResult {
   files: FileChange[];
   /** Records loaded from a committed `.sati/` snapshot, as in a teammate's fresh clone. */
   imported: number;
+  /** Hooks that were skipped and why, or what the user must do next. */
+  notes: string[];
 }
 
 /** Turns a folder name into a valid project slug. */
@@ -126,6 +128,8 @@ async function plan(
     name?: string | undefined;
     tools?: string | undefined;
     upgrade?: boolean | undefined;
+    /** Also chain into a global `core.hooksPath`, which every repo on the machine uses. */
+    globalHooks?: boolean | undefined;
   },
 ): Promise<InitPlan> {
   const loc = where(cwd);
@@ -173,7 +177,7 @@ async function plan(
       hint: `Run \`${CLI_NAME} init\`.`,
     });
   }
-  if (found) return upgradePlan(root, db, found);
+  if (found) return upgradePlan(root, db, found, args.globalHooks);
 
   const name = args.name ?? basename(root);
   const files: FileChange[] =
@@ -193,7 +197,7 @@ async function plan(
   // The snapshot only exists in git mode, so only git mode routes it to the merge driver.
   if (mode === "git") agentFiles.push(planGitAttributes(fileReader(root)));
   files.push(...agentFiles.map(({ path, action }) => ({ path, action })));
-  const { hooks, mergeDriver } = planGit(root, mode, files);
+  const { hooks, mergeDriver } = planGit(root, mode, files, args.globalHooks);
   return {
     mode,
     kind,
@@ -213,9 +217,9 @@ async function plan(
 }
 
 /** The hooks and merge driver, appended to `files` in display order. */
-function planGit(root: string, mode: Mode, files: FileChange[]) {
+function planGit(root: string, mode: Mode, files: FileChange[], globalHooks = false) {
   const self = selfCommand(root);
-  const hooks = planHooks(root, mode, self);
+  const hooks = planHooks(root, mode, self, globalHooks);
   files.push(...hooks.map(({ path, action }) => ({ path, action })));
   const mergeDriver = mode === "git" ? planMergeDriver(root, self) : undefined;
   if (mergeDriver) files.push({ path: mergeDriver.path, action: mergeDriver.action });
@@ -223,11 +227,16 @@ function planGit(root: string, mode: Mode, files: FileChange[]) {
 }
 
 /** `--upgrade` on an initialized project: only the git integration that init manages. */
-function upgradePlan(root: string, db: string, project: Project): InitPlan {
+function upgradePlan(
+  root: string,
+  db: string,
+  project: Project,
+  globalHooks: boolean | undefined,
+): InitPlan {
   const mode = project.mode;
   const agentFiles = mode === "git" ? [planGitAttributes(fileReader(root))] : [];
   const files: FileChange[] = agentFiles.map(({ path, action }) => ({ path, action }));
-  const { hooks, mergeDriver } = planGit(root, mode, files);
+  const { hooks, mergeDriver } = planGit(root, mode, files, globalHooks);
   return {
     mode,
     kind: readSettings(project.settings).kind,
@@ -349,7 +358,15 @@ async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
       p.mode === "git" && config?.action === "keep"
         ? await importClone(p.root, { ...deps, projectId: project.id, actorId: actor.id })
         : 0;
-    return { project, actor, db: p.db, tools: p.tools, files: p.files, imported };
+    return {
+      project,
+      actor,
+      db: p.db,
+      tools: p.tools,
+      files: p.files,
+      imported,
+      notes: notes(p.hooks),
+    };
   } finally {
     await store.close();
   }
@@ -392,15 +409,46 @@ async function wizard(cwd: string, args: Parameters<typeof plan>[1]): Promise<In
   const draft = await plan(cwd, { ...args, mode, kind });
   const name = await clack.text({ message: "Project name", initialValue: draft.name });
   if (clack.isCancel(name)) return null;
-  const final = await plan(cwd, { ...args, mode, kind, name, slug: args.slug ?? slugify(name) });
+  const globalHooks = await askGlobalHooks(draft, args.globalHooks);
+  if (globalHooks === null) return null;
+  const final = await plan(cwd, {
+    ...args,
+    mode,
+    kind,
+    name,
+    slug: args.slug ?? slugify(name),
+    globalHooks,
+  });
   clack.note(preview(final), `${CLI_NAME} will write`);
   const ok = await clack.confirm({ message: "Create the project?" });
   if (clack.isCancel(ok) || !ok) return null;
   return final;
 }
 
-/** `--upgrade` asks nothing but whether to go ahead. */
-async function confirmUpgrade(p: InitPlan): Promise<InitPlan | null> {
+/**
+ * A global `core.hooksPath` is shared by every repo on the machine, so writing there needs a yes.
+ * Null when the user cancels.
+ */
+async function askGlobalHooks(p: InitPlan, given: boolean | undefined): Promise<boolean | null> {
+  const dir = p.hooks.find((h) => h.global)?.abs;
+  if (given || dir === undefined) return Boolean(given);
+  const clack = await import("@clack/prompts");
+  const ok = await clack.confirm({
+    message: `git uses the global core.hooksPath ${dirname(dir)} for every repo on this machine. Chain ${CLI_NAME}'s hooks into it? They do nothing in repos without ${CLI_NAME}.`,
+    initialValue: false,
+  });
+  return clack.isCancel(ok) ? null : ok;
+}
+
+/** `--upgrade` asks nothing but whether to go ahead (and about a global hooks folder). */
+async function confirmUpgrade(
+  cwd: string,
+  args: Parameters<typeof plan>[1],
+): Promise<InitPlan | null> {
+  const draft = await plan(cwd, args);
+  const globalHooks = await askGlobalHooks(draft, args.globalHooks);
+  if (globalHooks === null) return null;
+  const p = globalHooks ? await plan(cwd, { ...args, globalHooks }) : draft;
   const clack = await import("@clack/prompts");
   clack.note(preview(p), `${CLI_NAME} will write`);
   const ok = await clack.confirm({ message: "Apply these changes?" });
@@ -419,6 +467,7 @@ function render(r: InitResult | UpgradeResult | null): string {
     `  database  ${r.db}`,
   ];
   for (const f of r.files) lines.push(`  ${LABEL[f.action].padEnd(9)} ${f.path}`);
+  lines.push(...r.notes.map((n) => `  ${n}`));
   lines.push(`  tools     ${r.tools.length ? r.tools.join(", ") : "none detected"}`);
   if (r.imported > 0) {
     lines.push(`  imported  ${r.imported} record(s) from ${CONFIG_DIR}/`);
@@ -449,6 +498,11 @@ export default defineCommand({
       description:
         "Update the git hooks, merge driver and .gitattributes of an initialized project",
     },
+    "global-hooks": {
+      type: "boolean",
+      description:
+        "Also chain the git hooks into a global core.hooksPath, which every repo on this machine uses",
+    },
     ...json,
   },
   run: ({ args }) =>
@@ -463,12 +517,11 @@ export default defineCommand({
           slug: args.slug,
           tools: args.tools,
           upgrade: args.upgrade,
+          globalHooks: args["global-hooks"],
         };
         if (args.yes) return apply(await plan(cwd, opts));
         if (!args.json && process.stdin.isTTY && process.stdout.isTTY) {
-          const chosen = args.upgrade
-            ? await confirmUpgrade(await plan(cwd, opts))
-            : await wizard(cwd, opts);
+          const chosen = args.upgrade ? await confirmUpgrade(cwd, opts) : await wizard(cwd, opts);
           return chosen && apply(chosen);
         }
         const p = await plan(cwd, opts);

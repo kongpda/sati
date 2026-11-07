@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  acquireLock,
   BRIEF_TOKEN_CAP,
   buildBrief,
   claimTask,
+  completeTask,
   createFeature,
   createTask,
   ensureActor,
   estimateTokens,
+  putContext,
   recordDecision,
   shortHandle,
 } from "../src/index.js";
@@ -101,6 +104,39 @@ describe("buildBrief", () => {
     const tight = await buildBrief(ctx, { maxTokens: 300 });
     expect(tight.tokens).toBeLessThanOrEqual(300);
     expect(tight.markdown).toContain(shortHandle(mine.id));
+
+    // PLAN Phase 5b: at the lowest cap, with a 200-character name and every section full, the
+    // header is clipped and emptied sections fold into one line instead of a heading each.
+    const other = {
+      ...ctx,
+      actorId: (await ensureActor(ctx, { name: "other@w", kind: "agent" })).id,
+    };
+    for (let i = 0; i < 10; i++) {
+      await acquireLock(other, { paths: [`area${i}/**`] });
+      const t = await claimTask(other, (await createTask(ctx, { title: long(i) })).id);
+      await completeTask(other, t.id, { summary: "x", filesTouched: ["a"], token: t.claim?.token });
+    }
+    const person = await ensureActor(ctx, { name: `${"y".repeat(198)}@w`, kind: "human" });
+    const long200 = { ...ctx, actorId: person.id };
+    const smallest = await buildBrief(long200, { maxTokens: 200 });
+    expect(smallest.tokens).toBeLessThanOrEqual(200);
+    expect(smallest.markdown).not.toContain("y".repeat(61));
+
+    // Every section present (shipped features, paths matching nothing, stale context): emptied
+    // sections fold into one closing line rather than a heading each, so the cap still holds.
+    for (let i = 0; i < 10; i++) {
+      await createFeature(ctx, {
+        title: long(i),
+        status: "shipped",
+        protected: true,
+        paths: [`gone${i}/**`],
+      });
+      await putContext(ctx, { path: `src/m${i}`, summary: long(i) });
+    }
+    ctx.repo = { files: async () => [{ path: "src/m0/a.ts", blob: "new" }], head: async () => "h" };
+    const full = await buildBrief({ ...long200, repo: ctx.repo }, { maxTokens: 200 });
+    expect(full.tokens).toBeLessThanOrEqual(200);
+    expect(full.markdown).toMatch(/\n… \d+ more items left out to keep this brief short\.\n$/u);
   }, 20_000);
 
   // PLAN: a feature glob that matches zero tracked files is reported. doctor repeats this in Phase 5.

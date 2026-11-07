@@ -49,8 +49,8 @@ export function isClaimActive(task: Pick<Task, "claim">, now: Date): boolean {
 }
 
 /**
- * Ready = `todo`, not actively claimed, and every dependency is `done`. `depStatus` reports a
- * deleted dependency as `done`: deleting a task unblocks its dependents.
+ * Ready = `todo`, not actively claimed, and every dependency is `done` or `cancelled` (work that
+ * will never happen must not block for good). `depStatus` reports a deleted dependency as `done`.
  */
 export function isReady(
   task: Pick<Task, "status" | "claim" | "dependsOn" | "deletedAt">,
@@ -59,5 +59,8 @@ export function isReady(
 ): boolean {
   if (task.deletedAt !== null || task.status !== "todo") return false;
   if (isClaimActive(task, now)) return false;
-  return task.dependsOn.every((id) => depStatus(id) === "done");
+  return task.dependsOn.every((id) => {
+    const status = depStatus(id);
+    return status === "done" || status === "cancelled";
+  });
 }

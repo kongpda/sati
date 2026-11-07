@@ -1,3 +1,4 @@
+import { isAbsolute, relative, sep } from "node:path";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import {
@@ -27,6 +28,7 @@ import {
   getProject,
   getRecord,
   isSatiError,
+  LIMITS,
   ListTasksInput,
   listAll,
   listRecords,
@@ -196,10 +198,23 @@ async function run(fn: () => Promise<unknown>): Promise<CallToolResult> {
  * Builds the MCP server for one project and caller. Tools are thin wrappers over core services,
  * which validate input again and run each write in one transaction with an activity row.
  */
+/**
+ * An agent's file tools usually give absolute paths. One inside the repo becomes repo-relative,
+ * as the feature and lock tools expect; anything else is passed on for core to refuse.
+ */
+function repoRelative(root: string | undefined, path: string): string {
+  if (!root || !isAbsolute(path)) return path;
+  const rel = relative(root, path);
+  if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return path;
+  return rel.split(sep).join("/");
+}
+
 export function createServer(
   ctx: ServiceContext,
   version: string = VERSION,
   kind: ProjectKind = "code",
+  /** The repo's root folder, so absolute paths inside it are accepted. */
+  root?: string,
 ): McpServer {
   const server = new McpServer(
     { name: CLI_NAME, version },
@@ -209,7 +224,7 @@ export function createServer(
   );
   registerTools(server, ctx, kind);
   // A general project leaves them out, so agents never see them and their schemas cost no tokens.
-  if (kind === "code") registerCodeTools(server, ctx);
+  if (kind === "code") registerCodeTools(server, ctx, (p) => repoRelative(root, p));
   registerResources(server, ctx, kind);
   registerPrompts(server, kind);
   return server;
@@ -408,7 +423,11 @@ function registerTools(server: McpServer, ctx: ServiceContext, kind: ProjectKind
 }
 
 /** Features, file locks and the guard's check: only `code` projects have them. */
-function registerCodeTools(server: McpServer, ctx: ServiceContext): void {
+function registerCodeTools(
+  server: McpServer,
+  ctx: ServiceContext,
+  repoPath: (path: string) => string,
+): void {
   const task = (ref: string) => resolveId(ctx, "task", ref);
 
   server.registerTool(
@@ -429,7 +448,7 @@ function registerCodeTools(server: McpServer, ctx: ServiceContext): void {
       run(async () =>
         checkChanges(ctx, {
           changes: paths.map((path) => ({
-            path,
+            path: repoPath(path),
             kind: change === "delete" ? "deleted" : "modified",
           })),
         }),
@@ -441,13 +460,18 @@ function registerCodeTools(server: McpServer, ctx: ServiceContext): void {
     {
       description:
         "Lock repo-relative paths or globs before editing a shared area. exclusive (default) blocks other agents; shared only warns. Fails with the holder's name on overlap. Pass taskId so task_complete releases it.",
-      inputSchema: AcquireLockInput.extend({ taskId: Ref.optional() }),
+      // Plain strings here: core checks the paths after an absolute one is made repo-relative.
+      inputSchema: AcquireLockInput.extend({
+        taskId: Ref.optional(),
+        paths: z.array(z.string().min(1).max(LIMITS.path)).min(1).max(LIMITS.array),
+      }),
       annotations: { destructiveHint: false },
     },
     ({ taskId, ...input }) =>
       run(async () =>
         acquireLock(ctx, {
           ...input,
+          paths: input.paths.map(repoPath),
           taskId: taskId === undefined ? undefined : await task(taskId),
         }),
       ),
@@ -468,15 +492,28 @@ function registerCodeTools(server: McpServer, ctx: ServiceContext): void {
     "feature_upsert",
     {
       description:
-        "Create a feature (no id) or update one (with id): title, description, status, protected, paths, tests, acceptance criteria.",
+        "Create a feature (no id; title required) or update one (with id): title, description, status, protected, paths, tests, acceptance criteria. expectedVersion, decisionId and reviewed apply to updates only.",
       inputSchema: linkable(UpdateFeatureInput).extend({ id: Ref.optional() }),
     },
     ({ id, ...rest }) =>
       run(async () => {
         const input = await links(ctx, rest);
-        return id === undefined
-          ? createFeature(ctx, input)
-          : updateFeature(ctx, await resolveId(ctx, "feature", id), input);
+        if (id !== undefined) return updateFeature(ctx, await resolveId(ctx, "feature", id), input);
+        // One schema serves both, so say which fields a create cannot take instead of a bare
+        // "unrecognized key" from core.
+        const updateOnly = (["expectedVersion", "decisionId", "reviewed"] as const).filter(
+          (k) => input[k] !== undefined,
+        );
+        if (updateOnly.length > 0) {
+          throw new SatiError(
+            "VALIDATION",
+            `${updateOnly.join(", ")} apply only when updating a feature.`,
+            {
+              hint: "Pass id to update an existing feature, or leave them out to create one.",
+            },
+          );
+        }
+        return createFeature(ctx, input);
       }),
   );
 }

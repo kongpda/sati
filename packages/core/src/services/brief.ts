@@ -168,7 +168,10 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
   const stale = short ? [] : (await getContext(ctx)).filter((e) => e.stale === true);
 
   const name = data.project?.name ?? "this project";
-  const who = data.actor ? `${data.actor.name} (${shortHandle(data.actor.id)})` : ctx.actorId;
+  // Names are up to 200 characters; clipped, the header stays a fixed size under any cap.
+  const who = data.actor
+    ? `${clip(data.actor.name, 60)} (${shortHandle(data.actor.id)})`
+    : ctx.actorId;
   const header = [
     `# ${CLI_NAME} brief: ${clip(name, 80)}`,
     `${data.project?.mode ?? "git"} mode. You are ${who}. Workflow: ${CLI_NAME}://workflow.`,
@@ -255,19 +258,30 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
   return fit(header, sections, maxTokens);
 }
 
-/** Renders the sections, dropping items from the bottom section up until the text fits. */
+/**
+ * Renders the sections, dropping items from the bottom section up until the text fits. If it
+ * still does not fit, sections left with no items fold into one closing line, bottom up, since
+ * each would otherwise cost a heading and a "left out" line.
+ */
 function fit(header: string[], sections: Section[], maxTokens: number): Brief {
   const dropped = sections.map((s) => Math.max(0, s.items.length - SECTION_LINES));
+  const folded = sections.map(() => false);
   const render = (): string => {
     const out = [...header];
+    let hidden = 0;
     sections.forEach((s, i) => {
       const cut = dropped[i] ?? 0;
+      if (folded[i]) {
+        hidden += cut;
+        return;
+      }
       const items = s.items.slice(0, s.items.length - cut);
       if (items.length === 0 && cut === 0 && s.empty === null) return;
       out.push("", `## ${s.title}`);
       out.push(...(items.length > 0 ? items : cut === 0 && s.empty ? [s.empty] : []));
       if (cut > 0) out.push(`- … ${cut} more left out to keep this brief short.`);
     });
+    if (hidden > 0) out.push("", `… ${hidden} more items left out to keep this brief short.`);
     return `${out.join("\n")}\n`;
   };
   let text = render();
@@ -278,6 +292,11 @@ function fit(header: string[], sections: Section[], maxTokens: number): Brief {
       dropped[i] = (dropped[i] ?? 0) + 1;
       text = render();
     }
+  }
+  for (let i = sections.length - 1; i >= 0 && estimateTokens(text) > maxTokens; i--) {
+    if ((dropped[i] ?? 0) < (sections[i]?.items.length ?? 0)) continue;
+    folded[i] = true;
+    text = render();
   }
   const omitted = dropped.reduce((a, b) => a + b, 0);
   return { markdown: text, tokens: estimateTokens(text), omitted };

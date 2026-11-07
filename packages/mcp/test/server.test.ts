@@ -47,9 +47,10 @@ afterEach(async () => {
 async function connect(
   as: ServiceContext = ctx,
   kind: "code" | "general" = "code",
+  root?: string,
 ): Promise<Client> {
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-  await createServer(as, undefined, kind).connect(serverSide);
+  await createServer(as, undefined, kind, root).connect(serverSide);
   const client = new Client({ name: "test", version: "0" });
   await client.connect(clientSide);
   return client;
@@ -106,6 +107,33 @@ describe("MCP server", () => {
     expect(prompts).toEqual(["finish-task", "start-task"]);
     const workflow = await client.readResource({ uri: "sati://workflow" });
     expect(workflow.contents[0]).toMatchObject({ text: GENERAL_WORKFLOW });
+  });
+
+  // PLAN Phase 5b: agents' file tools give absolute paths; inside the repo they count as the
+  // repo-relative path, outside it they are refused. Create says which fields it cannot take.
+  it("checks and locks absolute paths inside the repo, and explains update-only fields", async () => {
+    const client = await connect(ctx, "code", dir);
+    await call(client, "feature_upsert", {
+      title: "Login",
+      status: "shipped",
+      protected: true,
+      paths: ["src/login/**"],
+    });
+    const inside = await call(client, "feature_check", {
+      paths: [join(dir, "src", "login", "form.ts")],
+      change: "delete",
+    });
+    expect(inside.body).toMatchObject({ verdict: "blocked" });
+    expect(inside.body.findings[0].paths).toEqual(["src/login/form.ts"]);
+    const outside = await call(client, "feature_check", { paths: ["/etc/passwd"] });
+    expect(outside).toMatchObject({ isError: true, body: { error: { code: "VALIDATION" } } });
+    const lock = await call(client, "lock_acquire", { paths: [join(dir, "src", "login")] });
+    expect(lock.body.lock.paths).toEqual(["src/login"]);
+    const create = await call(client, "feature_upsert", { title: "Billing", expectedVersion: 1 });
+    expect(create.body.error).toMatchObject({
+      code: "VALIDATION",
+      message: "expectedVersion apply only when updating a feature.",
+    });
   });
 
   // PLAN Phase 7a: agents write and read notes, not only search them.

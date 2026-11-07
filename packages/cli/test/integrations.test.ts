@@ -139,6 +139,42 @@ describe("agent file planning", () => {
     ]);
   });
 
+  // A merge that re-sorts keys rewrites lines the user owns, so their order must survive.
+  it("keeps the key order of existing Claude Code settings and only appends its own", () => {
+    const theirs = {
+      model: "opus",
+      hooks: {
+        Stop: [{ matcher: "", hooks: [{ type: "command", command: "say done", timeout: 5 }] }],
+      },
+      env: { ZED: "1", ALPHA: "2" },
+    };
+    const run = (args: string) => [{ type: "command", command: `sati ${args}` }];
+    const ours = {
+      model: "opus",
+      hooks: {
+        Stop: [...theirs.hooks.Stop, { hooks: run("nudge") }],
+        SessionStart: [
+          { matcher: "startup|clear", hooks: run("brief --format=agent") },
+          { matcher: "resume|compact", hooks: run("brief --format=short") },
+        ],
+        PreToolUse: [
+          { matcher: "Edit|MultiEdit|Write|NotebookEdit", hooks: run("guard --hook") },
+          { matcher: "Bash", hooks: run("guard --hook") },
+        ],
+      },
+      env: theirs.env,
+      permissions: { deny: ["Bash(git commit --no-verify:*)", "Bash(git commit -n:*)"] },
+    };
+    const plan = byPath(
+      planIntegrations(
+        ["claude-code"],
+        "git",
+        reader({ ".claude/settings.json": `${JSON.stringify(theirs, null, 2)}\n` }),
+      ),
+    );
+    expect(plan[".claude/settings.json"]?.content).toBe(`${JSON.stringify(ours, null, 2)}\n`);
+  });
+
   // Moving between a global and a project install must swap the launcher in place. Leaving the
   // old entry would keep agents on PATH; adding a second would run every hook twice.
   it("switches its own MCP entries and hooks between global and local, never a user's", () => {

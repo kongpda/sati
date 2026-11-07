@@ -49,6 +49,9 @@ describe("isReady", () => {
     const t = { ...base, dependsOn: ["x", "y"] };
     expect(isReady(t, (id) => (id === "x" ? "done" : "in_progress"), now)).toBe(false);
     expect(isReady(t, () => "done", now)).toBe(true);
+    // Cancelled work will never be done, so it stops blocking; a missing dependency still blocks.
+    expect(isReady(t, (id) => (id === "x" ? "done" : "cancelled"), now)).toBe(true);
+    expect(isReady(t, (id) => (id === "x" ? "done" : undefined), now)).toBe(false);
   });
 
   // An agent that died must not hold a task forever: an expired lease frees it.

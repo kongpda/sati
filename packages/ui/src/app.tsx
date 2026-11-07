@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, api, COLUMNS, type Deletable, type Snapshot } from "./api.js";
-import { Board } from "./board.js";
+import { ApiError, api, COLUMNS, type Deletable, type Snapshot, type Task } from "./api.js";
+import { Board, boardOrder } from "./board.js";
 import { NewTask } from "./forms.js";
 import { MyWork } from "./my-work.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
@@ -24,6 +24,9 @@ const PAGES = [
 
 /** Pages a general project does without: it has no features, file reservations or guard. */
 const CODE_ONLY = new Set<string>(["/agents", "/features"]);
+
+/** The phone layout in styles.css: one column at a time. */
+const PHONE = "(max-width: 700px)";
 
 /** Where a search hit of each kind opens, and the tag it shows. */
 const HIT_PAGES: Record<string, string> = {
@@ -48,7 +51,7 @@ export function App() {
   const [filter, setFilter] = useState("");
   const [feature, setFeature] = useState("");
   const [column, setColumn] = useState(() =>
-    window.matchMedia("(max-width: 700px)").matches ? "in_progress" : "all",
+    window.matchMedia(PHONE).matches ? "in_progress" : "all",
   );
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [fresh, setFresh] = useState<Set<string>>(new Set());
@@ -65,8 +68,24 @@ export function App() {
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const [offline, setOffline] = useState(false);
-  const cursor = useRef(0);
+  /** The task j/k steps from: the open one, or the last one opened. */
+  const cursor = useRef<string | null>(null);
+  /** The cards as the board shows them, set on each render for the key handler. */
+  const visible = useRef<Task[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // A phone shows one column, a wider screen all of them; turning or resizing past the
+  // breakpoint switches, or the board keeps a layout made for the other width.
+  useEffect(() => {
+    const phone = window.matchMedia(PHONE);
+    const onChange = () => setColumn(phone.matches ? "in_progress" : "all");
+    phone.addEventListener("change", onChange);
+    return () => phone.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (task) cursor.current = task;
+  }, [task]);
 
   useEffect(() => {
     const onPop = () => {
@@ -248,21 +267,24 @@ export function App() {
       // Any open dialog (search, or a create or edit form on any page) owns the keyboard.
       const dialog = document.querySelector(".palette") !== null;
       if (dialog || typing || event.metaKey || event.ctrlKey || event.altKey) return;
-      // Buttons and links use these keys themselves, and the sheet is a dialog of its own.
-      if (target?.closest(".sheet, button, a")) return;
-      if (event.key === "j" || event.key === "k") {
-        const list = (client.getQueryData<Snapshot>(["snapshot"])?.tasks ?? []).filter((t) => {
-          if (feature && t.featureId !== feature) return false;
-          if (filter && !`${t.title} ${t.body}`.toLowerCase().includes(filter.toLowerCase()))
-            return false;
-          return true;
-        });
+      const step = event.key === "j" || event.key === "k";
+      // Buttons and links use these keys themselves, and the sheet is a dialog of its own; only
+      // j/k pass from the sheet's heading (where it puts focus), to step to the next card.
+      if (!(step && target?.id === "sheet-title") && target?.closest(".sheet, button, a")) return;
+      if (step && path === "/") {
+        // The order the board shows, with its filters and the phone's column choice.
+        const list = visible.current;
         if (list.length === 0) return;
-        const next = event.key === "j" ? cursor.current + 1 : cursor.current - 1;
-        const index = (next + list.length) % list.length;
-        cursor.current = index;
+        const at = list.findIndex((t) => t.id === (task ?? cursor.current));
+        const forward = event.key === "j";
+        const index =
+          at === -1
+            ? forward
+              ? 0
+              : list.length - 1
+            : (at + (forward ? 1 : -1) + list.length) % list.length;
         const item = list[index];
-        if (item) setTask(item.id);
+        if (item) go("/", item.id);
       }
       if (event.key === "Enter" && task) go("/", task);
       if (event.key === "c") {
@@ -281,7 +303,7 @@ export function App() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [client, closePalette, feature, filter, go, palette, path, task]);
+  }, [closePalette, go, palette, path, task]);
 
   useEffect(() => {
     if (!palette) return;
@@ -323,6 +345,7 @@ export function App() {
       return false;
     return true;
   });
+  visible.current = data ? boardOrder(tasks, data.features, column) : [];
 
   // While the task panel, New task or Search is open, the page behind it takes no focus or
   // clicks, so Tab stays inside the dialog (aria-modal alone does not stop it).

@@ -114,6 +114,26 @@ describe("edge branches", () => {
     expect(done.status).toBe("done");
   });
 
+  // PLAN Phase 5b: limits are bytes. Khmer is 3 bytes a character, so 40,000 of them is 120 KB.
+  it("caps bodies at 100 KB of UTF-8 and a subtask batch at 1 MB", async () => {
+    const { ctx } = await setup();
+    const khmer = (n: number) => "ក".repeat(n);
+    expect(await code(() => createNote(ctx, { title: "x", body: khmer(40_000) }))).toBe(
+      "VALIDATION",
+    );
+    expect(await code(() => createNote(ctx, { title: "x", body: khmer(33_000) }))).toBe("ok");
+    // Emoji are surrogate pairs: 2 characters, 4 bytes.
+    expect(await code(() => createTask(ctx, { title: "x", body: "😀".repeat(25_001) }))).toBe(
+      "VALIDATION",
+    );
+    const sub = (i: number) => ({ title: `Step ${i}`, body: "a".repeat(60_000) });
+    const many = Array.from({ length: 17 }, (_, i) => sub(i));
+    expect(await code(() => createTask(ctx, { title: "Big", subtasks: many }))).toBe("VALIDATION");
+    expect(await code(() => createTask(ctx, { title: "Ok", subtasks: many.slice(0, 16) }))).toBe(
+      "ok",
+    );
+  });
+
   it("reports doctor checks and blocks review mistakes", async () => {
     const { ctx, clock } = await setup();
     const clean = await doctorChecks(ctx);

@@ -118,6 +118,19 @@ describe("updateTask", () => {
     });
   });
 
+  // PLAN Phase 5b: starting work through update claims the task, so it is not free for others.
+  it("claims the task for the caller when update moves it to in_progress", async () => {
+    const { ctx } = await setup();
+    const t = await createTask(ctx, { title: "x" });
+    const u = await updateTask(ctx, t.id, { status: "in_progress" });
+    expect(u.claim).toMatchObject({ actorId: ctx.actorId, token: u.version });
+    // Writes now need the token, as after task_claim.
+    await expect(updateTask(ctx, t.id, { body: "y" })).rejects.toMatchObject({ code: "CONFLICT" });
+    expect((await updateTask(ctx, t.id, { body: "y", token: u.version })).body).toBe("y");
+    // Back to todo drops the claim again.
+    expect((await updateTask(ctx, t.id, { status: "todo", token: u.version })).claim).toBeNull();
+  });
+
   it("writes nothing for a no-op update", async () => {
     const { ctx, store } = await setup();
     const t = await createTask(ctx, { title: "x" });
@@ -141,11 +154,12 @@ describe("completeTask", () => {
   it("needs a summary and at least one file", async () => {
     const { ctx } = await setup();
     const t = await createTask(ctx, { title: "x" });
-    await updateTask(ctx, t.id, { status: "in_progress" });
+    const { claim: ct } = await updateTask(ctx, t.id, { status: "in_progress" });
+    const tokt = ct?.token;
     await expect(
-      completeTask(ctx, t.id, { summary: "ok", filesTouched: [] }),
+      completeTask(ctx, t.id, { summary: "ok", filesTouched: [], token: tokt }),
     ).rejects.toMatchObject({ code: "VALIDATION" });
-    await expect(completeTask(ctx, t.id, { summary: "ok" })).rejects.toMatchObject({
+    await expect(completeTask(ctx, t.id, { summary: "ok", token: tokt })).rejects.toMatchObject({
       code: "VALIDATION",
     });
   });
@@ -154,8 +168,9 @@ describe("completeTask", () => {
     const { ctx } = await setup();
     await updateSettings(ctx, { kind: "general" });
     const t = await createTask(ctx, { title: "Call the caterer" });
-    await updateTask(ctx, t.id, { status: "in_progress" });
-    const done = await completeTask(ctx, t.id, { summary: "Booked for 80 guests." });
+    const { claim: ct } = await updateTask(ctx, t.id, { status: "in_progress" });
+    const tokt = ct?.token;
+    const done = await completeTask(ctx, t.id, { summary: "Booked for 80 guests.", token: tokt });
     expect(done.completion?.filesTouched).toEqual([]);
   });
 
@@ -166,8 +181,9 @@ describe("completeTask", () => {
     const next = await createTask(ctx, { title: "next", dependsOn: [dep.id] });
     expect((await listTasks(ctx, { ready: true })).map((t) => t.id)).toEqual([dep.id]);
 
-    await updateTask(ctx, dep.id, { status: "in_progress" });
-    const finished = await completeTask(ctx, dep.id, done);
+    const { claim: cdep } = await updateTask(ctx, dep.id, { status: "in_progress" });
+    const tokdep = cdep?.token;
+    const finished = await completeTask(ctx, dep.id, { ...done, token: tokdep });
     expect(finished).toMatchObject({
       status: "done",
       claim: null,
@@ -189,8 +205,9 @@ describe("completeTask", () => {
     const { ctx } = await setup();
     await updateSettings(ctx, { review: "none" });
     const t = await createTask(ctx, { title: "x" });
-    await updateTask(ctx, t.id, { status: "in_progress" });
-    await completeTask(ctx, t.id, done);
+    const { claim: ct } = await updateTask(ctx, t.id, { status: "in_progress" });
+    const tokt = ct?.token;
+    await completeTask(ctx, t.id, { ...done, token: tokt });
     const reopened = await updateTask(ctx, t.id, { status: "todo" });
     expect(reopened.completion).toBeNull();
   });

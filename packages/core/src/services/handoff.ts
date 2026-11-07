@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LIMITS } from "../domain/schemas.js";
+import { BodyText, LIMITS } from "../domain/schemas.js";
 import {
   baseFields,
   insertWithLog,
@@ -14,9 +14,9 @@ export const HANDOFF_TAG = "handoff";
 
 export const HandoffInput = z.strictObject({
   taskId: z.string().trim().min(1),
-  done: z.string().max(LIMITS.body).default(""),
+  done: BodyText.default(""),
   next: z.string().max(LIMITS.shortText).default(""),
-  questions: z.string().max(LIMITS.body).default(""),
+  questions: BodyText.default(""),
   files: z.array(z.string().min(1).max(LIMITS.path)).max(LIMITS.array).default([]),
 });
 export type HandoffInput = z.input<typeof HandoffInput>;

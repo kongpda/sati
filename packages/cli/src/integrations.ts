@@ -203,10 +203,13 @@ const claudeSettings = (path: string, local: boolean) => (existing: string | und
       },
     );
   }
-  const hooks: Record<string, unknown[]> = parsed.data;
+  // Zod's output puts known keys first, so merge into the original objects to keep the
+  // user's key order; the parse above only checks the shape.
+  const original = (config.hooks ?? {}) as typeof parsed.data;
+  const hooks: Record<string, unknown[]> = original;
   let changed = false;
   for (const [event, groups] of Object.entries(claudeHooks(local))) {
-    const current = parsed.data[event] ?? [];
+    const current = original[event] ?? [];
     const wanted = new Set(groups.flatMap((g) => g.hooks.map((h) => h.command)));
     // A group init wrote for the other launcher (global vs local) is replaced, not duplicated.
     const kept = current.filter(

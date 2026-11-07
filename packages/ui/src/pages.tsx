@@ -132,7 +132,11 @@ export function Features({
               <label className="meta" htmlFor={`paths-${f.id}`}>
                 Files this feature owns, one pattern per line
               </label>
+              {/* Keyed by the paths, so the field reloads only when they change (saved here or
+                  elsewhere) and keeps what is typed across every other refresh. Without the key,
+                  a refresh never showed a change made elsewhere, and Save sent the stale text. */}
               <textarea
+                key={f.paths.join("\n")}
                 id={`paths-${f.id}`}
                 className="field"
                 name="paths"

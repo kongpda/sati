@@ -3,6 +3,8 @@ import type { Activity, EntityMap, Project, StoredEntity, Task } from "../domain
 export interface ListQuery {
   status?: readonly string[] | undefined;
   featureId?: string | undefined;
+  /** Only records linked to one of these features; an empty list matches nothing. */
+  featureIds?: readonly string[] | undefined;
   milestoneId?: string | undefined;
   parentId?: string | undefined;
   label?: string | undefined;

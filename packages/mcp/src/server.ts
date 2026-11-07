@@ -122,7 +122,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
     "task_list",
     {
       description:
-        "List tasks. Filter by status, feature or label; `ready: true` returns unclaimed todo tasks whose dependencies are done.",
+        'List tasks. Filter by status, feature, milestone (tasks whose feature is in it) or label, combined; `ready: true` returns unclaimed todo tasks whose dependencies are done. For "what is left for a milestone", pass milestoneId with the open statuses.',
       inputSchema: ListTasksInput,
       annotations: { readOnlyHint: true },
     },

@@ -851,3 +851,18 @@ fixed the same bug (undo of shortened text, subtask cycles, 400 for bad JSON, th
   or releases it first, so an agent's work is not deleted under it.
 - Checked in Chrome at 1280 and 375 px: edit dialog, pinned badge and tag chips, the Undo toast,
   and the panel's Delete button.
+
+### Phase 7a: task_list by milestone and label (2026-11-07)
+
+- Bug: `task_list` with `milestoneId` returned nothing unless `ready` was set. The SQLite store
+  filtered on the task row's own milestone column, which is always empty because tasks belong
+  to a milestone through their feature. The in-memory test store ignored the filter and
+  returned every task, so core's tests could not see it.
+- Fix in core: `listTasks` turns `milestoneId` into the milestone's feature ids and passes them
+  to the store as `featureIds` (one `IN`, so paging stays in SQL). Both the plain and the ready
+  path use it. `sati task list --milestone` exposes it on the command line.
+- Label filtering already worked and now combines with milestone and status. The due-date
+  filter moves to the task fields item, because tasks have no due date yet; it lands as
+  `dueBefore` with `dueDate`.
+- Regression test through MCP on SQLite: open tasks of a milestone across two features, with a
+  label, with a feature of another milestone (empty), and with `ready`.

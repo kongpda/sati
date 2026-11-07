@@ -190,7 +190,7 @@ Agents use sati through a small MCP toolset, with the CLI as a fallback. Hooks e
 | Tool | What it does |
 | --- | --- |
 | `sati_brief` | Session start: ready tasks, my claims, others' active locks, recent decisions, stale context, changes since my last session |
-| `task_list` | Filter by status, feature, label or ready-only; paginated |
+| `task_list` | Filter by status, feature, milestone (through the task's feature), label or ready-only, combined; paginated |
 | `task_create` | Creates a task; searches for duplicates first and returns likely matches |
 | `task_claim` | Atomic claim with a lease; fails with the holder's name if taken. With no id, claims the top ready task |
 | `task_update` | Status, notes, progress; renews the lease |
@@ -634,10 +634,10 @@ A capability is not done until both ways have it, with tests on both. sati itsel
 - [x] UI: milestone create and edit on the Roadmap (name, goal, target date, status; a stale edit is refused); decision record on the Decisions page, with "Replace" recording a new decision that supersedes the old one
 - [x] UI parity: note edit, tags (with a tag filter), pin and delete; delete for tasks, notes and decisions with an Undo toast that restores them (`DELETE /api/<kind>/:id`, `POST …/restore`)
 - [x] Agent parity: MCP `note_upsert` and `note_get` (Agent integration table updated)
-- [ ] Agent parity: `task_list` filters by milestone, label and due date, so "what is left for the launch?" is one call
+- [x] Agent parity: `task_list` filters by milestone (through the task's feature) and label, combined with status, so "what is left for the launch?" is one call; MCP, CLI `--milestone`
 - [ ] Project kind `code` (default) or `general`. A general project hides Features, path locks, the guard and the Agents page, and needs no git; it uses the standalone store
 - [ ] People: a human actor gets a display name, initials and a colour, editable in Settings; the UI never shows `user@worktree`
-- [ ] Task fields `dueDate` (date), `assigneeIds[]` (people or agents, separate from the claim) and `checklist[]` (text, done); MCP, CLI and UI accept them; the snapshot `schemaVersion` goes up with a migration
+- [ ] Task fields `dueDate` (date), `assigneeIds[]` (people or agents, separate from the claim) and `checklist[]` (text, done); MCP, CLI and UI accept them; `task_list` filters by `dueBefore` and assignee; the snapshot `schemaVersion` goes up with a migration
 - [ ] Comments: a new `comment` entity on tasks, notes and decisions (author, Markdown body), exported to `.sati/` and searchable; `sati handoff` writes one
 - [ ] "My work" page: tasks assigned to me, then due this week, then waiting for my approval
 - [ ] Plain words in the UI: "working on it" for a claim, "waiting for approval" for review, "until 14:32" in local time; one glossary in the docs, with no change to CLI or MCP terms

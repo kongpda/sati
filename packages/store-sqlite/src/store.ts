@@ -216,6 +216,10 @@ export class SqliteStore implements StorageAdapter {
       if (!q.includeDeleted) where.push(isNull(t.deletedAt));
       if (q.status?.length) where.push(inArray(t.status, [...q.status]));
       if (q.featureId) where.push(eq(t.featureId, q.featureId));
+      if (q.featureIds) {
+        if (q.featureIds.length === 0) return [];
+        where.push(inArray(t.featureId, [...q.featureIds]));
+      }
       if (q.milestoneId) where.push(eq(t.milestoneId, q.milestoneId));
       if (q.parentId) where.push(eq(t.parentId, q.parentId));
       if (q.label) {

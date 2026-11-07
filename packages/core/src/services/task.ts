@@ -471,34 +471,33 @@ async function lease(r: StorageReader, ctx: ServiceContext, minutes?: number): P
 
 /**
  * Lists tasks; `ready: true` returns todo, unclaimed tasks whose dependencies are done.
+ * Tasks have no milestone of their own: `milestoneId` means "linked to a feature of that
+ * milestone", so it is turned into the list of those features before the store sees it.
  * The store's ready query takes no filters, so the filters and paging apply here to up to 500
  * ready tasks. `includeDeleted` has no effect on ready tasks: a deleted task is never ready.
  */
 export async function listTasks(ctx: ServiceContext, input: unknown = {}): Promise<Task[]> {
-  const { ready, ...query } = parseInput(ListTasksInput, input);
-  if (!ready) return ctx.store.read((r) => r.list("task", ctx.projectId, query));
-  const { status, featureId, milestoneId, parentId, label } = query;
-  const { all, inMilestone } = await ctx.store.read(async (r) => {
-    const tasks = await r.readyTasks(ctx.projectId, nowIso(ctx), 500);
-    // Tasks have no milestone of their own; they belong to their feature's milestone.
-    const ids = new Set<string>();
-    if (milestoneId) {
-      for (const f of await listAll(r, ctx, "feature"))
-        if (f.milestoneId === milestoneId) ids.add(f.id);
-    }
-    return { all: tasks, inMilestone: ids };
+  const { ready, milestoneId, ...query } = parseInput(ListTasksInput, input);
+  return ctx.store.read(async (r) => {
+    const featureIds = milestoneId
+      ? (await listAll(r, ctx, "feature"))
+          .filter((f) => f.milestoneId === milestoneId)
+          .map((f) => f.id)
+      : undefined;
+    if (!ready) return r.list("task", ctx.projectId, { ...query, featureIds });
+    const { status, featureId, parentId, label } = query;
+    const start = query.offset ?? 0;
+    return (await r.readyTasks(ctx.projectId, nowIso(ctx), 500))
+      .filter(
+        (t) =>
+          (!status || status.includes(t.status)) &&
+          (!featureId || t.featureId === featureId) &&
+          (!featureIds || (t.featureId !== null && featureIds.includes(t.featureId))) &&
+          (!parentId || t.parentId === parentId) &&
+          (!label || t.labels.includes(label)),
+      )
+      .slice(start, start + (query.limit ?? 50));
   });
-  const start = query.offset ?? 0;
-  return all
-    .filter(
-      (t) =>
-        (!status || status.includes(t.status)) &&
-        (!featureId || t.featureId === featureId) &&
-        (!milestoneId || (t.featureId !== null && inMilestone.has(t.featureId))) &&
-        (!parentId || t.parentId === parentId) &&
-        (!label || t.labels.includes(label)),
-    )
-    .slice(start, start + (query.limit ?? 50));
 }
 
 /** Checks that linked feature, parent and dependencies exist and form no cycle. */

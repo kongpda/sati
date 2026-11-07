@@ -78,6 +78,8 @@ export class MemoryStore implements StorageAdapter {
           : live(e, projectId);
         if (q.status) rows = rows.filter((r) => q.status?.includes(String(r.status)));
         if (q.featureId) rows = rows.filter((r) => r.featureId === q.featureId);
+        if (q.featureIds) rows = rows.filter((r) => q.featureIds?.includes(String(r.featureId)));
+        if (q.milestoneId) rows = rows.filter((r) => r.milestoneId === q.milestoneId);
         if (q.label) rows = rows.filter((r) => (r.labels as string[]).includes(q.label ?? ""));
         if (q.newestFirst) rows = rows.reverse();
         const start = q.offset ?? 0;

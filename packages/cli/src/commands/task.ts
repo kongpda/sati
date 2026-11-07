@@ -91,6 +91,10 @@ const ls = defineCommand({
   args: {
     status: { type: "string", description: "Comma-separated statuses" },
     feature: { type: "string", description: "Only tasks of this feature" },
+    milestone: {
+      type: "string",
+      description: "Only tasks whose feature belongs to this milestone",
+    },
     label: { type: "string", description: "Only tasks with this label" },
     ready: { type: "boolean", description: "Only unclaimed tasks whose dependencies are done" },
     ...pagination,
@@ -103,6 +107,7 @@ const ls = defineCommand({
         listTasks(ctx, {
           status: list(args.status),
           featureId: await ref(ctx, "feature", args.feature),
+          milestoneId: await ref(ctx, "milestone", args.milestone),
           label: args.label,
           ready: args.ready,
           limit: int(args.limit, "limit"),

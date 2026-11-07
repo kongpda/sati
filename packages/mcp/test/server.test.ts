@@ -6,11 +6,14 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import {
   createFeature,
   createIdFactory,
+  createMilestone,
+  createTask,
   ensureActor,
   fixedClock,
   initProject,
   type ServiceContext,
   shortHandle,
+  updateTask,
   WORKFLOW,
 } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
@@ -147,6 +150,36 @@ describe("MCP server", () => {
 
   // Two agents must never hold one task; the loser needs the holder's name to coordinate.
   // The agent decides what to do with a likely duplicate; the tool only has to show it.
+  // PLAN Phase 7a: "what is left for the launch?" is one call. Tasks belong to a milestone
+  // through their feature.
+  it("lists a milestone's open tasks by label in one call", async () => {
+    const launch = await createMilestone(ctx, { title: "Launch" });
+    const later = await createMilestone(ctx, { title: "Later" });
+    const venue = await createFeature(ctx, { title: "Venue", milestoneId: launch.id });
+    const press = await createFeature(ctx, { title: "Press", milestoneId: launch.id });
+    const app = await createFeature(ctx, { title: "App", milestoneId: later.id });
+    await createTask(ctx, { title: "Book hall", featureId: venue.id, labels: ["print"] });
+    await createTask(ctx, { title: "Press kit", featureId: press.id });
+    const old = await createTask(ctx, { title: "Old idea", featureId: venue.id });
+    await updateTask(ctx, old.id, { status: "cancelled" });
+    await createTask(ctx, { title: "App beta", featureId: app.id });
+    await createTask(ctx, { title: "No feature" });
+    const client = await connect();
+    const titles = async (args: Record<string, unknown>) => {
+      const res = await call(client, "task_list", args);
+      expect(res.isError).toBe(false);
+      return (res.body as { title: string }[]).map((t) => t.title).sort();
+    };
+    const open = ["backlog", "todo", "in_progress", "review", "blocked"];
+    expect(await titles({ milestoneId: launch.id, status: open })).toEqual([
+      "Book hall",
+      "Press kit",
+    ]);
+    expect(await titles({ milestoneId: launch.id, label: "print" })).toEqual(["Book hall"]);
+    expect(await titles({ milestoneId: launch.id, featureId: app.id })).toEqual([]);
+    expect(await titles({ milestoneId: later.id, ready: true })).toEqual(["App beta"]);
+  });
+
   it("lists likely duplicates when creating a task, but never the new task itself", async () => {
     const client = await connect();
     const first = await call(client, "task_create", { title: "Fix login redirect loop" });

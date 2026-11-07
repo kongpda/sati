@@ -13,7 +13,7 @@ We build **Sati** (CLI: `sati`): a local-first project memory that AI agents and
 1. One shared, live memory for every agent and worktree of a repo, with no server required.
 2. Hard guards: an agent cannot silently delete a shipped feature or edit an area another agent has locked.
 3. Agents start each session from a short brief instead of crawling the repo.
-4. Humans get a fast kanban, roadmap and notes UI on top of the same data.
+4. Humans get a fast kanban, roadmap and notes UI on top of the same data, and can plan, keep todos and take notes either through their AI agent or in that UI.
 5. Optional hosted mode for multi-project, multi-machine and team use.
 
 **Non-goals for v1.0:** replacing GitHub Issues or Linear for client-facing work, real-time collaborative text editing, and a mobile app.
@@ -602,31 +602,60 @@ Deferred by the owner on 2026-11-07: v1 stays local-first. See `docs/progress.md
 
 **Gate:** two machines and two people work on one project through the hosted server with no lost updates.
 
-### Phase 7 — Team brain: sati for developers, office, events and marketing
+### Phase 7 — The brain for AI agents and the people who work with them
 
-Added 2026-11-07 at the owner's request: sati should be the shared brain of the whole team, not only of developers and their agents. The full reasoning, personas and examples are in [`docs/team-brain.md`](docs/team-brain.md). Phase 7a and 7b build on the local app and need no server; Phase 7c needs Phase 6.
+Added 2026-11-07 at the owner's request and refined the same day. sati is the brain AI agents work from, and the place their users plan, keep todo lists and take notes. It also looks back: it reviews what was done and what changed, and writes changelogs and feature lists from that record. The reasoning, personas and examples are in [`docs/team-brain.md`](docs/team-brain.md).
 
-**Positioning.** sati stays the team's *memory*: what we decided and why, what we know, who (person or agent) is doing what, and what is due. It does not become a full project-management suite: no Gantt dependencies, time tracking, budgets or invoicing. That keeps the non-goal of not replacing Linear and GitHub Issues for client work.
+**Two ways to work, one memory.** Everything a person can plan or record, they can do either way, and both write the same records:
 
-**Phase 7a — People first in the local app**
+1. **Through their AI agent in the project** — "plan the launch", "add a todo", "note that…", "what changed this week?", "write the changelog" — using MCP or the CLI.
+2. **In the sati web UI** — boards, lists, notes and the roadmap, for working and planning by hand.
 
+A capability is not done until both ways have it, with tests on both. sati itself never reads the user's files (Phase 8); the agent does.
+
+**Positioning.** sati is memory and planning, not a project-management suite: no Gantt dependencies, time tracking, budgets or invoicing, and it does not replace Linear or GitHub Issues for client work.
+
+**Where both ways stand today (2026-11-07)**
+
+| Capability | Agent (MCP / CLI) | Web UI |
+| --- | --- | --- |
+| Todos: create, edit, move, complete | Yes | Create by title only (hidden `c` key); edit and move; approve review; no complete |
+| Plans (milestones) | `roadmap_upsert`; CLI full | Read only (the API route exists, no UI) |
+| Notes | CLI only; no MCP tool | Create title and body; no edit, tags, pin or delete |
+| Decisions | `decision_record` | Read only (the API route exists, no UI) |
+| What changed | CLI `activity`, git-only `review`; the brief's promised "changes since my last session" is missing | Raw Activity list |
+| Changelog / feature list | None | None |
+
+**Phase 7a — Two ways to work**
+
+- [ ] UI parity: a visible "New task" button and form (body, priority, labels, due date, assignees, milestone); milestone create and edit on the Roadmap; decision create; note edit, tags, pin and delete; delete and restore for tasks, notes and decisions, each with an undo toast
+- [ ] Agent parity: MCP `note_upsert` and `note_get`, and `task_list` filters by milestone, label and due date, so "what is left for the launch?" is one call (update the Agent integration table)
 - [ ] Project kind `code` (default) or `general`. A general project hides Features, path locks, the guard and the Agents page, and needs no git; it uses the standalone store
 - [ ] People: a human actor gets a display name, initials and a colour, editable in Settings; the UI never shows `user@worktree`
-- [ ] Task fields `dueDate` (date), `assigneeIds[]` (people or agents, separate from the claim) and `checklist[]` (text, done); MCP and CLI accept them; the snapshot `schemaVersion` goes up with a migration
+- [ ] Task fields `dueDate` (date), `assigneeIds[]` (people or agents, separate from the claim) and `checklist[]` (text, done); MCP, CLI and UI accept them; the snapshot `schemaVersion` goes up with a migration
 - [ ] Comments: a new `comment` entity on tasks, notes and decisions (author, Markdown body), exported to `.sati/` and searchable; `sati handoff` writes one
-- [ ] Create and edit everything in the UI: a visible "New task" button with priority, labels, due date and assignees; milestone create and edit on the Roadmap; decision create; note edit, tags and pin
 - [ ] "My work" page: tasks assigned to me, then due this week, then waiting for my approval
 - [ ] Plain words in the UI: "working on it" for a claim, "waiting for approval" for review, "until 14:32" in local time; one glossary in the docs, with no change to CLI or MCP terms
 - [ ] Khmer and English UI strings (`Intl` dates and numbers, `lang` per note), the bundled Khmer font, and line-height for Khmer script
+- [ ] Parity test: one scripted scenario per capability runs through MCP and through the UI (Playwright) and checks both produce the same records
 
-**Phase 7b — The brain for every agent**
+**Phase 7b — Review what changed, write changelogs and feature lists**
 
-- [ ] MCP `note_upsert` and `note_get`, so agents can write and read the memory, not only search it (17 tools; update the Agent integration table)
-- [ ] Templates: `sati template apply event|campaign|release` creates a milestone with a task chain from a Markdown file in `.sati/templates/`; ship three starters (event, marketing campaign, product release)
-- [ ] Weekly digest: `sati digest --since 7d` in Markdown — done, decided, due next and blocked — to paste into email or chat
+- [ ] `task_complete` takes an optional `releaseNote`: one user-facing line, separate from the developer `summary`; tasks labelled `internal` stay out of changelogs
+- [ ] Changes: `sati changes --since <date|7d|last-session|milestone>` and MCP `changes`: done tasks (summary, release note, files touched), features that moved status, decisions, new and edited notes, and what is now blocked or overdue, grouped by milestone or feature, compact, with ids
+- [ ] The brief's "Since your last session" section, which PLAN promises and the brief does not have yet: up to 5 changes by other actors since the caller's last brief, inside the 1,500-token cap
+- [ ] Changelog: `sati changelog --since <date|tag|milestone> [--format keep-a-changelog|release-notes|plain]` prints Markdown built from release notes (falling back to summaries), grouped Added / Changed / Fixed / Removed by task label and feature status. It prints to stdout; the agent or person decides where it goes (`> CHANGELOG.md`), because sati writes no user files
+- [ ] Feature list: `sati features --format md` prints what the product does today, from shipped features with their acceptance criteria and milestone, for READMEs, sales sheets or release pages
+- [ ] Review: `sati review` also takes `--since` for projects without git, and reports done work still waiting for approval, decisions without a linked task, and shipped features without tests
+- [ ] UI "Changes" page: a timeline by day (done, decided, shipped, changed), filters by date, milestone, person or agent, and "Copy changelog" / "Copy feature list" buttons using the same generators
+- [ ] Weekly digest is `sati changes --since 7d --format digest`, to paste into email or chat (replaces the separate `digest` command)
+
+**Phase 7c — The brain for every agent**
+
+- [ ] Templates: `sati template apply event|campaign|release` creates a milestone with a task chain from a Markdown file in `.sati/templates/`; ship three starters (event, marketing campaign, product release); also in the UI's "New plan" menu
 - [ ] Calendar export: `sati calendar export` writes an `.ics` of due dates and milestone targets (read-only; no two-way sync)
 
-**Phase 7c — Without a terminal (needs Phase 6)**
+**Phase 7d — Without a terminal (needs Phase 6)**
 
 - [ ] Team server: the Phase 6 Docker image serves the UI to signed-in teammates, with email sign-in for people who have no GitHub account
 - [ ] Remote MCP (Streamable HTTP) with a per-person token, so Claude Desktop, ChatGPT and other assistants can use the team brain from a laptop with no repo
@@ -634,11 +663,11 @@ Added 2026-11-07 at the owner's request: sati should be the shared brain of the 
 - [ ] Desktop launcher: a signed app or `npx sati app` that starts the local server and opens it, for one-person use without a terminal
 - [ ] Attachments as links (Drive, Figma, Canva) with a preview title; no file storage in v1 of the team server
 
-**Gate:** a non-developer, given only a URL and a sign-in email, plans a 20-task event from the `event` template, assigns tasks to three people and one agent, approves the agent's work and finds last month's decision about the venue by asking in Khmer or English, without opening a terminal. The developer flows (claims, locks, guard, brief size, all performance budgets) still pass unchanged.
+**Gate:** a person plans a 20-task launch from the `release` template half in the UI and half by asking their agent, and both views show the same plan. Agents complete the tasks with release notes. A person asks their agent "what changed this week?" and gets the right list, and generates a changelog and a feature list from the UI and from the CLI that match. The developer flows (claims, locks, guard, brief size, all performance budgets) still pass unchanged.
 
 ### Phase 8 — Knowledge brain: agents read, sati remembers
 
-Added 2026-11-07 at the owner's request. sati is the memory, not a file reader: AI agents open the Word, Excel, PowerPoint, PDF and image files with their own tools, notice changes and understand the language; sati keeps what they and the people learned, decided, did, need and plan, and hands back the right part in as few tokens as possible. The full plan is in [`docs/knowledge-brain.md`](docs/knowledge-brain.md). It follows Phase 7a and uses `note_upsert` / `note_get` from 7b.
+Added 2026-11-07 at the owner's request. sati is the memory, not a file reader: AI agents open the Word, Excel, PowerPoint, PDF and image files with their own tools, notice changes and understand the language; sati keeps what they and the people learned, decided, did, need and plan, and hands back the right part in as few tokens as possible. The full plan is in [`docs/knowledge-brain.md`](docs/knowledge-brain.md). It follows Phase 7a and uses `note_upsert` / `note_get` from 7a.
 
 **Rule:** sati never opens, parses or watches the user's files.
 

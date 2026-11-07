@@ -87,7 +87,7 @@ requires.
 | `context_get` / `context_put` | Described as memory of any file, folder or module; accept the new fields |
 | `search` | Also searches cards (summary, facts, tags, path); returns compact hits by default (id, kind, title, 20-word snippet, about 40 tokens each), `detail: "full"` on request |
 | `task_list` | Compact rows by default (id, title, status, priority, holder), `detail: "full"` on request |
-| `note_upsert` / `note_get` | From Phase 7b: agents can write and read notes, including `pinned` and `private` |
+| `note_upsert` / `note_get` | From Phase 7a: agents can write and read notes, including `pinned` and `private` |
 | `recall` | One call for "what do we know about X": the best cards, notes, decisions and open tasks, deduplicated, with ids and sources, capped at 1,000 tokens. No model inside sati; the agent writes the answer |
 
 The managed rules block gains two lines: "Before opening a file, `context_get` it; reuse the card

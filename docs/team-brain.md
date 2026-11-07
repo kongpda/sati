@@ -1,4 +1,4 @@
-# Team brain: sati for the whole team
+# Team brain: the brain for AI agents and the people who use them
 
 Nov 7, 2026 · plan for PLAN.md Phase 7 · @kongpda
 
@@ -11,8 +11,57 @@ chat threads, spreadsheets and people's heads. Make those records easy for non-d
 write and read, and sati becomes the one place the whole team, and every AI assistant it uses,
 remembers from.
 
-The work splits into what helps every user locally (7a, 7b) and what needs the team server from
-Phase 6 (7c). Do 7a first: every item in it also helps developers.
+sati is the brain AI agents work from, and where their users plan, keep todo lists and take
+notes. It also looks back: it reviews what was done and what changed, and writes changelogs and
+feature lists from that record.
+
+The work splits into what helps every user locally (7a–7c) and what needs the team server from
+Phase 6 (7d). Do 7a first: every item in it also helps developers.
+
+## Two ways to work, one memory
+
+A person can plan and record work two ways, and both write the same records:
+
+1. **Through their AI agent in the project.** "Plan the launch as a checklist", "add a todo to
+   book the venue", "note that the client prefers blue", "what changed since Monday?", "write the
+   changelog for 1.2". The agent calls sati's MCP tools (or the CLI) and answers from sati.
+2. **In the sati web UI.** The board, lists, notes and the roadmap, for planning and working by
+   hand, with live updates when an agent changes something.
+
+A capability counts as done only when both ways have it. Today they are uneven:
+
+| Capability | Agent (MCP / CLI) | Web UI |
+| --- | --- | --- |
+| Todos | Full | Title-only create through a hidden key; no complete |
+| Plans (milestones) | Full | Read only |
+| Notes | CLI only (no MCP tool) | Create; no edit, tags, pin or delete |
+| Decisions | Full | Read only |
+| What changed | Raw activity, git-only review | Raw activity |
+| Changelog, feature list | None | None |
+
+Phase 7a closes the parity gaps, and a parity test runs each capability through MCP and through
+the UI and checks that the records match.
+
+## Review what changed, write changelogs and feature lists (Phase 7b)
+
+sati already records what happened: each finished task has a summary and its files, features have
+statuses and acceptance criteria, decisions have reasons, and every write has an activity row. Phase
+7b turns that record into answers people need:
+
+- **"What changed?"** `sati changes --since 7d` (and the MCP `changes` tool) lists finished work,
+  features that moved, decisions, new notes, and what is now blocked or overdue, grouped by
+  milestone or feature. `--since last-session` gives an agent exactly what others did while it was
+  away, and the brief gains that section, which PLAN promised but the brief never had.
+- **Changelogs.** `task_complete` takes an optional one-line `releaseNote` written for users, next
+  to the developer `summary`. `sati changelog --since v1.1` prints Markdown in Keep a Changelog
+  style (Added / Changed / Fixed / Removed) or as release notes; tasks labelled `internal` are left
+  out. It prints to stdout, so the agent or person chooses where it goes; sati writes no user files.
+- **Feature lists.** `sati features --format md` prints what the product does today, from shipped
+  features with their acceptance criteria, for a README, a sales sheet or a release page.
+- **Review.** `sati review --since` works without git, and points out finished work still waiting
+  for approval, decisions with no linked task, and shipped features with no tests.
+- **In the UI,** a Changes page shows the same timeline with filters and "Copy changelog" and
+  "Copy feature list" buttons that use the same generators, so both ways give the same text.
 
 ## Who it is for
 
@@ -56,7 +105,7 @@ Grounded in the 2026-11-07 review of the code:
    14:32" in local time. CLI and MCP keep `claim`, `review` and UTC, because agents and scripts rely
    on them and the MCP schemas are a public API.
 4. **The brain is notes + decisions + search, served to any assistant.** Add `note_upsert`,
-   `note_get` and a `recall` tool (Phase 8, `docs/knowledge-brain.md`) that returns ranked records with IDs. Do not bundle a model: the
+   `note_get` (Phase 7a) and a `recall` tool (Phase 8, `docs/knowledge-brain.md`) that returns ranked records with IDs. Do not bundle a model: the
    user's own assistant (Claude Code, Claude Desktop, ChatGPT through remote MCP) writes the
    answer. That keeps sati small, local-first and model-neutral.
 5. **Templates beat features.** An event, a campaign and a release are each a milestone plus a
@@ -64,7 +113,7 @@ Grounded in the 2026-11-07 review of the code:
    or campaign-specific screens.
 6. **Non-developers need the team server.** No amount of local polish lets a colleague open a
    board on someone else's laptop. Phase 6 (hosted) is the real unlock for office users; sequence
-   7c right after it, and keep 7a/7b useful on their own.
+   7d right after it, and keep 7a–7c useful on their own.
 7. **Telegram before Slack** for notifications if the team is in Cambodia, where Telegram is the
    default work chat; email first for everyone.
 8. **Keep the developer budgets.** New fields must not grow the brief past 1,500 tokens: due dates
@@ -77,6 +126,7 @@ Grounded in the 2026-11-07 review of the code:
 | Project | `kind: "code" \| "general"` (default `code`) | `general` uses the standalone store when there is no git |
 | Actor | `displayName`, `initials`, `color` for humans | Editable in Settings; agents keep their tool names |
 | Task | `dueDate` (ISO date, nullable), `assigneeIds[]`, `checklist[]` of `{ text, done }` | Validated like every field; arrays capped at 500 |
+| Task completion | `releaseNote` (optional, one user-facing line, Phase 7b) | Changelogs use it, falling back to `summary`; label `internal` excludes a task |
 | Comment (new) | `entity`, `entityId`, `body` (Markdown), `createdBy` | Exported to `.sati/comments/`, merged like notes, in FTS |
 
 Each change bumps the snapshot `schemaVersion` with an automatic migration, as the Versioning
@@ -98,11 +148,12 @@ section requires. Old binaries already refuse writes to a newer schema.
 | Step | Scope | Estimate |
 | --- | --- | --- |
 | Phase 5b open items | the open list in PLAN.md | 1 week |
-| 7a People first | kind, people, due/assignee/checklist, comments, UI create/edit, My work, plain words, Khmer | 3 weeks |
-| 7b Brain for agents | note tools, templates, digest, calendar export | 1 week |
+| 7a Two ways to work | UI and agent parity, note tools, kind, people, due/assignee/checklist, comments, My work, plain words, Khmer, parity test | 3.5 weeks |
+| 7b Review and changelogs | release notes, `changes`, brief "since last session", changelog, feature list, review without git, Changes page | 1.5 weeks |
+| 7c Brain for agents | templates, calendar export | 0.5 week |
 | Phase 8 Knowledge brain | cards with facts, recall, compact answers, private memory, token ledger, Memory page | 2.5 weeks |
 | Phase 6 Hosted | as planned (Postgres, auth, sync, remote MCP) | 5–6 weeks |
-| 7c Without a terminal | team server UI, email sign-in, inbox and notifications, launcher, link attachments | 2–3 weeks |
+| 7d Without a terminal | team server UI, email sign-in, inbox and notifications, launcher, link attachments | 2–3 weeks |
 
 ## How we will know it works
 
@@ -121,4 +172,4 @@ section requires. Old binaries already refuse writes to a newer schema.
 | Plain-word UI drifts from CLI terms and confuses developers | One glossary page; tooltips show the CLI term |
 | Comments and assignees bloat the agent brief | Comments never in the brief; brief tests keep the 1,500-token cap |
 | Non-developers edit `.sati/` JSON by hand in a general project without git | General projects have no snapshot by default; export is opt-in |
-| Hosted mode slips, so office users never get access | 7a/7b still pay off locally; the desktop launcher covers one-person use |
+| Hosted mode slips, so office users never get access | 7a–7c still pay off locally; the desktop launcher covers one-person use |

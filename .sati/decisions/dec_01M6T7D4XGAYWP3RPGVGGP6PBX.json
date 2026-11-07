@@ -1,0 +1,24 @@
+{
+  "consequences": "PLAN Phase 7 restructured into 7a two ways, 7b review and changelogs, 7c templates, 7d no terminal.",
+  "context": "The owner: sati is the brain for AI agents where users plan, keep todos and take notes, either through their agent in the project or in the web UI, and it can review what was done and changed and write changelogs or feature lists.",
+  "createdAt": "2026-11-07T05:23:52.367Z",
+  "createdBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
+  "decision": "Every planning and recording capability ships for both MCP/CLI and the UI, with a parity test. Add release notes on completion, a changes view (CLI, MCP, brief, UI), and changelog and feature-list generators that print Markdown; sati writes no user files, the agent or person decides where output goes.",
+  "deletedAt": null,
+  "featureIds": [],
+  "id": "dec_01M6T7D4XGAYWP3RPGVGGP6PBX",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "consequences": "2026-11-07T05:23:52.371Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "context": "2026-11-07T05:23:52.371Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "decision": "2026-11-07T05:23:52.371Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "deletedAt": "2026-11-07T05:23:52.371Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "featureIds": "2026-11-07T05:23:52.371Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "supersedes": "2026-11-07T05:23:52.371Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "title": "2026-11-07T05:23:52.371Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+  },
+  "supersedes": null,
+  "title": "Two ways to work, and sati looks back as well as forward",
+  "updatedAt": "2026-11-07T05:23:52.367Z",
+  "version": 1
+}

@@ -1,0 +1,24 @@
+{
+  "consequences": "PLAN Phase 7; hosted mode (Phase 6) is the access path for people without a terminal.",
+  "context": "The owner wants office, events and marketing teams to use sati too.",
+  "createdAt": "2026-11-07T04:06:10.330Z",
+  "createdBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
+  "decision": "Add a general project kind and human-first fields (due date, assignees, checklist, comments) to the same core instead of a separate edition. Assignees are long-lived ownership; claims stay short agent leases. Plain words only in the UI; CLI and MCP terms stay. No bundled model: an ask tool returns ranked records for the caller's assistant.",
+  "deletedAt": null,
+  "featureIds": [],
+  "id": "dec_01M6T2YW4TR0GDSY46YH2EQC0H",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "consequences": "2026-11-07T04:06:10.333Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "context": "2026-11-07T04:06:10.333Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "decision": "2026-11-07T04:06:10.333Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "deletedAt": "2026-11-07T04:06:10.333Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "featureIds": "2026-11-07T04:06:10.333Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "supersedes": "2026-11-07T04:06:10.333Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "title": "2026-11-07T04:06:10.333Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+  },
+  "supersedes": null,
+  "title": "Team brain: one product with project kinds, assignees separate from claims",
+  "updatedAt": "2026-11-07T04:06:10.330Z",
+  "version": 1
+}

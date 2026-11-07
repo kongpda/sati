@@ -155,4 +155,18 @@ describe("sati guard --paths and --hook", () => {
     expect(hook(join(dir, "README.md"))).toBe("");
     expect(hook("/etc/hosts")).toBe("");
   });
+
+  // A Bash call that moves a guarded file out of the repo, or skips the git hooks, is blocked.
+  it("--hook blocks moving a protected file out of the repo and --no-verify commits", async () => {
+    const { dir } = await billingRepo();
+    const bash = (command: string) =>
+      run(dir, ["guard", "--hook"], {}, JSON.stringify({ cwd: dir, tool_input: { command } }));
+    const moved = bash("mv src/billing/invoice.ts /tmp/invoice.ts");
+    expect(moved.code).toBe(2);
+    expect(moved.stderr).toContain("src/billing/invoice.ts");
+    const skipped = bash("git commit -am wip --no-verify");
+    expect(skipped.code).toBe(2);
+    expect(skipped.stderr).toContain("--no-verify");
+    expect(bash("mv README.md /tmp/readme.md").code).toBe(0);
+  });
 });

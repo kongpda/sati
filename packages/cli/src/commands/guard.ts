@@ -7,6 +7,7 @@ import {
   checkChanges,
   ERROR_EXIT_CODES,
   type GuardResult,
+  hookBypass,
   parseShellChanges,
   recordGuard,
   SatiConfigSchema,
@@ -108,15 +109,23 @@ async function runHook(): Promise<void> {
     const command = input.tool_input?.command;
     const target = input.tool_input?.file_path ?? input.tool_input?.notebook_path;
     rt = await openRuntime(cwd);
+    const bypass = typeof command === "string" ? hookBypass(command) : undefined;
+    if (bypass && !overridden()) {
+      process.stderr.write(
+        `blocked: ${bypass} Commit without it so the guard runs, or override once with SATI_GUARD=off (logged).\n`,
+      );
+      process.exitCode = 2;
+      return;
+    }
+    const root = rt.location.root;
     const changes: Change[] =
       typeof command === "string"
-        ? parseShellChanges(command).flatMap((change) => {
-            const path = inRepo(rt?.location.root ?? cwd, cwd, change.path);
-            if (path === undefined) return [];
-            const from =
-              change.from === undefined
-                ? undefined
-                : inRepo(rt?.location.root ?? cwd, cwd, change.from);
+        ? parseShellChanges(command).flatMap((change): Change[] => {
+            const path = inRepo(root, cwd, change.path);
+            const from = change.from === undefined ? undefined : inRepo(root, cwd, change.from);
+            // Moving a file out of the repo removes it from the repo.
+            if (path === undefined)
+              return from === undefined ? [] : [{ path: from, kind: "deleted" }];
             if (change.kind === "renamed" && from === undefined) return [];
             return [{ path, kind: change.kind, ...(from === undefined ? {} : { from }) }];
           })

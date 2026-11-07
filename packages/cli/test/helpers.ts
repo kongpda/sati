@@ -35,7 +35,12 @@ export interface Result {
  * Runs the built CLI. `SATI_ACTOR` defaults to "tester" so actor names are predictable. A `HOME`
  * override also sets `USERPROFILE`, which is where Node finds the home folder on Windows.
  */
-export function run(cwd: string, args: string[], env: NodeJS.ProcessEnv = {}): Result {
+export function run(
+  cwd: string,
+  args: string[],
+  env: NodeJS.ProcessEnv = {},
+  input?: string,
+): Result {
   const overrides: NodeJS.ProcessEnv = {
     SATI_ACTOR: "tester",
     CLAUDECODE: "",
@@ -50,7 +55,12 @@ export function run(cwd: string, args: string[], env: NodeJS.ProcessEnv = {}): R
     for (const key of Object.keys(full)) if (names.has(key.toUpperCase())) delete full[key];
   }
   Object.assign(full, overrides);
-  const r = spawnSync(process.execPath, [bin, ...args], { cwd, env: full, encoding: "utf8" });
+  const r = spawnSync(process.execPath, [bin, ...args], {
+    cwd,
+    env: full,
+    encoding: "utf8",
+    ...(input === undefined ? {} : { input }),
+  });
   return { code: r.status ?? -1, stdout: r.stdout, stderr: r.stderr };
 }
 

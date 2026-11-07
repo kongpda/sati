@@ -327,6 +327,53 @@ describe("search", () => {
     }
   });
 
+  // PLAN Phase 8: cards are found by path, summary, facts and tags, including cards written
+  // before migration 0004 added them to the index.
+  it("indexes cards, also those written before the cards migration", async () => {
+    const card = (id: string, path: string, extra: Record<string, unknown> = {}) => ({
+      id,
+      projectId: PROJECT_ID,
+      createdAt: NOW,
+      updatedAt: NOW,
+      createdBy: "actr_01J0000000000000000000000A",
+      version: 1,
+      deletedAt: null,
+      path,
+      summary: "Quote from the hall",
+      keyFiles: [],
+      contentHash: "",
+      gitCommit: null,
+      ...extra,
+    });
+    const v4 = tmpDb();
+    const raw = new Database(v4);
+    for (const m of MIGRATIONS.slice(0, 4)) raw.exec(m.sql);
+    raw.pragma("user_version = 4");
+    const old = card("ctx_01J0000000000000000000000B", "venue/old.pdf", { facts: ["Parking 40"] });
+    raw
+      .prepare(
+        "INSERT INTO context_entries (id, project_id, rank, created_at, updated_at, version, data) VALUES (?, ?, 0, ?, ?, 1, ?)",
+      )
+      .run(old.id, PROJECT_ID, NOW, NOW, JSON.stringify(old));
+    raw.close();
+    const upgraded = await SqliteStore.open(v4);
+    try {
+      const find = async (q: string) =>
+        (await upgraded.read((r) => r.search(PROJECT_ID, q))).map((h) => `${h.entity} ${h.title}`);
+      expect(await find("parking")).toEqual(["context venue/old.pdf"]);
+      const fresh = card("ctx_01J0000000000000000000000C", "brand/logo.pdf", { tags: ["brand"] });
+      await upgraded.write((w) => w.insert("context", fresh as never));
+      expect(await find("brand")).toEqual(["context brand/logo.pdf"]);
+      await upgraded.write((w) =>
+        w.update("context", { ...old, facts: ["Parking 60"], version: 2 } as never, 1),
+      );
+      expect(await find("60")).toEqual(["context venue/old.pdf"]);
+      expect(await find("40")).toEqual([]);
+    } finally {
+      await upgraded.close();
+    }
+  });
+
   // User text must never be interpreted as FTS syntax (column filters, NEAR, unbalanced quotes).
   it("treats operators and quotes in the query as plain text", async () => {
     await store.write((w) => w.insert("task", task({ title: "Alpha OR beta" })));

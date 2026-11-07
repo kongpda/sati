@@ -1,11 +1,12 @@
 import micromatch from "micromatch";
 import { z } from "zod";
 import { shortHandle } from "../domain/ids.js";
+import { pathsOverlap } from "../domain/locks.js";
 import { isGuardedFeature } from "../domain/rules.js";
 import type { Feature, Note, Task } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
 import { type ChangeItem, lastSession, readChanges } from "./changes.js";
-import { COMMENT_TAG } from "./comment.js";
+import { COMMENT_TAG, isThreadNote } from "./comment.js";
 import { actorName, listAll, nowIso, parseInput, type ServiceContext } from "./context.js";
 import { getContext } from "./context-cache.js";
 import { HANDOFF_TAG, handoffNext } from "./handoff.js";
@@ -17,6 +18,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const LINE_CHARS = 160;
 /** No section shows more lines than this, which also bounds the work in `fit`. */
 const SECTION_LINES = 40;
+/** PLAN Phase 8: up to 3 pinned notes, and a few cards for the claimed tasks, in the brief. */
+const PINNED_NOTES = 3;
+const LINKED_CARDS = 3;
 /** PLAN: "Since your last session" lists up to 5 changes by others. */
 const SINCE_LINES = 5;
 
@@ -123,6 +127,21 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       const next = handoffNext(note.body);
       for (const link of note.links) if (next) handoffs.set(link, next);
     }
+    // Knowledge: pinned notes (brand voice, policies, contacts), newest first, and the cards
+    // tied to my tasks, through their feature's paths or a label shared with the card's tags.
+    const pinned = (short ? [] : notes)
+      .filter((n) => n.pinned && !isThreadNote(n))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      .slice(0, PINNED_NOTES);
+    const cards = short || mine.length === 0 ? [] : await listAll(r, ctx, "context");
+    const owned = [...features.values()].flatMap((f) => f.paths);
+    const labels = new Set(mine.flatMap((t) => t.labels));
+    const linkedCards = cards
+      .filter(
+        (c) =>
+          owned.some((p) => pathsOverlap(p, c.path)) || (c.tags ?? []).some((t) => labels.has(t)),
+      )
+      .slice(0, LINKED_CARDS);
     const waiting =
       actor?.kind === "human"
         ? (await r.list("task", ctx.projectId, { status: ["review"], limit: 500 })).filter(
@@ -147,6 +166,8 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       actor,
       others,
       othersTotal,
+      pinned,
+      linkedCards,
       mine,
       ready,
       features,
@@ -239,6 +260,21 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       title: short ? "Ready (top 3)" : "Ready (top 5)",
       empty: "No ready tasks.",
       items: data.ready.map((t) => taskLine(t)),
+    },
+    {
+      title: "Knowledge (pinned notes; cards for your tasks)",
+      empty: null,
+      items: [
+        ...data.pinned.map(
+          (n) =>
+            `- ${shortHandle(n.id)} ${clip(n.title, 80)}\n  \`\`\`data\n  ${clip(n.body, 200)}\n  \`\`\``,
+        ),
+        ...data.linkedCards.map((c) => {
+          const facts = (c.facts ?? []).slice(0, 3).map((f) => clip(f, 100));
+          const text = [clip(c.summary, 160), ...facts].join(" · ");
+          return `- card ${shortHandle(c.id)} ${clip(c.path, 80)}\n  \`\`\`data\n  ${text}\n  \`\`\``;
+        }),
+      ],
     },
     {
       title: "Locked by other agents",

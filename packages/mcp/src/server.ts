@@ -45,8 +45,10 @@ import {
   parseHandle,
   parseId,
   putContext,
+  RecallInput,
   RecordDecisionInput,
   ReleaseLockInput,
+  recall,
   recordDecision,
   releaseLock,
   resolveId,
@@ -373,7 +375,7 @@ function registerTools(
     "context_get",
     {
       description:
-        "Cached module summaries. stale: true means files under the path changed since the summary; re-read them, then context_put. Use before crawling the repo.",
+        "Cards: what agents learned about files, folders and modules (summary, facts, tags, sourceSeen). Before opening a file, get its card; if the file is unchanged since sourceSeen (you check), use the card instead. In git, stale: true means the files changed; re-read, then context_put.",
       inputSchema: GetContextInput,
       annotations: { readOnlyHint: true },
     },
@@ -384,7 +386,7 @@ function registerTools(
     "context_put",
     {
       description:
-        "Save what you learned about a module: a path or glob, a short summary and key files. Never paste code. Replaces the entry for the same path.",
+        "After reading a file, folder or module, save a card: path, short summary, up to 50 facts worth quoting, tags, sourceSeen (the file's modified time or hash you read) and sourceTokens (about what reading it cost). Never paste file contents or secrets. private: true keeps it on this machine. Replaces the card for the same path.",
       inputSchema: PutContextInput,
       annotations: { idempotentHint: true },
     },
@@ -394,7 +396,8 @@ function registerTools(
   server.registerTool(
     "search",
     {
-      description: "Full-text search across tasks, features, notes and decisions.",
+      description:
+        'Full-text search across tasks, features, notes, decisions and cards (entity context: path, summary, facts, tags). For "what do we know about X", use recall.',
       inputSchema: SearchInput,
       annotations: { readOnlyHint: true },
     },
@@ -403,10 +406,28 @@ function registerTools(
   );
 
   server.registerTool(
+    "recall",
+    {
+      description:
+        "What do we know about X? One call returns the best cards, notes, decisions and open tasks for a question, with ids and sources, under 1,000 tokens. Answer from it; open a file only when its card is missing or the file changed since the card's sourceSeen.",
+      inputSchema: RecallInput,
+      annotations: { readOnlyHint: true },
+    },
+    async (input) => {
+      try {
+        // Markdown, like the brief: memory text arrives fenced as data.
+        return { content: [{ type: "text", text: (await recall(ctx, input)).markdown }] };
+      } catch (err) {
+        return fail(err);
+      }
+    },
+  );
+
+  server.registerTool(
     "note_upsert",
     {
       description:
-        'Save knowledge as a note: create one (no id; title required) or update one (with id). Body is Markdown; tags group notes; pinned keeps it at hand. Pass expectedVersion when updating to avoid overwriting a newer edit. Use for facts, research, how-tos and meeting notes; use decision_record for why something was decided. To comment on a task, note or decision, pass only body, tags: ["comment"] and links: [its id or handle].',
+        'Save knowledge as a note: create one (no id; title required) or update one (with id). Body is Markdown; tags group notes; pinned puts it in every brief (brand voice, policies, contacts); private: true keeps it on this machine, never in .sati/ or git. Pass expectedVersion when updating to avoid overwriting a newer edit. Use for facts, research, how-tos and meeting notes; use decision_record for why something was decided. To comment on a task, note or decision, pass only body, tags: ["comment"] and links: [its id or handle].',
       inputSchema: UpdateNoteInput.extend({ id: Ref.optional() }),
     },
     ({ id, ...rest }) =>

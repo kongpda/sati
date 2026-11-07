@@ -100,7 +100,28 @@ describe("secret scanner", () => {
     const dir = await tempRepo();
     sati(dir, "init", "--yes", "--tools", "");
     const secret = `gh${"p_"}${"a1".repeat(18)}`;
-    const note = satiJson<Rec>(dir, "note", "create", "Setup", "--body", `token ${secret}`).data;
+    // A write is refused first: nothing saved, the field named, the secret never echoed.
+    const refused = sati(dir, "note", "create", "Setup", "--body", `token ${secret}`);
+    expect(refused.code).not.toBe(0);
+    expect(refused.stderr).toContain("in body");
+    expect(refused.stdout + refused.stderr).not.toContain(secret);
+    // A record that reached the database another way (an older version, a hand edit) is still
+    // stopped by pre-commit before it reaches git.
+    const note = satiJson<Rec & { version: number }>(dir, "note", "create", "Setup").data;
+    const store = await SqliteStore.open(locateDb(dir).path);
+    try {
+      await store.write(async (w) => {
+        const before = await w.get("note", note.id);
+        if (before)
+          await w.update(
+            "note",
+            { ...before, body: `token ${secret}`, version: note.version + 1 },
+            note.version,
+          );
+      });
+    } finally {
+      await store.close();
+    }
     writeFileSync(join(dir, "README.md"), "hi\n");
     gitWithSati(dir, "add", "README.md");
 
@@ -115,7 +136,9 @@ describe("secret scanner", () => {
     }).toThrow();
     expect(stderr).toContain(`note ${note.id}, field body: GitHub token`);
     expect(stderr).not.toContain(secret);
-    expect(existsSync(join(dir, ".sati", "notes"))).toBe(false);
+    expect(readFileSync(join(dir, ".sati", "notes", `${note.id}.json`), "utf8")).not.toContain(
+      secret,
+    );
     expect(() => gitWithSati(dir, "rev-parse", "-q", "--verify", "HEAD")).toThrow();
   });
 });

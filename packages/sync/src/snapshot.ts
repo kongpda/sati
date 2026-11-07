@@ -14,12 +14,13 @@ import {
   type ImportResult,
   importRecords,
   SatiError,
+  type SecretFinding,
   type ServiceContext,
   SNAPSHOT_DIRS,
   SNAPSHOT_ENTITIES,
+  scanRecord,
   snapshotRecords,
 } from "@sati/core";
-import { type SecretFinding, scanRecord } from "./secrets.js";
 
 /** A record file larger than this cannot be valid (bodies are capped at 100 KB). */
 const MAX_FILE_BYTES = 1024 * 1024;

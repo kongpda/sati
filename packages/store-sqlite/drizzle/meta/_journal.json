@@ -29,6 +29,13 @@
       "when": 1793692493775,
       "tag": "0003_fts_rowids",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1794060000000,
+      "tag": "0004_fts_cards",
+      "breakpoints": true
     }
   ]
 }

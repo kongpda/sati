@@ -4,6 +4,7 @@ import { ApiError, api, COLUMNS, type Deletable, type Snapshot, type Task } from
 import { Board, boardOrder } from "./board.js";
 import { Changes } from "./changes.js";
 import { NewTask } from "./forms.js";
+import { Memory } from "./memory.js";
 import { MyWork } from "./my-work.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
 import { nameOf } from "./people.js";
@@ -18,6 +19,7 @@ const PAGES = [
   ["/roadmap", "Roadmap"],
   ["/features", "Features"],
   ["/notes", "Notes"],
+  ["/memory", "Memory"],
   ["/decisions", "Decisions"],
   ["/changes", "Changes"],
   ["/activity", "Activity"],
@@ -35,12 +37,14 @@ const HIT_PAGES: Record<string, string> = {
   note: "/notes",
   decision: "/decisions",
   feature: "/features",
+  context: "/memory",
 };
 const HIT_KINDS: Record<string, string> = {
   task: "Task",
   note: "Note",
   decision: "Decision",
   feature: "Feature",
+  context: "Card",
 };
 
 export function App() {
@@ -348,6 +352,10 @@ export function App() {
     return true;
   });
   visible.current = data ? boardOrder(tasks, data.features, column) : [];
+  // The brand kit or event brief one click from the board; the brief gives agents the same 3.
+  const pinned = (data?.notes ?? [])
+    .filter((n) => n.pinned && !threadOf(n) && !n.tags.includes("comment"))
+    .slice(0, 3);
 
   // While the task panel, New task or Search is open, the page behind it takes no focus or
   // clicks, so Tab stays inside the dialog (aria-modal alone does not stop it).
@@ -437,6 +445,23 @@ export function App() {
         {path === "/" ? (
           <>
             <h1 className="sr-only">Board</h1>
+            {pinned.length > 0 ? (
+              <nav className="pinned" aria-label="Pinned notes">
+                <span className="meta">Pinned</span>
+                {pinned.map((n) => (
+                  <a
+                    key={n.id}
+                    href="/notes"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      go("/notes");
+                    }}
+                  >
+                    {n.title}
+                  </a>
+                ))}
+              </nav>
+            ) : null}
             {(data?.tasks ?? []).some((t) => t.claim) ? (
               <div className="live">
                 {(data?.tasks ?? [])
@@ -598,9 +623,9 @@ export function App() {
         {data && path === "/notes" ? (
           <Notes
             data={data}
-            onCreate={(title, body) =>
+            onCreate={(title, body, hidden) =>
               api
-                .createNote({ title, body })
+                .createNote({ title, body, ...(hidden ? { private: true } : {}) })
                 .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
                 .then(() => undefined)
                 .catch((err: unknown) => {
@@ -617,6 +642,14 @@ export function App() {
             onSaved={saved}
             onDelete={(id, title) => remove("note", id, title)}
             thread={thread}
+          />
+        ) : null}
+        {data && path === "/memory" ? (
+          <Memory
+            data={data}
+            onSaved={saved}
+            onOpenTask={(id) => go("/", id)}
+            onGo={(next) => go(next)}
           />
         ) : null}
         {data && path === "/decisions" ? (

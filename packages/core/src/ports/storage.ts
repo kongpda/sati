@@ -22,7 +22,8 @@ export interface ListQuery {
   offset?: number | undefined;
 }
 
-export const SEARCHABLE = ["task", "feature", "note", "decision"] as const;
+/** `context` is a card: its path is the hit's title. */
+export const SEARCHABLE = ["task", "feature", "note", "decision", "context"] as const;
 export type SearchableEntity = (typeof SEARCHABLE)[number];
 
 export interface SearchHit {

@@ -3,6 +3,7 @@ import micromatch from "micromatch";
 import { z } from "zod";
 import { normalizeLockPath, pathsOverlap } from "../domain/locks.js";
 import { ContextEntry, LIMITS } from "../domain/schemas.js";
+import { refuseSecrets } from "../domain/secrets.js";
 import type { RepoFile } from "../ports/repo.js";
 import {
   baseFields,
@@ -12,6 +13,7 @@ import {
   type ServiceContext,
   updateWithLog,
 } from "./context.js";
+import { alreadyShared } from "./note.js";
 
 const ModulePath = z
   .string()
@@ -26,10 +28,17 @@ const ModulePath = z
     return p;
   });
 
+const card = ContextEntry.shape;
 export const PutContextInput = z.strictObject({
   path: ModulePath,
-  summary: ContextEntry.shape.summary.min(1),
+  summary: card.summary.min(1),
   keyFiles: z.array(ModulePath).max(LIMITS.array).optional(),
+  facts: card.facts,
+  tags: card.tags,
+  sourceSeen: card.sourceSeen,
+  sourceTokens: card.sourceTokens,
+  /** Keep this card on this machine; see `private` on notes. Left out: unchanged. */
+  private: z.boolean().optional(),
 });
 export type PutContextInput = z.input<typeof PutContextInput>;
 
@@ -59,12 +68,14 @@ export function moduleHash(path: string, files: readonly RepoFile[]): string {
 }
 
 /**
- * Stores what an agent learned about a module, one entry per path. Only the summary and a hash
- * of the module's files are kept, never file contents. Writing the same path again replaces
- * the entry and refreshes the hash.
+ * Stores what an agent learned about a module or file, one card per path: a summary, facts,
+ * tags and the file version it read. sati keeps a hash of the module's tracked files, never their
+ * contents, and never opens a file. Writing the same path again replaces the card (facts and tags
+ * not given are cleared) and refreshes the hash; privacy is kept unless changed.
  */
 export async function putContext(ctx: ServiceContext, input: unknown): Promise<ContextEntry> {
-  const data = parseInput(PutContextInput, input);
+  const { private: hidden, ...data } = parseInput(PutContextInput, input);
+  refuseSecrets("context", data);
   // git runs before the transaction, so the write lock is held only for the DB work.
   const files = ctx.repo ? await ctx.repo.files() : undefined;
   const gitCommit = ctx.repo ? await ctx.repo.head() : null;
@@ -74,11 +85,33 @@ export async function putContext(ctx: ServiceContext, input: unknown): Promise<C
     keyFiles: data.keyFiles ?? [],
     contentHash: files ? moduleHash(data.path, files) : "",
     gitCommit,
+    ...(data.facts?.length ? { facts: data.facts } : {}),
+    ...(data.tags?.length ? { tags: data.tags } : {}),
+    ...(data.sourceSeen ? { sourceSeen: data.sourceSeen } : {}),
+    ...(data.sourceTokens !== undefined ? { sourceTokens: data.sourceTokens } : {}),
   };
   return ctx.store.write(async (w) => {
     const existing = (await listAll(w, ctx, "context")).find((e) => e.path === data.path);
-    if (existing) return updateWithLog(w, ctx, "context", existing, fields);
-    return insertWithLog(w, ctx, "context", { ...baseFields(ctx, "context"), ...fields });
+    if (existing) {
+      if (hidden === true && !existing.private) throw alreadyShared("card");
+      const keepPrivate = existing.private === true && hidden !== false;
+      const clear = (["facts", "tags", "sourceSeen", "sourceTokens"] as const).filter(
+        (k) => !(k in fields) && existing[k] !== undefined,
+      );
+      return updateWithLog(
+        w,
+        ctx,
+        "context",
+        existing,
+        { ...fields, ...(keepPrivate ? { private: true } : {}) },
+        { clear: [...clear, ...(existing.private && !keepPrivate ? ["private"] : [])] },
+      );
+    }
+    return insertWithLog(w, ctx, "context", {
+      ...baseFields(ctx, "context"),
+      ...fields,
+      ...(hidden ? { private: true } : {}),
+    });
   });
 }
 

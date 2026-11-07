@@ -30,6 +30,15 @@ test.beforeAll(async () => {
     decision: "Use SQLite FTS5.",
   });
   ui.sati("milestone", "create", "1.0");
+  ui.sati(
+    "card",
+    "put",
+    "docs/search.md",
+    "--summary",
+    "How search ranks hits",
+    "--facts",
+    "Uses FTS5",
+  );
   taskId = task.id;
 });
 test.afterAll(async () => {
@@ -43,6 +52,7 @@ const PAGES = [
   "/roadmap",
   "/features",
   "/notes",
+  "/memory",
   "/decisions",
   "/changes",
   "/activity",
@@ -97,7 +107,7 @@ for (const [device, viewport] of [
       expect(summary(form.violations)).toEqual([]);
     });
 
-    test("axe: milestone, decision, note and person forms", async ({ page }) => {
+    test("axe: milestone, decision, note, card and person forms", async ({ page }) => {
       await page.goto(ui.signIn);
       await page.getByRole("link", { name: "Roadmap", exact: true }).click();
       await page.getByRole("button", { name: "Edit 1.0" }).click();
@@ -121,6 +131,17 @@ for (const [device, viewport] of [
       await expect(page.getByRole("dialog", { name: "Edit note" })).toBeVisible();
       const note = await new AxeBuilder({ page }).withTags(TAGS).analyze();
       expect(summary(note.violations)).toEqual([]);
+      await page.keyboard.press("Escape");
+      await page.getByRole("link", { name: "Memory", exact: true }).click();
+      await page.getByRole("textbox", { name: "Ask what the team knows" }).fill("search ranks");
+      await page.getByRole("button", { name: "Ask", exact: true }).click();
+      await expect(page.getByRole("region", { name: "Answer" })).toContainText("Uses FTS5");
+      const answer = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+      expect(summary(answer.violations)).toEqual([]);
+      await page.getByRole("button", { name: "Edit docs/search.md" }).click();
+      await expect(page.getByRole("dialog", { name: "Edit card" })).toBeVisible();
+      const card = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+      expect(summary(card.violations)).toEqual([]);
       await page.keyboard.press("Escape");
       await page.getByRole("link", { name: "Settings", exact: true }).click();
       await page

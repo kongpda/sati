@@ -35,6 +35,7 @@
   "parentId": null,
   "priority": "high",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "body": "2026-11-07T13:37:57.574Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
     "branch": "2026-11-07T13:37:57.574Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
@@ -46,13 +47,14 @@
     "labels": "2026-11-07T13:37:57.574Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
     "parentId": "2026-11-07T13:37:57.574Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
     "priority": "2026-11-07T13:37:57.574Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "status": "2026-11-07T13:48:52.472Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "reviewNote": "2026-11-07T14:04:08.566Z#000000#actr_01M6V55S9RG60S9CTSRK8E49MY",
+    "status": "2026-11-07T14:04:08.566Z#000000#actr_01M6V55S9RG60S9CTSRK8E49MY",
     "title": "2026-11-07T13:37:57.574Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
     "worktree": "2026-11-07T13:37:57.574Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
   },
-  "status": "review",
+  "status": "done",
   "title": "Phase 7c: plan templates (event, campaign, release)",
-  "updatedAt": "2026-11-07T13:48:52.476Z",
-  "version": 3,
+  "updatedAt": "2026-11-07T14:04:08.572Z",
+  "version": 4,
   "worktree": null
 }

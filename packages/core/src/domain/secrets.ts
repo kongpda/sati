@@ -1,3 +1,5 @@
+import { SatiError } from "./errors.js";
+
 /** One secret found in a record. It never carries the secret itself. */
 export interface SecretFinding {
   entity: string;
@@ -76,4 +78,25 @@ export function scanRecord<T extends { id: string }>(entity: string, record: T):
   };
   walk(record, "");
   return found;
+}
+
+/**
+ * Refuses a write whose text holds a secret, before it reaches the database. Notes and cards are
+ * free text an agent may paste a file's contents into; the export check alone would let a key sit
+ * in the local database and in every brief until the next commit. The message names the field,
+ * never the secret.
+ */
+export function refuseSecrets(entity: string, value: Record<string, unknown>): void {
+  const found = scanRecord(entity, { ...value, id: "" }).filter((f) => f.field !== "id");
+  const [first] = found;
+  if (!first) return;
+  const fields = [...new Set(found.map((f) => f.field))].join(", ");
+  throw new SatiError(
+    "VALIDATION",
+    `This looks like it contains a secret (${first.kind}) in ${fields}.`,
+    {
+      hint: "Remove the secret and save again; keep keys in your password manager or .env, not in notes. Nothing was saved.",
+      details: found.map(({ field, kind }) => ({ field, kind })),
+    },
+  );
 }

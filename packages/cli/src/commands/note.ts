@@ -18,7 +18,11 @@ const fields = {
   body: { type: "string", description: "Note text in Markdown" },
   tags: { type: "string", description: "Comma-separated tags" },
   links: { type: "string", description: "Comma-separated links (URLs, paths or ids)" },
-  pinned: { type: "boolean", description: "Pin the note" },
+  pinned: { type: "boolean", description: "Pin the note (pinned notes reach every brief)" },
+  private: {
+    type: "boolean",
+    description: "Keep it on this machine: never exported to .sati/ (--no-private shares it)",
+  },
 } as const;
 
 const create = defineCommand({
@@ -38,6 +42,7 @@ const create = defineCommand({
           tags: list(args.tags),
           links: list(args.links),
           pinned: args.pinned,
+          private: args.private,
         }),
       (n: Note) => `Created ${row(n)}`,
     ),
@@ -90,6 +95,7 @@ const update = defineCommand({
           tags: list(args.tags),
           links: list(args.links),
           pinned: args.pinned,
+          private: args.private,
           reviewed: args.reviewed ? true : undefined,
           expectedVersion: int(args["expected-version"], "expected-version"),
         }),

@@ -4,6 +4,7 @@ import {
   isReady,
   type Project,
   SatiError,
+  SEARCHABLE,
   type SearchHit,
   type StorageAdapter,
   type StorageWriter,
@@ -116,11 +117,12 @@ export class MemoryStore implements StorageAdapter {
         const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
         const hits: SearchHit[] = [];
         const test = opts.match === "any" ? "some" : "every";
-        for (const entity of opts.entities ?? (["task", "feature", "note", "decision"] as const)) {
+        for (const entity of opts.entities ?? SEARCHABLE) {
           for (const r of live(entity, projectId)) {
             const text = JSON.stringify(r).toLowerCase();
             if (terms.length && terms[test]((t) => text.includes(t))) {
-              hits.push({ entity, id: r.id, title: String(r.title), snippet: "", rank: 0 });
+              const title = String(entity === "context" ? r.path : r.title);
+              hits.push({ entity, id: r.id, title, snippet: "", rank: 0 });
             }
           }
         }

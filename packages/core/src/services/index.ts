@@ -15,6 +15,7 @@ export * from "./note.js";
 export * from "./plan.js";
 export * from "./project.js";
 export * from "./query.js";
+export * from "./recall.js";
 export * from "./records.js";
 export * from "./shell-changes.js";
 export * from "./similar.js";

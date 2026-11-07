@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { bin, run, sati, satiJson, tempRepo } from "./helpers.js";
@@ -169,6 +169,50 @@ describe("sati CLI", () => {
     expect(sati(dir, "template", "apply", "offsite").code).toBe(4);
     expect(sati(dir, "template", "apply", "wedding").code).toBe(3);
     expect(sati(dir, "template", "show", "release").stdout).toContain("## Freeze (-1w)");
+  });
+
+  it("saves cards, recalls them, and keeps private ones out of .sati/", async () => {
+    const dir = await tempRepo({ init: true });
+    const saved = sati(
+      dir,
+      "card",
+      "put",
+      "venue/quote.pdf",
+      "--summary",
+      "Hall B quote",
+      "--facts",
+      '["Price: $2,400, incl. tax", "Valid until 1 December"]',
+      "--seen",
+      "2026-11-03T09:15Z",
+    );
+    expect(saved.code).toBe(0);
+    sati(
+      dir,
+      "card",
+      "put",
+      "hr/pay.xlsx",
+      "--summary",
+      "Pay bands",
+      "--facts",
+      "Band A: 1,000\nBand B: 2,000",
+      "--private",
+    );
+    const shown = sati(dir, "card", "show", "venue").stdout;
+    expect(shown).toContain("venue/quote.pdf  [fresh]");
+    expect(shown).toContain("  - Price: $2,400, incl. tax");
+    expect(sati(dir, "card", "show", "hr").stdout).toContain(
+      "(private)\n  Pay bands\n  - Band A: 1,000\n  - Band B: 2,000",
+    );
+    const r = sati(dir, "recall", "what is the hall b price?");
+    expect(r.stdout).toContain("card ");
+    expect(r.stdout).toContain("  - Price: $2,400, incl. tax");
+    expect(sati(dir, "card", "put", "x", "--summary", "y", "--facts", "[oops").code).toBe(2);
+    sati(dir, "export");
+    const files = readdirSync(join(dir, ".sati", "context")).map((f) =>
+      readFileSync(join(dir, ".sati", "context", f), "utf8"),
+    );
+    expect(files).toHaveLength(1);
+    expect(files[0]).toContain("Hall B quote");
   });
 
   // The Stop hook blocks once while the agent holds a claim, then lets the stop through.

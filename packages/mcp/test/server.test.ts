@@ -79,6 +79,7 @@ describe("MCP server", () => {
       "lock_release",
       "note_get",
       "note_upsert",
+      "recall",
       "roadmap_upsert",
       "sati_brief",
       "search",
@@ -286,6 +287,38 @@ describe("MCP server", () => {
     expect(mine.body.tasks).toEqual([expect.objectContaining({ dueDate: null, stage: "Travel" })]);
     const bad = await call(client, "roadmap_upsert", { template: "event", status: "active" });
     expect(bad).toMatchObject({ isError: true, body: { error: { code: "VALIDATION" } } });
+  });
+
+  // PLAN Phase 8: an agent saves a card after reading a file, and the next one recalls it.
+  it("saves a card with facts and recalls it as fenced Markdown", async () => {
+    const client = await connect(ctx, "general");
+    const put = await call(client, "context_put", {
+      path: "venue/hall-b-quote.pdf",
+      summary: "Quote from Hall B.",
+      facts: ["Price: $2,400 for the day", "Valid until 1 December"],
+      sourceSeen: "mtime 2026-11-03T09:15Z",
+      sourceTokens: 4200,
+    });
+    expect(put.body).toMatchObject({
+      facts: ["Price: $2,400 for the day", "Valid until 1 December"],
+    });
+    const hits = await call(client, "search", { query: "december" });
+    expect(hits.body).toEqual([
+      expect.objectContaining({ entity: "context", title: "venue/hall-b-quote.pdf" }),
+    ]);
+    const res = await client.callTool({
+      name: "recall",
+      arguments: { question: "What is the venue price?" },
+    });
+    const text = (res.content as { text: string }[])[0]?.text ?? "";
+    expect(text).toContain("```data");
+    expect(text).toContain("venue/hall-b-quote.pdf, read at mtime 2026-11-03T09:15Z");
+    expect(text).toContain("  - Price: $2,400 for the day");
+    const secret = await call(client, "context_put", {
+      path: "ops.md",
+      summary: "AWS key AKIAABCDEFGHIJKLMNOP",
+    });
+    expect(secret).toMatchObject({ isError: true, body: { error: { code: "VALIDATION" } } });
   });
 
   // Two agents must never hold one task; the loser needs the holder's name to coordinate.

@@ -488,6 +488,7 @@ export function NoteForm({
             body: text(form, "body"),
             tags: parseLabels(text(form, "tags")),
             pinned: form.get("pinned") === "on",
+            ...(opened.private ? { private: form.get("private") === "on" } : {}),
             expectedVersion: opened.version,
           })
           .then(onSaved)
@@ -524,8 +525,15 @@ export function NoteForm({
       </label>
       <label className="dialog-check">
         <input type="checkbox" name="pinned" defaultChecked={opened.pinned} />
-        Pin to the top of Notes
+        Pin: shown on the board and in every agent's brief
       </label>
+      {/* A shared note is in git history already, so only a private one can change here. */}
+      {opened.private ? (
+        <label className="dialog-check">
+          <input type="checkbox" name="private" defaultChecked />
+          Keep on this computer only (untick to share it)
+        </label>
+      ) : null}
     </FormDialog>
   );
 }

@@ -269,8 +269,14 @@ export const Note = z.strictObject({
   tags: list(label),
   links: list(z.string().max(LIMITS.path)),
   pinned: z.boolean(),
+  /** Kept in this machine's database only: never exported to `.sati/` or synced. Absent when shared. */
+  private: z.literal(true).optional(),
 });
 export type Note = z.infer<typeof Note>;
+
+/** A card holds up to 50 facts of 300 characters: enough to answer from, small enough to recall. */
+export const MAX_FACTS = 50;
+export const FACT_CHARS = 300;
 
 export const ContextEntry = z.strictObject({
   id: idOf("ctx"),
@@ -280,6 +286,19 @@ export const ContextEntry = z.strictObject({
   keyFiles: list(pathGlob),
   contentHash: z.string().max(200),
   gitCommit: z.string().max(64).nullable(),
+  /*
+   * Memory of a file, written by the agent that read it; sati never opens the file. All optional
+   * and written only once set, so entries and `.sati/` files from before them stay valid.
+   */
+  /** Short facts worth quoting: "Hall B quote: $2,400, valid until 1 December". */
+  facts: z.array(z.string().trim().min(1).max(FACT_CHARS)).max(MAX_FACTS).optional(),
+  tags: list(label).optional(),
+  /** The file version the agent read (modified time or hash), so the next agent can compare. */
+  sourceSeen: z.string().trim().min(1).max(200).optional(),
+  /** The agent's estimate of what reading the file cost, in tokens. */
+  sourceTokens: z.number().int().min(0).max(100_000_000).optional(),
+  /** Kept in this machine's database only, like a private note. */
+  private: z.literal(true).optional(),
 });
 export type ContextEntry = z.infer<typeof ContextEntry>;
 

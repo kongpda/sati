@@ -2,8 +2,9 @@
  * Benchmarks for the Phase 1 CLI budgets (PLAN "Performance budgets"). Run with `pnpm bench`
  * after a build. Exits 1 if any budget is missed.
  *
- * Budgets checked here: CLI cold start, CLI read p95, full-text search on 50,000 records and
- * `task_claim` under 10 concurrent agents. The other budgets belong to later phases.
+ * Budgets checked here: CLI cold start, CLI read p95, full-text search and `recall` on 50,000
+ * records and cards, and `task_claim` under 10 concurrent agents. The other budgets belong to
+ * later phases.
  */
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, realpathSync } from "node:fs";
@@ -11,12 +12,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  type ContextEntry,
   claimTask,
   createIdFactory,
   createNote,
   createTask,
   ensureActor,
   type Note,
+  putContext,
+  recall,
   type ServiceContext,
   search,
   systemClock,
@@ -26,6 +30,8 @@ import { clearLocateCache, locateDb, SqliteStore } from "@sati/store-sqlite";
 
 const bin = fileURLToPath(new URL("../dist/index.mjs", import.meta.url));
 const RECORDS = 50_000;
+/** Cards among the seeded records (Phase 8 `recall` budget). */
+const CARDS = 2_000;
 const RUNS = 30;
 const AGENTS = 10;
 const CLAIMS_PER_AGENT = 50;
@@ -83,8 +89,19 @@ async function seed(dir: string): Promise<ServiceContext> {
   const ctx: ServiceContext = { ...deps, projectId: project.id, actorId: actor.id };
   const task: Task = await createTask(ctx, { title: "template task" });
   const note: Note = await createNote(ctx, { title: "template note" });
+  const card: ContextEntry = await putContext(ctx, { path: "template", summary: "template" });
   await store.write(async (w) => {
-    for (let i = 0; i < RECORDS / 2; i++) {
+    for (let i = 0; i < CARDS; i++) {
+      await w.insert("context", {
+        ...card,
+        id: ids("context"),
+        path: `docs/${words(i + 5, 2).replace(" ", "-")}-${i}.pdf`,
+        summary: words(i + 13, 20),
+        facts: [words(i + 17, 8), words(i + 19, 8)],
+        tags: [words(i + 23, 1)],
+      });
+    }
+    for (let i = 0; i < (RECORDS - CARDS) / 2; i++) {
       await w.insert("task", {
         ...task,
         id: ids("task"),
@@ -184,6 +201,14 @@ async function main(): Promise<void> {
       fts.push(performance.now() - start);
     }
   }
+  const asked: number[] = [];
+  for (let i = 0; i < RUNS; i++) {
+    for (const question of ["what is the auth token?", "merge conflict", "webhook billing"]) {
+      const start = performance.now();
+      await recall(ctx, { question });
+      asked.push(performance.now() - start);
+    }
+  }
   const claims = await concurrentClaims(dir, ctx);
   await ctx.store.close();
 
@@ -197,6 +222,11 @@ async function main(): Promise<void> {
     {
       measure: `Full-text search on ${RECORDS} records, p95`,
       value: percentile(fts, 95),
+      budget: 50,
+    },
+    {
+      measure: `recall on ${RECORDS} records and cards, p95`,
+      value: percentile(asked, 95),
       budget: 50,
     },
     {

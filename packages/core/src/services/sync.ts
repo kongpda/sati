@@ -29,12 +29,18 @@ export type SnapshotRecord = {
   [E in SnapshotEntity]: { entity: E; record: EntityMap[E] };
 }[SnapshotEntity];
 
-/** Every snapshot record of the project, soft-deleted ones included as tombstones. */
+/** True for a private note or card, which never leaves this machine's database. */
+export const isPrivate = (record: object): boolean =>
+  "private" in record && record.private === true;
+
+/** Every snapshot record of the project except private ones, soft-deleted ones as tombstones. */
 export async function snapshotRecords(ctx: ServiceContext): Promise<SnapshotRecord[]> {
   return ctx.store.read(async (r) => {
     const out: SnapshotRecord[] = [];
     for (const entity of SNAPSHOT_ENTITIES) {
       for (const record of await listAll(r, ctx, entity, { includeDeleted: true })) {
+        // Private notes and cards stay in this machine's database.
+        if (isPrivate(record)) continue;
         out.push({ entity, record } as SnapshotRecord);
       }
     }
@@ -84,10 +90,13 @@ export async function importRecords(ctx: ServiceContext, input: unknown): Promis
   const items = parseInput(ImportRecordsInput, input);
   const parsed: SnapshotRecord[] = [];
   const bad: string[] = [];
+  let newer = false;
   for (const { entity, source, record } of items) {
     const r = ENTITY_SCHEMAS[entity].safeParse(record);
     if (!r.success) {
       const issue = r.error.issues[0];
+      // Fields this version does not know: the files come from a newer sati on another clone.
+      newer ||= r.error.issues.some((i) => i.code === "unrecognized_keys");
       bad.push(`${source}: ${issue?.path.join(".") || "record"}: ${issue?.message}`);
     } else if (r.data.projectId !== ctx.projectId) {
       bad.push(`${source}: belongs to project ${r.data.projectId}, not ${ctx.projectId}`);
@@ -97,7 +106,9 @@ export async function importRecords(ctx: ServiceContext, input: unknown): Promis
   }
   if (bad.length > 0) {
     throw new SatiError("VALIDATION", `Invalid snapshot records: ${bad.slice(0, 3).join("; ")}`, {
-      hint: "Nothing was imported. Fix or restore these files from git.",
+      hint: newer
+        ? "Nothing was imported. A newer sati wrote these files; update sati on this machine and import again."
+        : "Nothing was imported. Fix or restore these files from git.",
       details: { invalid: bad },
     });
   }
@@ -106,7 +117,13 @@ export async function importRecords(ctx: ServiceContext, input: unknown): Promis
     const result: ImportResult = { imported: [], unchanged: 0, problems: [] };
     for (const { entity, record } of parsed) {
       const stored = await w.get(entity, record.id);
-      if (stored && !isNewer(record, stored)) {
+      // A file never replaces a private record, and a file marked private is not memory to take
+      // in: private items are never exported, so one in `.sati/` was put there by hand.
+      if (
+        isPrivate(record) ||
+        (stored && isPrivate(stored)) ||
+        (stored && !isNewer(record, stored))
+      ) {
         result.unchanged++;
         continue;
       }

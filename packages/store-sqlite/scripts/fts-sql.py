@@ -1,4 +1,5 @@
-# Generator for the FTS triggers. 0001_fts.sql created the index; 0003_fts_rowids.sql holds the
+# Generator for the FTS triggers. 0004_fts_cards.sql adds cards (context entries) the same way.
+# 0001_fts.sql created the index; 0003_fts_rowids.sql holds the
 # current triggers, which find a record's index row by rowid through `search_rowids`.
 # (Deleting by `id`, an UNINDEXED FTS column, scanned the whole index on every update.)
 # To change indexed columns, add a new migration that drops and recreates the triggers.

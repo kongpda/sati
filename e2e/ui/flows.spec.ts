@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { startUi, type Ui } from "./server.js";
 import { watch } from "./watch.js";
@@ -177,6 +179,7 @@ test("every page loads and marks itself current", async ({ page }) => {
     "Roadmap",
     "Features",
     "Notes",
+    "Memory",
     "Decisions",
     "Changes",
     "Activity",
@@ -296,7 +299,7 @@ test("edits, pins, tags and deletes notes, and undoes deletes", async ({ page })
   await expect(edit.getByLabel("Title")).toHaveValue("Venue options");
   await edit.getByLabel("Body").fill("Riverside hall, rooftop.");
   await edit.getByLabel("Tags").fill("venue, launch, venue");
-  await edit.getByLabel("Pin to the top of Notes").check();
+  await edit.getByLabel(/^Pin/).check();
   await edit.getByRole("button", { name: "Save note" }).click();
   await expect(edit).toHaveCount(0);
   // Pinned notes come first, although Catering is newer.
@@ -868,5 +871,82 @@ test("New plan creates a milestone and its staged tasks from a template", async 
   await dialog.getByRole("button", { name: "Create plan" }).click();
   await expect(dialog.getByRole("alert")).toContainText("already exists");
   await dialog.getByRole("button", { name: "Cancel" }).click();
+  expect(await problems()).toEqual([]);
+});
+
+// PLAN Phase 8: the Memory page answers from cards, edits them, and private items stay local.
+test("Memory answers from cards, edits them, and keeps private ones off .sati/", async ({
+  page,
+  context,
+}) => {
+  const problems = await watch(page);
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  ui.sati(
+    "card",
+    "put",
+    "venue/hall-b-quote.pdf",
+    "--summary",
+    "Quote from Hall B for the spring fair.",
+    "--facts",
+    "Venue price: $2,400 for the day\nCapacity 300 seated",
+    "--tags",
+    "venue",
+  );
+  ui.sati("note", "create", "Brand voice", "--body", "Warm, short sentences.", "--pinned");
+  ui.sati("note", "create", "Salary notes", "--body", "Band A is $12/hour.", "--private");
+
+  // The board links pinned notes.
+  await page.goto(ui.signIn);
+  const pinned = page.getByRole("navigation", { name: "Pinned notes" });
+  await expect(pinned.getByRole("link", { name: "Brand voice" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Memory", exact: true }).click();
+  await page.getByRole("textbox", { name: "Ask what the team knows" }).fill("venue price");
+  await page.getByRole("button", { name: "Ask", exact: true }).click();
+  const answer = page.getByRole("region", { name: "Answer" });
+  await expect(answer).toContainText("Venue price: $2,400 for the day");
+  await answer.getByRole("button", { name: "Copy as Markdown" }).click();
+  await expect(page.getByRole("status")).toContainText("Copied the answer as Markdown.");
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toContain("venue/hall-b-quote.pdf");
+  expect(copied).toContain("Venue price: $2,400 for the day");
+
+  // A question nothing matches says so instead of showing an empty box.
+  await page.getByRole("textbox", { name: "Ask what the team knows" }).fill("zebra parade");
+  await page.getByRole("button", { name: "Ask", exact: true }).click();
+  await expect(answer).toContainText("Nothing in memory matches yet");
+
+  // Edit a shared card: the private choice is not offered for it.
+  await page.getByRole("button", { name: "Edit venue/hall-b-quote.pdf" }).click();
+  const dialog = page.getByRole("dialog", { name: "Edit card" });
+  await expect(dialog.getByText("Shared with the team")).toBeVisible();
+  await dialog.getByLabel("Facts, one per line").fill("Venue price: $2,200 after discount");
+  await dialog.getByRole("button", { name: "Save card" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByText("Venue price: $2,200 after discount")).toBeVisible();
+
+  // A new private card shows its badge.
+  await page.getByRole("button", { name: "New card" }).click();
+  const fresh = page.getByRole("dialog", { name: "New card" });
+  await fresh.getByLabel("File or folder").fill("hr/pay-bands.xlsx");
+  await fresh.getByLabel("Summary").fill("Pay bands for the fair staff.");
+  await fresh.getByLabel("Keep on this computer only").check();
+  await fresh.getByRole("button", { name: "Save card" }).click();
+  await expect(fresh).toHaveCount(0);
+  const hr = page.getByRole("region", { name: "hr" });
+  await expect(hr.getByText("Private", { exact: true })).toBeVisible();
+
+  // The export carries the shared card and notes, never the private ones.
+  ui.sati("export");
+  const exported = (dir: string) =>
+    readdirSync(join(ui.repo, ".sati", dir))
+      .map((f) => readFileSync(join(ui.repo, ".sati", dir, f), "utf8"))
+      .join("\n");
+  const cards = exported("context");
+  expect(cards).toContain("$2,200 after discount");
+  expect(cards).not.toContain("pay-bands");
+  const notes = exported("notes");
+  expect(notes).toContain("Brand voice");
+  expect(notes).not.toContain("Salary notes");
   expect(await problems()).toEqual([]);
 });

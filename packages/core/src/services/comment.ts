@@ -2,6 +2,7 @@ import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { parseHandle, parseId } from "../domain/ids.js";
 import { LIMITS, type Note } from "../domain/schemas.js";
+import { refuseSecrets } from "../domain/secrets.js";
 import type { StorageReader } from "../ports/storage.js";
 import {
   baseFields,
@@ -56,27 +57,30 @@ export async function commentTarget(ctx: ServiceContext, ref: string): Promise<s
 }
 
 /** The record's title, so the comment note says what it is about in lists and search. */
-async function titleOf(r: StorageReader, ctx: ServiceContext, id: string): Promise<string> {
+async function targetRecord(r: StorageReader, ctx: ServiceContext, id: string) {
   const record = await mustGet(r, ctx, targetOf(id), id);
   // Threads are one level deep: a reply goes on the record, not on another comment.
   if ("tags" in record && isThreadNote(record)) {
     throw new SatiError("VALIDATION", "Reply on the record the comment is on, not on the comment.");
   }
-  return record.title;
+  return { title: record.title, private: "private" in record && record.private === true };
 }
 
 /** Adds a comment by the caller to a task, note or decision. */
 export async function addComment(ctx: ServiceContext, input: unknown): Promise<Note> {
   const { on, body } = parseInput(AddCommentInput, input);
+  refuseSecrets("note", { body });
   return ctx.store.write(async (w) => {
-    const about = await titleOf(w, ctx, on);
+    const about = await targetRecord(w, ctx, on);
     return insertWithLog(w, ctx, "note", {
       ...baseFields(ctx, "note"),
-      title: `Comment on ${about}`.slice(0, LIMITS.title),
+      title: `Comment on ${about.title}`.slice(0, LIMITS.title),
       body,
       tags: [COMMENT_TAG],
       links: [on],
       pinned: false,
+      // A comment on a private note stays on this machine with it.
+      ...(about.private ? { private: true } : {}),
     });
   });
 }

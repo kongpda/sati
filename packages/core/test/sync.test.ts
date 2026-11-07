@@ -127,10 +127,15 @@ describe("importRecords", () => {
     ).rejects.toMatchObject({
       code: "VALIDATION",
       message: expect.stringContaining("tasks/bad.json"),
+      // A field this version does not know points at a newer sati, not a broken file.
+      hint: expect.stringContaining("newer sati"),
     });
     await expect(
       importRecords(ctx, [{ entity: "task", source: "tasks/foreign.json", record: good }]),
-    ).rejects.toMatchObject({ message: expect.stringContaining("belongs to project") });
+    ).rejects.toMatchObject({
+      message: expect.stringContaining("belongs to project"),
+      hint: expect.stringContaining("Fix or restore"),
+    });
     expect(await store.read((r) => r.get("task", good.id))).toBeUndefined();
     expect(store.activity.length).toBe(before);
   });

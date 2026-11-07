@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { Note } from "../domain/schemas.js";
+import { refuseSecrets } from "../domain/secrets.js";
 import { COMMENT_TAG } from "./comment.js";
 import {
   baseFields,
@@ -13,15 +14,24 @@ import {
 } from "./context.js";
 
 const fields = Note.pick({ title: true, body: true, tags: true, links: true, pinned: true });
-export const CreateNoteInput = fields.partial({
-  body: true,
-  tags: true,
-  links: true,
-  pinned: true,
-});
+/**
+ * `private: true` keeps a note on this machine. Set when it is created; a private note can be
+ * shared later (`false`), but a shared one is already in `.sati/` and git history, so it cannot
+ * be made private again.
+ */
+const Private = { private: z.boolean().optional() };
+export const CreateNoteInput = fields
+  .partial({
+    body: true,
+    tags: true,
+    links: true,
+    pinned: true,
+  })
+  .extend(Private);
 export const UpdateNoteInput = fields
   .partial()
   .extend(ExpectedVersion)
+  .extend(Private)
   .extend({ reviewed: z.literal(true).optional() });
 export type CreateNoteInput = z.input<typeof CreateNoteInput>;
 
@@ -65,9 +75,21 @@ function guardComment(
   }
 }
 
+/** A shared record is in `.sati/` and git history already; marking it private would hide nothing. */
+export function alreadyShared(what: string): SatiError {
+  return new SatiError(
+    "VALIDATION",
+    `This ${what} is already shared, so it cannot become private.`,
+    {
+      hint: "It is in .sati/ and git history. Delete it and save a new private one; rotate anything sensitive in it.",
+    },
+  );
+}
+
 export async function createNote(ctx: ServiceContext, input: unknown): Promise<Note> {
-  const data = parseInput(CreateNoteInput, input);
+  const { private: hidden, ...data } = parseInput(CreateNoteInput, input);
   guardComment(ctx, undefined, data);
+  refuseSecrets("note", data);
   return ctx.store.write((w) =>
     insertWithLog(w, ctx, "note", {
       ...baseFields(ctx, "note"),
@@ -76,18 +98,27 @@ export async function createNote(ctx: ServiceContext, input: unknown): Promise<N
       links: [],
       pinned: false,
       ...data,
+      ...(hidden ? { private: true } : {}),
     }),
   );
 }
 
 export async function updateNote(ctx: ServiceContext, id: string, input: unknown): Promise<Note> {
-  const { expectedVersion, reviewed, ...patch } = parseInput(UpdateNoteInput, input);
+  const {
+    expectedVersion,
+    reviewed,
+    private: hidden,
+    ...patch
+  } = parseInput(UpdateNoteInput, input);
+  refuseSecrets("note", patch);
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "note", id);
     guardComment(ctx, before, patch);
-    return updateWithLog(w, ctx, "note", before, patch, {
-      expectedVersion,
-      clear: reviewed ? ["needsReview"] : [],
-    });
+    const clear = [
+      ...(reviewed ? ["needsReview"] : []),
+      ...(hidden === false && before.private ? ["private"] : []),
+    ];
+    if (hidden === true && !before.private) throw alreadyShared("note");
+    return updateWithLog(w, ctx, "note", before, patch, { expectedVersion, clear });
   });
 }

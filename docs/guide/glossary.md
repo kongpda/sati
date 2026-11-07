@@ -19,7 +19,11 @@ scripts and agents do not break. This table maps one to the other; the board's w
 | Send back | `--status todo --reason "…"` | Returns the task with a note the next person or agent sees. |
 | Reserved for editing | exclusive lock | Others wait until it is released. |
 | Sharing for editing | shared lock | Several can edit; it is still shown. |
-| File summary | context entry | An agent's note about a file or folder. |
+| Card | context entry (`sati card`, MCP `context_get` / `context_put`) | What someone learned about a file or folder: a summary, facts to quote, tags, and the version read. sati never opens the file itself. |
+| Memory, Ask | `sati recall "<question>"`, MCP `recall` | The cards, notes, decisions and open tasks that best answer a question, with their sources, in at most 1,000 tokens. |
+| Changed since | a stale context entry | The file changed after the card was written; read it again and save a new card. |
+| Keep on this computer only, Private | `private: true` (`--private`) | Never written to `.sati/`, so never shared through git. Set when the item is made; a shared item cannot be made private again. `sati doctor` lists them. |
+| Pinned | `pinned: true` (`--pinned`) | Shown on the board and in every brief (up to 3). |
 | Edited in two places · Looks right | `needsReview`, `--reviewed` | A sync merged two copies; check the result and confirm. |
 | Person, AI agent | actor `kind: human`, `agent` | Who did something. |
 | Software project, General project | `kind: code`, `kind: general` (`sati settings --kind`) | A general project (an event, a campaign) has no features, file reservations or guard. |

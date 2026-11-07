@@ -14,10 +14,13 @@ import {
   deleteRecord,
   featureList,
   formatChanges,
+  getContext,
   isSatiError,
   listChanges,
   ProjectKind,
+  putContext,
   readSettings,
+  recall,
   recordDecision,
   releaseExpiredClaims,
   releaseTask,
@@ -157,6 +160,8 @@ function openApi() {
         },
       },
       "/api/feature-list": { get: { summary: "Shipped features as Markdown" } },
+      "/api/recall": { get: { summary: "What is known about a question (query: q)" } },
+      "/api/cards": { post: { summary: "Save a card (replaces the card for its path)" } },
       "/api/templates": { get: { summary: "Plan templates: the starters and .sati/templates/" } },
       "/api/templates/apply": { post: { summary: "Create a milestone and its tasks from one" } },
       "/api/tasks": { post: { summary: "Create a task" } },
@@ -233,6 +238,8 @@ async function snapshot(rt: UiRuntime) {
     return { ...f, matchCount };
   });
   const project = await ctx.store.read((r) => r.getProject());
+  // Cards with their git staleness; read after the snapshot, as the brief does.
+  const cards = await getContext(ctx);
   return {
     project: project
       ? {
@@ -252,6 +259,7 @@ async function snapshot(rt: UiRuntime) {
     milestones,
     activity,
     locks,
+    cards,
   };
 }
 
@@ -355,6 +363,11 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
     });
   });
   app.get("/api/feature-list", async (c) => c.json({ markdown: await featureList(rt.ctx) }));
+  // The Memory page: the same recall agents get, and card edits through the same service.
+  app.get("/api/recall", async (c) =>
+    c.json(await recall(rt.ctx, { question: c.req.query("q") ?? "" })),
+  );
+  app.post("/api/cards", async (c) => c.json(await putContext(rt.ctx, await body(c))));
   // The New plan menu: the same templates and the same apply as `sati template`.
   const templateFiles = () => rt.templates?.() ?? [];
   app.get("/api/templates", (c) => c.json(availableTemplates(templateFiles()).map(summarize)));

@@ -247,7 +247,7 @@ export function Notes({
   thread,
 }: {
   data: Snapshot;
-  onCreate: (title: string, body: string) => Promise<void>;
+  onCreate: (title: string, body: string, hidden: boolean) => Promise<void>;
   onPatch: (id: string, patch: Record<string, unknown>) => void;
   onSaved: (message: string) => void;
   onDelete: (id: string, title: string) => void;
@@ -272,7 +272,11 @@ export function Notes({
           const element = e.currentTarget;
           const form = new FormData(element);
           // Keep the draft when the save fails.
-          onCreate(String(form.get("title") ?? ""), String(form.get("body") ?? "")).then(
+          onCreate(
+            String(form.get("title") ?? ""),
+            String(form.get("body") ?? ""),
+            form.get("private") === "on",
+          ).then(
             () => element.reset(),
             () => undefined,
           );
@@ -292,7 +296,13 @@ export function Notes({
           placeholder="Write in Markdown. Link with [text](https://…)."
           aria-label="Note body"
         />
-        <button type="submit">Save note</button>
+        <div className="note-actions">
+          <label className="dialog-check">
+            <input type="checkbox" name="private" />
+            Keep on this computer only
+          </label>
+          <button type="submit">Save note</button>
+        </div>
       </form>
       {tags.length > 0 ? (
         <fieldset className="tag-filter">
@@ -314,6 +324,7 @@ export function Notes({
           <article key={n.id} className="row">
             <h2 className="row-title">
               {n.pinned ? <span className="badge">Pinned</span> : null}
+              {n.private ? <span className="badge private">Private</span> : null}
               {n.title}
             </h2>
             <div className="meta">

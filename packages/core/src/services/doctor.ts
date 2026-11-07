@@ -61,7 +61,10 @@ export async function linkProblems(
   return out;
 }
 
-/** Stale claims, locks whose lease has ended, tasks flagged needsReview, and broken links. */
+/**
+ * Stale claims, locks whose lease has ended, tasks flagged needsReview, broken links, and the
+ * private notes and cards that never leave this machine.
+ */
 export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> {
   const now = nowIso(ctx);
   const data = await ctx.store.read(async (r) => ({
@@ -72,6 +75,10 @@ export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> 
     locks: await r.list("lock", ctx.projectId, { limit: 500 }),
     review: (await listAll(r, ctx, "task")).filter((t) => t.needsReview === true),
     links: await linkProblems(r, ctx),
+    private: [
+      ...(await listAll(r, ctx, "note")).filter((n) => n.private).map((n) => `note "${n.title}"`),
+      ...(await listAll(r, ctx, "context")).filter((c) => c.private).map((c) => `card ${c.path}`),
+    ],
   }));
   const stale = data.tasks.filter((t) => t.claim && t.claim.leaseUntil <= now);
   const expiredLocks = data.locks.filter((l) => l.leaseUntil <= now);
@@ -103,6 +110,15 @@ export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> 
         data.links.length === 0
           ? "Every task's links and dependencies are sound."
           : `${data.links.slice(0, 5).join(" ")}${data.links.length > 5 ? ` …and ${data.links.length - 5} more.` : ""} Fix with \`task update --depends-on\`, \`--feature\` or \`--milestone\`.`,
+    },
+    // Information, not a problem: what stays on this machine and never reaches .sati/ or git.
+    {
+      name: "private",
+      ok: true,
+      detail:
+        data.private.length === 0
+          ? "Nothing is private; every note and card is shared through .sati/."
+          : `${data.private.length} private item(s) stay on this machine only: ${data.private.slice(0, 5).join(", ")}${data.private.length > 5 ? ` …and ${data.private.length - 5} more` : ""}.`,
     },
   ];
 }

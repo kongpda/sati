@@ -1202,3 +1202,45 @@ notes only when the caller holds a task; handoffs stay out of it, as before.
 - Fixed while here: `sati plan import` created a milestone per heading but left its tasks
   outside it. Each task now joins its heading's milestone.
 
+
+## 2026-11-07 — Phase 8: knowledge brain
+
+- sati remembers; agents read. Context entries became **cards**: optional `facts[]` (up to 50,
+  300 characters each), `tags[]`, `sourceSeen` (the file version the agent read) and
+  `sourceTokens`. A later `context_put` replaces them, so a dropped fact does not linger.
+  Git-mode staleness is unchanged. `sati card` is an alias of `sati context`.
+- There is no snapshot `schemaVersion` to bump. The new fields are optional, so this version
+  reads every older snapshot. An older sati refuses the whole import of a newer card ("Unrecognized
+  key") and keeps nothing half-imported, the same as every earlier field addition; its hint now says
+  a newer sati wrote the files and to update.
+- Secrets are refused on write, not only on export: notes, comments and cards go through the same
+  scanner (moved to `core/domain/secrets.ts`; `@sati/sync` re-exports it). The error names the
+  field and never echoes the match.
+- Search covers cards (migration `0004_fts_cards`: path as title, summary, facts and tags as body,
+  with a backfill).
+- `recall` (core, `sati recall`, MCP `recall`, 19 tools, and the board's Ask box) drops stop words,
+  searches for all the words and then any, keeps open tasks only, ranks each card's facts by the
+  question, and returns Markdown inside a `data` block capped at 1,000 tokens with an omitted
+  count. No model or embeddings in sati.
+- **Private** (`private: true`, `--private`, "Keep on this computer only"): never exported to
+  `.sati/`, and an import never brings in or overwrites a private record. It is set when the item
+  is made; making a shared item private is refused, because git already has it. A comment on a
+  private note is private too. `sati doctor` lists private items (information only, never a
+  failure). Chosen: flags on `note create|update` and `card put` instead of separate
+  `note pin|private` commands the design doc sketched, to keep the CLI small.
+- The brief's Knowledge section holds up to 3 newest pinned notes and up to 3 cards tied to my
+  claimed tasks (through the feature's paths or a label matching the card's tags), inside the
+  1,500-token cap. Pinned notes also show above the board.
+- Rules blocks and both workflow guides: check a file's card before opening it, save one after;
+  general projects ask `recall` first.
+- Board: Memory page (Ask box with Copy as Markdown, cards by folder with facts, filter, New card
+  and Edit card, Private and "Changed since" badges); search palette opens card hits on Memory.
+  Checked at 1280 and 375 px; axe covers the page, the answer and the card dialog.
+- Budgets: `pnpm bench` now measures `recall` on 50,000 records including 2,000 cards: p95
+  49.7 ms against 50 ms in this orb, where `search` was 49.5 ms (47.3 ms on the previous commit).
+  The CLI read budget (150 ms) fails in this orb on the previous commit too (222 ms), so it is the
+  orb, not this phase; cold start is unchanged (p95 48 ms against 46.5 ms, interleaved runs).
+- Gate: "No private item appears in `.sati/`" is tested in core, the CLI and Playwright (a
+  mutation that exports private records fails the UI test). The token-saving gate (20 questions on
+  a real folder of Office and PDF files, at least 70% fewer tokens in a fresh session) needs a
+  manual run with an agent tool's own usage report; it is part of the real-project trial.

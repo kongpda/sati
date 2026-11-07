@@ -1220,3 +1220,101 @@ button.danger {
 .plan-stages ol {
   padding-left: 20px;
 }
+
+/* Memory: the Ask box, its answer, then cards by folder. */
+.ask {
+  max-width: 720px;
+  margin-bottom: 12px;
+}
+.ask label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.ask-row,
+.memory-filter {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ask-row .field {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+}
+.memory-filter {
+  max-width: 720px;
+  margin: 16px 0 12px;
+}
+.memory-filter .field {
+  flex: 1;
+  min-width: 0;
+}
+.answer {
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--moss);
+  border-radius: 8px;
+}
+.answer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.answer-head h2 {
+  font-size: 15px;
+  margin: 0;
+}
+.facts {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  overflow-wrap: anywhere;
+}
+.badge.private {
+  border-color: var(--live);
+  color: var(--live);
+  margin-left: 6px;
+}
+.row-title + .badge {
+  margin-left: 6px;
+}
+.badge.kind-card,
+.badge.kind-task {
+  border-color: var(--moss);
+}
+.note-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.note-actions .dialog-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+/* Pinned notes on the board: one line of links above the columns. */
+.pinned {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 0 14px 8px;
+}
+.pinned .meta {
+  margin: 0;
+  font-weight: 600;
+}
+.pinned a {
+  color: var(--moss);
+  font-size: 13px;
+}

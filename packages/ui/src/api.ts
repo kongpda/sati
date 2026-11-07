@@ -45,6 +45,8 @@ export interface Note {
   links: string[];
   needsReview?: boolean;
   pinned: boolean;
+  /** Kept on this machine only: never exported to `.sati/`. */
+  private?: boolean;
   createdAt: string;
   createdBy: string;
   updatedAt: string;
@@ -117,6 +119,37 @@ export interface Snapshot {
   milestones: Milestone[];
   activity: Activity[];
   locks: Lock[];
+  cards: Card[];
+}
+
+/** What an agent or person learned about a file or folder; sati never opens the file. */
+export interface Card {
+  id: string;
+  path: string;
+  summary: string;
+  keyFiles: string[];
+  facts?: string[];
+  tags?: string[];
+  sourceSeen?: string;
+  sourceTokens?: number;
+  private?: boolean;
+  /** In git: the files changed since the card. `null` outside git. */
+  stale: boolean | null;
+  createdBy: string;
+  updatedAt: string;
+  version: number;
+}
+
+export interface RecallItem {
+  kind: "card" | "note" | "decision" | "task";
+  id: string;
+  title: string;
+  text: string;
+  facts: string[];
+  sourceSeen: string | null;
+  stale: boolean | null;
+  private: boolean;
+  updatedAt: string;
 }
 
 interface ChangeBase {
@@ -241,6 +274,12 @@ export const api = {
     ),
   featureList: () => request<{ markdown: string }>("/api/feature-list"),
   templates: () => request<TemplateSummary[]>("/api/templates"),
+  recall: (q: string) =>
+    request<{ markdown: string; items: RecallItem[]; omitted: number }>(
+      `/api/recall?q=${encodeURIComponent(q)}`,
+    ),
+  saveCard: (body: Record<string, unknown>) =>
+    request<Card>("/api/cards", { method: "POST", body: JSON.stringify(body) }),
   applyTemplate: (body: { template: string; title?: string; targetDate?: string }) =>
     request<{ milestone: Milestone; taskIds: string[] }>("/api/templates/apply", {
       method: "POST",

@@ -1,0 +1,24 @@
+{
+  "consequences": "Nobody is misled into thinking a shared item was taken back. Export and import skip private records both ways. sati doctor lists private items so people can see what stays local.",
+  "context": "Phase 8 lets people keep notes and cards (HR, pay, contracts) off .sati/. Once a record is exported it is in git history, and agent-written text may carry keys.",
+  "createdAt": "2026-11-07T14:26:48.010Z",
+  "createdBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
+  "decision": "private: true is chosen when the note or card is made. private: false shares it later; making a shared item private is refused (VALIDATION), because git already has it. Notes, comments and cards go through the secret scanner when saved, naming the field and never echoing the match.",
+  "deletedAt": null,
+  "featureIds": [],
+  "id": "dec_01M6V6F92AYK0D711DTGCW4KW8",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "consequences": "2026-11-07T14:26:48.013Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "context": "2026-11-07T14:26:48.013Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "decision": "2026-11-07T14:26:48.013Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "deletedAt": "2026-11-07T14:26:48.013Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "featureIds": "2026-11-07T14:26:48.013Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "supersedes": "2026-11-07T14:26:48.013Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "title": "2026-11-07T14:26:48.013Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+  },
+  "supersedes": null,
+  "title": "Private is set at creation; secrets are refused on write",
+  "updatedAt": "2026-11-07T14:26:48.010Z",
+  "version": 1
+}

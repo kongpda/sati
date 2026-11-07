@@ -822,3 +822,19 @@ fixed the same bug (undo of shortened text, subtask cycles, 400 for bad JSON, th
   the new card in Todo with its toast. The palette's input reset was hiding the text fields'
   borders; the form now sets them. The toast's Dismiss button was ink on ink and now inherits
   the toast colour.
+
+### Phase 7a: milestone and decision forms (2026-11-07)
+
+- The server already had the routes, so this is UI only. The New task dialog's shell became a
+  shared `FormDialog` in `packages/ui/src/forms.tsx`: focus on open, Esc and Cancel close,
+  submit stays off until every required field has text, a refused save shows in the dialog.
+- Roadmap: "New milestone" and "Edit" per milestone. The edit sends the version the dialog
+  opened with, so a change an agent saved meanwhile is refused (409) and the draft stays. The
+  status list offers only the moves core allows (planned → active → done, and back one step).
+- Decisions: "Record decision" (title and decision required; context, consequences, the
+  features it affects, and what it replaces). Decisions stay append-only as core requires, so
+  there is no edit: "Replace" opens the form with `supersedes` preselected, and the old one shows
+  "replaced by …". Chosen over an edit button, which would break the decision log.
+- Shortcuts now stand down for any open dialog, not only the New task one.
+- Checked in Chrome at 1280 and 375 px. Tall dialogs cut off their buttons at 70vh; the dialog
+  now grows to 84vh and pins the action row at its bottom while the fields scroll.

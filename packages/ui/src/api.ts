@@ -149,6 +149,12 @@ export const api = {
     request<Note>("/api/notes", { method: "POST", body: JSON.stringify(body) }),
   patchNote: (id: string, body: Record<string, unknown>) =>
     request<Note>(`/api/notes/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  recordDecision: (body: Record<string, unknown>) =>
+    request<Decision>("/api/decisions", { method: "POST", body: JSON.stringify(body) }),
+  createMilestone: (body: Record<string, unknown>) =>
+    request<Milestone>("/api/milestones", { method: "POST", body: JSON.stringify(body) }),
+  patchMilestone: (id: string, body: Record<string, unknown>) =>
+    request<Milestone>(`/api/milestones/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   patchFeature: (id: string, body: Record<string, unknown>) =>
     request<Feature>(`/api/features/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
 };

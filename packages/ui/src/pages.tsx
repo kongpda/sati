@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
-import { ago, clockTime, leaseLeft, type Snapshot } from "./api.js";
+import { useEffect, useRef, useState } from "react";
+import { ago, clockTime, type Decision, leaseLeft, type Milestone, type Snapshot } from "./api.js";
+import { DecisionForm, MilestoneForm } from "./forms.js";
 import { Markdown } from "./markdown.js";
 
 export function Agents({
@@ -122,10 +123,17 @@ export function Features({
   );
 }
 
-export function Roadmap({ data }: { data: Snapshot }) {
+export function Roadmap({ data, onSaved }: { data: Snapshot; onSaved: (message: string) => void }) {
+  // "new" opens an empty form; a milestone opens it to edit that one.
+  const [editing, setEditing] = useState<Milestone | "new" | null>(null);
   return (
     <div className="page">
-      <h1>Roadmap</h1>
+      <div className="page-head">
+        <h1>Roadmap</h1>
+        <button type="button" className="primary" onClick={() => setEditing("new")}>
+          New milestone
+        </button>
+      </div>
       <div className="timeline">
         {data.milestones.map((m) => (
           <div key={m.id} className="tick">
@@ -141,11 +149,14 @@ export function Roadmap({ data }: { data: Snapshot }) {
           const done = tasks.filter((t) => t.status === "done").length;
           return (
             <article key={m.id} className="row">
-              <strong>{m.title}</strong>
+              <h2 className="row-title">{m.title}</h2>
               <div className="meta">
                 {m.status}
                 {m.targetDate ? ` · ${m.targetDate}` : ""}
                 {tasks.length ? ` · ${done}/${tasks.length} tasks done` : ""}
+                <button type="button" aria-label={`Edit ${m.title}`} onClick={() => setEditing(m)}>
+                  Edit
+                </button>
               </div>
               {m.goal ? <p>{m.goal}</p> : null}
               {features.map((f) => (
@@ -155,9 +166,21 @@ export function Roadmap({ data }: { data: Snapshot }) {
           );
         })}
         {data.milestones.length === 0 ? (
-          <p className="empty">No milestones yet. Run {__CLI_NAME__} milestone create "Name".</p>
+          <p className="empty">
+            No milestones yet. Add one with New milestone, or ask your agent to plan the roadmap.
+          </p>
         ) : null}
       </div>
+      {editing ? (
+        <MilestoneForm
+          milestone={editing === "new" ? undefined : editing}
+          onClose={() => setEditing(null)}
+          onSaved={(m) => {
+            setEditing(null);
+            onSaved(editing === "new" ? `Created ${m.title}.` : `Saved ${m.title}.`);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -236,11 +259,28 @@ function Backlinks({ notes, id }: { notes: Snapshot["notes"]; id: string }) {
   return <div className="meta">Linked from {linked.map((note) => note.title).join(", ")}</div>;
 }
 
-export function Decisions({ data }: { data: Snapshot }) {
+export function Decisions({
+  data,
+  onSaved,
+}: {
+  data: Snapshot;
+  onSaved: (message: string) => void;
+}) {
+  // "new" opens an empty form; a decision opens it to record one that replaces it.
+  const [recording, setRecording] = useState<Decision | "new" | null>(null);
   const titles = new Map(data.decisions.map((d) => [d.id, d.title]));
+  const features = new Map(data.features.map((f) => [f.id, f.title]));
+  const replacedBy = new Map(
+    data.decisions.flatMap((d) => (d.supersedes ? [[d.supersedes, d.title] as const] : [])),
+  );
   return (
     <div className="page">
-      <h1>Decisions</h1>
+      <div className="page-head">
+        <h1>Decisions</h1>
+        <button type="button" className="primary" onClick={() => setRecording("new")}>
+          Record decision
+        </button>
+      </div>
       <div className="list">
         {data.decisions.map((d) => (
           <article key={d.id} className="row">
@@ -249,7 +289,18 @@ export function Decisions({ data }: { data: Snapshot }) {
               <time dateTime={d.createdAt} title={d.createdAt}>
                 {ago(d.createdAt)}
               </time>
-              {d.supersedes ? ` · supersedes ${titles.get(d.supersedes) ?? d.supersedes}` : ""}
+              {d.supersedes ? ` · replaces ${titles.get(d.supersedes) ?? d.supersedes}` : ""}
+              {replacedBy.has(d.id) ? ` · replaced by ${replacedBy.get(d.id)}` : ""}
+              {d.featureIds.length
+                ? ` · ${d.featureIds.map((id) => features.get(id) ?? id).join(", ")}`
+                : ""}
+              <button
+                type="button"
+                aria-label={`Replace ${d.title}`}
+                onClick={() => setRecording(d)}
+              >
+                Replace
+              </button>
             </div>
             <Markdown source={d.decision} />
             {d.context ? (
@@ -267,9 +318,23 @@ export function Decisions({ data }: { data: Snapshot }) {
           </article>
         ))}
         {data.decisions.length === 0 ? (
-          <p className="empty">No decisions yet. Record one with {__CLI_NAME__} decision record.</p>
+          <p className="empty">
+            No decisions yet. Record one when you choose between options, so people and agents know
+            why.
+          </p>
         ) : null}
       </div>
+      {recording ? (
+        <DecisionForm
+          data={data}
+          replaces={recording === "new" ? undefined : recording}
+          onClose={() => setRecording(null)}
+          onSaved={(d) => {
+            setRecording(null);
+            onSaved(`Recorded ${d.title}.`);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

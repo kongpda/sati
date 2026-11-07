@@ -631,7 +631,8 @@ A capability is not done until both ways have it, with tests on both. sati itsel
 **Phase 7a — Two ways to work**
 
 - [x] UI: a visible "New task" button and form (title, details, priority, list, feature, labels); `c` opens it; a refused save keeps what was typed (due date, assignees and milestone join it with the task fields below)
-- [ ] UI parity: milestone create and edit on the Roadmap; decision create; note edit, tags, pin and delete; delete and restore for tasks, notes and decisions, each with an undo toast
+- [x] UI: milestone create and edit on the Roadmap (name, goal, target date, status; a stale edit is refused); decision record on the Decisions page, with "Replace" recording a new decision that supersedes the old one
+- [ ] UI parity: note edit, tags, pin and delete; delete and restore for tasks, notes and decisions, each with an undo toast
 - [x] Agent parity: MCP `note_upsert` and `note_get` (Agent integration table updated)
 - [ ] Agent parity: `task_list` filters by milestone, label and due date, so "what is left for the launch?" is one call
 - [ ] Project kind `code` (default) or `general`. A general project hides Features, path locks, the guard and the Agents page, and needs no git; it uses the standalone store

@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, api, COLUMNS, type Snapshot } from "./api.js";
 import { Board } from "./board.js";
-import { NewTask } from "./new-task.js";
+import { NewTask } from "./forms.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
 
 const PAGES = [
@@ -84,6 +84,14 @@ export function App() {
     setToast((hint ? `${message} ${hint}` : message).replaceAll("`", ""));
   }, []);
 
+  const saved = useCallback(
+    (message: string) => {
+      setToast(message);
+      void client.invalidateQueries({ queryKey: ["snapshot"] });
+    },
+    [client],
+  );
+
   const closePalette = useCallback(() => {
     setPalette(false);
     setQueryText("");
@@ -160,7 +168,9 @@ export function App() {
         return;
       }
       // Ctrl+C, Cmd+X and other chords belong to the browser, not to the board's letters.
-      if (palette || creating || typing || event.metaKey || event.ctrlKey || event.altKey) return;
+      // Any open dialog (search, or a create or edit form on any page) owns the keyboard.
+      const dialog = document.querySelector(".palette") !== null;
+      if (dialog || typing || event.metaKey || event.ctrlKey || event.altKey) return;
       // Buttons and links use these keys themselves, and the sheet is a dialog of its own.
       if (target?.closest(".sheet, button, a")) return;
       if (event.key === "j" || event.key === "k") {
@@ -194,7 +204,7 @@ export function App() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [client, closePalette, creating, feature, filter, go, palette, path, task]);
+  }, [client, closePalette, feature, filter, go, palette, path, task]);
 
   useEffect(() => {
     if (!palette) return;
@@ -432,7 +442,7 @@ export function App() {
             }
           />
         ) : null}
-        {data && path === "/roadmap" ? <Roadmap data={data} /> : null}
+        {data && path === "/roadmap" ? <Roadmap data={data} onSaved={saved} /> : null}
         {data && path === "/notes" ? (
           <Notes
             data={data}
@@ -454,7 +464,7 @@ export function App() {
             }
           />
         ) : null}
-        {data && path === "/decisions" ? <Decisions data={data} /> : null}
+        {data && path === "/decisions" ? <Decisions data={data} onSaved={saved} /> : null}
         {data && path === "/activity" ? <Activity data={data} /> : null}
       </main>
       {data && task ? (

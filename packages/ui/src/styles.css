@@ -595,54 +595,97 @@ textarea {
   gap: 8px;
 }
 
-/* New task dialog: reuses the palette overlay, with a form laid out as fields. */
-.palette form.new-task {
+/* Create and edit dialogs: reuse the palette overlay, with a form laid out as fields. */
+.palette form.dialog-form {
   display: grid;
   gap: 10px;
   padding: 16px;
+  max-height: 84vh;
 }
-.new-task h2 {
+.dialog-form h2 {
   font-size: 1.1rem;
   font-weight: 650;
   margin: 0;
 }
-.new-task label {
+.dialog-form label,
+.dialog-form legend {
   display: grid;
   gap: 4px;
   font-size: 13px;
   color: var(--muted);
 }
-form.new-task .field,
-form.new-task select {
+form.dialog-form .field,
+form.dialog-form select {
   color: var(--ink);
   width: 100%;
   background: var(--panel);
   border: 1px solid var(--line);
   padding: 6px 8px;
 }
-.new-task-row {
+.dialog-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 10px;
 }
-.palette form.new-task .new-task-actions button {
+.dialog-choices {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin: 0;
+  padding: 6px 10px 8px;
+  max-height: 160px;
+  overflow: auto;
+}
+.dialog-form .dialog-choices label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  padding: 2px 0;
+}
+.palette form.dialog-form .dialog-choices input {
+  width: auto;
+  padding: 0;
+}
+.dialog-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.palette form.dialog-form .dialog-actions button {
   display: inline-block;
   width: auto;
   text-align: center;
   border: 1px solid var(--line);
   padding: 4px 14px;
 }
-.new-task-actions {
+/* Long forms scroll inside the dialog; the actions stay pinned at its bottom edge. */
+.dialog-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  position: sticky;
+  bottom: -16px;
+  margin-bottom: -16px;
+  padding: 8px 0 16px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
 }
 .form-error {
   margin: 0;
   color: var(--clay);
 }
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.page-head h1 {
+  margin: 0;
+}
 button.primary,
-.palette form.new-task .new-task-actions button.primary {
+.palette form.dialog-form .dialog-actions button.primary {
   background: var(--moss);
   border-color: var(--moss);
   color: var(--panel);

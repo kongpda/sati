@@ -192,3 +192,79 @@ test("every page loads and marks itself current", async ({ page }) => {
   );
   expect(await problems()).toEqual([]);
 });
+
+// PLAN Phase 7a: people plan the roadmap and record decisions in the UI, without a terminal.
+test("creates and edits a milestone, records and replaces a decision", async ({ page }) => {
+  const problems = await watch(page);
+  await page.goto(ui.signIn);
+  await page.getByRole("link", { name: "Roadmap", exact: true }).click();
+  await page.getByRole("button", { name: "New milestone" }).click();
+  const create = page.getByRole("dialog", { name: "New milestone" });
+  await expect(create.getByLabel("Name")).toBeFocused();
+  await expect(create.getByRole("button", { name: "Create milestone" })).toBeDisabled();
+  await create.getByLabel("Name").fill("Launch event");
+  await create.getByLabel("Goal").fill("Guests in the room by 7 pm.");
+  await create.getByLabel("Target date").fill("2026-12-04");
+  await create.getByRole("button", { name: "Create milestone" }).click();
+  await expect(create).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 2, name: "Launch event" })).toBeVisible();
+
+  // An edit made elsewhere after the dialog opened is refused, and the draft stays.
+  await page.getByRole("button", { name: "Edit Launch event" }).click();
+  const edit = page.getByRole("dialog", { name: "Edit milestone" });
+  await expect(edit.getByLabel("Name")).toHaveValue("Launch event");
+  const [made] = ui.sati<{ id: string }[]>("milestone", "list", "--json");
+  ui.sati("milestone", "update", made?.id ?? "", "--goal", "Changed by an agent");
+  await edit.getByLabel("Status").selectOption("active");
+  await edit.getByRole("button", { name: "Save milestone" }).click();
+  await expect(edit.getByRole("alert")).toBeVisible();
+  await expect(edit.getByLabel("Status")).toHaveValue("active");
+  await edit.getByRole("button", { name: "Cancel" }).click();
+  // Live updates bring the agent's edit in; editing again starts from that version.
+  await expect(page.getByText("Changed by an agent")).toBeVisible();
+
+  await page.getByRole("button", { name: "Edit Launch event" }).click();
+  await edit.getByLabel("Status").selectOption("active");
+  await edit.getByRole("button", { name: "Save milestone" }).click();
+  await expect(edit).toHaveCount(0);
+  const [saved] = ui.sati<{ status: string; goal: string; targetDate: string }[]>(
+    "milestone",
+    "list",
+    "--json",
+  );
+  expect(saved).toMatchObject({
+    status: "active",
+    goal: "Changed by an agent",
+    targetDate: "2026-12-04",
+  });
+
+  await page.getByRole("link", { name: "Decisions", exact: true }).click();
+  await page.getByRole("button", { name: "Record decision", exact: true }).click();
+  const record = page.getByRole("dialog", { name: "Record decision" });
+  await record.getByLabel("Title").fill("Hold the launch at the riverside venue");
+  // Both the title and the decision text are required.
+  await expect(record.getByRole("button", { name: "Record decision", exact: true })).toBeDisabled();
+  await record.getByLabel("Decision", { exact: true }).fill("Book the riverside hall.");
+  await record.getByLabel("Context").fill("The hotel was full.");
+  await record.getByRole("button", { name: "Record decision", exact: true }).click();
+  await expect(record).toHaveCount(0);
+
+  await page
+    .getByRole("button", { name: "Replace Hold the launch at the riverside venue" })
+    .click();
+  const replace = page.getByRole("dialog", { name: "Replace decision" });
+  await replace.getByLabel("Title").fill("Hold the launch on the rooftop");
+  await replace.getByLabel("Decision", { exact: true }).fill("The hall flooded; use the rooftop.");
+  await replace.getByRole("button", { name: "Record decision", exact: true }).click();
+  await expect(replace).toHaveCount(0);
+  await expect(page.getByText("replaced by Hold the launch on the rooftop")).toBeVisible();
+  const decisions = ui.sati<{ id: string; title: string; supersedes: string | null }[]>(
+    "decision",
+    "list",
+    "--json",
+  );
+  const first = decisions.find((d) => d.title === "Hold the launch at the riverside venue");
+  const second = decisions.find((d) => d.title === "Hold the launch on the rooftop");
+  expect(second?.supersedes).toBe(first?.id);
+  expect(await problems()).toEqual([]);
+});

@@ -3,9 +3,9 @@ import type { Activity, EntityMap, Project, StoredEntity, Task } from "../domain
 export interface ListQuery {
   status?: readonly string[] | undefined;
   featureId?: string | undefined;
-  /** Only records linked to one of these features; an empty list matches nothing. */
-  featureIds?: readonly string[] | undefined;
   milestoneId?: string | undefined;
+  /** Tasks in a milestone: their own `milestoneId` is it, or their feature is one of `featureIds`. */
+  inMilestone?: { milestoneId: string; featureIds: readonly string[] } | undefined;
   parentId?: string | undefined;
   label?: string | undefined;
   /** Tasks due on or before this ISO date. */

@@ -1,5 +1,7 @@
+import { GENERAL_WORKFLOW } from "@sati/core";
 import { describe, expect, it } from "vitest";
 import {
+  GENERAL_RULES_BLOCK,
   type PlannedFile,
   planIntegrations,
   RULES_BLOCK,
@@ -23,6 +25,17 @@ describe("agent file planning", () => {
 
   it("keeps the block under 30 lines so it costs little context", () => {
     expect(RULES_BLOCK.trimEnd().split("\n").length).toBeLessThan(30);
+  });
+
+  it("a general project gets its own rules block and skill, without code steps", () => {
+    const plan = byPath(
+      planIntegrations(["claude-code", "cursor"], "git", reader({}), undefined, false, "general"),
+    );
+    expect(plan["AGENTS.md"]?.content).toBe(GENERAL_RULES_BLOCK);
+    expect(plan[".cursor/rules/sati.mdc"]?.content).toContain(GENERAL_RULES_BLOCK);
+    const skill = plan[".claude/skills/sati/SKILL.md"]?.content ?? "";
+    expect(skill).toContain(GENERAL_WORKFLOW);
+    expect(skill).not.toMatch(/feature_check|lock_acquire|coding task/u);
   });
 
   it("writes AGENTS.md for everyone and only the files of the selected tools", () => {

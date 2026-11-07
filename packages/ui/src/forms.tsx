@@ -173,6 +173,7 @@ export function NewTask({
       onSubmit={(form) => {
         const featureId = text(form, "featureId");
         const dueDate = text(form, "dueDate");
+        const milestoneId = text(form, "milestoneId");
         const assigneeIds = form.getAll("assigneeIds").map(String);
         return api
           .createTask({
@@ -183,6 +184,7 @@ export function NewTask({
             labels: parseLabels(text(form, "labels")),
             ...(featureId ? { featureId } : {}),
             ...(dueDate ? { dueDate } : {}),
+            ...(milestoneId ? { milestoneId } : {}),
             ...(assigneeIds.length ? { assigneeIds } : {}),
           })
           .then(onCreated);
@@ -233,6 +235,7 @@ export function NewTask({
           Due date
           <input className="field" type="date" name="dueDate" />
         </label>
+        {data.milestones.length > 0 ? <PlanSelect data={data} chosen={null} /> : null}
         <label>
           Labels
           <input className="field" name="labels" placeholder="design, launch" />
@@ -506,5 +509,31 @@ export function NoteForm({
         Pin to the top of Notes
       </label>
     </FormDialog>
+  );
+}
+
+/** The milestones a task can belong to directly, open ones first; done ones stay pickable. */
+export function PlanSelect({
+  data,
+  chosen,
+  className,
+}: {
+  data: Snapshot;
+  chosen: string | null;
+  className?: string;
+}) {
+  const open = data.milestones.filter((m) => m.status !== "done" || m.id === chosen);
+  return (
+    <label className={className}>
+      Plan
+      <select name="milestoneId" defaultValue={chosen ?? ""}>
+        <option value="">None</option>
+        {open.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.title}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

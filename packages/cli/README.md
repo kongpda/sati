@@ -41,7 +41,7 @@ sati doctor         # health checks
 ## Docs
 
 - [Quick start](https://github.com/kongpda/sati/blob/main/docs/guide/quick-start.md)
-- [Agent workflow](https://github.com/kongpda/sati/blob/main/docs/guide/agent-workflow.md)
+- [Agent workflow](https://github.com/kongpda/sati/blob/main/docs/guide/agent-workflow.md) ([general projects](https://github.com/kongpda/sati/blob/main/docs/guide/agent-workflow-general.md))
 - [Guard rules](https://github.com/kongpda/sati/blob/main/docs/guide/guard.md)
 - [FAQ](https://github.com/kongpda/sati/blob/main/docs/guide/faq.md)
 - [Glossary](https://github.com/kongpda/sati/blob/main/docs/guide/glossary.md)

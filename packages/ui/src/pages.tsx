@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ago, type Decision, type Milestone, type Note, type Snapshot } from "./api.js";
-import { Assignees, DecisionForm, MilestoneForm, NoteForm } from "./forms.js";
+import { Assignees, DecisionForm, MilestoneForm, NoteForm, PlanSelect } from "./forms.js";
 import { Markdown } from "./markdown.js";
 import { Avatar, nameOf, personName } from "./people.js";
 import { activityWords, dayWords, fullTime, statusWord, untilTime } from "./words.js";
@@ -163,7 +163,9 @@ export function Roadmap({ data, onSaved }: { data: Snapshot; onSaved: (message: 
       <div className="list">
         {data.milestones.map((m) => {
           const features = data.features.filter((f) => f.milestoneId === m.id);
-          const tasks = data.tasks.filter((t) => features.some((f) => f.id === t.featureId));
+          const tasks = data.tasks.filter(
+            (t) => t.milestoneId === m.id || features.some((f) => f.id === t.featureId),
+          );
           const done = tasks.filter((t) => t.status === "done").length;
           return (
             <article key={m.id} className="row">
@@ -536,6 +538,9 @@ export function TaskSheet({
           const form = new FormData(e.currentTarget);
           const status = String(form.get("status") ?? task.status);
           const dueDate = String(form.get("dueDate") ?? "") || null;
+          const milestoneId = form.has("milestoneId")
+            ? String(form.get("milestoneId")) || null
+            : (task.milestoneId ?? null);
           const assigneeIds = form.getAll("assigneeIds").map(String);
           const sameAssignees =
             assigneeIds.length === (task.assigneeIds ?? []).length &&
@@ -546,6 +551,7 @@ export function TaskSheet({
             body: String(form.get("body") ?? ""),
             ...(status === task.status ? {} : { status }),
             ...(dueDate === (task.dueDate ?? null) ? {} : { dueDate }),
+            ...(milestoneId === (task.milestoneId ?? null) ? {} : { milestoneId }),
             ...(sameAssignees ? {} : { assigneeIds }),
             expectedVersion: task.version,
           }).catch(() => undefined);
@@ -563,6 +569,9 @@ export function TaskSheet({
           Due date
           <input className="field" type="date" name="dueDate" defaultValue={task.dueDate ?? ""} />
         </label>
+        {data.milestones.length > 0 ? (
+          <PlanSelect className="sheet-label" data={data} chosen={task.milestoneId ?? null} />
+        ) : null}
         <Assignees data={data} chosen={task.assigneeIds ?? []} />
         <select name="status" defaultValue={task.status} aria-label="Status">
           {statusOptions(task.status).map((s) => (

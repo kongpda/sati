@@ -35,6 +35,7 @@ const fields = TaskShape.pick({
   dueDate: true,
   assigneeIds: true,
   checklist: true,
+  milestoneId: true,
 });
 const optional = {
   body: true,
@@ -49,6 +50,7 @@ const optional = {
   dueDate: true,
   assigneeIds: true,
   checklist: true,
+  milestoneId: true,
 } as const;
 
 const Subtask = z.strictObject({
@@ -76,6 +78,7 @@ export const UpdateTaskInput = fields
     reason: z.string().trim().min(1).max(LIMITS.shortText).optional(),
   });
 export const CompleteTaskInput = Completion.pick({ summary: true, filesTouched: true })
+  .partial({ filesTouched: true })
   .extend(ExpectedVersion)
   .extend(ClaimToken);
 export const ClaimTaskInput = z.strictObject({
@@ -167,6 +170,7 @@ export async function createTaskIn(
         status: "todo",
         priority: "medium",
         featureId: parent.featureId,
+        ...(parent.milestoneId ? { milestoneId: parent.milestoneId } : {}),
         parentId: parent.id,
         dependsOn: (sub.dependsOn ?? []).map((n) => childIds[n] ?? ""),
         labels: [],
@@ -248,7 +252,18 @@ export async function completeTask(ctx: ServiceContext, id: string, input: unkno
     }
     const status = gated ? "review" : "done";
     assertTransition(TASK_TRANSITIONS, "task", before.status, status);
-    const completion = { ...data, completedAt: nowIso(ctx), completedBy: ctx.actorId };
+    const filesTouched = data.filesTouched ?? [];
+    if (settings.kind === "code" && filesTouched.length === 0) {
+      throw new SatiError("VALIDATION", "List every file you touched.", {
+        hint: "Pass filesTouched; it is how reviewers and the guard trace a change.",
+      });
+    }
+    const completion = {
+      ...data,
+      filesTouched,
+      completedAt: nowIso(ctx),
+      completedBy: ctx.actorId,
+    };
     await releaseTaskLocks(w, ctx, id);
     return updateWithLog(
       w,
@@ -483,20 +498,23 @@ async function lease(r: StorageReader, ctx: ServiceContext, minutes?: number): P
 
 /**
  * Lists tasks; `ready: true` returns todo, unclaimed tasks whose dependencies are done.
- * Tasks have no milestone of their own: `milestoneId` means "linked to a feature of that
- * milestone", so it is turned into the list of those features before the store sees it.
+ * `milestoneId` matches a task whose own `milestoneId` is that milestone, or whose feature is in
+ * it, so the milestone's features are looked up before the store sees the query.
  * The store's ready query takes no filters, so the filters and paging apply here to up to 500
  * ready tasks. `includeDeleted` has no effect on ready tasks: a deleted task is never ready.
  */
 export async function listTasks(ctx: ServiceContext, input: unknown = {}): Promise<Task[]> {
   const { ready, milestoneId, ...query } = parseInput(ListTasksInput, input);
   return ctx.store.read(async (r) => {
-    const featureIds = milestoneId
-      ? (await listAll(r, ctx, "feature"))
-          .filter((f) => f.milestoneId === milestoneId)
-          .map((f) => f.id)
+    const inMilestone = milestoneId
+      ? {
+          milestoneId,
+          featureIds: (await listAll(r, ctx, "feature"))
+            .filter((f) => f.milestoneId === milestoneId)
+            .map((f) => f.id),
+        }
       : undefined;
-    if (!ready) return r.list("task", ctx.projectId, { ...query, featureIds });
+    if (!ready) return r.list("task", ctx.projectId, { ...query, inMilestone });
     const { status, featureId, parentId, label, dueBy, assigneeId } = query;
     const start = query.offset ?? 0;
     return (await r.readyTasks(ctx.projectId, nowIso(ctx), 500))
@@ -504,7 +522,9 @@ export async function listTasks(ctx: ServiceContext, input: unknown = {}): Promi
         (t) =>
           (!status || status.includes(t.status)) &&
           (!featureId || t.featureId === featureId) &&
-          (!featureIds || (t.featureId !== null && featureIds.includes(t.featureId))) &&
+          (!inMilestone ||
+            t.milestoneId === inMilestone.milestoneId ||
+            (t.featureId !== null && inMilestone.featureIds.includes(t.featureId))) &&
           (!parentId || t.parentId === parentId) &&
           (!label || t.labels.includes(label)) &&
           (!dueBy || (t.dueDate != null && t.dueDate <= dueBy)) &&
@@ -524,9 +544,11 @@ async function checkLinks(
     parentId?: string | null | undefined;
     dependsOn?: readonly string[] | undefined;
     assigneeIds?: readonly string[] | undefined;
+    milestoneId?: string | null | undefined;
   },
 ): Promise<void> {
   if (links.featureId) await mustGet(r, ctx, "feature", links.featureId);
+  if (links.milestoneId) await mustGet(r, ctx, "milestone", links.milestoneId);
   for (const actorId of links.assigneeIds ?? []) await mustGet(r, ctx, "actor", actorId);
   if (links.parentId) await checkParent(r, ctx, taskId, links.parentId);
   if (links.dependsOn?.length) {

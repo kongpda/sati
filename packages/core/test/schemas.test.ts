@@ -45,10 +45,6 @@ describe("Task schema", () => {
       completedBy: actor,
     };
     expect(Task.safeParse({ ...task, status: "done", completion }).success).toBe(true);
-    expect(
-      Task.safeParse({ ...task, status: "done", completion: { ...completion, filesTouched: [] } })
-        .success,
-    ).toBe(false);
   });
 
   it("enforces size limits on bodies and arrays", () => {

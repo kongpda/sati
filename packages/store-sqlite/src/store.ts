@@ -18,7 +18,7 @@ import {
   type Task,
 } from "@sati/core";
 import Database from "better-sqlite3";
-import { and, asc, desc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
 import { type BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
 import { buildFtsQuery } from "./fts.js";
 import { LATEST_SCHEMA_VERSION, migrate } from "./migrate.js";
@@ -216,9 +216,11 @@ export class SqliteStore implements StorageAdapter {
       if (!q.includeDeleted) where.push(isNull(t.deletedAt));
       if (q.status?.length) where.push(inArray(t.status, [...q.status]));
       if (q.featureId) where.push(eq(t.featureId, q.featureId));
-      if (q.featureIds) {
-        if (q.featureIds.length === 0) return [];
-        where.push(inArray(t.featureId, [...q.featureIds]));
+      if (q.inMilestone) {
+        const { milestoneId, featureIds } = q.inMilestone;
+        const own = eq(t.milestoneId, milestoneId);
+        const viaFeature = featureIds.length ? inArray(t.featureId, [...featureIds]) : undefined;
+        where.push(viaFeature ? (or(own, viaFeature) ?? own) : own);
       }
       if (q.milestoneId) where.push(eq(t.milestoneId, q.milestoneId));
       if (q.parentId) where.push(eq(t.parentId, q.parentId));

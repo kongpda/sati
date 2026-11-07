@@ -53,6 +53,14 @@ function due(value: string | undefined): string | null | undefined {
   return value === NONE ? null : value;
 }
 
+/** `--milestone` on create and update: an id or handle, or `none` to take the task out of it. */
+async function milestone(
+  ctx: ServiceContext,
+  value: string | undefined,
+): Promise<string | null | undefined> {
+  return value === NONE ? null : ref(ctx, "milestone", value);
+}
+
 /**
  * `--assign`: comma-separated actor names, ids or handles, `me`, or `none` to clear. People
  * know each other by name, so a name is looked up before it is treated as an id.
@@ -85,6 +93,7 @@ const fields = {
   branch: { type: "string", description: "Git branch for this task" },
   worktree: { type: "string", description: "Worktree path for this task" },
   due: { type: "string", description: "Due day YYYY-MM-DD, or none" },
+  milestone: { type: "string", description: "Milestone (plan) id or handle, or none" },
   assign: {
     type: "string",
     description: "Who should do it: comma-separated names, ids or me, or none",
@@ -119,6 +128,7 @@ const create = defineCommand({
           branch: args.branch,
           worktree: args.worktree,
           dueDate: due(args.due),
+          milestoneId: await milestone(ctx, args.milestone),
           assigneeIds: await assignees(ctx, args.assign),
           subtasks: args.subtasks ? parseJson(args.subtasks, "--subtasks", "USAGE") : undefined,
         }),
@@ -133,7 +143,7 @@ const ls = defineCommand({
     feature: { type: "string", description: "Only tasks of this feature" },
     milestone: {
       type: "string",
-      description: "Only tasks whose feature belongs to this milestone",
+      description: "Only tasks in this milestone, directly or through their feature",
     },
     label: { type: "string", description: "Only tasks with this label" },
     "due-by": { type: "string", description: "Only tasks due on or before YYYY-MM-DD" },
@@ -203,6 +213,7 @@ const update = defineCommand({
           branch: args.branch,
           worktree: args.worktree,
           dueDate: due(args.due),
+          milestoneId: await milestone(ctx, args.milestone),
           assigneeIds: await assignees(ctx, args.assign),
           expectedVersion: int(args["expected-version"], "expected-version"),
           token: await claimToken(ctx, taskId, args.token),
@@ -383,7 +394,10 @@ const complete = defineCommand({
   args: {
     ...id("Task"),
     summary: { type: "string", required: true, description: "What was done" },
-    files: { type: "string", required: true, description: "Comma-separated files touched" },
+    files: {
+      type: "string",
+      description: "Comma-separated files touched (required in a code project)",
+    },
     ...expectedVersion,
     ...token,
     ...json,

@@ -975,3 +975,17 @@ fixed the same bug (undo of shortened text, subtask cycles, 400 for bad JSON, th
   todos under a plan yet. Added to 7a as `milestoneId` on tasks. The workflow resource and skill
   still describe feature steps; a general variant is added to 7a too.
 - Checked in Chrome at 1280 and 375 px: Settings with each kind, the board and the nav.
+
+### Phase 7a: plans for general projects (2026-11-07)
+
+- Tasks carry an optional `milestoneId`, written only once set like the other planning fields,
+  so no migration: the store's generic `milestone_id` column already fills from the record.
+  `task_list` with a milestone now matches `milestone_id = M OR feature_id IN (M's features)`
+  in one query (`ListQuery.inMilestone`, replacing `featureIds`, which only this used).
+- Subtasks join their parent's milestone, as they already joined its feature.
+- The Plan picker lists open milestones, plus the task's own even when it is done.
+- General projects get their own workflow page, resource and Claude Code skill. Both workflow
+  constants come from `docs/guide/` through the same generator, and a test fails if they drift.
+- `task_complete` no longer needs files touched in a general project (booking a venue touches
+  none). Code projects still refuse an empty list, now in the service instead of the schema, so
+  a done record with no files is valid on disk. The MCP description says which applies.

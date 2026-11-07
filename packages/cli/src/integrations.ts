@@ -10,6 +10,7 @@ import {
 import { delimiter, dirname, join } from "node:path";
 import {
   CLI_NAME,
+  GENERAL_WORKFLOW,
   type Mode,
   PACKAGE_NAME,
   type ProjectKind,
@@ -258,6 +259,13 @@ description: How to use ${CLI_NAME}, this repo's shared memory for tasks, featur
 
 ${WORKFLOW}`;
 
+const GENERAL_SKILL = `---
+name: ${CLI_NAME}
+description: How to use ${CLI_NAME}, this project's shared memory for plans, todos, notes and decisions. Use at the start of any task, before claiming or finishing work, and to save what you learn.
+---
+
+${GENERAL_WORKFLOW}`;
+
 const codexToml = (local: boolean) => (existing: string | undefined) => {
   const table = `[mcp_servers.${CLI_NAME}]`;
   const line = `command = "${command(local)}"`;
@@ -282,7 +290,9 @@ interface Target {
   render: (existing: string | undefined) => string;
 }
 
-function targets(read: ReadFile, local: boolean, block: string): Target[] {
+function targets(read: ReadFile, local: boolean, kind: ProjectKind): Target[] {
+  const block = blockFor(kind);
+  const skill = kind === "general" ? GENERAL_SKILL : SKILL;
   const upsert = (existing: string | undefined) => upsertBlock(existing, block);
   // `.clinerules` is either a single rules file (older Cline) or a folder of them.
   const clineFile = read(".clinerules") !== undefined;
@@ -295,7 +305,7 @@ function targets(read: ReadFile, local: boolean, block: string): Target[] {
       tool: "claude-code",
       render: claudeSettings(".claude/settings.json", local),
     },
-    { path: `.claude/skills/${CLI_NAME}/SKILL.md`, tool: "claude-code", render: () => SKILL },
+    { path: `.claude/skills/${CLI_NAME}/SKILL.md`, tool: "claude-code", render: () => skill },
     { path: ".codex/config.toml", tool: "codex", render: codexToml(local) },
     { path: ".cursor/mcp.json", tool: "cursor", render: mcpJson(".cursor/mcp.json", local) },
     {
@@ -341,7 +351,7 @@ export function planIntegrations(
   kind: ProjectKind = "code",
 ): PlannedFile[] {
   const block = blockFor(kind);
-  let list = targets(read, local, block).filter((t) => t.tool === null || tools.includes(t.tool));
+  let list = targets(read, local, kind).filter((t) => t.tool === null || tools.includes(t.tool));
   if (mode === "stealth") {
     // Claude Code reads CLAUDE.local.md and .claude/settings.local.json as personal files.
     list = list

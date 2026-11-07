@@ -19,6 +19,7 @@ import {
   createTask,
   type Feature,
   findSimilarTasks,
+  GENERAL_WORKFLOW,
   GetContextInput,
   getContext,
   getProject,
@@ -95,7 +96,7 @@ export function createServer(
       instructions: `Shared project memory for agents. Start with ${CLI_NAME}_brief, claim a task before ${kind === "code" ? "coding" : "working on it"}, finish with task_complete. Full rules: ${CLI_NAME}://workflow.`,
     },
   );
-  registerTools(server, ctx);
+  registerTools(server, ctx, kind);
   // A general project leaves them out, so agents never see them and their schemas cost no tokens.
   if (kind === "code") registerCodeTools(server, ctx);
   registerResources(server, ctx, kind);
@@ -103,7 +104,7 @@ export function createServer(
   return server;
 }
 
-function registerTools(server: McpServer, ctx: ServiceContext): void {
+function registerTools(server: McpServer, ctx: ServiceContext, kind: ProjectKind): void {
   const task = (ref: string) => resolveId(ctx, "task", ref);
 
   server.registerTool(
@@ -129,7 +130,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
     "task_list",
     {
       description:
-        'List tasks. Filter by status, feature, milestone (tasks whose feature is in it), label, assigneeId or dueBy (due on or before a date), combined; `ready: true` returns unclaimed todo tasks whose dependencies are done. For "what is left for a milestone", pass milestoneId with the open statuses.',
+        'List tasks. Filter by status, feature, milestone (tasks in it directly or through their feature), label, assigneeId or dueBy (due on or before a date), combined; `ready: true` returns unclaimed todo tasks whose dependencies are done. For "what is left for a milestone", pass milestoneId with the open statuses.',
       inputSchema: ListTasksInput,
       annotations: { readOnlyHint: true },
     },
@@ -140,7 +141,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
     "task_create",
     {
       description:
-        "Create a task. New tasks start in todo (or backlog). Optional dueDate (YYYY-MM-DD), assigneeIds (actor ids: who should do it) and checklist ([{text, done}]). The result lists `similar` existing tasks; if one is the same work, cancel the new task and use that one.",
+        "Create a task. New tasks start in todo (or backlog). Optional dueDate (YYYY-MM-DD), milestoneId (the plan it belongs to), assigneeIds (actor ids: who should do it) and checklist ([{text, done}]). The result lists `similar` existing tasks; if one is the same work, cancel the new task and use that one.",
       inputSchema: CreateTaskInput,
       annotations: { destructiveHint: false },
     },
@@ -169,7 +170,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
     "task_update",
     {
       description:
-        "Update a task's fields or status. checklist and assigneeIds replace the whole list, so send them with expectedVersion; dueDate null clears it. While the task is claimed, pass the token from task_claim; a stale token means your claim was lost, so stop. Renews your lease. Moving it back to todo releases it.",
+        "Update a task's fields or status. checklist and assigneeIds replace the whole list, so send them with expectedVersion; dueDate or milestoneId null clears it. While the task is claimed, pass the token from task_claim; a stale token means your claim was lost, so stop. Renews your lease. Moving it back to todo releases it.",
       inputSchema: UpdateTaskInput.extend({ id: Ref }),
     },
     ({ id, ...input }) => run(async () => updateTask(ctx, await task(id), input)),
@@ -179,7 +180,9 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
     "task_complete",
     {
       description:
-        "Mark a task done. Requires a summary, every file touched, and the token from task_claim. Releases the claim and your locks tied to the task.",
+        kind === "code"
+          ? "Mark a task done. Requires a summary, every file touched, and the token from task_claim. Releases the claim and your locks tied to the task."
+          : "Mark a task done. Requires a summary and the token from task_claim; list any files you touched. Releases the claim.",
       inputSchema: CompleteTaskInput.extend({ id: Ref }),
     },
     ({ id, ...input }) => run(async () => completeTask(ctx, await task(id), input)),
@@ -356,7 +359,7 @@ function registerResources(server: McpServer, ctx: ServiceContext, kind: Project
     "workflow",
     `${scheme}workflow`,
     { title: "Agent workflow", description: "The rules agents follow in this repo." },
-    (uri) => text(uri, WORKFLOW),
+    (uri) => text(uri, kind === "code" ? WORKFLOW : GENERAL_WORKFLOW),
   );
 
   server.registerResource(
@@ -382,17 +385,29 @@ function registerResources(server: McpServer, ctx: ServiceContext, kind: Project
   );
 }
 
-/** Milestones in order, each with its features; features without a milestone come last. */
+/**
+ * Milestones in order, each with its features and how many of its tasks are done (its own tasks
+ * plus its features' tasks); features without a milestone come last.
+ */
 async function roadmap(ctx: ServiceContext): Promise<string> {
   const project = await getProject(ctx.store);
   const milestones = await listRecords(ctx, "milestone", { limit: 500 });
   const features = await listRecords(ctx, "feature", { limit: 500 });
+  const tasks = await listRecords(ctx, "task", { limit: 500 });
   const line = (f: Feature) =>
     `- ${shortHandle(f.id)} ${f.title} (${f.status}${f.protected ? ", protected" : ""})`;
   const out = [`# ${project.name} roadmap`];
   for (const m of milestones) {
     out.push("", `## ${shortHandle(m.id)} ${m.title} (${m.status})`);
     if (m.goal) out.push(m.goal);
+    const mine = new Set(features.filter((f) => f.milestoneId === m.id).map((f) => f.id));
+    const inIt = tasks.filter(
+      (t) => t.milestoneId === m.id || (t.featureId !== null && mine.has(t.featureId)),
+    );
+    if (inIt.length > 0) {
+      const done = inIt.filter((t) => t.status === "done").length;
+      out.push(`${done}/${inIt.length} tasks done`);
+    }
     out.push(...features.filter((f) => f.milestoneId === m.id).map(line));
   }
   const loose = features.filter((f) => f.milestoneId === null);

@@ -530,6 +530,19 @@ test("a general project hides features and the Agents page, and switches back", 
   await page.goto(`${ui.origin}/features`);
   await expect(page.getByText("A general project has no features")).toBeVisible();
 
+  // With no features, a task joins a plan directly, and the Roadmap counts it.
+  await ui.api("POST", "/api/milestones", { title: "Spring launch" });
+  await page.getByRole("button", { name: "New task" }).click();
+  const form = page.getByRole("dialog", { name: "New task" });
+  await form.getByLabel("Title").fill("Print the programme");
+  await form.getByLabel("Plan").selectOption({ label: "Spring launch" });
+  await form.getByRole("button", { name: "Create task" }).click();
+  await expect(form).toHaveCount(0);
+  await page.getByRole("link", { name: "Roadmap", exact: true }).click();
+  await expect(page.locator("article").filter({ hasText: "Spring launch" })).toContainText(
+    "0/1 tasks done",
+  );
+
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await page.getByRole("radio", { name: /Software project/u }).check();
   await expect(nav.getByRole("link", { name: "Features", exact: true })).toBeVisible();

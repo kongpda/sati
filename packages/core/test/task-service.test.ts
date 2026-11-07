@@ -3,6 +3,7 @@ import {
   claimTask,
   completeTask,
   createFeature,
+  createMilestone,
   createTask,
   ensureActor,
   getRecord,
@@ -144,6 +145,18 @@ describe("completeTask", () => {
     await expect(
       completeTask(ctx, t.id, { summary: "ok", filesTouched: [] }),
     ).rejects.toMatchObject({ code: "VALIDATION" });
+    await expect(completeTask(ctx, t.id, { summary: "ok" })).rejects.toMatchObject({
+      code: "VALIDATION",
+    });
+  });
+
+  it("needs no files in a general project, where work is often not in files", async () => {
+    const { ctx } = await setup();
+    await updateSettings(ctx, { kind: "general" });
+    const t = await createTask(ctx, { title: "Call the caterer" });
+    await updateTask(ctx, t.id, { status: "in_progress" });
+    const done = await completeTask(ctx, t.id, { summary: "Booked for 80 guests." });
+    expect(done.completion?.filesTouched).toEqual([]);
   });
 
   it("records who finished it, releases the claim and unblocks dependents", async () => {
@@ -193,6 +206,38 @@ describe("listTasks", () => {
     await expect(listTasks(ctx, { status: ["nope"] })).rejects.toMatchObject({
       code: "VALIDATION",
     });
+  });
+});
+
+describe("task milestones", () => {
+  it("lists a milestone's own tasks and its features' tasks, and checks the link", async () => {
+    const { ctx } = await setup();
+    const launch = await createMilestone(ctx, { title: "Spring launch" });
+    const other = await createMilestone(ctx, { title: "Autumn" });
+    const feature = await createFeature(ctx, { title: "Tickets", milestoneId: launch.id });
+    const venue = await createTask(ctx, {
+      title: "Book the venue",
+      milestoneId: launch.id,
+      subtasks: [{ title: "Visit two halls" }],
+    });
+    await createTask(ctx, { title: "Sell tickets", featureId: feature.id });
+    await createTask(ctx, { title: "Plan autumn", milestoneId: other.id });
+    await createTask(ctx, { title: "Unplanned" });
+    const titles = async (input: object) =>
+      (await listTasks(ctx, { milestoneId: launch.id, ...input })).map((t) => t.title).sort();
+    // Subtasks join their parent's plan.
+    expect(await titles({})).toEqual(["Book the venue", "Sell tickets", "Visit two halls"]);
+    expect(await titles({ ready: true })).toEqual([
+      "Book the venue",
+      "Sell tickets",
+      "Visit two halls",
+    ]);
+    // Clearing the link takes the task out of the plan; a missing milestone is refused.
+    await updateTask(ctx, venue.id, { milestoneId: null });
+    expect(await titles({})).toEqual(["Sell tickets", "Visit two halls"]);
+    await expect(
+      createTask(ctx, { title: "x", milestoneId: "mil_01M6GMFKG0QFF1E44RZG05GC7W" }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });
 

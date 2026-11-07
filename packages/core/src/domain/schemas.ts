@@ -139,7 +139,8 @@ export type Priority = z.infer<typeof Priority>;
 
 export const Completion = z.strictObject({
   summary: z.string().trim().min(1).max(LIMITS.shortText),
-  filesTouched: list(pathGlob).min(1),
+  /** At least one in a code project (checked by `completeTask`); a general one may touch none. */
+  filesTouched: list(pathGlob),
   completedAt: ts,
   completedBy: ActorId,
 });
@@ -179,6 +180,8 @@ export const TaskShape = z.strictObject({
   /** Who should do it, people or agents. The claim says who is doing it right now. */
   assigneeIds: list(ActorId).optional(),
   checklist: z.array(ChecklistItem).max(100).optional(),
+  /** The plan it belongs to, for tasks without a feature (a general project has none). */
+  milestoneId: MilestoneId.nullable().optional(),
 });
 
 export const Task = TaskShape.refine((t) => t.status !== "done" || t.completion !== null, {

@@ -16,6 +16,8 @@ export interface Task {
   needsReview?: boolean;
   completion: { summary: string; filesTouched: string[]; completedBy: string } | null;
   dueDate?: string | null;
+  /** The plan it belongs to directly; a task can also be in one through its feature. */
+  milestoneId?: string | null;
   assigneeIds?: string[];
   checklist?: { text: string; done: boolean }[];
 }

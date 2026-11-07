@@ -10,6 +10,7 @@ import {
   createTask,
   ensureActor,
   fixedClock,
+  GENERAL_WORKFLOW,
   initProject,
   type ServiceContext,
   shortHandle,
@@ -103,6 +104,8 @@ describe("MCP server", () => {
     expect((await client.listResourceTemplates()).resourceTemplates).toEqual([]);
     const prompts = (await client.listPrompts()).prompts.map((p) => p.name).sort();
     expect(prompts).toEqual(["finish-task", "start-task"]);
+    const workflow = await client.readResource({ uri: "sati://workflow" });
+    expect(workflow.contents[0]).toMatchObject({ text: GENERAL_WORKFLOW });
   });
 
   // PLAN Phase 7a: agents write and read notes, not only search them.
@@ -279,10 +282,10 @@ describe("MCP server", () => {
     const client = await connect();
     const bad = await client.callTool({
       name: "task_complete",
-      arguments: { id: "tsk_000000", summary: "x" },
+      arguments: { id: "tsk_000000", filesTouched: ["a.ts"] },
     });
     expect(bad.isError).toBe(true);
-    expect(JSON.stringify(bad.content)).toContain("filesTouched");
+    expect(JSON.stringify(bad.content)).toContain("summary");
     // Input that passes the schema but fails in core keeps the code and hint.
     const missing = await call(client, "task_claim", { id: "tsk_000000" });
     expect(missing.body.error).toMatchObject({ code: "NOT_FOUND", hint: expect.any(String) });

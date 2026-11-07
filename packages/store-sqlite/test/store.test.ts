@@ -122,6 +122,27 @@ describe("queries", () => {
     expect(reversed.map((t) => t.id)).toEqual([low.id, urgent.id]);
   });
 
+  it("finds a milestone's tasks directly or through their feature, and no others", async () => {
+    const M = "mil_01JC0000000000000000000001";
+    const F = "feat_01JC000000000000000000001";
+    const own = task({ milestoneId: M });
+    const viaFeature = task({ featureId: F });
+    const elsewhere = task({ milestoneId: "mil_01JC0000000000000000000002" });
+    const loose = task();
+    await store.write(async (w) => {
+      for (const t of [own, viaFeature, elsewhere, loose]) await w.insert("task", t);
+    });
+    const ids = async (featureIds: string[]) =>
+      (
+        await store.read((r) =>
+          r.list("task", PROJECT_ID, { inMilestone: { milestoneId: M, featureIds } }),
+        )
+      ).map((t) => t.id);
+    expect((await ids([F])).sort()).toEqual([own.id, viaFeature.id].sort());
+    // A milestone with no features still finds its own tasks.
+    expect(await ids([])).toEqual([own.id]);
+  });
+
   it("finds records by short-handle suffix", async () => {
     const t = task();
     await store.write((w) => w.insert("task", t));

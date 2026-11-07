@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ago, type Decision, type Milestone, type Note, type Snapshot } from "./api.js";
-import { Assignees, DecisionForm, MilestoneForm, NoteForm, PlanSelect } from "./forms.js";
+import { Assignees, DecisionForm, MilestoneForm, NoteForm, PlanForm, PlanSelect } from "./forms.js";
 import { Markdown } from "./markdown.js";
 import { Avatar, nameOf, personName } from "./people.js";
 import { isThreadNote, Thread, threadOf } from "./thread.js";
@@ -159,13 +159,19 @@ export function Features({
 export function Roadmap({ data, onSaved }: { data: Snapshot; onSaved: (message: string) => void }) {
   // "new" opens an empty form; a milestone opens it to edit that one.
   const [editing, setEditing] = useState<Milestone | "new" | null>(null);
+  const [planning, setPlanning] = useState(false);
   return (
     <div className="page">
       <div className="page-head">
         <h1>Roadmap</h1>
-        <button type="button" className="primary" onClick={() => setEditing("new")}>
-          New milestone
-        </button>
+        <div className="page-actions">
+          <button type="button" onClick={() => setEditing("new")}>
+            New milestone
+          </button>
+          <button type="button" className="primary" onClick={() => setPlanning(true)}>
+            New plan
+          </button>
+        </div>
       </div>
       <div className="timeline">
         {data.milestones.map((m) => (
@@ -204,10 +210,20 @@ export function Roadmap({ data, onSaved }: { data: Snapshot; onSaved: (message: 
         })}
         {data.milestones.length === 0 ? (
           <p className="empty">
-            No milestones yet. Add one with New milestone, or ask your agent to plan the roadmap.
+            No milestones yet. Start one from a template with New plan, add one with New milestone,
+            or ask your agent to plan the roadmap.
           </p>
         ) : null}
       </div>
+      {planning ? (
+        <PlanForm
+          onClose={() => setPlanning(false)}
+          onSaved={(title, tasks) => {
+            setPlanning(false);
+            onSaved(`Created ${title} with ${tasks} tasks.`);
+          }}
+        />
+      ) : null}
       {editing ? (
         <MilestoneForm
           milestone={editing === "new" ? undefined : editing}

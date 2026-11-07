@@ -20,5 +20,6 @@ export * from "./shell-changes.js";
 export * from "./similar.js";
 export * from "./sync.js";
 export * from "./task.js";
+export * from "./template.js";
 export * from "./undo.js";
 export * from "./worktree.js";

@@ -1197,3 +1197,26 @@ button.danger {
     flex: 1 1 140px;
   }
 }
+
+/* New plan: one choice per template, then what the chosen one will create. */
+.dialog-choices.plan-templates {
+  max-height: none;
+}
+.dialog-form .dialog-choices label.plan-template {
+  align-items: flex-start;
+  padding: 4px 0;
+}
+.plan-template > span {
+  display: flex;
+  flex-direction: column;
+}
+.palette form.dialog-form .dialog-choices .plan-template input {
+  margin-top: 3px;
+}
+.plan-stages p,
+.plan-stages ol {
+  margin: 0 0 4px;
+}
+.plan-stages ol {
+  padding-left: 20px;
+}

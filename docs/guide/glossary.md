@@ -28,6 +28,32 @@ scripts and agents do not break. This table maps one to the other; the board's w
 | Changes, Copy changelog | `sati changes --format changelog`, MCP `changes` | What changed in a time range. The changelog uses each task's release note (`--release-note`), falling back to its summary, and leaves out tasks labelled `internal`. |
 | Since my last visit | `--since last-session` | From your previous session's last write; for an agent, its previous session with the same name. |
 | Copy feature list | `sati feature list --format md` | Shipped features with their acceptance criteria, by plan. |
+| New plan | `sati template apply <name>`, MCP `roadmap_upsert` with `template` | A milestone and its tasks from a template (event, campaign, release, or `.sati/templates/<name>.md`). Each stage waits for the one before; due dates count back from the day. |
 
 Times on the board are in your own time zone and clock style, with the full date in the
 tooltip. Due dates are calendar days ("by Friday") and never shift between time zones.
+
+## Writing a template
+
+A template is a Markdown file in `.sati/templates/<name>.md`, committed with the project. A file
+named like a starter (`event`, `campaign`, `release`) replaces it. `sati template show event`
+prints a starter to copy.
+
+```markdown
+# Team offsite
+Goal: Two days away, everyone back rested.
+Labels: offsite
+
+## Travel (-2w)
+- [ ] Book the bus
+  - [ ] Ask three companies for quotes
+- [ ] Collect dietary needs
+
+## After (+3d)
+- [ ] Share the photos
+```
+
+`(-2w)`, `(-10d)`, `(0d)` and `(+3d)` place a stage before or after the plan's day. An indented
+`- [ ]` is a checklist step of the task above it. Other lines are ignored, so notes for the next
+editor can stay in the file.
+

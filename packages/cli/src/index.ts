@@ -31,6 +31,7 @@ const root = defineCommand({
     handoff: lazy(() => import("./commands/handoff.js")),
     milestone: lazy(() => import("./commands/milestone.js")),
     plan: lazy(() => import("./commands/plan.js")),
+    template: lazy(() => import("./commands/template.js")),
     activity: lazy(() => import("./commands/activity.js")),
     changes: lazy(() => import("./commands/changes.js")),
     undo: lazy(() => import("./commands/undo.js")),

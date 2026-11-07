@@ -3,8 +3,11 @@ import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mc
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import {
   AcquireLockInput,
+  ApplyTemplateInput,
   acquireLock,
   addComment,
+  applyTemplate,
+  availableTemplates,
   BriefInput,
   buildBrief,
   CHANGE_FORMATS,
@@ -54,6 +57,7 @@ import {
   search,
   shortHandle,
   type Task,
+  type TemplateFile,
   UpdateFeatureInput,
   UpdateMilestoneInput,
   UpdateNoteInput,
@@ -219,6 +223,8 @@ export function createServer(
   kind: ProjectKind = "code",
   /** The repo's root folder, so absolute paths inside it are accepted. */
   root?: string,
+  /** The project's own templates (`.sati/templates/`), read on each use; the starters are built in. */
+  templates: () => TemplateFile[] = () => [],
 ): McpServer {
   const server = new McpServer(
     { name: CLI_NAME, version },
@@ -226,7 +232,7 @@ export function createServer(
       instructions: `Shared project memory for agents. Start with ${CLI_NAME}_brief, claim a task before ${kind === "code" ? "coding" : "working on it"}, finish with task_complete. Every id field takes a full id or a short handle such as tsk_8f3k2a. Full rules: ${CLI_NAME}://workflow.`,
     },
   );
-  registerTools(server, ctx, kind);
+  registerTools(server, ctx, kind, templates);
   // A general project leaves them out, so agents never see them and their schemas cost no tokens.
   if (kind === "code") registerCodeTools(server, ctx, (p) => repoRelative(root, p));
   registerResources(server, ctx, kind);
@@ -234,7 +240,12 @@ export function createServer(
   return server;
 }
 
-function registerTools(server: McpServer, ctx: ServiceContext, kind: ProjectKind): void {
+function registerTools(
+  server: McpServer,
+  ctx: ServiceContext,
+  kind: ProjectKind,
+  templates: () => TemplateFile[],
+): void {
   const task = (ref: string) => resolveId(ctx, "task", ref);
 
   server.registerTool(
@@ -433,19 +444,50 @@ function registerTools(server: McpServer, ctx: ServiceContext, kind: ProjectKind
   server.registerTool(
     "roadmap_upsert",
     {
-      description:
-        "Create a milestone (no id) or update one (with id): title, goal, targetDate, status, order.",
+      description: `Create a milestone (no id) or update one (with id): title, goal, targetDate, status, order. To plan from a template, create with template (${availableTemplates(
+        templates(),
+      )
+        .map((t) => t.name)
+        .join(
+          ", ",
+        )}): it adds the milestone and its tasks in stages, each stage waiting for the one before, due dates counted back from targetDate. title defaults to the template's.`,
       inputSchema: UpdateMilestoneInput.extend({
         id: Ref.optional(),
         title: UpdateMilestoneInput.shape.title,
+        template: ApplyTemplateInput.shape.template.optional(),
       }),
     },
-    ({ id, ...input }) =>
-      run(async () =>
-        id === undefined
+    ({ id, template, ...input }) =>
+      run(async () => {
+        if (template !== undefined) {
+          const extra = input.status !== undefined || input.order !== undefined;
+          if (id !== undefined || extra || input.expectedVersion !== undefined) {
+            throw new SatiError(
+              "VALIDATION",
+              "A template creates a new plan: pass only template, title, goal and targetDate.",
+            );
+          }
+          const applied = await applyTemplate(ctx, templates(), {
+            template,
+            title: input.title,
+            goal: input.goal,
+            targetDate: input.targetDate ?? undefined,
+          });
+          // Short rows, like task_list: the agent needs ids and dates, not whole records.
+          return {
+            milestone: applied.milestone,
+            tasks: applied.tasks.map((t, i) => ({
+              id: shortHandle(applied.taskIds[i] ?? ""),
+              title: t.title,
+              stage: t.stage,
+              dueDate: t.dueDate,
+            })),
+          };
+        }
+        return id === undefined
           ? createMilestone(ctx, input)
-          : updateMilestone(ctx, await resolveId(ctx, "milestone", id), input),
-      ),
+          : updateMilestone(ctx, await resolveId(ctx, "milestone", id), input);
+      }),
   );
 }
 

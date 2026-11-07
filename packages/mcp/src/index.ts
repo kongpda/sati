@@ -1,5 +1,5 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import type { ProjectKind, ServiceContext } from "@sati/core";
+import type { ProjectKind, ServiceContext, TemplateFile } from "@sati/core";
 import { createServer } from "./server.js";
 
 export { createServer } from "./server.js";
@@ -10,8 +10,9 @@ export async function serveStdio(
   version?: string,
   kind?: ProjectKind,
   root?: string,
+  templates?: () => TemplateFile[],
 ): Promise<void> {
-  const server = createServer(ctx, version, kind, root);
+  const server = createServer(ctx, version, kind, root, templates);
   let stop: () => void = () => undefined;
   const closed = new Promise<void>((resolve) => {
     stop = resolve;

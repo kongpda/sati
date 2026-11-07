@@ -3,6 +3,7 @@ import { CONFIG_DIR, readSettings } from "@sati/core";
 import { defineCommand } from "citty";
 import pkg from "../../package.json" with { type: "json" };
 import { openRuntime, printError } from "../runtime.js";
+import { readTemplateFiles } from "../templates.js";
 
 /** Agents write in bursts; export once the burst is over. */
 const EXPORT_DEBOUNCE_MS = 2000;
@@ -15,9 +16,10 @@ export default defineCommand({
       // Loaded here so the MCP SDK never slows down the other commands.
       const { serveStdio } = await import("@sati/mcp");
       const { kind } = readSettings(project.settings);
+      const templates = () => readTemplateFiles(location.root);
       if (project.mode !== "git") {
         try {
-          await serveStdio(ctx, pkg.version, kind, location.root);
+          await serveStdio(ctx, pkg.version, kind, location.root, templates);
         } finally {
           await ctx.store.close();
         }
@@ -35,7 +37,13 @@ export default defineCommand({
         (err) => printError(err, false),
       );
       try {
-        await serveStdio({ ...ctx, store: synced.store }, pkg.version, kind, location.root);
+        await serveStdio(
+          { ...ctx, store: synced.store },
+          pkg.version,
+          kind,
+          location.root,
+          templates,
+        );
       } finally {
         await synced.flush();
         await ctx.store.close();

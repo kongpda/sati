@@ -5,6 +5,8 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import {
   addComment,
+  applyTemplate,
+  availableTemplates,
   CLI_NAME,
   createMilestone,
   createNote,
@@ -23,6 +25,8 @@ import {
   SatiError,
   type ServiceContext,
   type StorageAdapter,
+  summarize,
+  type TemplateFile,
   takeOverTask,
   updateFeature,
   updateMilestone,
@@ -112,6 +116,8 @@ export interface UiRuntime {
   dataStore?: StorageAdapter;
   /** Called after the project kind changes, to record it in the committed config. */
   onKind?: (kind: ProjectKind) => void;
+  /** The project's own templates (`.sati/templates/`); without it, only the starters. */
+  templates?: () => TemplateFile[];
 }
 
 /** A JSON request body. Malformed JSON is the client's mistake: 400, not a 500 "server failed". */
@@ -151,6 +157,8 @@ function openApi() {
         },
       },
       "/api/feature-list": { get: { summary: "Shipped features as Markdown" } },
+      "/api/templates": { get: { summary: "Plan templates: the starters and .sati/templates/" } },
+      "/api/templates/apply": { post: { summary: "Create a milestone and its tasks from one" } },
       "/api/tasks": { post: { summary: "Create a task" } },
       "/api/tasks/{id}": { patch: { summary: "Update a task" }, delete: { summary: "Delete" } },
       "/api/tasks/{id}/restore": { post: { summary: "Restore a deleted task" } },
@@ -347,6 +355,12 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
     });
   });
   app.get("/api/feature-list", async (c) => c.json({ markdown: await featureList(rt.ctx) }));
+  // The New plan menu: the same templates and the same apply as `sati template`.
+  const templateFiles = () => rt.templates?.() ?? [];
+  app.get("/api/templates", (c) => c.json(availableTemplates(templateFiles()).map(summarize)));
+  app.post("/api/templates/apply", async (c) =>
+    c.json(await applyTemplate(rt.ctx, templateFiles(), await body(c))),
+  );
 
   app.post("/api/tasks", async (c) => c.json(await createTask(rt.ctx, await body(c))));
   app.patch("/api/tasks/:id", async (c) => {

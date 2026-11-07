@@ -154,6 +154,16 @@ export interface ChangesFilter {
   actorId: string;
 }
 
+/** A plan template, as `sati template list --json` gives it. */
+export interface TemplateSummary {
+  name: string;
+  title: string;
+  goal: string;
+  source: string;
+  tasks: number;
+  stages: { title: string; offsetDays: number | null; tasks: number }[];
+}
+
 /** Records a person can delete from the board and bring back with Undo. */
 export type Deletable = "task" | "note" | "decision";
 
@@ -230,6 +240,12 @@ export const api = {
       `/api/changes?${new URLSearchParams(Object.entries(filter).filter(([, v]) => v !== ""))}`,
     ),
   featureList: () => request<{ markdown: string }>("/api/feature-list"),
+  templates: () => request<TemplateSummary[]>("/api/templates"),
+  applyTemplate: (body: { template: string; title?: string; targetDate?: string }) =>
+    request<{ milestone: Milestone; taskIds: string[] }>("/api/templates/apply", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   patchFeature: (id: string, body: Record<string, unknown>) =>
     request<Feature>(`/api/features/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
 };

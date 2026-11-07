@@ -11,6 +11,7 @@ import {
   doctorChecks,
   importPlan,
   isCompacted,
+  listRecords,
   listTasks,
   PRIORITY_RANK,
   shortHandle,
@@ -135,6 +136,17 @@ describe("importPlan", () => {
     const again = await importPlan(ctx, { markdown: md });
     expect(again.added).toEqual([]);
     expect(await listTasks(ctx, {})).toHaveLength(0);
+  });
+
+  // Each heading is a milestone; its tasks must belong to it, so "what is left for M?" works.
+  it("puts each task in its heading's milestone, also when re-run with new items", async () => {
+    const { ctx } = await setup();
+    await importPlan(ctx, { markdown: "# Venue\n- [ ] Book hall\n# Food\n- [ ] Pick menu\n" });
+    await importPlan(ctx, { markdown: "# Venue\n- [ ] Book hall\n- [ ] Pay deposit\n" });
+    const milestones = await listRecords(ctx, "milestone", {});
+    const venue = milestones.find((m) => m.title === "Venue")?.id;
+    const tasks = await listTasks(ctx, { milestoneId: venue });
+    expect(tasks.map((t) => t.title).sort()).toEqual(["Book hall", "Pay deposit"]);
   });
 
   it("rolls back everything when a write fails part-way", async () => {

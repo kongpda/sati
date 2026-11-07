@@ -1181,3 +1181,24 @@ notes only when the caller holds a task; handoffs stay out of it, as before.
   save: the Replace decision button did not respond to a quick click. While a dialog is open the
   toast now shows at the top of the screen. The decision flows went from 7.7 s to 1.9 s.
 
+## 2026-11-07 — Phase 7c: plan templates
+
+- A template is Markdown: `# Title`, `Goal:` and `Labels:` lines, `## Stage (-6w)` headings and
+  `- [ ]` tasks, with indented boxes as checklist steps. `applyTemplate` (core) writes the
+  milestone and every task in one transaction, after validating every input, so a refused
+  template leaves nothing. Each stage's tasks depend on all of the stage before, so only the first
+  stage is ready; with a target day, a task is due at its stage's offset.
+- Three starters are built in (event 18 tasks, campaign 14, release 18). A project's own files
+  in `.sati/templates/` replace or add to them. The CLI reads them on every call; only regular
+  files under 200 KB with a lowercase dash name are read, so a symlink in a cloned repo is never
+  followed. Core takes the files as data and does no I/O.
+- A second plan with the same name (case-insensitive) is a CONFLICT: applying a template twice by
+  accident would double every task.
+- One surface per client, no new tool: `sati template list|show|apply`, MCP `roadmap_upsert`
+  with `template` (its description lists the template names), and the Roadmap page's New plan
+  dialog over `GET /api/templates` and `POST /api/templates/apply`.
+- `.sati/templates/` is the one folder in `.sati/` people edit; the rules blocks and workflow say
+  so. Snapshot export and import only touch the record folders, so the templates are left alone.
+- Fixed while here: `sati plan import` created a milestone per heading but left its tasks
+  outside it. Each task now joins its heading's milestone.
+

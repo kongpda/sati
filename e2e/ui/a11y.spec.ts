@@ -105,6 +105,11 @@ for (const [device, viewport] of [
       const milestone = await new AxeBuilder({ page }).withTags(TAGS).analyze();
       expect(summary(milestone.violations)).toEqual([]);
       await page.keyboard.press("Escape");
+      await page.getByRole("button", { name: "New plan" }).click();
+      await expect(page.getByRole("radio", { name: /Event/ })).toBeVisible();
+      const plan = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+      expect(summary(plan.violations)).toEqual([]);
+      await page.keyboard.press("Escape");
       await page.getByRole("link", { name: "Decisions", exact: true }).click();
       await page.getByRole("button", { name: "Record decision", exact: true }).click();
       await expect(page.getByRole("dialog", { name: "Record decision" })).toBeVisible();

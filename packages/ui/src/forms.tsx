@@ -1,5 +1,14 @@
+import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
-import { api, type Decision, type Milestone, type Note, type Snapshot, type Task } from "./api.js";
+import {
+  api,
+  type Decision,
+  type Milestone,
+  type Note,
+  type Snapshot,
+  type Task,
+  type TemplateSummary,
+} from "./api.js";
 import { Avatar, personName } from "./people.js";
 import { capital, plainError, statusWord } from "./words.js";
 
@@ -544,5 +553,109 @@ export function PlanSelect({
         ))}
       </select>
     </label>
+  );
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/** "8 weeks before", "on the day", "3 days after": when a stage is due, from the plan's day. */
+export function offsetWords(days: number | null): string {
+  if (days === null) return "no due date";
+  if (days === 0) return "on the day";
+  const n = Math.abs(days);
+  const [count, unit] = n % 7 === 0 ? [n / 7, "week"] : [n, "day"];
+  return `${count} ${unit}${count === 1 ? "" : "s"} ${days < 0 ? "before" : "after"}`;
+}
+
+/**
+ * New plan: a template (event, campaign, release, or the project's own) becomes a milestone and
+ * its tasks in stages. The same apply as `sati template apply`, so both make the same plan.
+ */
+export function PlanForm({
+  onClose,
+  onSaved,
+}: {
+  onClose: () => void;
+  onSaved: (title: string, tasks: number) => void;
+}) {
+  const templates = useQuery({ queryKey: ["templates"], queryFn: api.templates });
+  const [chosen, setChosen] = useState<string>("");
+  const list = templates.data ?? [];
+  const current: TemplateSummary | undefined = list.find((t) => t.name === chosen) ?? list[0];
+  return (
+    <FormDialog
+      title="New plan"
+      submit="Create plan"
+      busy="Creating…"
+      onClose={onClose}
+      onSubmit={(form) => {
+        const template = text(form, "template");
+        const title = text(form, "title").trim();
+        const targetDate = text(form, "targetDate");
+        return api
+          .applyTemplate({
+            template,
+            ...(title ? { title } : {}),
+            ...(targetDate ? { targetDate } : {}),
+          })
+          .then((r) => onSaved(r.milestone.title, r.taskIds.length));
+      }}
+    >
+      <fieldset className="dialog-choices plan-templates">
+        <legend>Start from</legend>
+        {templates.isPending ? <p className="dialog-note">Loading templates…</p> : null}
+        {templates.error ? (
+          <p className="form-error" role="alert">
+            {plainError(templates.error)}
+          </p>
+        ) : null}
+        {list.map((t) => (
+          <label key={t.name} className="plan-template">
+            <input
+              type="radio"
+              name="template"
+              value={t.name}
+              required
+              checked={current?.name === t.name}
+              onChange={() => setChosen(t.name)}
+            />
+            <span>
+              <strong>{t.title}</strong>
+              <span className="dialog-note">
+                {plural(t.tasks, "task")} in {plural(t.stages.length, "stage")}
+                {t.source === "built-in" ? "" : ` · ${t.source}`}
+              </span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      {current ? (
+        <div className="dialog-note plan-stages">
+          {current.goal ? <p>{current.goal}</p> : null}
+          <ol>
+            {current.stages.map((s) => (
+              <li key={s.title}>
+                {s.title}: {plural(s.tasks, "task")}, {offsetWords(s.offsetDays)}
+              </li>
+            ))}
+          </ol>
+          <p>Each stage starts when the one before is done.</p>
+        </div>
+      ) : null}
+      <label>
+        Name
+        <input
+          className="field"
+          name="title"
+          maxLength={300}
+          placeholder={current ? current.title : "Spring fair"}
+        />
+      </label>
+      <label>
+        The day
+        <input className="field" type="date" name="targetDate" />
+        <span className="dialog-note">Due dates count back from it. Leave empty for none.</span>
+      </label>
+    </FormDialog>
   );
 }

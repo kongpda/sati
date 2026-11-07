@@ -27,7 +27,7 @@ interface Item {
   key: string;
 }
 
-/** One milestone per heading, one task per unchecked box. The key is heading plus item text. */
+/** One milestone per heading, one task per unchecked box in it. The key is heading plus item text. */
 export function parsePlan(markdown: string): Item[] {
   const items: Item[] = [];
   let heading = "Imported";
@@ -62,6 +62,10 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
       tasks: await listAll(w, ctx, "task", { includeDeleted: true }),
     };
     const result: PlanImport = { added: [], skipped: [] };
+    // Live milestones only: a task must not land in a deleted one.
+    const milestoneIds = new Map(
+      existing.milestones.filter((m) => m.deletedAt === null).map((m) => [m.title, m.id]),
+    );
     const milestoneTitles = new Set(existing.milestones.map((m) => m.title));
     const taskKeys = new Set(
       existing.tasks.flatMap((t) => t.labels.filter((l) => l.startsWith("plan:"))),
@@ -74,7 +78,8 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
         continue;
       }
       result.added.push({ kind: "milestone", title, key });
-      if (write) await createMilestoneIn(write, ctx, { title, goal: "" });
+      if (write)
+        milestoneIds.set(title, (await createMilestoneIn(write, ctx, { title, goal: "" })).id);
     }
     for (const item of items) {
       const label = `plan:${item.key}`;
@@ -85,7 +90,14 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
       }
       result.added.push(change);
       taskKeys.add(label);
-      if (write) await createTaskIn(write, ctx, { title: item.title, labels: [label] });
+      const milestoneId = milestoneIds.get(item.heading);
+      if (write) {
+        await createTaskIn(write, ctx, {
+          title: item.title,
+          labels: [label],
+          ...(milestoneId ? { milestoneId } : {}),
+        });
+      }
     }
     return result;
   };

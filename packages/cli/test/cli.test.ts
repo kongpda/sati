@@ -1,4 +1,6 @@
 import { spawnSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { bin, run, sati, satiJson, tempRepo } from "./helpers.js";
 
@@ -132,6 +134,41 @@ describe("sati CLI", () => {
     const md = sati(dir, "feature", "list", "--format", "md");
     expect(md.stdout).toBe("# Demo features\n\n### Search\n\n- Typos match\n");
     expect(sati(dir, "feature", "list", "--format", "csv").code).toBe(2);
+  });
+
+  it("applies a template, with the project's own from .sati/templates/", async () => {
+    const dir = await tempRepo({ init: true });
+    const dry = sati(dir, "template", "apply", "campaign", "--date", "2027-01-31", "--dry-run");
+    expect(dry.stdout).toContain("Would create Marketing campaign with 14 tasks");
+    expect(satiJson<Rec[]>(dir, "milestone", "list").data).toEqual([]);
+
+    mkdirSync(join(dir, ".sati", "templates"), { recursive: true });
+    writeFileSync(
+      join(dir, ".sati", "templates", "offsite.md"),
+      "# Offsite\n## Go (-1w)\n- [ ] Book bus\n  - [ ] Get quotes\n",
+    );
+    expect(sati(dir, "template", "list").stdout).toContain(
+      "offsite      Offsite (1 task in 1 stage, .sati/templates/offsite.md)",
+    );
+    const made = satiJson<{ milestone: Rec; taskIds: string[] }>(
+      dir,
+      "template",
+      "apply",
+      "offsite",
+      "--date",
+      "2027-01-31",
+    );
+    expect(made.code).toBe(0);
+    const task = satiJson<Rec>(dir, "task", "show", made.data.taskIds[0] ?? "").data;
+    expect(task).toMatchObject({
+      title: "Book bus",
+      dueDate: "2027-01-24",
+      milestoneId: made.data.milestone.id,
+      checklist: [{ text: "Get quotes", done: false }],
+    });
+    expect(sati(dir, "template", "apply", "offsite").code).toBe(4);
+    expect(sati(dir, "template", "apply", "wedding").code).toBe(3);
+    expect(sati(dir, "template", "show", "release").stdout).toContain("## Freeze (-1w)");
   });
 
   // The Stop hook blocks once while the agent holds a claim, then lets the stop through.

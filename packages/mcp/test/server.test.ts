@@ -255,6 +255,39 @@ describe("MCP server", () => {
     expect(bad.text).toContain("VALIDATION");
   });
 
+  // PLAN Phase 7c: "plan our release for March 20" is one call, with the project's own templates.
+  it("plans from a template through roadmap_upsert, refusing fields a template ignores", async () => {
+    const own = {
+      name: "offsite",
+      markdown: "# Offsite\n## Travel (-3d)\n- [ ] Book the bus\n",
+      source: ".sati/templates/offsite.md",
+    };
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    await createServer(ctx, undefined, "general", undefined, () => [own]).connect(serverSide);
+    const client = new Client({ name: "test", version: "0" });
+    await client.connect(clientSide);
+    const tool = (await client.listTools()).tools.find((t) => t.name === "roadmap_upsert");
+    expect(tool?.description).toContain("campaign, event, offsite, release");
+
+    const plan = await call(client, "roadmap_upsert", {
+      template: "release",
+      title: "v2",
+      targetDate: "2027-03-20",
+    });
+    expect(plan.body.milestone).toMatchObject({ title: "v2", targetDate: "2027-03-20" });
+    expect(plan.body.tasks).toHaveLength(18);
+    expect(plan.body.tasks[0]).toEqual({
+      id: expect.stringMatching(/^tsk_[0-9a-z]{6}$/u),
+      title: "Agree what is in and out of this release",
+      stage: "Scope",
+      dueDate: "2027-02-20",
+    });
+    const mine = await call(client, "roadmap_upsert", { template: "offsite" });
+    expect(mine.body.tasks).toEqual([expect.objectContaining({ dueDate: null, stage: "Travel" })]);
+    const bad = await call(client, "roadmap_upsert", { template: "event", status: "active" });
+    expect(bad).toMatchObject({ isError: true, body: { error: { code: "VALIDATION" } } });
+  });
+
   // Two agents must never hold one task; the loser needs the holder's name to coordinate.
   // The agent decides what to do with a likely duplicate; the tool only has to show it.
   // PLAN Phase 7a: "what is left for the launch?" is one call. Tasks belong to a milestone

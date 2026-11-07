@@ -1,0 +1,24 @@
+{
+  "consequences": "No new MCP tool or schema; agents see template names in the tool description. .sati/templates/ is the one folder people edit by hand; rules and workflow say so.",
+  "context": "Phase 7c: event, campaign and release plans. Options: event-specific screens, a template_apply MCP tool, or a template option on the existing roadmap_upsert.",
+  "createdAt": "2026-11-07T13:48:52.288Z",
+  "createdBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
+  "decision": "Templates are Markdown in .sati/templates/ (three starters built in). Applying one creates a milestone and staged tasks in one transaction. MCP uses roadmap_upsert with template; CLI sati template; UI New plan. A same-named plan is refused.",
+  "deletedAt": null,
+  "featureIds": [],
+  "id": "dec_01M6V49TP09QGBV2GBZ3P5FCTC",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "consequences": "2026-11-07T13:48:52.291Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "context": "2026-11-07T13:48:52.291Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "decision": "2026-11-07T13:48:52.291Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "deletedAt": "2026-11-07T13:48:52.291Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "featureIds": "2026-11-07T13:48:52.291Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "supersedes": "2026-11-07T13:48:52.291Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "title": "2026-11-07T13:48:52.291Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+  },
+  "supersedes": null,
+  "title": "Templates are Markdown files applied through roadmap_upsert, not a new tool",
+  "updatedAt": "2026-11-07T13:48:52.288Z",
+  "version": 1
+}

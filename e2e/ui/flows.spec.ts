@@ -817,3 +817,56 @@ test("Changes shows done work by day, filters it and copies the changelog", asyn
   ui.sati("settings", "--review", "agents");
   expect(await problems()).toEqual([]);
 });
+
+// PLAN Phase 7c: a person starts an event plan from a template on the board, and an agent's
+// `sati template apply` makes the same plan.
+test("New plan creates a milestone and its staged tasks from a template", async ({ page }) => {
+  const problems = await watch(page);
+  await page.goto(ui.signIn);
+  await page.getByRole("link", { name: "Roadmap", exact: true }).click();
+  await page.getByRole("button", { name: "New plan" }).click();
+  const dialog = page.getByRole("dialog", { name: "New plan" });
+  await dialog.getByRole("radio", { name: /Event/ }).check();
+  await expect(dialog.getByText("Plan: 3 tasks, 8 weeks before")).toBeVisible();
+  await dialog.getByLabel("Name").fill("Summer fair");
+  await dialog.getByLabel("The day").fill("2027-03-20");
+  await dialog.getByRole("button", { name: "Create plan" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("status")).toContainText("Created Summer fair with 18 tasks.");
+  await expect(page.getByRole("heading", { name: "Summer fair" })).toBeVisible();
+  await expect(page.getByText("0/18 tasks done")).toBeVisible();
+
+  const plan = ui
+    .sati<{ id: string; title: string; targetDate: string }[]>("milestone", "list")
+    .find((m) => m.title === "Summer fair");
+  expect(plan?.targetDate).toBe("2027-03-20");
+  const tasks = ui.sati<{ title: string; dueDate?: string; dependsOn: string[] }[]>(
+    "task",
+    "list",
+    "--milestone",
+    plan?.id ?? "",
+    "--limit",
+    "500",
+  );
+  expect(tasks.find((t) => t.title === "Draft the guest list")?.dueDate).toBe("2027-01-23");
+  expect(tasks.find((t) => t.title === "Book catering")?.dependsOn).toHaveLength(3);
+
+  // The CLI makes the same plan, and a second plan of the same name is refused in the dialog.
+  const cli = ui.sati<{ tasks: unknown[] }>(
+    "template",
+    "apply",
+    "event",
+    "--title",
+    "Winter fair",
+    "--date",
+    "2027-03-20",
+  );
+  expect(cli.tasks).toHaveLength(18);
+  await page.getByRole("button", { name: "New plan" }).click();
+  await dialog.getByRole("radio", { name: /Event/ }).check();
+  await dialog.getByLabel("Name").fill("summer FAIR");
+  await dialog.getByRole("button", { name: "Create plan" }).click();
+  await expect(dialog.getByRole("alert")).toContainText("already exists");
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  expect(await problems()).toEqual([]);
+});

@@ -182,6 +182,24 @@ describe("sati CLI", () => {
     expect(sati(dir, "search", "nothing-here").stdout).toContain("No matches.");
   });
 
+  it("comments on a task by handle and lists the thread with the author's name", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = satiJson<{ id: string }>(dir, "task", "create", "Book venue").data;
+    const handle = `tsk_${t.id.slice(-6).toLowerCase()}`;
+    expect(sati(dir, "comment", "add", handle, "Ask for the hall on level 2").stdout).toMatch(
+      /^Commented on tsk_/,
+    );
+    const thread = sati(dir, "comment", "list", handle).stdout;
+    expect(thread).toContain("tester");
+    expect(thread).toContain("  Ask for the hall on level 2");
+    const bad = sati(dir, "comment", "add", "feat_zzzzzz", "x");
+    expect(bad).toMatchObject({
+      code: 5,
+      stderr: expect.stringContaining("task, note or decision"),
+    });
+    expect(sati(dir, "comment", "list", t.id).stdout).not.toContain("No comments");
+  });
+
   it("reports usage errors with exit code 2, as JSON when asked", async () => {
     const dir = await tempRepo({ init: true });
     const missing = sati(dir, "task", "create");

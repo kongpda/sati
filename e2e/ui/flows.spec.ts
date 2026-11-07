@@ -334,6 +334,67 @@ test("edits, pins, tags and deletes notes, and undoes deletes", async ({ page })
   expect(await problems()).toEqual([]);
 });
 
+// PLAN Phase 7a: people and agents talk on a task, note or decision; agents read it in the brief.
+test("comments on a task, a note and a decision, and deletes one with Undo", async ({ page }) => {
+  const problems = await watch(page);
+  const t = await ui.api<{ id: string }>("POST", "/api/tasks", { title: "Print the flyers" });
+  ui.sati("comment", "add", t.id, "The printer opens at **9**.");
+  await page.goto(ui.signIn);
+  await page.goto(`${ui.origin}/?task=${t.id}`);
+  const sheet = page.getByRole("dialog", { name: "Print the flyers" });
+  const thread = sheet.getByRole("region", { name: /^Comments/u });
+  await expect(thread.getByRole("heading", { name: "Comments · 1" })).toBeVisible();
+  await expect(thread.locator("strong", { hasText: "9" })).toBeVisible();
+
+  // Ctrl+Enter sends; the box empties and the comment shows under your name.
+  const box = thread.getByLabel("Add a comment");
+  await box.fill("Use the matte paper");
+  await box.press("Control+Enter");
+  await expect(thread.getByRole("heading", { name: "Comments · 2" })).toBeVisible();
+  await expect(box).toHaveValue("");
+  await expect(thread.locator("li").last()).toContainText("Use the matte paper");
+  await thread
+    .getByRole("button", { name: /^Delete your comment/u })
+    .last()
+    .click();
+  await expect(page.locator(".toast")).toContainText("Deleted the comment.");
+  await expect(thread.getByRole("heading", { name: "Comments · 1" })).toBeVisible();
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(thread.getByRole("heading", { name: "Comments · 2" })).toBeVisible();
+  const said = ui.sati<{ body: string }[]>("comment", "list", t.id).map((c) => c.body);
+  expect(said).toEqual(["The printer opens at **9**.", "Use the matte paper"]);
+  await page.keyboard.press("Escape");
+
+  // On list pages the thread is folded; comments are not listed as notes of their own.
+  await ui.api("POST", "/api/notes", { title: "Supplier list" });
+  await page.getByRole("link", { name: "Notes", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 2, name: /^Comment on/u })).toHaveCount(0);
+  const note = page.locator("article").filter({ hasText: "Supplier list" });
+  await expect(note.getByLabel("Add a comment")).toBeHidden();
+  await note.getByText("Comments", { exact: true }).click();
+  await note.getByLabel("Add a comment").fill("Ask for two quotes");
+  await note.getByRole("button", { name: "Comment", exact: true }).click();
+  await expect(note.getByText("Comments · 1")).toBeVisible();
+  await expect(note.getByLabel("Add a comment")).toBeVisible();
+
+  await ui.api("POST", "/api/decisions", {
+    title: "Print locally",
+    decision: "Use the shop nearby.",
+  });
+  await page.getByRole("link", { name: "Decisions", exact: true }).click();
+  const dec = page.locator("article").filter({ hasText: "Print locally" });
+  await dec.getByText("Comments", { exact: true }).click();
+  await dec.getByLabel("Add a comment").fill("Agreed");
+  await dec.getByRole("button", { name: "Comment", exact: true }).click();
+  await expect(dec.getByText("Comments · 1")).toBeVisible();
+
+  await page.getByRole("link", { name: "Activity", exact: true }).click();
+  await expect(
+    page.locator("article").filter({ hasText: "commented on Print locally" }).first(),
+  ).toBeVisible();
+  expect(await problems()).toEqual([]);
+});
+
 // PLAN Phase 7a: a person plans a task with a due date, who should do it, and its steps.
 test("plans a task with a due date, an assignee and a checklist", async ({ page }) => {
   const problems = await watch(page);

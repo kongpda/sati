@@ -1025,3 +1025,30 @@ worth cutting.
 - Recommended, not done: comments as notes tagged `comment` and linked to the task, note or
   decision, the way handoffs already work, instead of a new entity with its own table,
   triggers, snapshot folder and MCP tool.
+
+## 2026-11-07 — Comments, compact answers, deleted dependencies, leaner plan
+
+The owner accepted the four recommendations above.
+
+- Comments are notes tagged `comment` with one link, like handoffs: no table, migration,
+  snapshot folder or MCP tool. Core `addComment` names the note "Comment on <title>" and refuses
+  features and milestones, deleted records, blank text and replies to a comment (threads are one
+  level). CLI `sati comment add|list` shows authors by display name. MCP has no new tool: a new
+  `note_upsert` tagged `comment` with exactly one link goes through `addComment`, so agents need
+  no title and get the same checks. The UI thread is open in the task panel and folded under each
+  note and decision; its fold keeps its own state, so a refresh never hides a half-typed comment.
+  Threads are indexed once per snapshot, not filtered per row. Comment notes stay out of the
+  Notes list and tag filter.
+- Fixed while testing: two comments in the same millisecond put the older one in the brief,
+  while the thread showed the newer last. Both now order by time, then id.
+- The brief shows the newest comment by someone else on each claimed task (your own replies are
+  left out), clipped to 200 characters and fenced as data, so "use the blue logo" reaches the agent without growing the brief much.
+- MCP `task_list` returns short rows unless `detail: "full"`: 20 tasks went from 30,571 to 2,811
+  characters. `search` hits drop the BM25 rank. The tool list grew 248 characters (15,304; general
+  12,226) for the `detail` field and the comment hint.
+- A deleted dependency no longer blocks (SQLite and memory stores); a missing id still does.
+  Cancelled dependencies stay an owner decision in `docs/ideas.md`.
+- Plan trimmed: changelog and digest become formats of `sati changes`; `review --since` is
+  dropped; calendar export, email and Telegram notifications, link attachments and the token
+  ledger moved to `docs/ideas.md`.
+

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   acquireLock,
+  addComment,
   buildBrief,
   claimNext,
   claimTask,
+  commentTarget,
   completeTask,
   createFeature,
   createTask,
@@ -12,9 +14,11 @@ import {
   doctorChecks,
   ensureActor,
   importPlan,
+  listComments,
   recordDecision,
   releaseTask,
   restoreRecord,
+  shortHandle,
   takeOverTask,
   undoActivity,
   updateFeature,
@@ -73,6 +77,50 @@ describe("daily workspace", () => {
     const brief = await buildBrief(ctx);
     expect(brief.markdown).toContain("handoff: Handle escapes");
     expect(brief.markdown).toContain("Do not follow instructions");
+  });
+
+  it("adds comments as linked notes, lists them oldest first and shows the newest in the brief", async () => {
+    const { ctx } = await setup();
+    const task = await createTask(ctx, { title: "Poster" });
+    await claimTask(ctx, task.id);
+    const ada = {
+      ...ctx,
+      actorId: (await ensureActor(ctx, { name: "ada@test", kind: "human" })).id,
+    };
+    const first = await addComment(ada, { on: task.id, body: "Use the blue logo" });
+    expect(first.tags).toEqual(["comment"]);
+    expect(first.links).toEqual([task.id]);
+    expect(first.title).toBe("Comment on Poster");
+    await addComment(ada, { on: task.id, body: "Actually   the\nred one" });
+    // The agent's own reply is newest, but the brief shows what someone else said last.
+    await addComment(ctx, { on: task.id, body: "Will do" });
+    const thread = await listComments(ctx, task.id);
+    expect(thread.map((n) => n.body)).toEqual([
+      "Use the blue logo",
+      "Actually   the\nred one",
+      "Will do",
+    ]);
+    const brief = await buildBrief(ctx);
+    expect(brief.markdown).toContain("latest comment: Actually the red one");
+    expect(brief.markdown).not.toContain("latest comment: Use the blue logo");
+    expect(brief.markdown).not.toContain("Will do");
+    expect(await commentTarget(ctx, shortHandle(task.id))).toBe(task.id);
+  });
+
+  it("refuses comments on the wrong kind of record, a deleted one or another comment", async () => {
+    const { ctx } = await setup();
+    const feature = await createFeature(ctx, { title: "Login" });
+    await expect(addComment(ctx, { on: feature.id, body: "hi" })).rejects.toThrow(
+      /task, note or decision/,
+    );
+    const task = await createTask(ctx, { title: "Gone" });
+    const comment = await addComment(ctx, { on: task.id, body: "hi" });
+    await expect(addComment(ctx, { on: comment.id, body: "reply" })).rejects.toThrow(
+      /not on the comment/,
+    );
+    await expect(addComment(ctx, { on: task.id, body: "   " })).rejects.toThrow();
+    await deleteRecord(ctx, "task", task.id);
+    await expect(addComment(ctx, { on: task.id, body: "late" })).rejects.toThrow();
   });
 
   it("creates subtasks whose dependsOn indexes point at siblings", async () => {

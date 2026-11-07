@@ -153,7 +153,7 @@ characters per token), stated as such.
    `detail`, `recall` in core, CLI and MCP, with the 1,000-token cap.
 3. **Private and pinned (0.5 week).** `private` on notes and cards, export and sync skip them,
    pinned notes in the brief.
-4. **Token ledger and UI (0.5 week).** Ledger, `stats tokens`, Memory page, Ask box, pinned notes
+4. **Token ledger and UI (0.5 week; the ledger moved to `docs/ideas.md` on 2026-11-07).** Ledger, `stats tokens`, Memory page, Ask box, pinned notes
    on the board; Playwright and axe.
 
 ## Gate

@@ -133,6 +133,24 @@ describe("MCP server", () => {
     expect(untitled).toMatchObject({ isError: true, body: { error: { code: "VALIDATION" } } });
   });
 
+  // A comment is a note tagged comment and linked to its record; a short handle link is resolved.
+  it("adds a comment by linking a note to a task's short handle", async () => {
+    const task = await createTask(ctx, { title: "Poster" });
+    const client = await connect();
+    const comment = await call(client, "note_upsert", {
+      body: "Use the blue logo",
+      tags: ["comment"],
+      links: [shortHandle(task.id)],
+    });
+    expect(comment.body).toMatchObject({
+      title: "Comment on Poster",
+      tags: ["comment"],
+      links: [task.id],
+    });
+    const bad = await call(client, "note_upsert", { body: "x", links: ["tsk_zzzzzz"] });
+    expect(bad).toMatchObject({ isError: true, body: { error: { code: "NOT_FOUND" } } });
+  });
+
   // The gate: an agent finishes a real task end to end using only sati tools.
   it("runs a task from create through claim and update to complete, by short handle", async () => {
     const client = await connect();
@@ -142,6 +160,12 @@ describe("MCP server", () => {
 
     const ready = await call(client, "task_list", { ready: true });
     expect(ready.body.map((t: { id: string }) => t.id)).toEqual([created.body.id]);
+    // Rows are short by default so a long list stays cheap; detail "full" returns whole tasks.
+    expect(ready.body[0]).toMatchObject({ title: "Add login", priority: "high", version: 1 });
+    expect(ready.body[0]).not.toHaveProperty("body");
+    expect(ready.body[0]).not.toHaveProperty("stamps");
+    const full = await call(client, "task_list", { ready: true, detail: "full" });
+    expect(full.body[0]).toHaveProperty("body");
 
     const claimed = await call(client, "task_claim", { id: handle });
     expect(claimed.body).toMatchObject({ status: "in_progress", claim: { actorId: ctx.actorId } });
@@ -351,6 +375,7 @@ describe("MCP server", () => {
     expect(dec.isError).toBe(false);
     const hits = await call(client, "search", { query: "cookies" });
     expect(hits.body.map((h: { id: string }) => h.id)).toEqual([dec.body.id]);
+    expect(hits.body[0]).not.toHaveProperty("rank");
   });
 
   it("serves the workflow, the roadmap and a feature with its tasks", async () => {

@@ -131,7 +131,7 @@ Ten entities cover tasks, features, roadmap, memory and coordination. Every reco
 **Rules enforced in the core**
 
 - A task can be claimed only if it is unclaimed, its lease expired, or the caller already holds it. This check-and-set runs inside one `BEGIN IMMEDIATE` transaction, so two agents can never claim the same task.
-- A task is "ready" when it is `todo`, unclaimed and all `dependsOn` tasks are `done`. Dependency cycles are rejected on write.
+- A task is "ready" when it is `todo`, unclaimed and all `dependsOn` tasks are `done` or deleted (a deleted dependency no longer blocks; a missing one still does). Dependency cycles are rejected on write.
 - Leases default to 30 minutes and renew on any write by the holder. `sati doctor` and every brief clear expired leases.
 - Full-text search (FTS5) indexes task, feature, note and decision text.
 
@@ -190,7 +190,7 @@ Agents use sati through a small MCP toolset, with the CLI as a fallback. Hooks e
 | Tool | What it does |
 | --- | --- |
 | `sati_brief` | Session start: ready tasks, my claims, others' active locks, recent decisions, stale context, changes since my last session |
-| `task_list` | Filter by status, feature, milestone (through the task's feature), label, assignee, due by a date or ready-only, combined; paginated |
+| `task_list` | Filter by status, feature, milestone (through the task's feature), label, assignee, due by a date or ready-only, combined; paginated; short rows by default, `detail: "full"` for whole records |
 | `task_create` | Creates a task; searches for duplicates first and returns likely matches |
 | `task_claim` | Atomic claim with a lease; fails with the holder's name if taken. With no id, claims the top ready task |
 | `task_update` | Status, notes, progress; renews the lease |
@@ -200,14 +200,14 @@ Agents use sati through a small MCP toolset, with the CLI as a fallback. Hooks e
 | `lock_acquire` / `lock_release` | Path-glob locks with a lease |
 | `decision_record` | Logs why something changed or was rejected |
 | `context_get` / `context_put` | Cached module summaries; `get` flags stale entries by hash |
-| `search` | Full-text search across tasks, features, notes and decisions |
-| `note_upsert` | Create a note (no id) or update one (id, `expectedVersion`): title, Markdown body, tags, pinned |
+| `search` | Full-text search across tasks, features, notes and decisions (comments are notes) |
+| `note_upsert` | Create a note (no id) or update one (id, `expectedVersion`): title, Markdown body, tags, pinned; a new note tagged `comment` with one link is a comment on that task, note or decision |
 | `note_get` | Read one note in full by id or short handle |
 | `roadmap_upsert` | Create or update a milestone |
 
 MCP **resources**: `sati://workflow` (the rules agents follow), `sati://project/roadmap`, `sati://feature/{id}`. MCP **prompts**: `start-task`, `finish-task`, `plan-feature`.
 
-**CLI** mirrors the tools: `sati init | brief | next | task … | feature … | lock … | decision … | note … | handoff | plan | milestone … | context … | search | activity | undo | settings | projects | ui | serve | sync | guard | doctor | review | scan | export | import | mcp`. Every command supports `--json`, so agents without MCP can still use it.
+**CLI** mirrors the tools: `sati init | brief | next | task … | feature … | lock … | decision … | note … | comment … | handoff | plan | milestone … | context … | search | activity | undo | settings | projects | ui | serve | sync | guard | doctor | review | scan | export | import | mcp`. Every command supports `--json`, so agents without MCP can still use it.
 
 **Hooks installed by `sati init`**
 
@@ -633,7 +633,7 @@ A capability is not done until both ways have it, with tests on both. sati itsel
 
 **Positioning.** sati is memory and planning, not a project-management suite: no Gantt dependencies, time tracking, budgets or invoicing, and it does not replace Linear or GitHub Issues for client work.
 
-**Where both ways stand today (2026-11-07)**
+**Where both ways stood when Phase 7 was added (2026-11-07)**
 
 | Capability | Agent (MCP / CLI) | Web UI |
 | --- | --- | --- |
@@ -656,7 +656,9 @@ A capability is not done until both ways have it, with tests on both. sati itsel
 - [x] A `general` variant of `sati://workflow` and the Claude Code skill, without feature and lock steps (generated from `docs/guide/agent-workflow-general.md`); in a general project `task_complete` needs no files touched, since much of the work is not in files
 - [x] People: a human actor gets a display name, initials and a colour, editable in Settings (`PATCH /api/actors/:id`, people only); the UI never shows `user@worktree` (a person without a display name is shown by the user part); avatars on cards, assignee pickers and the Agents page
 - [x] Task fields `dueDate` (date), `assigneeIds[]` (people or agents, separate from the claim) and `checklist[]` (text, done); MCP, CLI (`--due`, `--assign`, `task checklist`) and UI (New task form, task panel, due and steps on cards) accept them; `task_list` filters by `dueBy` (inclusive) and `assigneeId`. The fields are optional and written only once set, so existing records and `.sati/` files stay valid without a migration
-- [ ] Comments: a new `comment` entity on tasks, notes and decisions (author, Markdown body), exported to `.sati/` and searchable; `sati handoff` writes one
+- [x] Comments on tasks, notes and decisions, as notes tagged `comment` and linked to the record (no new table, migration, snapshot folder or MCP tool: notes already export, merge, search and restore). Core `addComment` refuses other kinds, deleted records and replies to comments; CLI `sati comment add|list`; MCP through `note_upsert` (tag `comment`, one link, short handles resolved); UI thread in the task panel and, folded, under each note and decision, with Ctrl/⌘+Enter to send and Delete with Undo for your own; handoffs show in the same thread; Activity says "commented on". The brief shows the newest comment by someone else on each claimed task, as fenced data
+- [x] Compact answers (moved from Phase 8): MCP `task_list` returns short rows (id, title, status, priority, version and only the fields that are set) unless `detail: "full"`; `search` hits drop the BM25 rank
+- [x] A deleted dependency stops blocking: the ready list ignores deleted `dependsOn` tasks in both stores
 - [x] "My work" page: waiting for my approval (review tasks assigned to me or to nobody, with Approve and Send back with a reason), then tasks assigned to me, then due by Sunday including late ones; each task appears once, in the first list it fits
 - [x] Plain words in the UI: "working on it" for a claim and `in_progress`, "waiting for approval" for review, "until 2:32 PM" in local time and clock style, activity as sentences, refused saves explained without versions or commands; one glossary (`docs/guide/glossary.md`, words in `packages/ui/src/words.ts`), with no change to CLI or MCP terms
 - [ ] Khmer and English UI strings (`Intl` dates and numbers, `lang` per note), the bundled Khmer font, and line-height for Khmer script
@@ -667,24 +669,20 @@ A capability is not done until both ways have it, with tests on both. sati itsel
 - [ ] `task_complete` takes an optional `releaseNote`: one user-facing line, separate from the developer `summary`; tasks labelled `internal` stay out of changelogs
 - [ ] Changes: `sati changes --since <date|7d|last-session|milestone>` and MCP `changes`: done tasks (summary, release note, files touched), features that moved status, decisions, new and edited notes, and what is now blocked or overdue, grouped by milestone or feature, compact, with ids
 - [ ] The brief's "Since your last session" section, which PLAN promises and the brief does not have yet: up to 5 changes by other actors since the caller's last brief, inside the 1,500-token cap
-- [ ] Changelog: `sati changelog --since <date|tag|milestone> [--format keep-a-changelog|release-notes|plain]` prints Markdown built from release notes (falling back to summaries), grouped Added / Changed / Fixed / Removed by task label and feature status. It prints to stdout; the agent or person decides where it goes (`> CHANGELOG.md`), because sati writes no user files
+- [ ] Changelog and digest are formats of `changes`, not commands of their own: `sati changes --since … --format changelog|digest|plain` (MCP `changes` takes `format`). `changelog` is Markdown built from release notes (falling back to summaries), grouped Added / Changed / Fixed / Removed by task label and feature status; `digest` is a short weekly summary to paste into email or chat. It prints to stdout; the agent or person decides where it goes (`> CHANGELOG.md`), because sati writes no user files
 - [ ] Feature list: `sati features --format md` prints what the product does today, from shipped features with their acceptance criteria and milestone, for READMEs, sales sheets or release pages
-- [ ] Review: `sati review` also takes `--since` for projects without git, and reports done work still waiting for approval, decisions without a linked task, and shipped features without tests
 - [ ] UI "Changes" page: a timeline by day (done, decided, shipped, changed), filters by date, milestone, person or agent, and "Copy changelog" / "Copy feature list" buttons using the same generators
-- [ ] Weekly digest is `sati changes --since 7d --format digest`, to paste into email or chat (replaces the separate `digest` command)
 
 **Phase 7c — The brain for every agent**
 
 - [ ] Templates: `sati template apply event|campaign|release` creates a milestone with a task chain from a Markdown file in `.sati/templates/`; ship three starters (event, marketing campaign, product release); also in the UI's "New plan" menu
-- [ ] Calendar export: `sati calendar export` writes an `.ics` of due dates and milestone targets (read-only; no two-way sync)
 
 **Phase 7d — Without a terminal (needs Phase 6)**
 
 - [ ] Team server: the Phase 6 Docker image serves the UI to signed-in teammates, with email sign-in for people who have no GitHub account
 - [ ] Remote MCP (Streamable HTTP) with a per-person token, so Claude Desktop, ChatGPT and other assistants can use the team brain from a laptop with no repo
-- [ ] Notifications: an in-app inbox for mentions, assignments, approvals and due dates, then email and Telegram
+- [ ] Notifications: an in-app inbox for mentions, assignments, approvals and due dates
 - [ ] Desktop launcher: a signed app or `npx sati app` that starts the local server and opens it, for one-person use without a terminal
-- [ ] Attachments as links (Drive, Figma, Canva) with a preview title; no file storage in v1 of the team server
 
 **Gate:** a person plans a 20-task launch from the `release` template half in the UI and half by asking their agent, and both views show the same plan. Agents complete the tasks with release notes. A person asks their agent "what changed this week?" and gets the right list, and generates a changelog and a feature list from the UI and from the CLI that match. The developer flows (claims, locks, guard, brief size, all performance budgets) still pass unchanged.
 
@@ -697,12 +695,10 @@ Added 2026-11-07 at the owner's request. sati is the memory, not a file reader: 
 - [ ] Cards: context entries gain optional `facts[]`, `tags[]`, `sourceSeen` (the file version the agent saw) and `sourceTokens` (its estimate of reading the file); migration and snapshot `schemaVersion` bump; git-mode staleness unchanged
 - [ ] Secret scan on write for cards and notes, not only on export
 - [ ] Search covers cards (summary, facts, tags, path)
-- [ ] Compact answers: `search` and `task_list` return short rows by default, `detail: "full"` on request
 - [ ] `recall` in core, CLI (`sati recall`) and MCP: the best cards, notes, decisions and open tasks for a question, with ids and sources, capped at 1,000 tokens; no model inside sati (18 tools; update the Agent integration table)
 - [ ] `private: true` on notes and cards: kept in the local database, never exported to `.sati/` or synced
 - [ ] Pinned notes (up to 3, clipped) in the brief's Knowledge section, inside the 1,500-token cap, with the cards linked to the claimed task
 - [ ] Rules block and `sati://workflow`: check a file's card before opening it; save a card after reading one
-- [ ] Token ledger and `sati stats tokens`: served, avoided by card reuse, hit rate, brief size (estimates, stated as such)
 - [ ] UI: Memory page (cards by folder, facts, search, edit, private badge), Ask box, pinned notes on the board; Playwright and axe
 
 **Gate:** an agent answers 20 questions about a folder of real Office and PDF files, saving cards; in a fresh session it answers them again from memory, re-reading only changed files, with at least 70% fewer tokens by the agent tool's own usage report. No private item appears in `.sati/` or git. All existing budgets pass.

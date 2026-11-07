@@ -48,7 +48,10 @@ export function isClaimActive(task: Pick<Task, "claim">, now: Date): boolean {
   return task.claim !== null && Date.parse(task.claim.leaseUntil) > now.getTime();
 }
 
-/** Ready = `todo`, not actively claimed, and every dependency is `done`. */
+/**
+ * Ready = `todo`, not actively claimed, and every dependency is `done`. `depStatus` reports a
+ * deleted dependency as `done`: deleting a task unblocks its dependents.
+ */
 export function isReady(
   task: Pick<Task, "status" | "claim" | "dependsOn" | "deletedAt">,
   depStatus: (id: string) => Task["status"] | undefined,

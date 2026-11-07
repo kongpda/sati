@@ -3,10 +3,12 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import {
   AcquireLockInput,
   acquireLock,
+  addComment,
   BriefInput,
   buildBrief,
   CLI_NAME,
   ClaimTaskInput,
+  COMMENT_TAG,
   CompleteTaskInput,
   CreateTaskInput,
   checkChanges,
@@ -31,6 +33,8 @@ import {
   listTasks,
   type ProjectKind,
   PutContextInput,
+  parseHandle,
+  parseId,
   putContext,
   RecordDecisionInput,
   ReleaseLockInput,
@@ -43,6 +47,7 @@ import {
   type StoredEntity,
   search,
   shortHandle,
+  type Task,
   UpdateFeatureInput,
   UpdateMilestoneInput,
   UpdateNoteInput,
@@ -111,6 +116,58 @@ async function links<T extends object>(ctx: ServiceContext, input: T): Promise<T
     }
   }
   return out as T;
+}
+
+/** Record prefixes a note link may name by short handle. */
+const LINKABLE: Record<string, StoredEntity> = {
+  tsk: "task",
+  note: "note",
+  dec: "decision",
+  feat: "feature",
+  mil: "milestone",
+};
+
+/**
+ * Note links are URLs, paths or ids. A short handle of a record becomes its full id, so a comment
+ * linked by handle still shows in that record's thread; anything else is kept as written.
+ */
+async function recordLinks(ctx: ServiceContext, links: string[]): Promise<string[]> {
+  return Promise.all(
+    links.map(async (link) => {
+      const handle = parseHandle(link);
+      const entity = handle && !parseId(link) ? LINKABLE[handle.prefix] : undefined;
+      return entity ? resolveId(ctx, entity, link) : link;
+    }),
+  );
+}
+
+/**
+ * A task as a list row: what an agent needs to pick, filter or update it (version for
+ * expectedVersion), with empty and unset fields left out. A full record carries the body,
+ * completion and per-field stamps, several times the size; task_list asks for it with detail.
+ */
+function taskRow(t: Task): Record<string, unknown> {
+  const row: Record<string, unknown> = {
+    id: t.id,
+    title: t.title,
+    status: t.status,
+    priority: t.priority,
+    version: t.version,
+  };
+  if (t.featureId) row.featureId = t.featureId;
+  if (t.milestoneId) row.milestoneId = t.milestoneId;
+  if (t.parentId) row.parentId = t.parentId;
+  if (t.dependsOn.length) row.dependsOn = t.dependsOn;
+  if (t.labels.length) row.labels = t.labels;
+  if (t.dueDate) row.dueDate = t.dueDate;
+  if (t.assigneeIds?.length) row.assigneeIds = t.assigneeIds;
+  if (t.claim) row.claim = { actorId: t.claim.actorId, leaseUntil: t.claim.leaseUntil };
+  if (t.checklist?.length) {
+    row.checklist = `${t.checklist.filter((c) => c.done).length}/${t.checklist.length}`;
+  }
+  if (t.reviewNote) row.reviewNote = t.reviewNote;
+  if (t.needsReview) row.needsReview = true;
+  return row;
 }
 
 /** Results go back as compact JSON: agents parse it fine and it costs fewer tokens. */
@@ -184,11 +241,17 @@ function registerTools(server: McpServer, ctx: ServiceContext, kind: ProjectKind
     "task_list",
     {
       description:
-        'List tasks. Filter by status, feature, milestone (tasks in it directly or through their feature), label, assigneeId or dueBy (due on or before a date), combined; `ready: true` returns unclaimed todo tasks whose dependencies are done. For "what is left for a milestone", pass milestoneId with the open statuses.',
-      inputSchema: linkable(ListTasksInput),
+        'List tasks. Filter by status, feature, milestone (tasks in it directly or through their feature), label, assigneeId or dueBy (due on or before a date), combined; `ready: true` returns unclaimed todo tasks whose dependencies are done. For "what is left for a milestone", pass milestoneId with the open statuses. Returns short rows (no body, history or stamps); pass detail: "full" for whole records.',
+      inputSchema: linkable(ListTasksInput).extend({
+        detail: z.enum(["short", "full"]).optional(),
+      }),
       annotations: { readOnlyHint: true },
     },
-    (input) => run(async () => listTasks(ctx, await links(ctx, input))),
+    ({ detail, ...input }) =>
+      run(async () => {
+        const tasks = await listTasks(ctx, await links(ctx, input));
+        return detail === "full" ? tasks : tasks.map(taskRow);
+      }),
   );
 
   server.registerTool(
@@ -282,22 +345,33 @@ function registerTools(server: McpServer, ctx: ServiceContext, kind: ProjectKind
       inputSchema: SearchInput,
       annotations: { readOnlyHint: true },
     },
-    (input) => run(() => search(ctx, input)),
+    // The BM25 rank only orders the hits, which are already in order; it is left out.
+    (input) => run(async () => (await search(ctx, input)).map(({ rank: _, ...hit }) => hit)),
   );
 
   server.registerTool(
     "note_upsert",
     {
       description:
-        "Save knowledge as a note: create one (no id; title required) or update one (with id). Body is Markdown; tags group notes; pinned keeps it at hand. Pass expectedVersion when updating to avoid overwriting a newer edit. Use for facts, research, how-tos and meeting notes; use decision_record for why something was decided.",
+        'Save knowledge as a note: create one (no id; title required) or update one (with id). Body is Markdown; tags group notes; pinned keeps it at hand. Pass expectedVersion when updating to avoid overwriting a newer edit. Use for facts, research, how-tos and meeting notes; use decision_record for why something was decided. To comment on a task, note or decision, pass only body, tags: ["comment"] and links: [its id or handle].',
       inputSchema: UpdateNoteInput.extend({ id: Ref.optional() }),
     },
-    ({ id, ...input }) =>
-      run(async () =>
-        id === undefined
-          ? createNote(ctx, input)
-          : updateNote(ctx, await resolveId(ctx, "note", id), input),
-      ),
+    ({ id, ...rest }) =>
+      run(async () => {
+        const input = { ...rest, links: rest.links && (await recordLinks(ctx, rest.links)) };
+        if (id !== undefined) return updateNote(ctx, await resolveId(ctx, "note", id), input);
+        // A new comment gets the same title and checks as one written in the UI or CLI.
+        if (input.tags?.includes(COMMENT_TAG)) {
+          if (input.links?.length !== 1) {
+            throw new SatiError(
+              "VALIDATION",
+              "A comment links to exactly one task, note or decision.",
+            );
+          }
+          return addComment(ctx, { on: input.links[0], body: input.body ?? "" });
+        }
+        return createNote(ctx, input);
+      }),
   );
 
   server.registerTool(

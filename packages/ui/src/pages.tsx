@@ -3,6 +3,14 @@ import { ago, type Decision, type Milestone, type Note, type Snapshot } from "./
 import { Assignees, DecisionForm, MilestoneForm, NoteForm, PlanSelect } from "./forms.js";
 import { Markdown } from "./markdown.js";
 import { Avatar, nameOf, personName } from "./people.js";
+import { Thread, threadOf } from "./thread.js";
+
+/** Adds and deletes comments; the board passes one to every page with a thread. */
+export interface ThreadActions {
+  onAdd: (on: string, body: string) => Promise<unknown>;
+  onDelete: (id: string, title: string) => void;
+}
+
 import { activityWords, dayWords, fullTime, statusWord, untilTime } from "./words.js";
 
 export function Agents({
@@ -211,18 +219,22 @@ export function Notes({
   onPatch,
   onSaved,
   onDelete,
+  thread,
 }: {
   data: Snapshot;
   onCreate: (title: string, body: string) => Promise<void>;
   onPatch: (id: string, patch: Record<string, unknown>) => void;
   onSaved: (message: string) => void;
   onDelete: (id: string, title: string) => void;
+  thread: ThreadActions;
 }) {
   const [editing, setEditing] = useState<Note | null>(null);
   const [tag, setTag] = useState("");
-  const tags = [...new Set(data.notes.flatMap((n) => n.tags))].sort();
+  // Comments show under what they are on, not as notes of their own.
+  const notes = data.notes.filter((n) => !n.tags.includes("comment"));
+  const tags = [...new Set(notes.flatMap((n) => n.tags))].sort();
   // Pinned notes first; the rest keep the newest-first order the server sends.
-  const shown = data.notes
+  const shown = notes
     .filter((n) => !tag || n.tags.includes(tag))
     .sort((a, b) => Number(b.pinned) - Number(a.pinned));
   return (
@@ -315,10 +327,11 @@ export function Notes({
               </button>
             </div>
             <Markdown source={n.body} />
-            <Backlinks notes={data.notes} id={n.id} />
+            <Backlinks notes={notes} id={n.id} />
+            {threadOf(n) ? null : <Thread data={data} on={n.id} folded {...thread} />}
           </article>
         ))}
-        {data.notes.length === 0 ? (
+        {notes.length === 0 ? (
           <p className="empty">No notes yet. Write one above, or an agent records one.</p>
         ) : null}
       </div>
@@ -346,10 +359,12 @@ export function Decisions({
   data,
   onSaved,
   onDelete,
+  thread,
 }: {
   data: Snapshot;
   onSaved: (message: string) => void;
   onDelete: (id: string, title: string) => void;
+  thread: ThreadActions;
 }) {
   // "new" opens an empty form; a decision opens it to record one that replaces it.
   const [recording, setRecording] = useState<Decision | "new" | null>(null);
@@ -407,6 +422,7 @@ export function Decisions({
                 <Markdown source={d.consequences} />
               </>
             ) : null}
+            <Thread data={data} on={d.id} folded {...thread} />
           </article>
         ))}
         {data.decisions.length === 0 ? (
@@ -440,27 +456,33 @@ export function Activity({ data }: { data: Snapshot }) {
     ...data.decisions.map((d) => [d.id, d.title] as const),
     ...data.milestones.map((m) => [m.id, m.title] as const),
   ]);
+  const notes = new Map(data.notes.map((n) => [n.id, n]));
   return (
     // Rows have no controls, so the scrolling page itself takes focus (WCAG scrollable region).
     // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be keyboard-reachable
     <section className="page" tabIndex={0} aria-labelledby="activity-title">
       <h1 id="activity-title">Activity</h1>
       <div className="list">
-        {data.activity.map((row) => (
-          <article key={row.id} className="row">
-            <strong>{nameOf(data, row.actorId)}</strong>{" "}
-            {activityWords(row.verb, row.entity, row.diff)}
-            {titles.has(row.entityId) ? (
-              <span className="subject"> {titles.get(row.entityId)}</span>
-            ) : null}
-            <div className="meta">
-              <time dateTime={row.at} title={fullTime(row.at)}>
-                {ago(row.at)}
-              </time>
-              {row.branch ? ` · ${row.branch}` : ""}
-            </div>
-          </article>
-        ))}
+        {data.activity.map((row) => {
+          // A new comment reads "commented on <the task>", not "added the note Comment on …".
+          const note = row.entity === "note" ? notes.get(row.entityId) : undefined;
+          const on =
+            note?.tags.includes("comment") && row.verb === "create" ? threadOf(note) : undefined;
+          const subject = titles.get(on ?? row.entityId);
+          return (
+            <article key={row.id} className="row">
+              <strong>{nameOf(data, row.actorId)}</strong>{" "}
+              {on ? "commented on" : activityWords(row.verb, row.entity, row.diff)}
+              {subject ? <span className="subject"> {subject}</span> : null}
+              <div className="meta">
+                <time dateTime={row.at} title={fullTime(row.at)}>
+                  {ago(row.at)}
+                </time>
+                {row.branch ? ` · ${row.branch}` : ""}
+              </div>
+            </article>
+          );
+        })}
         {data.activity.length === 0 ? (
           <p className="empty">No activity yet. Changes appear here as they happen.</p>
         ) : null}
@@ -486,6 +508,7 @@ export function TaskSheet({
   onRelease,
   onTakeOver,
   onDelete,
+  thread,
 }: {
   data: Snapshot;
   id: string;
@@ -495,6 +518,7 @@ export function TaskSheet({
   onRelease: (id: string, force: boolean) => void;
   onTakeOver: (id: string) => void;
   onDelete: (id: string, title: string) => void;
+  thread: ThreadActions;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const task = data.tasks.find((t) => t.id === id);
@@ -616,6 +640,7 @@ export function TaskSheet({
         </>
       ) : null}
       <Markdown source={task.body} />
+      <Thread data={data} on={task.id} {...thread} />
     </aside>
   );
 }

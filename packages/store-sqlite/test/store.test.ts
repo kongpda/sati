@@ -234,6 +234,16 @@ describe("queries", () => {
     await store.write((w) => w.update("task", { ...dep, status: "review", version: 2 }, 1));
     const stillBlocked = await store.read((r) => r.readyTasks(PROJECT_ID, NOW, 10));
     expect(stillBlocked.map((t) => t.id)).not.toContain(blockedByDep.id);
+
+    // Deleting the dependency unblocks the task; a dependency that was never there still blocks.
+    await store.write((w) =>
+      w.update("task", { ...dep, status: "review", deletedAt: NOW, version: 3 }, 2),
+    );
+    const missing = task({ dependsOn: ["tsk_01JC0000000000000000000ZZZ"] });
+    await store.write((w) => w.insert("task", missing));
+    const unblocked = await store.read((r) => r.readyTasks(PROJECT_ID, NOW, 10));
+    expect(unblocked.map((t) => t.id)).toContain(blockedByDep.id);
+    expect(unblocked.map((t) => t.id)).not.toContain(missing.id);
   });
 });
 

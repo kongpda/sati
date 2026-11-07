@@ -7,6 +7,7 @@ import { MyWork } from "./my-work.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
 import { nameOf } from "./people.js";
 import { Settings } from "./settings.js";
+import { threadOf } from "./thread.js";
 import { plainError } from "./words.js";
 
 const PAGES = [
@@ -126,6 +127,17 @@ export function App() {
         .catch(fail),
     [client, fail, saved, setToast],
   );
+  const thread = {
+    onAdd: (on: string, body: string) =>
+      api
+        .addComment(on, body)
+        .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
+        .catch((err: unknown) => {
+          fail(err);
+          throw err;
+        }),
+    onDelete: (id: string, title: string) => remove("note", id, title),
+  };
 
   const closePalette = useCallback(() => {
     setPalette(false);
@@ -539,6 +551,7 @@ export function App() {
             }
             onSaved={saved}
             onDelete={(id, title) => remove("note", id, title)}
+            thread={thread}
           />
         ) : null}
         {data && path === "/decisions" ? (
@@ -546,6 +559,7 @@ export function App() {
             data={data}
             onSaved={saved}
             onDelete={(id, title) => remove("decision", id, title)}
+            thread={thread}
           />
         ) : null}
         {data && path === "/activity" ? <Activity data={data} /> : null}
@@ -587,6 +601,7 @@ export function App() {
             go(path);
             remove("task", id, title);
           }}
+          thread={thread}
         />
       ) : null}
       {creating && data ? (
@@ -641,7 +656,12 @@ export function App() {
                 key={`${hit.entity}-${hit.id}`}
                 onClick={() => {
                   closePalette();
+                  // A comment opens what it is on.
+                  const note = data?.notes.find((n) => n.id === hit.id);
+                  const on = note ? threadOf(note) : undefined;
                   if (hit.entity === "task") go("/", hit.id);
+                  else if (on?.startsWith("tsk_")) go("/", on);
+                  else if (on?.startsWith("dec_")) go("/decisions");
                   else
                     go(
                       hit.entity === "note"

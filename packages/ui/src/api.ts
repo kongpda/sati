@@ -43,6 +43,8 @@ export interface Note {
   links: string[];
   needsReview?: boolean;
   pinned: boolean;
+  createdAt: string;
+  createdBy: string;
   updatedAt: string;
   version: number;
 }
@@ -165,6 +167,8 @@ export const api = {
     request<Task[]>("/api/claims/release-expired", { method: "POST", body: "{}" }),
   createNote: (body: Record<string, unknown>) =>
     request<Note>("/api/notes", { method: "POST", body: JSON.stringify(body) }),
+  addComment: (on: string, body: string) =>
+    request<Note>("/api/comments", { method: "POST", body: JSON.stringify({ on, body }) }),
   patchNote: (id: string, body: Record<string, unknown>) =>
     request<Note>(`/api/notes/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   recordDecision: (body: Record<string, unknown>) =>

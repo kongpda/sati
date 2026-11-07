@@ -15,6 +15,7 @@ const root = defineCommand({
     task: lazy(() => import("./commands/task.js")),
     feature: lazy(() => import("./commands/feature.js")),
     note: lazy(() => import("./commands/note.js")),
+    comment: lazy(() => import("./commands/comment.js")),
     context: lazy(() => import("./commands/context.js")),
     decision: lazy(() => import("./commands/decision.js")),
     lock: lazy(() => import("./commands/lock.js")),

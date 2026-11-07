@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import {
+  addComment,
   CLI_NAME,
   createMilestone,
   createNote,
@@ -108,6 +109,7 @@ function openApi() {
       "/api/tasks/{id}/take-over": { post: { summary: "Take a task over (people only)" } },
       "/api/claims/release-expired": { post: { summary: "Release expired claims" } },
       "/api/notes": { post: { summary: "Create a note" } },
+      "/api/comments": { post: { summary: "Comment on a task, note or decision" } },
       "/api/notes/{id}": { patch: { summary: "Update a note" }, delete: { summary: "Delete" } },
       "/api/notes/{id}/restore": { post: { summary: "Restore a deleted note" } },
       "/api/decisions": { post: { summary: "Record a decision" } },
@@ -300,6 +302,8 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   app.post("/api/claims/release-expired", async (c) => c.json(await releaseExpiredClaims(rt.ctx)));
 
   app.post("/api/notes", async (c) => c.json(await createNote(rt.ctx, await body(c))));
+  // A comment is a note; it is deleted and restored through the notes routes.
+  app.post("/api/comments", async (c) => c.json(await addComment(rt.ctx, await body(c))));
   app.patch("/api/notes/:id", async (c) =>
     c.json(await updateNote(rt.ctx, c.req.param("id"), await body(c))),
   );

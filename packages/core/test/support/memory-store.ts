@@ -98,7 +98,11 @@ export class MemoryStore implements StorageAdapter {
       },
       readyTasks: async (projectId, now, limit) => {
         const tasks = live("task", projectId) as unknown as Task[];
-        const status = (id: string) => (table("task").get(id) as Task | undefined)?.status;
+        // Like the SQL store: a deleted dependency counts as out of the way.
+        const status = (id: string) => {
+          const dep = table("task").get(id) as Task | undefined;
+          return dep?.deletedAt ? "done" : dep?.status;
+        };
         return tasks
           .filter((t) => isReady(t, status, new Date(now)))
           .slice(0, limit)

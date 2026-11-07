@@ -956,3 +956,53 @@ button.danger {
   height: 20px;
   margin: 0;
 }
+
+/* Comments: a short thread under a task, note or decision. */
+.thread {
+  margin-top: 12px;
+}
+.thread h3,
+.thread summary {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+.thread summary {
+  cursor: pointer;
+  width: fit-content;
+  color: var(--muted);
+}
+.thread[open] summary {
+  color: inherit;
+}
+.thread ol {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+  display: grid;
+  gap: 8px;
+}
+.thread li {
+  border-left: 3px solid var(--line);
+  padding: 2px 0 2px 10px;
+  overflow-wrap: anywhere;
+}
+.thread-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.thread-head button {
+  margin-left: auto;
+}
+.thread-add {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.thread-add .field {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+}

@@ -114,10 +114,11 @@ Grounded in the 2026-11-07 review of the code:
 6. **Non-developers need the team server.** No amount of local polish lets a colleague open a
    board on someone else's laptop. Phase 6 (hosted) is the real unlock for office users; sequence
    7d right after it, and keep 7a–7c useful on their own.
-7. **Telegram before Slack** for notifications if the team is in Cambodia, where Telegram is the
-   default work chat; email first for everyone.
+7. **In-app notifications first.** Email and Telegram moved to `docs/ideas.md` on 2026-11-07;
+   if they come back, Telegram before Slack for a team in Cambodia.
 8. **Keep the developer budgets.** New fields must not grow the brief past 1,500 tokens: due dates
-   and assignees show only for tasks in the brief already, and comments never enter it.
+   and assignees show only for tasks in the brief already, and only the newest comment on each
+   claimed task enters it, clipped to 200 characters and fenced as data.
 
 ## Data model changes (Phase 7a)
 
@@ -127,7 +128,7 @@ Grounded in the 2026-11-07 review of the code:
 | Actor | `displayName`, `initials`, `color` for humans | Editable in Settings; agents keep their tool names |
 | Task | `dueDate` (ISO date, nullable), `assigneeIds[]`, `checklist[]` of `{ text, done }` | Validated like every field; arrays capped at 500 |
 | Task completion | `releaseNote` (optional, one user-facing line, Phase 7b) | Changelogs use it, falling back to `summary`; label `internal` excludes a task |
-| Comment (new) | `entity`, `entityId`, `body` (Markdown), `createdBy` | Exported to `.sati/comments/`, merged like notes, in FTS |
+| Comment | A note tagged `comment` with one link to its task, note or decision (no new entity) | Exported, merged and searched as a note; no migration |
 
 Each change bumps the snapshot `schemaVersion` with an automatic migration, as the Versioning
 section requires. Old binaries already refuse writes to a newer schema.
@@ -170,6 +171,6 @@ section requires. Old binaries already refuse writes to a newer schema.
 | --- | --- |
 | Scope creep into a full PM suite | Positioning rule in PLAN Phase 7; new requests go to `docs/ideas.md` first |
 | Plain-word UI drifts from CLI terms and confuses developers | One glossary page; tooltips show the CLI term |
-| Comments and assignees bloat the agent brief | Comments never in the brief; brief tests keep the 1,500-token cap |
+| Comments and assignees bloat the agent brief | Only the newest comment per claimed task, clipped; brief tests keep the 1,500-token cap |
 | Non-developers edit `.sati/` JSON by hand in a general project without git | General projects have no snapshot by default; export is opt-in |
 | Hosted mode slips, so office users never get access | 7a–7c still pay off locally; the desktop launcher covers one-person use |

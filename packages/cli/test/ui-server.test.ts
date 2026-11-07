@@ -175,6 +175,10 @@ describe("ui server", () => {
     expect((await call(`/api/notes/${note.id}`, "DELETE")).status).toBe(404);
     expect((await call(`/api/notes/${note.id}/restore`, "POST", {})).status).toBe(200);
     expect(await titles()).toContain("Venue list");
+    const comment = await call("/api/comments", "POST", { on: note.id, body: "Add the prices" });
+    expect(comment.status).toBe(200);
+    expect(await comment.json()).toMatchObject({ tags: ["comment"], links: [note.id] });
+    expect((await call("/api/comments", "POST", { on: note.id, body: " " })).status).toBe(400);
     // Milestones are not deletable here.
     expect((await call("/api/milestones/mil_x", "DELETE")).status).toBe(404);
   });

@@ -211,6 +211,25 @@ describe("sati init", () => {
     expect(r.data.files[0]?.action).toBe("keep");
   });
 
+  // Why: a teammate who clones and runs init must see the shared tasks, not an empty project.
+  it("loads the committed .sati/ snapshot when init runs in a fresh clone", async () => {
+    const origin = await tempRepo();
+    const git = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd });
+    git(origin, "commit", "-q", "--allow-empty", "-m", "root");
+    expect(sati(origin, "init", "--yes", "--tools", "").code).toBe(0);
+    expect(sati(origin, "task", "create", "Shared task").code).toBe(0);
+    git(origin, "add", "-A");
+    git(origin, "commit", "-q", "-m", "snapshot");
+    const clone = join(mkdtempSync(join(tmpdir(), "sati-clone-")), "b");
+    git(origin, "clone", "-q", origin, clone);
+
+    const r = satiJson<Init & { imported: number }>(clone, "init", "--yes", "--tools", "");
+    expect(r.code).toBe(0);
+    expect(r.data.imported).toBe(1);
+    const list = satiJson<{ title: string }[]>(clone, "task", "list");
+    expect(list.data.map((t) => t.title)).toEqual(["Shared task"]);
+  });
+
   it("refuses a second init with CONFLICT (exit 4) instead of creating a new project", async () => {
     const dir = await tempRepo();
     expect(sati(dir, "init", "--yes").code).toBe(0);

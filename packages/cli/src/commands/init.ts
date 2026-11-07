@@ -4,19 +4,23 @@ import { basename, join } from "node:path";
 import {
   type Actor,
   actorIdentity,
+  CLI_NAME,
   CONFIG_DIR,
   CONFIG_FILE,
   createIdFactory,
   initProject,
+  isSatiError,
   MODES,
   type Mode,
   type Project,
   type SatiConfig,
   SatiConfigSchema,
   SatiError,
+  type ServiceContext,
   systemClock,
 } from "@sati/core";
 import { type DbLocation, locateDb, SqliteStore, standaloneDbPath } from "@sati/store-sqlite";
+import { importSnapshot } from "@sati/sync";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { selectTools } from "../detect.js";
@@ -30,7 +34,7 @@ import {
   selfCommand,
   shownPath,
 } from "../hooks.js";
-import { isLocalInstall } from "../install.js";
+import { isLocalInstall, runHint } from "../install.js";
 import {
   excludeFileFor,
   type FileAction,
@@ -69,6 +73,8 @@ export interface InitResult {
   db: string;
   tools: string[];
   files: FileChange[];
+  /** Records loaded from a committed `.sati/` snapshot, as in a teammate's fresh clone. */
+  imported: number;
 }
 
 /** Turns a folder name into a valid project slug. */
@@ -272,6 +278,20 @@ function applyUpgrade(p: InitPlan & { upgrade: Project }): UpgradeResult {
   return { upgraded: p.upgrade, files: p.files, notes: notes(p.hooks) };
 }
 
+/** Loads the committed snapshot. The project is already set up, so a failure says how to retry. */
+async function importClone(root: string, ctx: ServiceContext): Promise<number> {
+  const dir = join(root, CONFIG_DIR);
+  try {
+    return (await importSnapshot(ctx, dir)).imported.length;
+  } catch (err) {
+    if (!isSatiError(err)) throw err;
+    throw new SatiError(err.code, `The project is set up, but ${err.message}`, {
+      hint: `${err.hint ?? "Fix the snapshot files."} Then run \`${runHint(root, "sync import")}\`.`,
+      ...(err.details ? { details: err.details } : {}),
+    });
+  }
+}
+
 async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
   if (p.upgrade) return applyUpgrade({ ...p, upgrade: p.upgrade });
   const store = await SqliteStore.open(p.db);
@@ -298,6 +318,11 @@ async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
       writeFileSync(abs, `${JSON.stringify(p.config, null, 2)}\n`, { flag: "wx" });
     }
     writeManaged(p);
+    // A fresh clone already has teammates' records in .sati/; without this it starts empty.
+    const imported =
+      p.mode === "git" && config?.action === "keep"
+        ? await importClone(p.root, { ...deps, projectId: project.id, actorId: actor.id })
+        : 0;
     warnIfNotOnPath(p.tools, isLocalInstall(p.root));
     const { rememberProject } = await import("../projects.js");
     rememberProject({
@@ -308,7 +333,7 @@ async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
       mode: project.mode,
       db: p.db,
     });
-    return { project, actor, db: p.db, tools: p.tools, files: p.files };
+    return { project, actor, db: p.db, tools: p.tools, files: p.files, imported };
   } finally {
     await store.close();
   }
@@ -367,7 +392,12 @@ function render(r: InitResult | UpgradeResult | null): string {
   ];
   for (const f of r.files) lines.push(`  ${LABEL[f.action].padEnd(9)} ${f.path}`);
   lines.push(`  tools     ${r.tools.length ? r.tools.join(", ") : "none detected"}`);
-  lines.push('Next: sati task create "First task"');
+  if (r.imported > 0) {
+    lines.push(`  imported  ${r.imported} record(s) from ${CONFIG_DIR}/`);
+    lines.push(`Next: ${CLI_NAME} next`);
+  } else {
+    lines.push(`Next: ${CLI_NAME} task create "First task"`);
+  }
   return lines.join("\n");
 }
 

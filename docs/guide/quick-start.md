@@ -36,9 +36,9 @@ npx sati init
 ```
 
 Each clone needs its own `init`, because the git hooks and the live database live in `.git`. A
-teammate runs `npm install`, then `npx sati init` (it keeps the project id from the committed
-config) and `npx sati sync import` to load the committed `.sati/` snapshot. `sati doctor`
-reports a clone that has no hooks yet.
+teammate runs `npm install`, then `npx sati init`. In a clone, `init` keeps the project id from
+the committed config and loads the committed `.sati/` snapshot, so the shared tasks are there at
+once. `sati doctor` reports a clone that has no hooks yet.
 
 `init` asks for a mode and the agent tools to set up. To skip the prompts:
 

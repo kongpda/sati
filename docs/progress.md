@@ -714,3 +714,7 @@ until the `pele` licence is checked. Playwright, axe, and the 2,000-card frame b
   `npx sati init` for a project install, and `doctor` now checks the hook runner under the git
   common dir and the binary it starts, instead of `.git/hooks/pre-commit`, which missed worktrees
   and husky.
+- `init` in a git-mode clone with a committed config now imports the `.sati/` snapshot, so a
+  teammate does not need a separate `sync import`. Only git mode with a kept config imports;
+  a first init has nothing to load. If the snapshot is invalid, init has already set up the
+  project, so the error says to fix the files and run `sync import`.

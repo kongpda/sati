@@ -101,7 +101,6 @@ if the file is unchanged. After reading a file, save a card with facts and `sour
   when, a search box, and Edit. Private items carry a lock badge.
 - **Ask box** on every page: the same result as `recall`, with "Copy as Markdown".
 - Pinned notes show at the top of the board, so the brand kit or event brief is one click away.
-- Khmer displays correctly everywhere (the bundled font from Phase 5b/7a).
 
 ### Measuring the saving
 

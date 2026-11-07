@@ -148,7 +148,7 @@ section requires. Old binaries already refuse writes to a newer schema.
 | Step | Scope | Estimate |
 | --- | --- | --- |
 | Phase 5b open items | the open list in PLAN.md | 1 week |
-| 7a Two ways to work | UI and agent parity, note tools, kind, people, due/assignee/checklist, comments, My work, plain words, Khmer, parity test | 3.5 weeks |
+| 7a Two ways to work | UI and agent parity, note tools, kind, people, due/assignee/checklist, comments, My work, plain words, parity test | 3.5 weeks |
 | 7b Review and changelogs | release notes, `changes` with changelog and digest formats, brief "since last session", feature list, Changes page | 1.5 weeks |
 | 7c Brain for agents | templates | 0.5 week |
 | Phase 8 Knowledge brain | cards with facts, recall, private memory, Memory page | 2.5 weeks |

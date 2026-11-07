@@ -594,14 +594,13 @@ Added 2026-11-07 at the owner's request, after a full review of core, store, CLI
 - [ ] Moving a task to `in_progress` through `task update` leaves it with no claim; claim it for the caller instead
 - [ ] Owner decision: a deleted or cancelled dependency blocks its dependents forever (PLAN requires `done`); options are in `docs/ideas.md`
 - [ ] `importRecords` skips dependency-cycle and link checks
-- [ ] Size limits count characters, not bytes (100,000 Khmer characters is about 300 KB), and a `subtasks[]` batch has no total cap
+- [ ] Size limits count characters, not bytes (100,000 characters of a non-Latin script such as Khmer is about 300 KB), and a `subtasks[]` batch has no total cap
 - [ ] The brief can exceed `maxTokens` with long actor names and many sections; clip the header and drop empty sections
 - [ ] FTS drops punctuation inside a term (`v1.2` searches `v12`); split on it instead
 - [ ] MCP `feature_upsert` advertises the update schema for creates; `feature_check` rejects absolute and `./` paths
 - [ ] `sati init` chains into a global `core.hooksPath`, which changes every repo on the machine; say so in the plan and ask first. It also re-sorts the keys of an existing `.claude/settings.json`
 - [ ] `chainInto` adds an sh block to hooks with another interpreter (`#!/usr/bin/env node`)
 - [ ] UI: `j`/`k` follows snapshot order, not board order, and does not update `?task=`; the Features path field has the same lost-edit problem as the task panel had
-- [ ] UI: bundle a Noto Sans Khmer subset (the CSP blocks web fonts, so it is named but never loads), add "Khmer UI", and set `lang` from the content
 - [ ] UI at 375 px: the single-column default is chosen only at load, "All columns" scrolls sideways, and the nav hides Notes, Decisions and Activity with no hint
 - [ ] UI: serve an HTML page (not JSON) for a stale session
 
@@ -661,7 +660,6 @@ A capability is not done until both ways have it, with tests on both. sati itsel
 - [x] A deleted dependency stops blocking: the ready list ignores deleted `dependsOn` tasks in both stores
 - [x] "My work" page: waiting for my approval (review tasks assigned to me or to nobody, with Approve and Send back with a reason), then tasks assigned to me, then due by Sunday including late ones; each task appears once, in the first list it fits
 - [x] Plain words in the UI: "working on it" for a claim and `in_progress`, "waiting for approval" for review, "until 2:32 PM" in local time and clock style, activity as sentences, refused saves explained without versions or commands; one glossary (`docs/guide/glossary.md`, words in `packages/ui/src/words.ts`), with no change to CLI or MCP terms
-- [ ] Khmer and English UI strings (`Intl` dates and numbers, `lang` per note), the bundled Khmer font, and line-height for Khmer script
 - [ ] Parity test: one scripted scenario per capability runs through MCP and through the UI (Playwright) and checks both produce the same records
 
 **Phase 7b — Review what changed, write changelogs and feature lists**

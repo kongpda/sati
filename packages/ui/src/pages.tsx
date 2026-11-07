@@ -8,7 +8,7 @@ import {
   type Note,
   type Snapshot,
 } from "./api.js";
-import { DecisionForm, MilestoneForm, NoteForm } from "./forms.js";
+import { Assignees, DecisionForm, MilestoneForm, NoteForm } from "./forms.js";
 import { Markdown } from "./markdown.js";
 
 export function Agents({
@@ -472,7 +472,8 @@ export function TaskSheet({
   data: Snapshot;
   id: string;
   onClose: () => void;
-  onSave: (id: string, patch: Record<string, unknown>) => void;
+  /** Rejects when the save is refused (the reason is already shown). */
+  onSave: (id: string, patch: Record<string, unknown>) => Promise<unknown>;
   onRelease: (id: string, force: boolean) => void;
   onTakeOver: (id: string) => void;
   onDelete: (id: string, title: string) => void;
@@ -518,12 +519,20 @@ export function TaskSheet({
           e.preventDefault();
           const form = new FormData(e.currentTarget);
           const status = String(form.get("status") ?? task.status);
-          onSave(task.id, {
+          const dueDate = String(form.get("dueDate") ?? "") || null;
+          const assigneeIds = form.getAll("assigneeIds").map(String);
+          const sameAssignees =
+            assigneeIds.length === (task.assigneeIds ?? []).length &&
+            assigneeIds.every((a) => task.assigneeIds?.includes(a));
+          // Unchanged planning fields stay out of the patch, so old tasks keep their shape.
+          void onSave(task.id, {
             title: String(form.get("title") ?? ""),
             body: String(form.get("body") ?? ""),
             ...(status === task.status ? {} : { status }),
+            ...(dueDate === (task.dueDate ?? null) ? {} : { dueDate }),
+            ...(sameAssignees ? {} : { assigneeIds }),
             expectedVersion: task.version,
-          });
+          }).catch(() => undefined);
         }}
       >
         <input className="field" name="title" defaultValue={task.title} aria-label="Title" />
@@ -534,6 +543,11 @@ export function TaskSheet({
           defaultValue={task.body}
           aria-label="Body"
         />
+        <label className="sheet-label">
+          Due date
+          <input className="field" type="date" name="dueDate" defaultValue={task.dueDate ?? ""} />
+        </label>
+        <Assignees data={data} chosen={task.assigneeIds ?? []} />
         <select name="status" defaultValue={task.status} aria-label="Status">
           {statusOptions(task.status).map((s) => (
             <option key={s} value={s}>
@@ -543,6 +557,11 @@ export function TaskSheet({
         </select>
         <button type="submit">Save</button>
       </form>
+      <Checklist
+        version={task.version}
+        items={task.checklist ?? []}
+        onChange={(checklist) => onSave(task.id, { checklist, expectedVersion: task.version })}
+      />
       {held ? null : (
         <button type="button" className="danger" onClick={() => onDelete(task.id, task.title)}>
           Delete task
@@ -560,6 +579,80 @@ export function TaskSheet({
       ) : null}
       <Markdown source={task.body} />
     </aside>
+  );
+}
+
+/**
+ * The task's steps. Each tick, add or remove saves at once with the task's version, so a step an
+ * agent ticked meanwhile is refused instead of unticked.
+ */
+function Checklist({
+  version,
+  items,
+  onChange,
+}: {
+  version: number;
+  items: { text: string; done: boolean }[];
+  onChange: (items: { text: string; done: boolean }[]) => Promise<unknown>;
+}) {
+  // Shown at once; a refused save puts back what the server has. A new version (a save from
+  // here or anywhere) resets it to the server's list without remounting, so focus stays put.
+  const [shown, setShown] = useState(items);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: items is new on every snapshot; the version says when it changed
+  useEffect(() => setShown(items), [version]);
+  const change = (next: typeof items) => {
+    setShown(next);
+    onChange(next).catch(() => setShown(items));
+  };
+  const done = shown.filter((c) => c.done).length;
+  return (
+    <section className="checklist" aria-labelledby="checklist-title">
+      <h3 id="checklist-title">Checklist{shown.length ? ` · ${done}/${shown.length}` : ""}</h3>
+      <ul>
+        {shown.map((c, i) => (
+          // Steps have no ids; the position is what a person and the CLI refer to.
+          // biome-ignore lint/suspicious/noArrayIndexKey: steps are addressed by position
+          <li key={i}>
+            <label>
+              <input
+                type="checkbox"
+                checked={c.done}
+                onChange={() =>
+                  change(shown.map((x, j) => (j === i ? { ...x, done: !x.done } : x)))
+                }
+              />
+              <span className={c.done ? "done" : undefined}>{c.text}</span>
+            </label>
+            <button
+              type="button"
+              aria-label={`Remove step ${c.text}`}
+              onClick={() => change(shown.filter((_, j) => j !== i))}
+            >
+              Remove
+            </button>
+          </li>
+        ))}
+      </ul>
+      <form
+        className="checklist-add"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const input = e.currentTarget.elements.namedItem("step");
+          if (!(input instanceof HTMLInputElement) || input.value.trim() === "") return;
+          change([...shown, { text: input.value.trim(), done: false }]);
+          input.value = "";
+        }}
+      >
+        <input
+          className="field"
+          name="step"
+          maxLength={300}
+          aria-label="New step"
+          placeholder="Add a step"
+        />
+        <button type="submit">Add</button>
+      </form>
+    </section>
   );
 }
 

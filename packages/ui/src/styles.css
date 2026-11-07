@@ -735,3 +735,55 @@ button.danger {
   color: var(--clay);
   border-color: var(--clay);
 }
+
+/* Task planning: due dates on cards, the panel's own labels, and the checklist. */
+.meta time.late {
+  color: var(--clay);
+  font-weight: 600;
+}
+.sheet .sheet-label {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.sheet form .sheet-label,
+.sheet form fieldset {
+  grid-column: 1 / -1;
+}
+.sheet form .dialog-choices label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+.sheet .checklist ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+}
+.sheet .checklist li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+.sheet .checklist li label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.sheet .checklist .done {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.sheet form.checklist-add {
+  display: flex;
+  gap: 8px;
+}
+.sheet form.checklist-add .field {
+  flex: 1;
+  min-width: 0;
+}

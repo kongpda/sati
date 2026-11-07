@@ -190,7 +190,7 @@ Agents use sati through a small MCP toolset, with the CLI as a fallback. Hooks e
 | Tool | What it does |
 | --- | --- |
 | `sati_brief` | Session start: ready tasks, my claims, others' active locks, recent decisions, stale context, changes since my last session |
-| `task_list` | Filter by status, feature, milestone (through the task's feature), label or ready-only, combined; paginated |
+| `task_list` | Filter by status, feature, milestone (through the task's feature), label, assignee, due by a date or ready-only, combined; paginated |
 | `task_create` | Creates a task; searches for duplicates first and returns likely matches |
 | `task_claim` | Atomic claim with a lease; fails with the holder's name if taken. With no id, claims the top ready task |
 | `task_update` | Status, notes, progress; renews the lease |
@@ -637,7 +637,7 @@ A capability is not done until both ways have it, with tests on both. sati itsel
 - [x] Agent parity: `task_list` filters by milestone (through the task's feature) and label, combined with status, so "what is left for the launch?" is one call; MCP, CLI `--milestone`
 - [ ] Project kind `code` (default) or `general`. A general project hides Features, path locks, the guard and the Agents page, and needs no git; it uses the standalone store
 - [ ] People: a human actor gets a display name, initials and a colour, editable in Settings; the UI never shows `user@worktree`
-- [ ] Task fields `dueDate` (date), `assigneeIds[]` (people or agents, separate from the claim) and `checklist[]` (text, done); MCP, CLI and UI accept them; `task_list` filters by `dueBefore` and assignee; the snapshot `schemaVersion` goes up with a migration
+- [x] Task fields `dueDate` (date), `assigneeIds[]` (people or agents, separate from the claim) and `checklist[]` (text, done); MCP, CLI (`--due`, `--assign`, `task checklist`) and UI (New task form, task panel, due and steps on cards) accept them; `task_list` filters by `dueBy` (inclusive) and `assigneeId`. The fields are optional and written only once set, so existing records and `.sati/` files stay valid without a migration
 - [ ] Comments: a new `comment` entity on tasks, notes and decisions (author, Markdown body), exported to `.sati/` and searchable; `sati handoff` writes one
 - [ ] "My work" page: tasks assigned to me, then due this week, then waiting for my approval
 - [ ] Plain words in the UI: "working on it" for a claim, "waiting for approval" for review, "until 14:32" in local time; one glossary in the docs, with no change to CLI or MCP terms

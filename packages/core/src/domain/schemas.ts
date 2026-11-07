@@ -138,6 +138,13 @@ export const Completion = z.strictObject({
 });
 export type Completion = z.infer<typeof Completion>;
 
+/** One step inside a task, ticked off in place. */
+export const ChecklistItem = z.strictObject({
+  text: z.string().trim().min(1).max(LIMITS.title),
+  done: z.boolean(),
+});
+export type ChecklistItem = z.infer<typeof ChecklistItem>;
+
 /** Task fields without the cross-field rule, so input schemas can `pick` from it. */
 export const TaskShape = z.strictObject({
   id: TaskId,
@@ -156,6 +163,15 @@ export const TaskShape = z.strictObject({
   completion: Completion.nullable(),
   /** Why a reviewer sent the task back to todo. The next claimer sees it in the brief. */
   reviewNote: shortText.nullable().optional(),
+  /*
+   * The planning fields are optional and written only once set, so records and `.sati/` files
+   * from before them stay valid, and only tasks that use them carry the new keys.
+   */
+  /** The calendar day it is due (no time or zone: "by Friday"). */
+  dueDate: z.iso.date().nullable().optional(),
+  /** Who should do it, people or agents. The claim says who is doing it right now. */
+  assigneeIds: list(ActorId).optional(),
+  checklist: z.array(ChecklistItem).max(100).optional(),
 });
 
 export const Task = TaskShape.refine((t) => t.status !== "done" || t.completion !== null, {

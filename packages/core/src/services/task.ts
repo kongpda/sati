@@ -32,6 +32,9 @@ const fields = TaskShape.pick({
   labels: true,
   branch: true,
   worktree: true,
+  dueDate: true,
+  assigneeIds: true,
+  checklist: true,
 });
 const optional = {
   body: true,
@@ -43,6 +46,9 @@ const optional = {
   labels: true,
   branch: true,
   worktree: true,
+  dueDate: true,
+  assigneeIds: true,
+  checklist: true,
 } as const;
 
 const Subtask = z.strictObject({
@@ -84,7 +90,13 @@ export const ReleaseTaskInput = z.strictObject({
   /** Release another actor's live claim. Only a person may; the release is logged. */
   force: z.boolean().optional(),
 });
-export const ListTasksInput = listInput("task").extend({ ready: z.boolean().optional() });
+export const ListTasksInput = listInput("task").extend({
+  ready: z.boolean().optional(),
+  /** Only tasks due on or before this day; tasks without a due date are left out. */
+  dueBy: z.iso.date().optional(),
+  /** Only tasks assigned to this actor. */
+  assigneeId: z.string().max(100).optional(),
+});
 export type CreateTaskInput = z.input<typeof CreateTaskInput>;
 export type UpdateTaskInput = z.input<typeof UpdateTaskInput>;
 export type CompleteTaskInput = z.input<typeof CompleteTaskInput>;
@@ -485,7 +497,7 @@ export async function listTasks(ctx: ServiceContext, input: unknown = {}): Promi
           .map((f) => f.id)
       : undefined;
     if (!ready) return r.list("task", ctx.projectId, { ...query, featureIds });
-    const { status, featureId, parentId, label } = query;
+    const { status, featureId, parentId, label, dueBy, assigneeId } = query;
     const start = query.offset ?? 0;
     return (await r.readyTasks(ctx.projectId, nowIso(ctx), 500))
       .filter(
@@ -494,7 +506,9 @@ export async function listTasks(ctx: ServiceContext, input: unknown = {}): Promi
           (!featureId || t.featureId === featureId) &&
           (!featureIds || (t.featureId !== null && featureIds.includes(t.featureId))) &&
           (!parentId || t.parentId === parentId) &&
-          (!label || t.labels.includes(label)),
+          (!label || t.labels.includes(label)) &&
+          (!dueBy || (t.dueDate != null && t.dueDate <= dueBy)) &&
+          (!assigneeId || (t.assigneeIds ?? []).includes(assigneeId)),
       )
       .slice(start, start + (query.limit ?? 50));
   });
@@ -509,9 +523,11 @@ async function checkLinks(
     featureId?: string | null | undefined;
     parentId?: string | null | undefined;
     dependsOn?: readonly string[] | undefined;
+    assigneeIds?: readonly string[] | undefined;
   },
 ): Promise<void> {
   if (links.featureId) await mustGet(r, ctx, "feature", links.featureId);
+  for (const actorId of links.assigneeIds ?? []) await mustGet(r, ctx, "actor", actorId);
   if (links.parentId) await checkParent(r, ctx, taskId, links.parentId);
   if (links.dependsOn?.length) {
     const graph = new Map<string, readonly string[]>();

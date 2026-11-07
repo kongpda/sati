@@ -323,3 +323,51 @@ test("edits, pins, tags and deletes notes, and undoes deletes", async ({ page })
   await expect(page.getByRole("button", { name: "Order banners", exact: true })).toBeVisible();
   expect(await problems()).toEqual([]);
 });
+
+// PLAN Phase 7a: a person plans a task with a due date, who should do it, and its steps.
+test("plans a task with a due date, an assignee and a checklist", async ({ page }) => {
+  const problems = await watch(page);
+  await page.goto(ui.signIn);
+  await page.getByRole("button", { name: "New task" }).click();
+  const form = page.getByRole("dialog", { name: "New task" });
+  await form.getByLabel("Title").fill("Send the invitations");
+  await form.getByLabel("Due date").fill("2026-12-01");
+  await form.getByRole("checkbox", { name: /\(you\)/u }).check();
+  await form.getByRole("button", { name: "Create task" }).click();
+  await expect(form).toHaveCount(0);
+  const card = page.locator(".card").filter({ hasText: "Send the invitations" });
+  await expect(card.locator("time[datetime='2026-12-01']")).toContainText("due");
+
+  await card.getByRole("button", { name: "Send the invitations", exact: true }).click();
+  const sheet = page.getByRole("dialog", { name: "Send the invitations" });
+  await expect(sheet.getByLabel("Due date")).toHaveValue("2026-12-01");
+  for (const step of ["Guest list", "Print cards"]) {
+    await sheet.getByLabel("New step").fill(step);
+    await sheet.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(sheet.getByRole("checkbox", { name: step })).toBeVisible();
+  }
+  await sheet.getByRole("checkbox", { name: "Guest list" }).check();
+  await expect(sheet.getByRole("heading", { name: "Checklist · 1/2" })).toBeVisible();
+  await expect(card).toContainText("1/2 steps");
+
+  // Clearing the due date in the panel saves null, and the task drops out of the due filter.
+  await sheet.getByLabel("Due date").fill("");
+  await sheet.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(card.locator("time[datetime='2026-12-01']")).toHaveCount(0);
+  const [task] = ui.sati<
+    {
+      dueDate: string | null;
+      assigneeIds: string[];
+      checklist: { text: string; done: boolean }[];
+    }[]
+  >("task", "list", "--assignee", "me");
+  expect(task).toMatchObject({
+    dueDate: null,
+    checklist: [
+      { text: "Guest list", done: true },
+      { text: "Print cards", done: false },
+    ],
+  });
+  expect(ui.sati<unknown[]>("task", "list", "--due-by", "2026-12-31")).toEqual([]);
+  expect(await problems()).toEqual([]);
+});

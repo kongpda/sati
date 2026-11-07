@@ -81,6 +81,12 @@ export class MemoryStore implements StorageAdapter {
         if (q.featureIds) rows = rows.filter((r) => q.featureIds?.includes(String(r.featureId)));
         if (q.milestoneId) rows = rows.filter((r) => r.milestoneId === q.milestoneId);
         if (q.label) rows = rows.filter((r) => (r.labels as string[]).includes(q.label ?? ""));
+        if (q.dueBy)
+          rows = rows.filter((r) => typeof r.dueDate === "string" && r.dueDate <= (q.dueBy ?? ""));
+        if (q.assigneeId)
+          rows = rows.filter((r) =>
+            ((r.assigneeIds as string[] | undefined) ?? []).includes(q.assigneeId ?? ""),
+          );
         if (q.newestFirst) rows = rows.reverse();
         const start = q.offset ?? 0;
         return rows.slice(start, start + (q.limit ?? 50)).map(clone) as never;

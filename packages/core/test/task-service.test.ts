@@ -196,6 +196,54 @@ describe("listTasks", () => {
   });
 });
 
+describe("task planning fields", () => {
+  it("stores a due date, assignees and a checklist only once set, and checks them", async () => {
+    const { ctx, actor } = await setup();
+    const plain = await createTask(ctx, { title: "No plan yet" });
+    // Untouched tasks keep the old record shape, so older .sati/ files read the same.
+    expect(Object.keys(plain)).not.toContain("dueDate");
+    expect(Object.keys(plain)).not.toContain("checklist");
+    const t = await createTask(ctx, {
+      title: "Print flyers",
+      dueDate: "2026-12-04",
+      assigneeIds: [actor.id],
+      checklist: [{ text: "Proof the design", done: false }],
+    });
+    expect(t).toMatchObject({ dueDate: "2026-12-04", assigneeIds: [actor.id] });
+    const ticked = await updateTask(ctx, t.id, {
+      checklist: [{ text: "Proof the design", done: true }],
+      dueDate: null,
+      expectedVersion: t.version,
+    });
+    expect(ticked).toMatchObject({ checklist: [{ done: true }], dueDate: null });
+    await expect(
+      createTask(ctx, { title: "x", assigneeIds: ["actr_01M0000000000000000000000Z"] }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(createTask(ctx, { title: "x", dueDate: "2026-02-30" })).rejects.toMatchObject({
+      code: "VALIDATION",
+    });
+    await expect(
+      createTask(ctx, { title: "x", checklist: [{ text: "  ", done: false }] }),
+    ).rejects.toMatchObject({ code: "VALIDATION" });
+  });
+
+  it("filters by due date (inclusive, undated left out) and by assignee", async () => {
+    const { ctx, actor } = await setup();
+    const other = await ensureActor(ctx, { name: "codex@b", kind: "agent", tool: "codex" });
+    await createTask(ctx, { title: "thu", dueDate: "2026-12-03", assigneeIds: [other.id] });
+    await createTask(ctx, { title: "fri", dueDate: "2026-12-04", assigneeIds: [actor.id] });
+    await createTask(ctx, { title: "sat", dueDate: "2026-12-05", assigneeIds: [actor.id] });
+    await createTask(ctx, { title: "someday" });
+    const titles = async (q: Record<string, unknown>) =>
+      (await listTasks(ctx, q)).map((t) => t.title).sort();
+    expect(await titles({ dueBy: "2026-12-04" })).toEqual(["fri", "thu"]);
+    expect(await titles({ assigneeId: actor.id })).toEqual(["fri", "sat"]);
+    expect(await titles({ assigneeId: actor.id, dueBy: "2026-12-04", ready: true })).toEqual([
+      "fri",
+    ]);
+  });
+});
+
 describe("service input", () => {
   // Callers such as the CLI pass every flag, set or not. An unset flag must not wipe a default.
   it("treats undefined fields as absent", async () => {

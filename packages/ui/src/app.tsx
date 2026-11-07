@@ -511,10 +511,13 @@ export function App() {
           id={task}
           onClose={() => go(path)}
           onSave={(id, patch) =>
-            void api
+            api
               .patchTask(id, patch)
               .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
-              .catch(fail)
+              .catch((err: unknown) => {
+                fail(err);
+                throw err;
+              })
           }
           onRelease={(id, force) =>
             void api

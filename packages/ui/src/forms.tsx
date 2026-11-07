@@ -133,6 +133,32 @@ function FormDialog({
   );
 }
 
+/** Checkboxes for who should do a task, people first; the reader is marked "(you)". */
+export function Assignees({ data, chosen = [] }: { data: Snapshot; chosen?: string[] }) {
+  if (data.actors.length === 0) return null;
+  const actors = [...data.actors].sort(
+    (a, b) =>
+      Number(a.kind !== "human") - Number(b.kind !== "human") || a.name.localeCompare(b.name),
+  );
+  return (
+    <fieldset className="dialog-choices">
+      <legend>Assigned to</legend>
+      {actors.map((a) => (
+        <label key={a.id}>
+          <input
+            type="checkbox"
+            name="assigneeIds"
+            value={a.id}
+            defaultChecked={chosen.includes(a.id)}
+          />
+          {a.name}
+          {a.id === data.you ? " (you)" : ""}
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
 /** The "New task" dialog: what a person needs to plan a todo. Claims and completion come later. */
 export function NewTask({
   data,
@@ -151,6 +177,8 @@ export function NewTask({
       onClose={onClose}
       onSubmit={(form) => {
         const featureId = text(form, "featureId");
+        const dueDate = text(form, "dueDate");
+        const assigneeIds = form.getAll("assigneeIds").map(String);
         return api
           .createTask({
             title: text(form, "title").trim(),
@@ -159,6 +187,8 @@ export function NewTask({
             status: text(form, "status") || "todo",
             labels: parseLabels(text(form, "labels")),
             ...(featureId ? { featureId } : {}),
+            ...(dueDate ? { dueDate } : {}),
+            ...(assigneeIds.length ? { assigneeIds } : {}),
           })
           .then(onCreated);
       }}
@@ -203,10 +233,17 @@ export function NewTask({
           </label>
         ) : null}
       </div>
-      <label>
-        Labels
-        <input className="field" name="labels" placeholder="design, launch" />
-      </label>
+      <div className="dialog-row">
+        <label>
+          Due date
+          <input className="field" type="date" name="dueDate" />
+        </label>
+        <label>
+          Labels
+          <input className="field" name="labels" placeholder="design, launch" />
+        </label>
+      </div>
+      <Assignees data={data} />
     </FormDialog>
   );
 }

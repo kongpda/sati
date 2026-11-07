@@ -180,6 +180,37 @@ describe("MCP server", () => {
     expect(await titles({ milestoneId: later.id, ready: true })).toEqual(["App beta"]);
   });
 
+  it("plans a task with a due date, assignee and checklist, and finds it by them", async () => {
+    const client = await connect();
+    const made = await call(client, "task_create", {
+      title: "Send invitations",
+      dueDate: "2026-12-01",
+      assigneeIds: [ctx.actorId],
+      checklist: [
+        { text: "Guest list", done: false },
+        { text: "Print", done: false },
+      ],
+    });
+    expect(made.isError).toBe(false);
+    await call(client, "task_create", { title: "Later", dueDate: "2026-12-20" });
+    const due = await call(client, "task_list", { dueBy: "2026-12-01", assigneeId: ctx.actorId });
+    expect((due.body as { title: string }[]).map((t) => t.title)).toEqual(["Send invitations"]);
+    const ticked = await call(client, "task_update", {
+      id: made.body.id,
+      checklist: [
+        { text: "Guest list", done: true },
+        { text: "Print", done: false },
+      ],
+      expectedVersion: made.body.version,
+    });
+    expect(ticked.body.checklist[0].done).toBe(true);
+    const unknown = await call(client, "task_create", {
+      title: "x",
+      assigneeIds: ["actr_01M0000000000000000000000Z"],
+    });
+    expect(unknown.isError).toBe(true);
+  });
+
   it("lists likely duplicates when creating a task, but never the new task itself", async () => {
     const client = await connect();
     const first = await call(client, "task_create", { title: "Fix login redirect loop" });

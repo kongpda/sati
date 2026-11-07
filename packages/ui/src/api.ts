@@ -15,6 +15,9 @@ export interface Task {
   claim: Claim | null;
   needsReview?: boolean;
   completion: { summary: string; filesTouched: string[] } | null;
+  dueDate?: string | null;
+  assigneeIds?: string[];
+  checklist?: { text: string; done: boolean }[];
 }
 
 export interface Feature {
@@ -187,6 +190,28 @@ export const COLUMNS = [
   ["blocked", "Blocked"],
   ["cancelled", "Cancelled"],
 ] as const;
+
+/** Today's calendar day in the reader's time zone, as YYYY-MM-DD. */
+export function today(now = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/**
+ * A due day in the reader's words, for example "due Fri 4 Dec", and whether it has passed.
+ * The date has no zone ("by Friday"), so it is read as a local day, never shifted by UTC.
+ */
+export function dueLabel(
+  day: string,
+  status: string,
+  now = new Date(),
+): { text: string; late: boolean } {
+  const [y, m, d] = day.split("-").map(Number);
+  const date = new Date(y ?? 0, (m ?? 1) - 1, d ?? 1);
+  const text = `due ${date.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}`;
+  const open = status !== "done" && status !== "cancelled";
+  return { text, late: open && day < today(now) };
+}
 
 /** A clock time in the reader's own time zone, for example "14:32". */
 export function clockTime(iso: string): string {

@@ -12,7 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef, useState } from "react";
-import { ago, COLUMNS, type Feature, type Task } from "./api.js";
+import { ago, COLUMNS, dueLabel, type Feature, type Task } from "./api.js";
 
 export function Board({
   tasks,
@@ -247,6 +247,8 @@ function CardBody({
   onReviewed?: (id: string) => void;
 }) {
   const urgent = task.priority === "high" || task.priority === "urgent";
+  const due = task.dueDate ? dueLabel(task.dueDate, task.status) : null;
+  const steps = task.checklist ?? [];
   return (
     <>
       {onToggle ? null : <div className="title">{task.title}</div>}
@@ -257,6 +259,15 @@ function CardBody({
         </time>
         {feature ? ` · ${feature}` : ""}
         {urgent ? ` · ${task.priority}` : ""}
+        {due ? (
+          <>
+            {" · "}
+            <time dateTime={task.dueDate ?? undefined} className={due.late ? "late" : undefined}>
+              {due.late ? `late, ${due.text}` : due.text}
+            </time>
+          </>
+        ) : null}
+        {steps.length ? ` · ${steps.filter((c) => c.done).length}/${steps.length} steps` : ""}
         {onReviewed && task.needsReview ? (
           <button type="button" onClick={() => onReviewed(task.id)}>
             mark reviewed

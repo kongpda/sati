@@ -8,6 +8,10 @@ export interface ListQuery {
   milestoneId?: string | undefined;
   parentId?: string | undefined;
   label?: string | undefined;
+  /** Tasks due on or before this ISO date. */
+  dueBy?: string | undefined;
+  /** Tasks with this actor in `assigneeIds`. */
+  assigneeId?: string | undefined;
   includeDeleted?: boolean | undefined;
   /** Reverse the usual order (rank, then id); with equal ranks this means newest first. */
   newestFirst?: boolean | undefined;

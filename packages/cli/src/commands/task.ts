@@ -1,4 +1,5 @@
 import {
+  type ChecklistItem,
   CLI_NAME,
   claimNext,
   claimTask,
@@ -10,6 +11,7 @@ import {
   releaseTask,
   resolveId,
   restoreRecord,
+  SatiError,
   type ServiceContext,
   type Task,
   takeOverTask,
@@ -42,6 +44,37 @@ async function claimToken(
   return t.claim?.actorId === ctx.actorId ? t.claim.token : undefined;
 }
 
+/** `none` clears a planning field from the command line. */
+const NONE = "none";
+
+/** `--due`: a YYYY-MM-DD day, or `none` to clear it. Core checks the date. */
+function due(value: string | undefined): string | null | undefined {
+  if (value === undefined) return undefined;
+  return value === NONE ? null : value;
+}
+
+/**
+ * `--assign`: comma-separated actor names, ids or handles, `me`, or `none` to clear. People
+ * know each other by name, so a name is looked up before it is treated as an id.
+ */
+async function assignees(
+  ctx: ServiceContext,
+  value: string | undefined,
+): Promise<string[] | undefined> {
+  if (value === undefined) return undefined;
+  if (value === NONE) return [];
+  const out: string[] = [];
+  for (const item of list(value) ?? []) {
+    if (item === "me") {
+      out.push(ctx.actorId);
+      continue;
+    }
+    const named = await ctx.store.read((r) => r.getByKey("actor", ctx.projectId, item));
+    out.push(named ? named.id : await resolveId(ctx, "actor", item));
+  }
+  return [...new Set(out)];
+}
+
 const fields = {
   body: { type: "string", description: "Details in Markdown" },
   priority: { type: "string", description: "low | medium | high | urgent" },
@@ -51,6 +84,11 @@ const fields = {
   labels: { type: "string", description: "Comma-separated labels" },
   branch: { type: "string", description: "Git branch for this task" },
   worktree: { type: "string", description: "Worktree path for this task" },
+  due: { type: "string", description: "Due day YYYY-MM-DD, or none" },
+  assign: {
+    type: "string",
+    description: "Who should do it: comma-separated names, ids or me, or none",
+  },
 } as const;
 
 const create = defineCommand({
@@ -80,6 +118,8 @@ const create = defineCommand({
           labels: list(args.labels),
           branch: args.branch,
           worktree: args.worktree,
+          dueDate: due(args.due),
+          assigneeIds: await assignees(ctx, args.assign),
           subtasks: args.subtasks ? parseJson(args.subtasks, "--subtasks", "USAGE") : undefined,
         }),
       (t: Task) => `Created ${row(t)}`,
@@ -96,6 +136,8 @@ const ls = defineCommand({
       description: "Only tasks whose feature belongs to this milestone",
     },
     label: { type: "string", description: "Only tasks with this label" },
+    "due-by": { type: "string", description: "Only tasks due on or before YYYY-MM-DD" },
+    assignee: { type: "string", description: "Only tasks assigned to this name, id or me" },
     ready: { type: "boolean", description: "Only unclaimed tasks whose dependencies are done" },
     ...pagination,
     ...json,
@@ -109,6 +151,8 @@ const ls = defineCommand({
           featureId: await ref(ctx, "feature", args.feature),
           milestoneId: await ref(ctx, "milestone", args.milestone),
           label: args.label,
+          dueBy: args["due-by"],
+          assigneeId: (await assignees(ctx, args.assignee))?.[0],
           ready: args.ready,
           limit: int(args.limit, "limit"),
           offset: int(args.offset, "offset"),
@@ -158,6 +202,8 @@ const update = defineCommand({
           labels: list(args.labels),
           branch: args.branch,
           worktree: args.worktree,
+          dueDate: due(args.due),
+          assigneeIds: await assignees(ctx, args.assign),
           expectedVersion: int(args["expected-version"], "expected-version"),
           token: await claimToken(ctx, taskId, args.token),
           reviewed: args.reviewed ? true : undefined,
@@ -165,6 +211,71 @@ const update = defineCommand({
         });
       },
       (t: Task) => `Updated ${row(t)}`,
+    ),
+});
+
+/** The checklist as numbered lines, so `--done 2` refers to what the person sees. */
+function checklistText(t: Task): string {
+  const items = t.checklist ?? [];
+  if (items.length === 0) return `${row(t)}\n  No checklist. Add a step with --add "text".`;
+  const lines = items.map((c, i) => `  ${i + 1}. [${c.done ? "x" : " "}] ${c.text}`);
+  return [row(t), ...lines].join("\n");
+}
+
+const checklist = defineCommand({
+  meta: {
+    name: "checklist",
+    description: "Show a task's checklist, or add, tick, untick or remove a step",
+  },
+  args: {
+    ...id("Task"),
+    add: { type: "string", description: "Add a step with this text" },
+    done: { type: "string", description: "Tick step number N" },
+    undone: { type: "string", description: "Untick step number N" },
+    remove: { type: "string", description: "Remove step number N" },
+    ...token,
+    ...json,
+  },
+  run: ({ args }) =>
+    execute(
+      args.json,
+      async ({ ctx }) => {
+        const taskId = await resolveId(ctx, "task", args.id);
+        const t = await getRecord(ctx, "task", taskId);
+        const items: ChecklistItem[] = [...(t.checklist ?? [])];
+        const step = (flag: "done" | "undone" | "remove") => {
+          const n = int(args[flag], flag);
+          if (n === undefined) return undefined;
+          if (n < 1 || n > items.length) {
+            throw new SatiError(
+              "USAGE",
+              `--${flag} ${n}: the checklist has ${items.length} steps.`,
+            );
+          }
+          return n - 1;
+        };
+        const done = step("done");
+        const undone = step("undone");
+        const removed = step("remove");
+        if (done !== undefined && items[done]) items[done] = { ...items[done], done: true };
+        if (undone !== undefined && items[undone])
+          items[undone] = { ...items[undone], done: false };
+        if (removed !== undefined) items.splice(removed, 1);
+        if (args.add !== undefined) items.push({ text: args.add, done: false });
+        const changed =
+          args.add !== undefined ||
+          done !== undefined ||
+          undone !== undefined ||
+          removed !== undefined;
+        if (!changed) return t;
+        // The version read above guards the whole list against a change made meanwhile.
+        return updateTask(ctx, taskId, {
+          checklist: items,
+          expectedVersion: t.version,
+          token: await claimToken(ctx, taskId, args.token),
+        });
+      },
+      checklistText,
     ),
 });
 
@@ -300,6 +411,7 @@ export default defineCommand({
     list: ls,
     show,
     update,
+    checklist,
     claim,
     release,
     "take-over": takeOver,

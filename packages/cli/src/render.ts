@@ -5,10 +5,12 @@ interface Row {
   title: string;
   status?: string;
   priority?: string;
+  dueDate?: string | null | undefined;
 }
 
 export function row(r: Row): string {
-  return [shortHandle(r.id), r.status, r.priority, r.title].filter(Boolean).join("  ");
+  const due = r.dueDate ? `due ${r.dueDate}` : "";
+  return [shortHandle(r.id), r.status, r.priority, due, r.title].filter(Boolean).join("  ");
 }
 
 /** Empty lists teach the next command instead of printing nothing. */

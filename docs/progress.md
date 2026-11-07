@@ -866,3 +866,28 @@ fixed the same bug (undo of shortened text, subtask cycles, 400 for bad JSON, th
   `dueBefore` with `dueDate`.
 - Regression test through MCP on SQLite: open tasks of a milestone across two features, with a
   label, with a feature of another milestone (empty), and with `ready`.
+
+### Phase 7a: due date, assignees and checklist (2026-11-07)
+
+- `dueDate` is a calendar day (`YYYY-MM-DD`), not a timestamp: "by Friday" has no zone, and
+  the UI reads it as a local day so it never shifts by a day across time zones.
+- `assigneeIds` says who should do the task; the claim still says who is doing it now. Assignees
+  must be actors of the project. `checklist` holds up to 100 `{ text, done }` steps.
+- Choice on the plan's "schemaVersion goes up with a migration": no migration. The fields are
+  optional and only written once set, so every existing record and `.sati/` file is still
+  valid and untouched tasks keep their shape. Note: `SNAPSHOT_SCHEMA_VERSION` is declared but
+  not read anywhere, and snapshot files carry no `schemaVersion`, so the Versioning rule is not
+  in force yet; an older sati would refuse (loudly, importing nothing) a file with the new keys.
+  That needs settling before the first release.
+- Merging: `assigneeIds` is a list of ids, so the three-way set merge keeps both sides' adds.
+  `checklist` is a list of objects, so the later write wins, by its field stamp.
+- `task_list` gains `dueBy` (inclusive; undated tasks left out) and `assigneeId`, filtered in SQL
+  with `json_extract` / `json_each`, and in the ready path.
+- CLI: `--due` and `--assign` on create and update (`none` clears; `me` and actor names work),
+  `--due-by` and `--assignee` on list, and `task checklist <id>` with numbered steps for
+  `--add`, `--done`, `--undone` and `--remove`, guarded by the version it read. List rows show
+  the due day.
+- UI: the New task form has Due date and Assigned to; the task panel edits both and has the
+  checklist, where ticks show at once and revert if the save is refused. Cards show
+  "due Tue, Dec 1" (clay with "late" once it passed and the task is open) and "1/3 steps".
+- Checked in Chrome at 1280 and 375 px.

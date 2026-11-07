@@ -122,7 +122,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
     "task_list",
     {
       description:
-        'List tasks. Filter by status, feature, milestone (tasks whose feature is in it) or label, combined; `ready: true` returns unclaimed todo tasks whose dependencies are done. For "what is left for a milestone", pass milestoneId with the open statuses.',
+        'List tasks. Filter by status, feature, milestone (tasks whose feature is in it), label, assigneeId or dueBy (due on or before a date), combined; `ready: true` returns unclaimed todo tasks whose dependencies are done. For "what is left for a milestone", pass milestoneId with the open statuses.',
       inputSchema: ListTasksInput,
       annotations: { readOnlyHint: true },
     },
@@ -133,7 +133,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
     "task_create",
     {
       description:
-        "Create a task. New tasks start in todo (or backlog). The result lists `similar` existing tasks; if one is the same work, cancel the new task and use that one.",
+        "Create a task. New tasks start in todo (or backlog). Optional dueDate (YYYY-MM-DD), assigneeIds (actor ids: who should do it) and checklist ([{text, done}]). The result lists `similar` existing tasks; if one is the same work, cancel the new task and use that one.",
       inputSchema: CreateTaskInput,
       annotations: { destructiveHint: false },
     },
@@ -162,7 +162,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
     "task_update",
     {
       description:
-        "Update a task's fields or status. While the task is claimed, pass the token from task_claim; a stale token means your claim was lost, so stop. Renews your lease. Moving it back to todo releases it.",
+        "Update a task's fields or status. checklist and assigneeIds replace the whole list, so send them with expectedVersion; dueDate null clears it. While the task is claimed, pass the token from task_claim; a stale token means your claim was lost, so stop. Renews your lease. Moving it back to todo releases it.",
       inputSchema: UpdateTaskInput.extend({ id: Ref }),
     },
     ({ id, ...input }) => run(async () => updateTask(ctx, await task(id), input)),

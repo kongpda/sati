@@ -908,3 +908,25 @@ fixed the same bug (undo of shortened text, subtask cycles, 400 for bad JSON, th
 - The phone nav kept "My work" on two lines, which made the bar taller and made the Activity
   page scroll, so axe flagged it; nav labels now stay on one line.
 - Checked in Chrome at 1280 and 375 px.
+
+### Phase 7a: People (2026-11-07)
+
+- Actors gain optional `displayName`, `initials` and `color` (one of eight named colours with
+  white-text contrast in both themes). `name` stays the identity sati looks actors up by.
+- `updateProfile` in core, `PATCH /api/actors/:id` in the UI server. Only a person may edit, and
+  only people have a profile; agents keep their session name, because which session did the work
+  matters. No version check: an actor's version moves on every write it makes (clock stamps).
+  `null` clears a field back to the default.
+- Defaults in the UI: a person without a display name shows as the user part of
+  `user@worktree`, so the same person reads the same in every worktree; initials are the first
+  graphemes of the first two words (Khmer clusters stay whole); the colour is picked from the
+  shown name.
+- Settings page (`/settings`) with the People list and an Edit dialog that previews the avatar.
+- Known limit: actors are not in the `.sati/` snapshot, so a profile lives in each clone's
+  database and a teammate's clone shows their own defaults. Syncing profiles needs actors in the
+  snapshot; left for the sync work.
+- Fixed while testing: two quick checklist edits in the task panel both sent the version the
+  panel opened with, so the second was refused and the tick reverted. Checklist saves now run in
+  order, each with the version the previous save returned.
+- Colour radios meet the WCAG 2.2 target size (axe flagged the default 13 px radios).
+- Checked in Chrome at 1280 px; axe on Settings and the Edit person dialog at 1280 and 375 px.

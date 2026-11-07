@@ -1,4 +1,8 @@
 import { basename } from "node:path";
+import { z } from "zod";
+import { SatiError } from "../domain/errors.js";
+import { type Actor, Actor as ActorSchema } from "../domain/schemas.js";
+import { mustGet, parseInput, type ServiceContext, updateWithLog } from "./context.js";
 import type { ActorIdentity } from "./project.js";
 
 export interface IdentityEnv {
@@ -43,4 +47,40 @@ export function actorIdentity({ env, worktree, user }: IdentityEnv): ActorIdenti
   }
   const who = env.USER ?? env.USERNAME ?? user ?? "human";
   return { name: `${who}@${place}`, kind, tool: null, worktree };
+}
+
+const profile = ActorSchema.pick({ displayName: true, initials: true, color: true }).shape;
+/** Each field sets it, `null` clears it back to the default, and a missing field is kept. */
+export const UpdateProfileInput = z.strictObject({
+  displayName: profile.displayName.unwrap().nullable().optional(),
+  initials: profile.initials.unwrap().nullable().optional(),
+  color: profile.color.unwrap().nullable().optional(),
+});
+export type UpdateProfileInput = z.input<typeof UpdateProfileInput>;
+
+/**
+ * Sets how a person is shown: display name, initials and avatar colour. Only people have a
+ * profile, and only a person may change one; agents keep their identity string. No version check:
+ * an actor's version moves on every write it makes (its clock stamp), and only people edit this.
+ */
+export async function updateProfile(
+  ctx: ServiceContext,
+  actorId: string,
+  input: unknown,
+): Promise<Actor> {
+  const data = parseInput(UpdateProfileInput, input);
+  return ctx.store.write(async (w) => {
+    const caller = await mustGet(w, ctx, "actor", ctx.actorId);
+    if (caller.kind !== "human") {
+      throw new SatiError("VALIDATION", "Only a person can change how people are shown.");
+    }
+    const before = await mustGet(w, ctx, "actor", actorId);
+    if (before.kind !== "human") {
+      throw new SatiError("VALIDATION", "Agents have no profile; they are shown by their name.");
+    }
+    const keys = ["displayName", "initials", "color"] as const;
+    const set = Object.fromEntries(keys.flatMap((k) => (data[k] ? [[k, data[k]]] : [])));
+    const clear = keys.filter((k) => data[k] === null && before[k] !== undefined);
+    return updateWithLog(w, ctx, "actor", before, set, { clear });
+  });
 }

@@ -5,6 +5,8 @@ import { Board } from "./board.js";
 import { NewTask } from "./forms.js";
 import { MyWork } from "./my-work.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
+import { nameOf } from "./people.js";
+import { Settings } from "./settings.js";
 
 const PAGES = [
   ["/", "Board"],
@@ -15,6 +17,7 @@ const PAGES = [
   ["/notes", "Notes"],
   ["/decisions", "Decisions"],
   ["/activity", "Activity"],
+  ["/settings", "Settings"],
 ] as const;
 
 export function App() {
@@ -348,10 +351,7 @@ export function App() {
                   .filter((t) => t.claim)
                   .map((t) => (
                     <span className="pill" key={t.id}>
-                      <strong>
-                        {data?.actors.find((a) => a.id === t.claim?.actorId)?.name ?? "agent"}
-                      </strong>{" "}
-                      · {t.title}
+                      <strong>{data ? nameOf(data, t.claim?.actorId) : ""}</strong> · {t.title}
                     </span>
                   ))}
               </div>
@@ -402,6 +402,7 @@ export function App() {
               <Board
                 tasks={tasks}
                 features={data?.features ?? []}
+                actors={data?.actors ?? []}
                 fresh={fresh}
                 selected={selected}
                 column={column}
@@ -459,7 +460,7 @@ export function App() {
             }
             onReleaseTask={(id) => {
               const t = data.tasks.find((x) => x.id === id);
-              const name = data.actors.find((a) => a.id === t?.claim?.actorId)?.name ?? "them";
+              const name = nameOf(data, t?.claim?.actorId);
               const ok =
                 t?.claim?.actorId === data.you ||
                 window.confirm(`Release ${t?.title ?? id} from ${name}? Their claim ends.`);
@@ -526,6 +527,7 @@ export function App() {
           />
         ) : null}
         {data && path === "/activity" ? <Activity data={data} /> : null}
+        {data && path === "/settings" ? <Settings data={data} onSaved={saved} /> : null}
       </main>
       {data && task ? (
         <TaskSheet
@@ -536,7 +538,10 @@ export function App() {
           onSave={(id, patch) =>
             api
               .patchTask(id, patch)
-              .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
+              .then(async (saved) => {
+                await client.invalidateQueries({ queryKey: ["snapshot"] });
+                return saved;
+              })
               .catch((err: unknown) => {
                 fail(err);
                 throw err;

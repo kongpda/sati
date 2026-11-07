@@ -179,6 +179,7 @@ test("every page loads and marks itself current", async ({ page }) => {
     "Notes",
     "Decisions",
     "Activity",
+    "Settings",
     "Board",
   ]) {
     await page.getByRole("link", { name, exact: true }).click();
@@ -195,7 +196,7 @@ test("every page loads and marks itself current", async ({ page }) => {
     }
   }
   await page.goBack();
-  await expect(page.getByRole("link", { name: "Activity", exact: true })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Settings", exact: true })).toHaveAttribute(
     "aria-current",
     "page",
   );
@@ -428,5 +429,50 @@ test("My work lists approvals, my tasks and this week's, and approves or sends b
   // A title opens the task panel over the page.
   await assigned.getByRole("button", { name: "Call the caterer" }).click();
   await expect(page.getByRole("dialog", { name: "Call the caterer" })).toBeVisible();
+  expect(await problems()).toEqual([]);
+});
+
+// PLAN Phase 7a: a person picks how they are shown; the board uses it everywhere.
+test("sets a person's display name, initials and colour, shown on the board", async ({ page }) => {
+  const problems = await watch(page);
+  const { you } = await ui.api<{ you: string }>("GET", "/api/snapshot");
+  await ui.api("POST", "/api/tasks", { title: "Brief the photographer", assigneeIds: [you] });
+  await page.goto(ui.signIn);
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Edit playwright" }).click();
+  const form = page.getByRole("dialog", { name: "Edit person" });
+  await form.getByLabel("Display name").fill("Sokha Chan");
+  await expect(form.getByLabel("Initials")).toHaveAttribute("placeholder", "SC");
+  await form.getByLabel("Initials").fill("SK");
+  await form.getByRole("radio", { name: "Plum" }).check();
+  await form.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(form).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 3, name: "Sokha Chan (you)" })).toBeVisible();
+
+  // The card's avatar and the activity log use the new name.
+  await page.getByRole("link", { name: "Board", exact: true }).click();
+  const avatar = page
+    .locator(".card")
+    .filter({ hasText: "Brief the photographer" })
+    .getByRole("img", { name: "Sokha Chan" });
+  await expect(avatar).toHaveText("SK");
+  await expect(avatar).toHaveClass(/c-plum/u);
+  await page.getByRole("link", { name: "Activity", exact: true }).click();
+  await expect(page.locator("article strong").first()).toHaveText("Sokha Chan");
+
+  // A blank field goes back to the default.
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Edit Sokha Chan" }).click();
+  await form.getByLabel("Initials").fill("");
+  await form.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(form).toHaveCount(0);
+  const actor = (
+    await ui.api<{ actors: { id: string; initials?: string; color?: string }[] }>(
+      "GET",
+      "/api/snapshot",
+    )
+  ).actors.find((a) => a.id === you);
+  expect(actor).toMatchObject({ color: "plum" });
+  expect(actor?.initials).toBeUndefined();
   expect(await problems()).toEqual([]);
 });

@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from "react";
 import { dueLabel, type Snapshot, type Task, today } from "./api.js";
+import { nameOf } from "./people.js";
 
 const CLOSED = new Set(["done", "cancelled"]);
 
@@ -172,7 +173,7 @@ function Approval({
   onSendBack: (task: Task, reason: string) => Promise<unknown>;
 }) {
   const [sending, setSending] = useState(false);
-  const by = data.actors.find((a) => a.id === task.completion?.completedBy)?.name;
+  const by = task.completion ? nameOf(data, task.completion.completedBy) : null;
   const files = task.completion?.filesTouched.length ?? 0;
   return (
     <Row data={data} task={task} onOpen={onOpen}>

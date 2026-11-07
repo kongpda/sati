@@ -12,11 +12,13 @@ import {
 } from "@dnd-kit/core";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef, useState } from "react";
-import { ago, COLUMNS, dueLabel, type Feature, type Task } from "./api.js";
+import { type Actor, ago, COLUMNS, dueLabel, type Feature, type Task } from "./api.js";
+import { Avatar } from "./people.js";
 
 export function Board({
   tasks,
   features,
+  actors,
   fresh,
   selected,
   column,
@@ -27,6 +29,7 @@ export function Board({
 }: {
   tasks: Task[];
   features: Feature[];
+  actors: Actor[];
   fresh: Set<string>;
   selected: Set<string>;
   column: string;
@@ -37,6 +40,7 @@ export function Board({
 }) {
   const byFeature = new Map(features.map((f) => [f.id, f.title]));
   const featureName = (id: string | null) => (id ? (byFeature.get(id) ?? "") : "");
+  const people = new Map(actors.map((a) => [a.id, a]));
   // A drag starts only after the pointer moves, so a plain click still opens the card.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -68,6 +72,7 @@ export function Board({
             show={column === "all" || column === status}
             tasks={tasks.filter((t) => t.status === status)}
             featureName={featureName}
+            people={people}
             fresh={fresh}
             selected={selected}
             onOpen={onOpen}
@@ -82,6 +87,7 @@ export function Board({
             <CardBody
               task={dragged}
               feature={featureName(dragged.featureId)}
+              people={people}
               fresh={false}
               selected={selected.has(dragged.id)}
             />
@@ -98,6 +104,7 @@ function Column({
   show,
   tasks,
   featureName,
+  people,
   fresh,
   selected,
   onOpen,
@@ -109,6 +116,7 @@ function Column({
   show: boolean;
   tasks: Task[];
   featureName: (id: string | null) => string;
+  people: Map<string, Actor>;
   fresh: Set<string>;
   selected: Set<string>;
   onOpen: (id: string) => void;
@@ -166,6 +174,7 @@ function Column({
                 <Card
                   task={item.task}
                   feature={featureName(item.task.featureId)}
+                  people={people}
                   fresh={fresh.has(item.task.id)}
                   selected={selected.has(item.task.id)}
                   onOpen={onOpen}
@@ -184,6 +193,7 @@ function Column({
 function Card({
   task,
   feature,
+  people,
   fresh,
   selected,
   onOpen,
@@ -192,6 +202,7 @@ function Card({
 }: {
   task: Task;
   feature: string;
+  people: Map<string, Actor>;
   fresh: boolean;
   selected: boolean;
   onOpen: (id: string) => void;
@@ -221,6 +232,7 @@ function Card({
       <CardBody
         task={task}
         feature={feature}
+        people={people}
         fresh={fresh}
         selected={selected}
         onReviewed={onReviewed}
@@ -234,6 +246,7 @@ function Card({
 function CardBody({
   task,
   feature,
+  people,
   fresh,
   selected,
   onToggle,
@@ -241,6 +254,7 @@ function CardBody({
 }: {
   task: Task;
   feature: string;
+  people: Map<string, Actor>;
   fresh: boolean;
   selected: boolean;
   onToggle?: (id: string) => void;
@@ -249,6 +263,7 @@ function CardBody({
   const urgent = task.priority === "high" || task.priority === "urgent";
   const due = task.dueDate ? dueLabel(task.dueDate, task.status) : null;
   const steps = task.checklist ?? [];
+  const assignees = (task.assigneeIds ?? []).flatMap((id) => people.get(id) ?? []);
   return (
     <>
       {onToggle ? null : <div className="title">{task.title}</div>}
@@ -268,6 +283,13 @@ function CardBody({
           </>
         ) : null}
         {steps.length ? ` · ${steps.filter((c) => c.done).length}/${steps.length} steps` : ""}
+        {assignees.length ? (
+          <span className="avatars">
+            {assignees.map((a) => (
+              <Avatar key={a.id} actor={a} label />
+            ))}
+          </span>
+        ) : null}
         {onReviewed && task.needsReview ? (
           <button type="button" onClick={() => onReviewed(task.id)}>
             mark reviewed

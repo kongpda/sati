@@ -10,6 +10,7 @@ import {
 } from "./api.js";
 import { Assignees, DecisionForm, MilestoneForm, NoteForm } from "./forms.js";
 import { Markdown } from "./markdown.js";
+import { Avatar, nameOf, personName } from "./people.js";
 
 export function Agents({
   data,
@@ -20,7 +21,6 @@ export function Agents({
   onRelease: () => void;
   onReleaseTask: (id: string) => void;
 }) {
-  const name = new Map(data.actors.map((a) => [a.id, a.name]));
   return (
     <div className="page">
       <h1>Agents</h1>
@@ -33,7 +33,10 @@ export function Agents({
           const locks = data.locks.filter((l) => l.actorId === actor.id);
           return (
             <article key={actor.id} className="row">
-              <strong>{actor.name}</strong>
+              <strong className="who">
+                <Avatar actor={actor} />
+                {personName(actor)}
+              </strong>
               <div className="meta">
                 {actor.kind}
                 {actor.tool ? ` · ${actor.tool}` : ""}
@@ -56,7 +59,7 @@ export function Agents({
               ))}
               {locks.map((l) => (
                 <div key={l.id} className="meta">
-                  {l.mode} lock on {l.paths.join(", ")} by {name.get(l.actorId) ?? l.actorId}
+                  {l.mode} lock on {l.paths.join(", ")} by {nameOf(data, l.actorId)}
                 </div>
               ))}
               {tasks.length === 0 && locks.length === 0 ? <div className="meta">Idle</div> : null}
@@ -416,7 +419,6 @@ export function Decisions({
 }
 
 export function Activity({ data }: { data: Snapshot }) {
-  const names = new Map(data.actors.map((a) => [a.id, a.name]));
   // Name the record each row touched when it is still on screen elsewhere in the snapshot.
   const titles = new Map<string, string>([
     ...data.tasks.map((t) => [t.id, t.title] as const),
@@ -431,7 +433,7 @@ export function Activity({ data }: { data: Snapshot }) {
       <div className="list">
         {data.activity.map((row) => (
           <article key={row.id} className="row">
-            <strong>{names.get(row.actorId) ?? row.actorId}</strong> {row.verb} {row.entity}
+            <strong>{nameOf(data, row.actorId)}</strong> {row.verb} {row.entity}
             {titles.has(row.entityId) ? (
               <span className="subject"> {titles.get(row.entityId)}</span>
             ) : null}
@@ -473,7 +475,7 @@ export function TaskSheet({
   id: string;
   onClose: () => void;
   /** Rejects when the save is refused (the reason is already shown). */
-  onSave: (id: string, patch: Record<string, unknown>) => Promise<unknown>;
+  onSave: (id: string, patch: Record<string, unknown>) => Promise<{ version: number }>;
   onRelease: (id: string, force: boolean) => void;
   onTakeOver: (id: string) => void;
   onDelete: (id: string, title: string) => void;
@@ -560,7 +562,7 @@ export function TaskSheet({
       <Checklist
         version={task.version}
         items={task.checklist ?? []}
-        onChange={(checklist) => onSave(task.id, { checklist, expectedVersion: task.version })}
+        onChange={(checklist, expectedVersion) => onSave(task.id, { checklist, expectedVersion })}
       />
       {held ? null : (
         <button type="button" className="danger" onClick={() => onDelete(task.id, task.title)}>
@@ -593,16 +595,33 @@ function Checklist({
 }: {
   version: number;
   items: { text: string; done: boolean }[];
-  onChange: (items: { text: string; done: boolean }[]) => Promise<unknown>;
+  onChange: (
+    items: { text: string; done: boolean }[],
+    expectedVersion: number,
+  ) => Promise<{ version: number }>;
 }) {
   // Shown at once; a refused save puts back what the server has. A new version (a save from
   // here or anywhere) resets it to the server's list without remounting, so focus stays put.
   const [shown, setShown] = useState(items);
   // biome-ignore lint/correctness/useExhaustiveDependencies: items is new on every snapshot; the version says when it changed
   useEffect(() => setShown(items), [version]);
+  // Quick ticks run one after another, each with the version the last save returned; sent
+  // together, the second would carry a stale version and be refused.
+  const latest = useRef(version);
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  useEffect(() => {
+    latest.current = Math.max(latest.current, version);
+  }, [version]);
   const change = (next: typeof items) => {
     setShown(next);
-    onChange(next).catch(() => setShown(items));
+    queue.current = queue.current.then(() =>
+      onChange(next, latest.current).then(
+        (saved) => {
+          latest.current = saved.version;
+        },
+        () => setShown(items),
+      ),
+    );
   };
   const done = shown.filter((c) => c.done).length;
   return (
@@ -672,7 +691,7 @@ function ClaimBox({
   onTakeOver: () => void;
 }) {
   const mine = claim.actorId === data.you;
-  const name = data.actors.find((a) => a.id === claim.actorId)?.name ?? claim.actorId;
+  const name = nameOf(data, claim.actorId);
   const live = Date.parse(claim.leaseUntil) > Date.now();
   const until = (
     <time dateTime={claim.leaseUntil} title={claim.leaseUntil}>

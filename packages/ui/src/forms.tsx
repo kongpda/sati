@@ -8,6 +8,7 @@ import {
   type Snapshot,
   type Task,
 } from "./api.js";
+import { Avatar, personName } from "./people.js";
 
 const PRIORITIES = ["low", "medium", "high", "urgent"] as const;
 
@@ -52,7 +53,7 @@ function filled(form: HTMLFormElement): boolean {
  * Cancel, keeps the submit button off until the required fields are filled, and shows a refused
  * save inside the dialog so nothing typed is lost. The caller closes it when the save succeeds.
  */
-function FormDialog({
+export function FormDialog({
   title,
   submit,
   busy,
@@ -138,7 +139,8 @@ export function Assignees({ data, chosen = [] }: { data: Snapshot; chosen?: stri
   if (data.actors.length === 0) return null;
   const actors = [...data.actors].sort(
     (a, b) =>
-      Number(a.kind !== "human") - Number(b.kind !== "human") || a.name.localeCompare(b.name),
+      Number(a.kind !== "human") - Number(b.kind !== "human") ||
+      personName(a).localeCompare(personName(b)),
   );
   return (
     <fieldset className="dialog-choices">
@@ -151,7 +153,8 @@ export function Assignees({ data, chosen = [] }: { data: Snapshot; chosen?: stri
             value={a.id}
             defaultChecked={chosen.includes(a.id)}
           />
-          {a.name}
+          <Avatar actor={a} />
+          {personName(a)}
           {a.id === data.you ? " (you)" : ""}
         </label>
       ))}

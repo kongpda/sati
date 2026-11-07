@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { actorIdentity } from "../src/index.js";
+import { actorIdentity, ensureActor, updateProfile } from "../src/index.js";
+import { setup } from "./support/setup.js";
 
 const wt = "/repo/.worktrees/feature-a";
 
@@ -37,5 +38,51 @@ describe("actorIdentity", () => {
     const id = actorIdentity({ env: { USER: "dara" }, worktree: "/x/main" });
     expect(id).toEqual({ name: "dara@main", kind: "human", tool: null, worktree: "/x/main" });
     expect(actorIdentity({ env: {}, worktree: null, user: "os" }).name).toBe("os@local");
+  });
+});
+
+describe("updateProfile", () => {
+  it("lets a person set and clear how people are shown, and logs it", async () => {
+    const { ctx, store, actor: agent } = await setup();
+    const kong = await ensureActor(ctx, {
+      name: "kong@main",
+      kind: "human",
+      tool: null,
+      worktree: null,
+    });
+    const asKong = { ...ctx, actorId: kong.id };
+    const before = store.activity.length;
+    const set = await updateProfile(asKong, kong.id, {
+      displayName: "  Kong Da ",
+      initials: "KD",
+      color: "plum",
+    });
+    expect(set).toMatchObject({
+      name: "kong@main",
+      displayName: "Kong Da",
+      initials: "KD",
+      color: "plum",
+    });
+    expect(store.activity.slice(before)).toEqual([
+      expect.objectContaining({ verb: "update", entity: "actor", entityId: kong.id }),
+    ]);
+    // null goes back to the default; a field left out is kept.
+    const cleared = await updateProfile(asKong, kong.id, { initials: null });
+    expect(Object.keys(cleared)).not.toContain("initials");
+    expect(cleared.displayName).toBe("Kong Da");
+
+    // Agents neither have a profile nor change one.
+    await expect(updateProfile(asKong, agent.id, { displayName: "Bot" })).rejects.toMatchObject({
+      code: "VALIDATION",
+    });
+    await expect(updateProfile(ctx, kong.id, { displayName: "Hacked" })).rejects.toMatchObject({
+      code: "VALIDATION",
+    });
+    await expect(updateProfile(asKong, kong.id, { color: "neon" })).rejects.toMatchObject({
+      code: "VALIDATION",
+    });
+    await expect(updateProfile(asKong, kong.id, { displayName: "   " })).rejects.toMatchObject({
+      code: "VALIDATION",
+    });
   });
 });

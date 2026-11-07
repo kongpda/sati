@@ -228,6 +228,17 @@ export const ContextEntry = z.strictObject({
 export type ContextEntry = z.infer<typeof ContextEntry>;
 
 export const ACTOR_KINDS = ["agent", "human"] as const;
+/** Avatar colours a person can pick. Named, not hex, so every one keeps contrast in both themes. */
+export const ACTOR_COLORS = [
+  "moss",
+  "teal",
+  "sky",
+  "plum",
+  "rose",
+  "clay",
+  "sun",
+  "slate",
+] as const;
 export const Actor = z.strictObject({
   id: ActorId,
   projectId: ProjectId,
@@ -236,6 +247,14 @@ export const Actor = z.strictObject({
   name: z.string().min(1).max(200),
   tool: z.string().max(100).nullable(),
   worktree: z.string().max(LIMITS.path).nullable(),
+  /*
+   * How a person is shown. `name` stays the stable identity sati looks actors up by; these are
+   * only what people read, and are absent until set.
+   */
+  displayName: z.string().trim().min(1).max(80).optional(),
+  /** Up to three letters for the avatar; Khmer clusters take more code units, hence 8. */
+  initials: z.string().trim().min(1).max(8).optional(),
+  color: z.enum(ACTOR_COLORS).optional(),
   createdAt: ts,
   updatedAt: ts,
   version: z.number().int().min(1),

@@ -21,6 +21,7 @@ import {
   updateFeature,
   updateMilestone,
   updateNote,
+  updateProfile,
   updateTask,
 } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
@@ -110,6 +111,7 @@ function openApi() {
       "/api/features/{id}": { patch: { summary: "Update a feature" } },
       "/api/milestones": { post: { summary: "Create a milestone" } },
       "/api/milestones/{id}": { patch: { summary: "Update a milestone" } },
+      "/api/actors/{id}": { patch: { summary: "Set a person's display name, initials, colour" } },
       "/events": { get: { summary: "Server-sent events when the database changes" } },
     },
   };
@@ -297,6 +299,10 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   app.post("/api/milestones", async (c) => c.json(await createMilestone(rt.ctx, await body(c))));
   app.patch("/api/milestones/:id", async (c) =>
     c.json(await updateMilestone(rt.ctx, c.req.param("id"), await body(c))),
+  );
+
+  app.patch("/api/actors/:id", async (c) =>
+    c.json(await updateProfile(rt.ctx, c.req.param("id"), await body(c))),
   );
 
   // Deletes are soft, so the board's Undo is a restore of the same record.

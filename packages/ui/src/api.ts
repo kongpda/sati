@@ -62,6 +62,9 @@ export interface Actor {
   kind: string;
   tool: string | null;
   worktree: string | null;
+  displayName?: string;
+  initials?: string;
+  color?: string;
 }
 
 export interface Milestone {
@@ -165,6 +168,8 @@ export const api = {
     request<unknown>(`/api/${entity}s/${id}`, { method: "DELETE" }),
   restore: (entity: Deletable, id: string) =>
     request<unknown>(`/api/${entity}s/${id}/restore`, { method: "POST", body: "{}" }),
+  patchProfile: (id: string, body: Record<string, unknown>) =>
+    request<Actor>(`/api/actors/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   patchFeature: (id: string, body: Record<string, unknown>) =>
     request<Feature>(`/api/features/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
 };

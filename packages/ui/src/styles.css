@@ -831,3 +831,94 @@ button.danger {
   flex: 1 1 200px;
   min-width: 0;
 }
+
+/* People: avatars in eight colours that keep white text readable in both themes. */
+.avatar,
+.swatch {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 650;
+  line-height: 1;
+}
+.avatar {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  font-size: 10px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.swatch {
+  width: 16px;
+  height: 16px;
+}
+.c-moss {
+  background: #1b6a44;
+}
+.c-teal {
+  background: #0f6466;
+}
+.c-sky {
+  background: #1d5c8c;
+}
+.c-plum {
+  background: #6a3d8a;
+}
+.c-rose {
+  background: #9b2c58;
+}
+.c-clay {
+  background: #8a3b2c;
+}
+.c-sun {
+  background: #7d5200;
+}
+.c-slate {
+  background: #48535f;
+}
+.meta .avatars {
+  margin-left: 6px;
+}
+.meta .avatars .avatar {
+  margin-right: 2px;
+}
+.row.person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.row.person > div {
+  flex: 1;
+  min-width: 0;
+}
+.row.person .avatar {
+  min-width: 32px;
+  height: 32px;
+  font-size: 13px;
+  margin: 0;
+}
+.who {
+  display: inline-flex;
+  align-items: center;
+}
+.person-preview {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+.palette form.dialog-form .swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px 10px;
+  max-height: none;
+}
+/* WCAG 2.2 target size: each radio is at least 20 px with room around it. */
+.palette form.dialog-form .swatches input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+}

@@ -45,6 +45,7 @@ const PAGES = [
   "/notes",
   "/decisions",
   "/activity",
+  "/settings",
 ];
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
@@ -95,7 +96,7 @@ for (const [device, viewport] of [
       expect(summary(form.violations)).toEqual([]);
     });
 
-    test("axe: milestone, decision and note forms", async ({ page }) => {
+    test("axe: milestone, decision, note and person forms", async ({ page }) => {
       await page.goto(ui.signIn);
       await page.getByRole("link", { name: "Roadmap", exact: true }).click();
       await page.getByRole("button", { name: "Edit 1.0" }).click();
@@ -114,6 +115,15 @@ for (const [device, viewport] of [
       await expect(page.getByRole("dialog", { name: "Edit note" })).toBeVisible();
       const note = await new AxeBuilder({ page }).withTags(TAGS).analyze();
       expect(summary(note.violations)).toEqual([]);
+      await page.keyboard.press("Escape");
+      await page.getByRole("link", { name: "Settings", exact: true }).click();
+      await page
+        .getByRole("button", { name: /^Edit / })
+        .first()
+        .click();
+      await expect(page.getByRole("dialog", { name: "Edit person" })).toBeVisible();
+      const person = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+      expect(summary(person.violations)).toEqual([]);
     });
   });
 }

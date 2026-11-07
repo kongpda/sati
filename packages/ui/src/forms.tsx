@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api, type Decision, type Milestone, type Note, type Snapshot, type Task } from "./api.js";
 import { Avatar, personName } from "./people.js";
-import { plainError } from "./words.js";
+import { plainError, statusWord } from "./words.js";
 
 const PRIORITIES = ["low", "medium", "high", "urgent"] as const;
 
@@ -128,7 +128,10 @@ export function FormDialog({
 
 /** Checkboxes for who should do a task, people first; the reader is marked "(you)". */
 export function Assignees({ data, chosen = [] }: { data: Snapshot; chosen?: string[] }) {
-  if (data.actors.length === 0) return null;
+  // People are not in the `.sati/` snapshot, so a teammate's clone can name someone this
+  // computer has never seen. They stay ticked, or saving any edit would unassign them.
+  const elsewhere = chosen.filter((id) => !data.actors.some((a) => a.id === id));
+  if (data.actors.length === 0 && elsewhere.length === 0) return null;
   const actors = [...data.actors].sort(
     (a, b) =>
       Number(a.kind !== "human") - Number(b.kind !== "human") ||
@@ -148,6 +151,12 @@ export function Assignees({ data, chosen = [] }: { data: Snapshot; chosen?: stri
           <Avatar actor={a} />
           {personName(a)}
           {a.id === data.you ? " (you)" : ""}
+        </label>
+      ))}
+      {elsewhere.map((id) => (
+        <label key={id}>
+          <input type="checkbox" name="assigneeIds" value={id} defaultChecked />
+          Someone on another computer
         </label>
       ))}
     </fieldset>
@@ -212,7 +221,7 @@ export function NewTask({
         <label>
           List
           <select name="status" defaultValue="todo">
-            <option value="todo">Todo</option>
+            <option value="todo">{statusWord("todo")}</option>
             <option value="backlog">Backlog</option>
           </select>
         </label>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { type Actor, api, type ProjectKind, type Snapshot } from "./api.js";
 import { FormDialog } from "./forms.js";
 import { Avatar, COLORS, colorOf, initialsOf, personName } from "./people.js";
@@ -45,6 +45,11 @@ export function Settings({
 }) {
   const kind = data.project?.kind ?? "code";
   const [saving, setSaving] = useState<ProjectKind | null>(null);
+  // The choice stays shown until the reloaded board has it; clearing it when the request
+  // returned showed the old kind for a moment.
+  useEffect(() => {
+    if (saving === kind) setSaving(null);
+  }, [saving, kind]);
   const [editing, setEditing] = useState<Actor | null>(null);
   const people = data.actors
     .filter((a) => a.kind === "human")
@@ -74,8 +79,10 @@ export function Settings({
                   api
                     .setKind(value)
                     .then(() => onSaved(`This is now a ${label.toLowerCase()}.`))
-                    .catch(onError)
-                    .finally(() => setSaving(null));
+                    .catch((err: unknown) => {
+                      setSaving(null);
+                      onError(err);
+                    });
                 }}
               />
               <span>

@@ -1,4 +1,4 @@
-import { ApiError } from "./api.js";
+import { ApiError, COLUMNS } from "./api.js";
 
 /*
  * The words people read in the board. The CLI and MCP keep their own terms (`in_progress`,
@@ -6,15 +6,7 @@ import { ApiError } from "./api.js";
  */
 
 /** Task statuses as people say them. The values sent to the server stay the same. */
-export const STATUS_WORDS: Record<string, string> = {
-  backlog: "Backlog",
-  todo: "To do",
-  in_progress: "Working on it",
-  review: "Waiting for approval",
-  done: "Done",
-  blocked: "Blocked",
-  cancelled: "Cancelled",
-};
+export const STATUS_WORDS: Record<string, string> = Object.fromEntries(COLUMNS);
 
 export const statusWord = (status: string): string => STATUS_WORDS[status] ?? status;
 

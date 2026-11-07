@@ -1,9 +1,7 @@
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
   CLI_NAME,
-  CONFIG_DIR,
-  CONFIG_FILE,
   checkChanges,
   ERROR_EXIT_CODES,
   type GuardResult,
@@ -11,7 +9,6 @@ import {
   parseShellChanges,
   readSettings,
   recordGuard,
-  SatiConfigSchema,
   SatiError,
 } from "@sati/core";
 import { defineCommand } from "citty";
@@ -24,17 +21,14 @@ import {
   parseJson,
   printError,
   type Runtime,
+  readProjectConfig,
 } from "../runtime.js";
 
 /** `SATI_GUARD=off` lets one blocked run through; the override is logged. */
 const overridden = () => process.env.SATI_GUARD === "off";
 
 function maxRemovalRatio(root: string): number | undefined {
-  const file = join(root, CONFIG_DIR, CONFIG_FILE);
-  if (!existsSync(file)) return undefined;
-  const parsed = SatiConfigSchema.safeParse(parseJson(readFileSync(file, "utf8"), file));
-  if (!parsed.success) throw new SatiError("VALIDATION", `Invalid ${file}.`);
-  return parsed.data.guard?.maxRemovalRatio;
+  return readProjectConfig(root)?.guard?.maxRemovalRatio;
 }
 
 /** realpath of `path`, or of its deepest existing parent plus the missing tail (a new file). */

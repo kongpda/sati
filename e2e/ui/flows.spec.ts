@@ -356,8 +356,11 @@ test("plans a task with a due date, an assignee and a checklist", async ({ page 
     await sheet.getByRole("button", { name: "Add", exact: true }).click();
     await expect(sheet.getByRole("checkbox", { name: step })).toBeVisible();
   }
+  // A tick saves at once; it must not throw away text typed in the form but not yet saved.
+  await sheet.getByLabel("Body").fill("Ask the printer for a proof.");
   await sheet.getByRole("checkbox", { name: "Guest list" }).check();
   await expect(sheet.getByRole("heading", { name: "Checklist · 1/2" })).toBeVisible();
+  await expect(sheet.getByLabel("Body")).toHaveValue("Ask the printer for a proof.");
   await expect(card).toContainText("1/2 steps");
 
   // Clearing the due date in the panel saves null, and the task drops out of the due filter.

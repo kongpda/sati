@@ -1,7 +1,7 @@
 import { CLI_NAME, readSettings, updateSettings } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { execute, int } from "../runtime.js";
+import { execute, int, writeConfigKind } from "../runtime.js";
 
 export default defineCommand({
   meta: { name: "settings", description: "Show or change project settings" },
@@ -22,7 +22,7 @@ export default defineCommand({
   run: ({ args }) =>
     execute(
       args.json,
-      async ({ ctx, project }) => {
+      async ({ ctx, project, location }) => {
         const changing =
           args.review !== undefined ||
           args["auto-continue"] !== undefined ||
@@ -35,7 +35,9 @@ export default defineCommand({
           leaseMinutes: int(args.lease, "lease"),
           kind: args.kind,
         });
-        return readSettings(updated.settings);
+        const settings = readSettings(updated.settings);
+        writeConfigKind(location.root, settings.kind);
+        return settings;
       },
       (settings) =>
         `kind ${settings.kind}\nreview ${settings.review}\nautoContinue ${settings.autoContinue}\nlease ${settings.leaseMinutes} min`,

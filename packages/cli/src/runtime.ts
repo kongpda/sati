@@ -16,9 +16,12 @@ import {
   initProject,
   isSatiError,
   type Project,
+  type ProjectKind,
   type RepoFile,
   type RepoIndex,
   resolveId,
+  type SatiConfig,
+  SatiConfigSchema,
   SatiError,
   type ServiceContext,
   type StorageAdapter,
@@ -402,4 +405,25 @@ export function snapshotDir(rt: Runtime): string {
 export async function closeRuntime(): Promise<void> {
   await opened?.close();
   opened = undefined;
+}
+
+/** `.sati/sati.config.json` of a project, or undefined when it has none (stealth mode). */
+export function readProjectConfig(root: string): SatiConfig | undefined {
+  const file = join(root, CONFIG_DIR, CONFIG_FILE);
+  if (!existsSync(file)) return undefined;
+  const parsed = SatiConfigSchema.safeParse(parseJson(readFileSync(file, "utf8"), file));
+  if (!parsed.success) throw new SatiError("VALIDATION", `Invalid ${file}.`);
+  return parsed.data;
+}
+
+/**
+ * Records the project kind in the committed config, so a teammate's clone gets it too (the
+ * project row itself is not in the snapshot). Written only for `general`; stealth has no file.
+ */
+export function writeConfigKind(root: string, kind: ProjectKind): void {
+  const config = readProjectConfig(root);
+  if (!config || (config.kind ?? "code") === kind) return;
+  const { kind: _old, ...rest } = config;
+  const next = kind === "general" ? { ...rest, kind } : rest;
+  writeFileSync(join(root, CONFIG_DIR, CONFIG_FILE), `${JSON.stringify(next, null, 2)}\n`);
 }

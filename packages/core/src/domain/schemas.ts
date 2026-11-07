@@ -24,6 +24,17 @@ const shortText = z.string().max(LIMITS.shortText);
 const list = <T extends z.ZodType>(item: T) => z.array(item).max(LIMITS.array);
 const pathGlob = z.string().min(1).max(LIMITS.path);
 const label = z.string().trim().min(1).max(100);
+/**
+ * A calendar day, YYYY-MM-DD. Not `z.iso.date()`: its leap-year regex is 330 characters in the
+ * JSON Schema every agent loads with the tools; the short pattern plus this check is the same rule.
+ */
+export const IsoDay = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/u, "use YYYY-MM-DD")
+  .refine((v) => {
+    const d = new Date(`${v}T00:00:00.000Z`);
+    return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(v);
+  }, "not a real day");
 
 export const idOf = (prefix: string) =>
   z.string().regex(new RegExp(`^${prefix}_[0-9A-HJKMNP-TV-Z]{26}$`), `expected a ${prefix}_ id`);
@@ -100,7 +111,7 @@ export const Milestone = z.strictObject({
   ...base,
   title,
   goal: shortText,
-  targetDate: z.iso.date().nullable(),
+  targetDate: IsoDay.nullable(),
   status: z.enum(MILESTONE_STATUSES),
   order: z.number().int(),
 });
@@ -176,7 +187,7 @@ export const TaskShape = z.strictObject({
    * from before them stay valid, and only tasks that use them carry the new keys.
    */
   /** The calendar day it is due (no time or zone: "by Friday"). */
-  dueDate: z.iso.date().nullable().optional(),
+  dueDate: IsoDay.nullable().optional(),
   /** Who should do it, people or agents. The claim says who is doing it right now. */
   assigneeIds: list(ActorId).optional(),
   checklist: z.array(ChecklistItem).max(100).optional(),
@@ -332,6 +343,8 @@ export const SatiConfigSchema = z.strictObject({
   version: z.literal(1),
   projectId: ProjectId,
   mode: Mode,
+  /** Present only for `general`, so every clone sets up the project the same way. */
+  kind: ProjectKind.optional(),
   guard: z
     .strictObject({
       /** Share of a protected feature's changed lines a commit may remove before it is blocked. */

@@ -507,6 +507,20 @@ export function TaskSheet({
       if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
     };
   }, [found]);
+  // The form reloads only when a field it edits changes. Keyed by version, a checklist tick
+  // (saved at once) remounted it and threw away what was typed but not yet saved. Changes to
+  // other fields cannot be overwritten: the form sends only its own fields.
+  const fields = JSON.stringify([
+    task?.id,
+    task?.title,
+    task?.body,
+    task?.status,
+    task?.dueDate ?? null,
+    task?.milestoneId ?? null,
+    task?.assigneeIds ?? [],
+  ]);
+  const formKey = useRef({ fields, n: 0 });
+  if (formKey.current.fields !== fields) formKey.current = { fields, n: formKey.current.n + 1 };
   if (!task) return null;
   const feature = data.features.find((f) => f.id === task.featureId);
   // Someone else's live claim is ended with Take over or Release first, not deleted under them.
@@ -530,9 +544,8 @@ export function TaskSheet({
           onTakeOver={() => onTakeOver(task.id)}
         />
       ) : null}
-      {/* Keyed by version, so a change made elsewhere reloads the fields instead of being overwritten. */}
       <form
-        key={task.version}
+        key={formKey.current.n}
         onSubmit={(e) => {
           e.preventDefault();
           const form = new FormData(e.currentTarget);

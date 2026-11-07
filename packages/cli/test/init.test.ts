@@ -226,6 +226,25 @@ describe("sati init", () => {
     expect(r.data.files[0]?.action).toBe("keep");
   });
 
+  // The project row is not in the snapshot, so the kind travels in the committed config.
+  it("takes a general kind from the committed config, and follows a later switch", async () => {
+    const dir = await tempRepo();
+    const projectId = "prj_01M6G33B1G2RYG4BE041CCNFNM";
+    const config = join(dir, ".sati", "sati.config.json");
+    mkdirSync(join(dir, ".sati"));
+    writeFileSync(config, JSON.stringify({ version: 1, projectId, mode: "git", kind: "general" }));
+    expect(sati(dir, "init", "--yes", "--tools", "").code).toBe(0);
+    expect(satiJson<{ kind: string }>(dir, "settings").data.kind).toBe("general");
+    expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).not.toContain("feature_check");
+    // A teammate switches back to code and commits the config; the next import follows it.
+    writeFileSync(config, JSON.stringify({ version: 1, projectId, mode: "git" }));
+    expect(sati(dir, "sync", "import").code).toBe(0);
+    expect(satiJson<{ kind: string }>(dir, "settings").data.kind).toBe("code");
+    // And `settings --kind` writes the config for everyone else.
+    sati(dir, "settings", "--kind", "general");
+    expect(JSON.parse(readFileSync(config, "utf8"))).toMatchObject({ kind: "general" });
+  });
+
   // Why: a teammate who clones and runs init must see the shared tasks, not an empty project.
   it("loads the committed .sati/ snapshot when init runs in a fresh clone", async () => {
     const origin = await tempRepo();

@@ -66,6 +66,8 @@ export interface UiRuntime {
   ctx: ServiceContext;
   /** The store `data_version` is read from, when `ctx.store` is a wrapper around it. */
   dataStore?: StorageAdapter;
+  /** Called after the project kind changes, to record it in the committed config. */
+  onKind?: (kind: ProjectKind) => void;
 }
 
 /** A JSON request body. Malformed JSON is the client's mistake: 400, not a 500 "server failed". */
@@ -317,8 +319,9 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   app.patch("/api/settings", async (c) => {
     const patch = SettingsPatch.safeParse(await body(c));
     if (!patch.success) throw new SatiError("VALIDATION", "Send { kind: code | general }.");
-    const project = await updateSettings(rt.ctx, patch.data);
-    return c.json({ kind: readSettings(project.settings).kind });
+    const { kind } = readSettings((await updateSettings(rt.ctx, patch.data)).settings);
+    rt.onKind?.(kind);
+    return c.json({ kind });
   });
 
   app.patch("/api/actors/:id", async (c) =>

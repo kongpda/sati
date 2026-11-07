@@ -989,3 +989,39 @@ fixed the same bug (undo of shortened text, subtask cycles, 400 for bad JSON, th
 - `task_complete` no longer needs files touched in a general project (booking a venue touches
   none). Code projects still refuse an empty list, now in the service instead of the schema, so
   a done record with no files is valid on disk. The MCP description says which applies.
+
+### Review: bloat and bugs (2026-11-07)
+
+Measured: the MCP tool list an agent loads each session was 16,497 characters (about 4,100
+tokens) for a code project; the brief is capped at 1,500 tokens; the board's main bundle is
+105 KB gzipped from localhost; a CLI call takes about 0.13 s. The tool list was the one cost
+worth cutting.
+
+- MCP link fields (`featureId`, `milestoneId`, `parentId`, `dependsOn`, `assigneeIds`,
+  `assigneeId`, `featureIds`, `supersedes`, `decisionId`) take short handles and are resolved
+  before core sees them. Before, `task_list` with a handle silently matched nothing and the
+  create and update tools refused it, so the agent retried with a full id it had to look up.
+- Calendar days use a short pattern plus a real-day check instead of `z.iso.date()`, whose
+  330-character leap-year regex was in every date field of the tool list. Same rule.
+- The "full id or short handle" description, repeated in 27 fields, is said once in the server
+  instructions. Tool list now 15,056 characters (about 3,760 tokens), general projects 11,978.
+- Fixed: the project kind lived only in the local database, so a teammate's `init` made a
+  general project `code` again and rewrote the committed AGENTS.md. `kind` is now in
+  `.sati/sati.config.json` (written only for general); init reads it, `settings --kind` and the
+  UI write it, and `sync import` (the post-merge and post-checkout hooks) adopts a switch.
+- Fixed: actors are not in the snapshot, so assignees from another clone were dropped when the
+  task panel saved, and core refused any update that kept them. Core now checks only newly
+  added assignees; the panel shows them as "Someone on another computer", still ticked.
+- Fixed: ticking a checklist step remounted the task panel form and lost unsaved typing. The
+  form now reloads only when a field it edits changes; it sends only its own fields, so changes
+  to other fields are never overwritten.
+- Fixed: `task list --assignee none` or two names listed every task; it now asks for one.
+  `sati://project/roadmap` counted only the first 500 tasks. The general workflow no longer
+  asks for files touched.
+- Removed duplication: status words come from one table, the New task form says "To do",
+  init and guard share one config reader, two unused exported types are gone.
+- Not changed: a deleted task still blocks the tasks that depend on it (the ready query treats
+  a missing dependency as not done). Older behaviour; left for a decision.
+- Recommended, not done: comments as notes tagged `comment` and linked to the task, note or
+  decision, the way handoffs already work, instead of a new entity with its own table,
+  triggers, snapshot folder and MCP tool.

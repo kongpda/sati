@@ -242,6 +242,21 @@ describe("task milestones", () => {
 });
 
 describe("task planning fields", () => {
+  it("keeps an assignee this database has never seen, but checks new ones", async () => {
+    const { ctx, actor, store } = await setup();
+    // As in a teammate's clone: the snapshot names an actor that only exists over there.
+    const elsewhere = "actr_01M6G33B1G2RYG4BE041CCNFNK";
+    const t = await createTask(ctx, { title: "Book venue" });
+    await store.write((w) =>
+      w.update("task", { ...t, assigneeIds: [elsewhere], version: t.version + 1 }, t.version),
+    );
+    const kept = await updateTask(ctx, t.id, { assigneeIds: [elsewhere, actor.id] });
+    expect(kept.assigneeIds).toEqual([elsewhere, actor.id]);
+    await expect(
+      updateTask(ctx, t.id, { assigneeIds: [elsewhere, "actr_01M6G33B1G2RYG4BE041CCNFNM"] }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
   it("stores a due date, assignees and a checklist only once set, and checks them", async () => {
     const { ctx, actor } = await setup();
     const plain = await createTask(ctx, { title: "No plan yet" });

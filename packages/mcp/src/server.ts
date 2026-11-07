@@ -26,6 +26,7 @@ import {
   getRecord,
   isSatiError,
   ListTasksInput,
+  listAll,
   listRecords,
   listTasks,
   type ProjectKind,
@@ -39,6 +40,7 @@ import {
   SatiError,
   SearchInput,
   type ServiceContext,
+  type StoredEntity,
   search,
   shortHandle,
   UpdateFeatureInput,
@@ -57,7 +59,59 @@ import pkg from "../package.json" with { type: "json" };
 /** Reported to clients on connect. The CLI passes its own (published) version instead. */
 const VERSION: string = pkg.version;
 
-const Ref = z.string().trim().min(1).max(60).describe("Full id or short handle, e.g. tsk_8f3k2a");
+/**
+ * A full id or a short handle. Not described per field: the description was repeated in 27
+ * fields of the tool list; the server instructions say it once.
+ */
+const Ref = z.string().trim().min(1).max(60);
+
+/**
+ * Fields that link to another record. Agents see short handles (tsk_8f3k2a) in the brief and in
+ * results, so these accept a handle as well as a full id; `links` resolves them before core sees
+ * the input. Without this a handle was refused, or in task_list silently matched nothing.
+ */
+const LINKS: Record<string, StoredEntity> = {
+  featureId: "feature",
+  milestoneId: "milestone",
+  parentId: "task",
+  supersedes: "decision",
+  decisionId: "decision",
+  assigneeId: "actor",
+};
+const LINK_LISTS: Record<string, StoredEntity> = {
+  dependsOn: "task",
+  assigneeIds: "actor",
+  featureIds: "feature",
+};
+
+/** `schema` with its link fields relaxed to `Ref`, keeping whether each may be null or left out. */
+function linkable<T extends z.ZodObject>(schema: T): T {
+  const over: Record<string, z.ZodType> = {};
+  for (const [key, field] of Object.entries(schema.shape as Record<string, z.ZodType>)) {
+    const list = key in LINK_LISTS;
+    if (!list && !(key in LINKS)) continue;
+    let ref: z.ZodType = list ? z.array(Ref).max(500) : Ref;
+    if (field.safeParse(null).success) ref = ref.nullable();
+    if (field.safeParse(undefined).success) ref = ref.optional();
+    over[key] = ref;
+  }
+  // The relaxed fields are strings and string arrays, as before, so the type still holds.
+  return schema.extend(over) as unknown as T;
+}
+
+/** Turns the handles in an input's link fields into full ids. */
+async function links<T extends object>(ctx: ServiceContext, input: T): Promise<T> {
+  const out = { ...input } as Record<string, unknown>;
+  for (const [key, value] of Object.entries(out)) {
+    const one = LINKS[key];
+    const many = LINK_LISTS[key];
+    if (one && typeof value === "string") out[key] = await resolveId(ctx, one, value);
+    if (many && Array.isArray(value)) {
+      out[key] = await Promise.all(value.map((v: string) => resolveId(ctx, many, v)));
+    }
+  }
+  return out as T;
+}
 
 /** Results go back as compact JSON: agents parse it fine and it costs fewer tokens. */
 function ok(value: unknown): CallToolResult {
@@ -93,7 +147,7 @@ export function createServer(
   const server = new McpServer(
     { name: CLI_NAME, version },
     {
-      instructions: `Shared project memory for agents. Start with ${CLI_NAME}_brief, claim a task before ${kind === "code" ? "coding" : "working on it"}, finish with task_complete. Full rules: ${CLI_NAME}://workflow.`,
+      instructions: `Shared project memory for agents. Start with ${CLI_NAME}_brief, claim a task before ${kind === "code" ? "coding" : "working on it"}, finish with task_complete. Every id field takes a full id or a short handle such as tsk_8f3k2a. Full rules: ${CLI_NAME}://workflow.`,
     },
   );
   registerTools(server, ctx, kind);
@@ -131,10 +185,10 @@ function registerTools(server: McpServer, ctx: ServiceContext, kind: ProjectKind
     {
       description:
         'List tasks. Filter by status, feature, milestone (tasks in it directly or through their feature), label, assigneeId or dueBy (due on or before a date), combined; `ready: true` returns unclaimed todo tasks whose dependencies are done. For "what is left for a milestone", pass milestoneId with the open statuses.',
-      inputSchema: ListTasksInput,
+      inputSchema: linkable(ListTasksInput),
       annotations: { readOnlyHint: true },
     },
-    (input) => run(() => listTasks(ctx, input)),
+    (input) => run(async () => listTasks(ctx, await links(ctx, input))),
   );
 
   server.registerTool(
@@ -142,14 +196,14 @@ function registerTools(server: McpServer, ctx: ServiceContext, kind: ProjectKind
     {
       description:
         "Create a task. New tasks start in todo (or backlog). Optional dueDate (YYYY-MM-DD), milestoneId (the plan it belongs to), assigneeIds (actor ids: who should do it) and checklist ([{text, done}]). The result lists `similar` existing tasks; if one is the same work, cancel the new task and use that one.",
-      inputSchema: CreateTaskInput,
+      inputSchema: linkable(CreateTaskInput),
       annotations: { destructiveHint: false },
     },
     (input) =>
       run(async () => {
         // Search before creating, so the new task does not match itself.
         const similar = await findSimilarTasks(ctx, { title: input.title });
-        const task = await createTask(ctx, input);
+        const task = await createTask(ctx, await links(ctx, input));
         return { ...task, similar: similar.map((t) => ({ ...t, id: shortHandle(t.id) })) };
       }),
   );
@@ -171,9 +225,9 @@ function registerTools(server: McpServer, ctx: ServiceContext, kind: ProjectKind
     {
       description:
         "Update a task's fields or status. checklist and assigneeIds replace the whole list, so send them with expectedVersion; dueDate or milestoneId null clears it. While the task is claimed, pass the token from task_claim; a stale token means your claim was lost, so stop. Renews your lease. Moving it back to todo releases it.",
-      inputSchema: UpdateTaskInput.extend({ id: Ref }),
+      inputSchema: linkable(UpdateTaskInput).extend({ id: Ref }),
     },
-    ({ id, ...input }) => run(async () => updateTask(ctx, await task(id), input)),
+    ({ id, ...input }) => run(async () => updateTask(ctx, await task(id), await links(ctx, input))),
   );
 
   server.registerTool(
@@ -193,10 +247,10 @@ function registerTools(server: McpServer, ctx: ServiceContext, kind: ProjectKind
     {
       description:
         "Record why something changed or was rejected. Required before removing a shipped feature.",
-      inputSchema: RecordDecisionInput,
+      inputSchema: linkable(RecordDecisionInput),
       annotations: { destructiveHint: false },
     },
-    (input) => run(() => recordDecision(ctx, input)),
+    (input) => run(async () => recordDecision(ctx, await links(ctx, input))),
   );
 
   server.registerTool(
@@ -338,14 +392,15 @@ function registerCodeTools(server: McpServer, ctx: ServiceContext): void {
     {
       description:
         "Create a feature (no id) or update one (with id): title, description, status, protected, paths, tests, acceptance criteria.",
-      inputSchema: UpdateFeatureInput.extend({ id: Ref.optional() }),
+      inputSchema: linkable(UpdateFeatureInput).extend({ id: Ref.optional() }),
     },
-    ({ id, ...input }) =>
-      run(async () =>
-        id === undefined
+    ({ id, ...rest }) =>
+      run(async () => {
+        const input = await links(ctx, rest);
+        return id === undefined
           ? createFeature(ctx, input)
-          : updateFeature(ctx, await resolveId(ctx, "feature", id), input),
-      ),
+          : updateFeature(ctx, await resolveId(ctx, "feature", id), input);
+      }),
   );
 }
 
@@ -391,24 +446,28 @@ function registerResources(server: McpServer, ctx: ServiceContext, kind: Project
  */
 async function roadmap(ctx: ServiceContext): Promise<string> {
   const project = await getProject(ctx.store);
-  const milestones = await listRecords(ctx, "milestone", { limit: 500 });
-  const features = await listRecords(ctx, "feature", { limit: 500 });
-  const tasks = await listRecords(ctx, "task", { limit: 500 });
+  // Every record, not the first 500: the counts are wrong otherwise.
+  const { milestones, features, tasks } = await ctx.store.read(async (r) => ({
+    milestones: await listAll(r, ctx, "milestone"),
+    features: await listAll(r, ctx, "feature"),
+    tasks: await listAll(r, ctx, "task"),
+  }));
   const line = (f: Feature) =>
     `- ${shortHandle(f.id)} ${f.title} (${f.status}${f.protected ? ", protected" : ""})`;
   const out = [`# ${project.name} roadmap`];
   for (const m of milestones) {
     out.push("", `## ${shortHandle(m.id)} ${m.title} (${m.status})`);
     if (m.goal) out.push(m.goal);
-    const mine = new Set(features.filter((f) => f.milestoneId === m.id).map((f) => f.id));
+    const mine = features.filter((f) => f.milestoneId === m.id);
+    const ids = new Set(mine.map((f) => f.id));
     const inIt = tasks.filter(
-      (t) => t.milestoneId === m.id || (t.featureId !== null && mine.has(t.featureId)),
+      (t) => t.milestoneId === m.id || (t.featureId !== null && ids.has(t.featureId)),
     );
     if (inIt.length > 0) {
       const done = inIt.filter((t) => t.status === "done").length;
       out.push(`${done}/${inIt.length} tasks done`);
     }
-    out.push(...features.filter((f) => f.milestoneId === m.id).map(line));
+    out.push(...mine.map(line));
   }
   const loose = features.filter((f) => f.milestoneId === null);
   if (loose.length > 0) out.push("", "## No milestone", ...loose.map(line));

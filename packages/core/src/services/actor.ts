@@ -56,7 +56,6 @@ export const UpdateProfileInput = z.strictObject({
   initials: profile.initials.unwrap().nullable().optional(),
   color: profile.color.unwrap().nullable().optional(),
 });
-export type UpdateProfileInput = z.input<typeof UpdateProfileInput>;
 
 /**
  * Sets how a person is shown: display name, initials and avatar colour. Only people have a

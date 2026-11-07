@@ -199,6 +199,38 @@ describe("MCP server", () => {
     expect(await titles({ milestoneId: later.id, ready: true })).toEqual(["App beta"]);
   });
 
+  // Agents copy the short handles the brief shows; a full id must not be the only way in.
+  it("accepts short handles in link fields, and still refuses unknown ones", async () => {
+    const launch = await createMilestone(ctx, { title: "Launch" });
+    const venue = await createFeature(ctx, { title: "Venue", milestoneId: launch.id });
+    const first = await createTask(ctx, { title: "Book hall", featureId: venue.id });
+    const client = await connect();
+    const made = await call(client, "task_create", {
+      title: "Print signs",
+      featureId: shortHandle(venue.id),
+      dependsOn: [shortHandle(first.id)],
+      assigneeIds: [shortHandle(ctx.actorId)],
+    });
+    expect(made.isError, JSON.stringify(made.body)).toBe(false);
+    expect(made.body).toMatchObject({
+      featureId: venue.id,
+      dependsOn: [first.id],
+      assigneeIds: [ctx.actorId],
+    });
+    const listed = await call(client, "task_list", { milestoneId: shortHandle(launch.id) });
+    expect((listed.body as { title: string }[]).map((t) => t.title).sort()).toEqual([
+      "Book hall",
+      "Print signs",
+    ]);
+    const missing = await call(client, "task_list", { featureId: "feat_zzzzzz" });
+    expect(missing.body.error).toMatchObject({ code: "NOT_FOUND" });
+    const badDay = await client.callTool({
+      name: "task_create",
+      arguments: { title: "x", dueDate: "2026-02-30" },
+    });
+    expect(badDay.isError).toBe(true);
+  });
+
   it("plans a task with a due date, assignee and checklist, and finds it by them", async () => {
     const client = await connect();
     const made = await call(client, "task_create", {

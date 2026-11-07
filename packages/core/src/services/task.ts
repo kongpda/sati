@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { findDependencyCycle, PRIORITY_RANK } from "../domain/rules.js";
-import { type Claim, Completion, LIMITS, type Task, TaskShape } from "../domain/schemas.js";
+import { type Claim, Completion, IsoDay, LIMITS, type Task, TaskShape } from "../domain/schemas.js";
 import { TASK_TRANSITIONS } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
 import type { StorageReader, StorageWriter } from "../ports/storage.js";
@@ -96,7 +96,7 @@ export const ReleaseTaskInput = z.strictObject({
 export const ListTasksInput = listInput("task").extend({
   ready: z.boolean().optional(),
   /** Only tasks due on or before this day; tasks without a due date are left out. */
-  dueBy: z.iso.date().optional(),
+  dueBy: IsoDay.optional(),
   /** Only tasks assigned to this actor. */
   assigneeId: z.string().max(100).optional(),
 });
@@ -105,7 +105,6 @@ export type UpdateTaskInput = z.input<typeof UpdateTaskInput>;
 export type CompleteTaskInput = z.input<typeof CompleteTaskInput>;
 export type ListTasksInput = z.input<typeof ListTasksInput>;
 export type ClaimTaskInput = z.input<typeof ClaimTaskInput>;
-export type ReleaseTaskInput = z.input<typeof ReleaseTaskInput>;
 
 /** Statuses that put a task back in the pool, so moving there drops the claim. */
 const UNCLAIMED_STATUSES: readonly string[] = ["backlog", "todo", "cancelled"];
@@ -190,7 +189,10 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "task", id);
     checkToken(before, token, ctx.actorId);
-    await checkLinks(w, ctx, id, patch);
+    // Only newly added assignees must exist here: actors are not in the snapshot, so a task
+    // from a teammate's clone may keep someone this database has never seen.
+    const added = patch.assigneeIds?.filter((a) => !before.assigneeIds?.includes(a));
+    await checkLinks(w, ctx, id, { ...patch, assigneeIds: added });
     const settings = readSettings((await w.getProject())?.settings);
     let completion = before.completion;
     let reviewNote = before.reviewNote;

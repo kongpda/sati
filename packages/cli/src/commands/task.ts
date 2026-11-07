@@ -83,6 +83,18 @@ async function assignees(
   return [...new Set(out)];
 }
 
+/** `task list --assignee`: one person, since the filter matches one; `none` is not a filter. */
+async function oneAssignee(ctx: ServiceContext, value: string | undefined) {
+  const ids = await assignees(ctx, value);
+  if (ids === undefined) return undefined;
+  if (ids.length !== 1) {
+    throw new SatiError("USAGE", "--assignee takes one name, id or me.", {
+      hint: "List each person's tasks separately.",
+    });
+  }
+  return ids[0];
+}
+
 const fields = {
   body: { type: "string", description: "Details in Markdown" },
   priority: { type: "string", description: "low | medium | high | urgent" },
@@ -162,7 +174,7 @@ const ls = defineCommand({
           milestoneId: await ref(ctx, "milestone", args.milestone),
           label: args.label,
           dueBy: args["due-by"],
-          assigneeId: (await assignees(ctx, args.assignee))?.[0],
+          assigneeId: await oneAssignee(ctx, args.assignee),
           ready: args.ready,
           limit: int(args.limit, "limit"),
           offset: int(args.offset, "offset"),

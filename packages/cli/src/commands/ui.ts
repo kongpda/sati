@@ -2,9 +2,9 @@ import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CLI_NAME, CONFIG_DIR, SatiError } from "@sati/core";
+import { CLI_NAME, CONFIG_DIR, type ProjectKind, SatiError } from "@sati/core";
 import { defineCommand } from "citty";
-import { closeRuntime, int, openRuntime, printError } from "../runtime.js";
+import { closeRuntime, int, openRuntime, printError, writeConfigKind } from "../runtime.js";
 import { createUiApp, listenUi, sessionToken, type UiRuntime } from "../ui/server.js";
 
 /** Writes come in bursts from the board; export once the burst is over. */
@@ -58,7 +58,8 @@ export default defineCommand({
       const token = sessionToken();
       // Git mode keeps `.sati/` current after UI writes, as CLI commands and the MCP server do.
       let flush = async () => {};
-      let ui: UiRuntime = { ctx: rt.ctx };
+      const onKind = (kind: ProjectKind) => writeConfigKind(rt.location.root, kind);
+      let ui: UiRuntime = { ctx: rt.ctx, onKind };
       if (rt.project.mode === "git") {
         const { afterWrites, exportSnapshot } = await import("@sati/sync");
         const dir = join(rt.location.root, CONFIG_DIR);
@@ -71,7 +72,7 @@ export default defineCommand({
           (err) => printError(err, false),
         );
         flush = synced.flush;
-        ui = { ctx: { ...rt.ctx, store: synced.store }, dataStore: rt.ctx.store };
+        ui = { ctx: { ...rt.ctx, store: synced.store }, dataStore: rt.ctx.store, onKind };
       }
       const app = createUiApp(ui, token, uiDir());
       const server = await listenUi(app, port);

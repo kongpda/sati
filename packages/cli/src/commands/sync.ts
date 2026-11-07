@@ -1,8 +1,8 @@
-import type { ImportResult } from "@sati/core";
+import { type ImportResult, readSettings, updateSettings } from "@sati/core";
 import { type ExportResult, exportSnapshot, importSnapshot } from "@sati/sync";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { execute, openRuntime, output, snapshotDir } from "../runtime.js";
+import { execute, openRuntime, output, readProjectConfig, snapshotDir } from "../runtime.js";
 
 const exportCmd = defineCommand({
   meta: { name: "export", description: "Write changed records to .sati/ (run by pre-commit)" },
@@ -28,7 +28,14 @@ const importCmd = defineCommand({
       args.json,
       async () => {
         const rt = await openRuntime();
-        return importSnapshot(rt.ctx, snapshotDir(rt));
+        const result = await importSnapshot(rt.ctx, snapshotDir(rt));
+        // A teammate's kind switch arrives in the committed config, not in the snapshot.
+        const config = readProjectConfig(rt.location.root);
+        const kind = config?.kind ?? "code";
+        if (config && readSettings(rt.project.settings).kind !== kind) {
+          await updateSettings(rt.ctx, { kind });
+        }
+        return result;
       },
       (r: ImportResult) =>
         args.quiet && r.imported.length === 0

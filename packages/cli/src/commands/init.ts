@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import {
@@ -17,7 +17,6 @@ import {
   type ProjectKind,
   readSettings,
   type SatiConfig,
-  SatiConfigSchema,
   SatiError,
   type ServiceContext,
   systemClock,
@@ -49,7 +48,7 @@ import {
   warnIfNotOnPath,
   writePlanned,
 } from "../integrations.js";
-import { currentBranch, osUser, output, parseJson } from "../runtime.js";
+import { currentBranch, osUser, output, readProjectConfig } from "../runtime.js";
 
 interface InitPlan {
   mode: Mode;
@@ -100,13 +99,6 @@ function where(cwd: string): DbLocation | undefined {
   }
 }
 
-function readConfig(file: string): SatiConfig | undefined {
-  if (!existsSync(file)) return undefined;
-  const parsed = SatiConfigSchema.safeParse(parseJson(readFileSync(file, "utf8"), file));
-  if (!parsed.success) throw new SatiError("VALIDATION", `Invalid ${file}.`);
-  return parsed.data;
-}
-
 async function alreadyInitialized(db: string): Promise<Project | undefined> {
   if (!existsSync(db)) return undefined;
   const store = await SqliteStore.open(db, { readonly: true });
@@ -154,16 +146,16 @@ async function plan(
       hint: `Use \`${CLI_NAME} init --mode git\`, or \`--mode stealth\` to commit nothing.`,
     });
   }
-  const kind = (args.kind ?? "code") as ProjectKind;
+  const root = loc?.root ?? cwd;
+  const configPath = join(root, CONFIG_DIR, CONFIG_FILE);
+  // A committed config (e.g. in a fresh clone) keeps its project id and kind.
+  const existing = readProjectConfig(root);
+  const kind = (args.kind ?? existing?.kind ?? "code") as ProjectKind;
   if (!PROJECT_KINDS.includes(kind)) {
     throw new SatiError("USAGE", `Unknown project kind "${args.kind}".`, {
       hint: "Use code for software, or general for plans, todos and notes.",
     });
   }
-  const root = loc?.root ?? cwd;
-  const configPath = join(root, CONFIG_DIR, CONFIG_FILE);
-  // A committed config (e.g. in a fresh clone) keeps its project id.
-  const existing = readConfig(configPath);
   const projectId = existing?.projectId ?? createIdFactory()("project");
   const db = mode === "standalone" ? standaloneDbPath(homedir(), projectId) : (loc?.path ?? "");
 
@@ -215,7 +207,7 @@ async function plan(
     agentFiles,
     hooks,
     mergeDriver,
-    config: { version: 1, projectId, mode },
+    config: { version: 1, projectId, mode, ...(kind === "general" ? { kind } : {}) },
     upgrade: undefined,
   };
 }

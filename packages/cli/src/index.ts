@@ -36,12 +36,9 @@ const root = defineCommand({
     settings: lazy(() => import("./commands/settings.js")),
     doctor: lazy(() => import("./commands/doctor.js")),
     projects: lazy(() => import("./commands/projects.js")),
-    export: lazy(() =>
-      import("./commands/snapshot.js").then((m) => ({ default: m.exportCommand })),
-    ),
-    import: lazy(() =>
-      import("./commands/snapshot.js").then((m) => ({ default: m.importCommand })),
-    ),
+    // The same commands as `sync export` and `sync import`.
+    export: lazy(() => import("./commands/sync.js").then((m) => ({ default: m.exportCmd }))),
+    import: lazy(() => import("./commands/sync.js").then((m) => ({ default: m.importCmd }))),
     review: lazy(() => import("./commands/review.js")),
     scan: lazy(() => import("./commands/scan.js")),
     serve: lazy(() => import("./commands/serve.js")),

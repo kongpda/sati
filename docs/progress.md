@@ -1052,3 +1052,44 @@ The owner accepted the four recommendations above.
   dropped; calendar export, email and Telegram notifications, link attachments and the token
   ledger moved to `docs/ideas.md`.
 
+## 2026-11-07 — Polish pass: review, dead code, every page
+
+Three read-only reviews (bugs in the last two commits, unused code, every UI page at 1280 and
+375 px in light and dark), then fixes.
+
+- Fixed: the kind in the database and in `.sati/sati.config.json` could disagree. An explicit
+  `init --kind` in a clone is now recorded in the config, the wizard starts from the committed
+  kind, and the config always records `kind` (both values). A config without it (made before
+  kinds) is "no opinion": `sync import` no longer resets such a project to code.
+- Fixed: comments could be moved, untagged or rewritten through `note_upsert` or
+  `PATCH /api/notes`, still credited to their author. Notes cannot gain or lose the `comment`
+  tag, a comment's links, tags, title and pin are fixed, and only its author edits its text.
+  `note_upsert` refuses a title, pin or extra tags on a new comment instead of dropping them.
+  `comment list` refuses a deleted record by full id as it did by handle.
+- Fixed: a search hit for a comment whose record was deleted closed the palette and did
+  nothing; it now says so. Hits show their kind (Task, Note, Comment …), a comment shows what it
+  is on, and the palette says to press Enter.
+- UI fixes: Search no longer floats mid-bar off the board; the phone top bar wraps the filter
+  onto its own row and the nav scrolls the current page into view; labels show on cards and in
+  the panel; Markdown renders pipe tables, quotes, and a list right after a paragraph line;
+  comment lists lost a stray second bar and the Comment button sits beside its box; panel values
+  are no longer grey; toasts lay out as text plus actions with a filled Undo; bulk moves say why
+  they failed; handoffs left the Notes list and read "left a handoff on" in Activity; features
+  show their description, a paths label and capitalised status; milestones and priorities are
+  capitalised and a milestone's features are labelled; a replaced decision is dimmed and has no
+  Replace; unresolved feature ids no longer show on decisions; the task panel shows priority,
+  feature, labels, "What was done" for finished tasks, a labelled Status, a Details heading and
+  Delete at the bottom; empty board messages are padded and say no CLI commands; My work says
+  "Nothing is due" when nothing is; the page title names the page.
+- Accessibility: the page behind the task panel, New task and Search is `inert`, so Tab stays
+  in the dialog; control borders use a new `--line-strong` at 3.5:1 (light) and 3.5:1 (dark)
+  against the panel, up from 1.46:1 and 1.37:1; checkboxes and radios use the theme colour.
+- Removed: `commands/snapshot.ts` (top-level `export`/`import` now are `sync export`/`sync
+  import`, so `import` also adopts a kind switch; `export --all` is still accepted), the unused
+  `backupDir` store option, `IdPrefix`, `detectTools`'s unused parameter, the unused
+  `__CLI_NAME__` define, and two `?? 30` lease literals (now `DEFAULT_LEASE_MINUTES`).
+- Not changed, noted for later: the short brief used after a resume or compaction has no latest
+  comment; MCP has no tool to read a whole thread (search and `note_get` reach comments); the
+  board loads the newest 2,000 notes, comments included; test-only exports in core stay so tests
+  can reach them; `SNAPSHOT_SCHEMA_VERSION` is still unread and needs an owner decision.
+

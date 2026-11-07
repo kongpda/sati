@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api, type Decision, type Milestone, type Note, type Snapshot, type Task } from "./api.js";
 import { Avatar, personName } from "./people.js";
-import { plainError, statusWord } from "./words.js";
+import { capital, plainError, statusWord } from "./words.js";
 
 const PRIORITIES = ["low", "medium", "high", "urgent"] as const;
 
@@ -213,7 +213,7 @@ export function NewTask({
           <select name="priority" defaultValue="medium">
             {PRIORITIES.map((p) => (
               <option key={p} value={p}>
-                {p}
+                {capital(p)}
               </option>
             ))}
           </select>

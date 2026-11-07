@@ -14,7 +14,6 @@ export const ID_PREFIXES = {
 } as const;
 
 export type EntityName = keyof typeof ID_PREFIXES;
-export type IdPrefix = (typeof ID_PREFIXES)[EntityName];
 
 const HANDLE_LEN = 6;
 const ULID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/;

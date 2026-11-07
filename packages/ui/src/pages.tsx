@@ -3,7 +3,7 @@ import { ago, type Decision, type Milestone, type Note, type Snapshot } from "./
 import { Assignees, DecisionForm, MilestoneForm, NoteForm, PlanSelect } from "./forms.js";
 import { Markdown } from "./markdown.js";
 import { Avatar, nameOf, personName } from "./people.js";
-import { Thread, threadOf } from "./thread.js";
+import { isThreadNote, Thread, threadOf } from "./thread.js";
 
 /** Adds and deletes comments; the board passes one to every page with a thread. */
 export interface ThreadActions {
@@ -11,7 +11,7 @@ export interface ThreadActions {
   onDelete: (id: string, title: string) => void;
 }
 
-import { activityWords, dayWords, fullTime, statusWord, untilTime } from "./words.js";
+import { activityWords, capital, dayWords, fullTime, statusWord, untilTime } from "./words.js";
 
 export function Agents({
   data,
@@ -97,7 +97,7 @@ export function Features({
           <article key={f.id} className="row">
             <h2 className="row-title">{f.title}</h2>
             <div className="meta">
-              {f.status}
+              {capital(f.status)}
               {f.protected ? " · protected" : ""}
               {f.matchCount === null ? "" : ` · matches ${f.matchCount} files`}
               {f.needsReview ? (
@@ -113,6 +113,7 @@ export function Features({
                 </>
               ) : null}
             </div>
+            {f.description ? <Markdown source={f.description} /> : null}
             {f.acceptance.length > 0 ? (
               <ul className="acceptance">
                 {f.acceptance.map((item) => (
@@ -128,7 +129,11 @@ export function Features({
                 onSavePaths(f.id, String(input ?? ""), f.version);
               }}
             >
+              <label className="meta" htmlFor={`paths-${f.id}`}>
+                Files this feature owns, one pattern per line
+              </label>
               <textarea
+                id={`paths-${f.id}`}
                 className="field"
                 name="paths"
                 rows={Math.max(2, f.paths.length)}
@@ -140,7 +145,7 @@ export function Features({
           </article>
         ))}
         {data.features.length === 0 ? (
-          <p className="empty">No features yet. An agent records one with feature_upsert.</p>
+          <p className="empty">No features yet. Your agent records one when it builds something.</p>
         ) : null}
       </div>
     </div>
@@ -179,7 +184,7 @@ export function Roadmap({ data, onSaved }: { data: Snapshot; onSaved: (message: 
             <article key={m.id} className="row">
               <h2 className="row-title">{m.title}</h2>
               <div className="meta">
-                {m.status}
+                {capital(m.status)}
                 {m.targetDate ? ` · ${dayWords(m.targetDate)}` : ""}
                 {tasks.length ? ` · ${done}/${tasks.length} tasks done` : ""}
                 <button type="button" aria-label={`Edit ${m.title}`} onClick={() => setEditing(m)}>
@@ -187,9 +192,9 @@ export function Roadmap({ data, onSaved }: { data: Snapshot; onSaved: (message: 
                 </button>
               </div>
               {m.goal ? <p>{m.goal}</p> : null}
-              {features.map((f) => (
-                <div key={f.id}>{f.title}</div>
-              ))}
+              {features.length ? (
+                <p className="meta">Features: {features.map((f) => f.title).join(", ")}</p>
+              ) : null}
             </article>
           );
         })}
@@ -230,8 +235,8 @@ export function Notes({
 }) {
   const [editing, setEditing] = useState<Note | null>(null);
   const [tag, setTag] = useState("");
-  // Comments show under what they are on, not as notes of their own.
-  const notes = data.notes.filter((n) => !n.tags.includes("comment"));
+  // Comments and handoffs show under what they are on, not as notes of their own.
+  const notes = data.notes.filter((n) => !isThreadNote(n));
   const tags = [...new Set(notes.flatMap((n) => n.tags))].sort();
   // Pinned notes first; the rest keep the newest-first order the server sends.
   const shown = notes
@@ -383,7 +388,7 @@ export function Decisions({
       </div>
       <div className="list">
         {data.decisions.map((d) => (
-          <article key={d.id} className="row">
+          <article key={d.id} className={replacedBy.has(d.id) ? "row replaced" : "row"}>
             <h2 className="row-title">{d.title}</h2>
             <div className="meta">
               <time dateTime={d.createdAt} title={fullTime(d.createdAt)}>
@@ -392,15 +397,18 @@ export function Decisions({
               {d.supersedes ? ` · replaces ${titles.get(d.supersedes) ?? d.supersedes}` : ""}
               {replacedBy.has(d.id) ? ` · replaced by ${replacedBy.get(d.id)}` : ""}
               {d.featureIds.length
-                ? ` · ${d.featureIds.map((id) => features.get(id) ?? id).join(", ")}`
+                ? ` · ${d.featureIds.flatMap((id) => features.get(id) ?? []).join(", ")}`
                 : ""}
-              <button
-                type="button"
-                aria-label={`Replace ${d.title}`}
-                onClick={() => setRecording(d)}
-              >
-                Replace
-              </button>
+              {/* A replaced decision is history: only the current one can be replaced again. */}
+              {replacedBy.has(d.id) ? null : (
+                <button
+                  type="button"
+                  aria-label={`Replace ${d.title}`}
+                  onClick={() => setRecording(d)}
+                >
+                  Replace
+                </button>
+              )}
               <button
                 type="button"
                 aria-label={`Delete ${d.title}`}
@@ -466,13 +474,17 @@ export function Activity({ data }: { data: Snapshot }) {
         {data.activity.map((row) => {
           // A new comment reads "commented on <the task>", not "added the note Comment on …".
           const note = row.entity === "note" ? notes.get(row.entityId) : undefined;
-          const on =
-            note?.tags.includes("comment") && row.verb === "create" ? threadOf(note) : undefined;
+          const on = note && row.verb === "create" ? threadOf(note) : undefined;
+          const handoff = note?.tags.includes("handoff");
           const subject = titles.get(on ?? row.entityId);
           return (
             <article key={row.id} className="row">
               <strong>{nameOf(data, row.actorId)}</strong>{" "}
-              {on ? "commented on" : activityWords(row.verb, row.entity, row.diff)}
+              {on
+                ? handoff
+                  ? "left a handoff on"
+                  : "commented on"
+                : activityWords(row.verb, row.entity, row.diff)}
               {subject ? <span className="subject"> {subject}</span> : null}
               <div className="meta">
                 <time dateTime={row.at} title={fullTime(row.at)}>
@@ -560,6 +572,20 @@ export function TaskSheet({
       <h2 id="sheet-title" ref={heading} tabIndex={-1}>
         {task.title}
       </h2>
+      <p className="meta sheet-meta">
+        {capital(task.priority)} priority{feature ? ` · ${feature.title}` : ""}
+        {(task.labels ?? []).map((l) => (
+          <span key={l} className="badge">
+            {l}
+          </span>
+        ))}
+      </p>
+      {task.completion?.summary ? (
+        <section className="done-summary" aria-label="What was done">
+          <h3>What was done</h3>
+          <Markdown source={task.completion.summary} />
+        </section>
+      ) : null}
       {task.claim ? (
         <ClaimBox
           data={data}
@@ -610,25 +636,25 @@ export function TaskSheet({
           <PlanSelect className="sheet-label" data={data} chosen={task.milestoneId ?? null} />
         ) : null}
         <Assignees data={data} chosen={task.assigneeIds ?? []} />
-        <select name="status" defaultValue={task.status} aria-label="Status">
-          {statusOptions(task.status).map((s) => (
-            <option key={s} value={s}>
-              {statusWord(s)}
-            </option>
-          ))}
-        </select>
-        <button type="submit">Save</button>
+        <label className="sheet-label sheet-status">
+          Status
+          <select name="status" defaultValue={task.status}>
+            {statusOptions(task.status).map((s) => (
+              <option key={s} value={s}>
+                {statusWord(s)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="submit" className="primary">
+          Save
+        </button>
       </form>
       <Checklist
         version={task.version}
         items={task.checklist ?? []}
         onChange={(checklist, expectedVersion) => onSave(task.id, { checklist, expectedVersion })}
       />
-      {held ? null : (
-        <button type="button" className="danger" onClick={() => onDelete(task.id, task.title)}>
-          Delete task
-        </button>
-      )}
       {feature && feature.acceptance.length > 0 ? (
         <>
           <h3>Acceptance</h3>
@@ -639,8 +665,22 @@ export function TaskSheet({
           </ul>
         </>
       ) : null}
-      <Markdown source={task.body} />
+      {task.body.trim() ? (
+        <>
+          <h3>Details</h3>
+          <Markdown source={task.body} />
+        </>
+      ) : null}
       <Thread data={data} on={task.id} {...thread} />
+      {held ? null : (
+        <button
+          type="button"
+          className="danger sheet-delete"
+          onClick={() => onDelete(task.id, task.title)}
+        >
+          Delete task
+        </button>
+      )}
     </aside>
   );
 }

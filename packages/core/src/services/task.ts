@@ -18,7 +18,7 @@ import {
   updateWithLog,
 } from "./context.js";
 import { releaseTaskLocks } from "./lock.js";
-import { readSettings } from "./project.js";
+import { DEFAULT_LEASE_MINUTES, readSettings } from "./project.js";
 import { listInput } from "./query.js";
 
 const fields = TaskShape.pick({
@@ -490,7 +490,7 @@ function checkToken(task: Task, token: number | undefined, actorId: string): voi
 /** A fresh lease for the calling actor, defaulting to the project's lease length. */
 async function lease(r: StorageReader, ctx: ServiceContext, minutes?: number): Promise<Claim> {
   const now = ctx.clock.now();
-  const length = minutes ?? (await r.getProject())?.settings.leaseMinutes ?? 30;
+  const length = minutes ?? (await r.getProject())?.settings.leaseMinutes ?? DEFAULT_LEASE_MINUTES;
   return {
     actorId: ctx.actorId,
     leaseUntil: new Date(now.getTime() + length * 60_000).toISOString(),

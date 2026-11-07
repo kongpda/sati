@@ -95,7 +95,7 @@ export function Settings({
       </section>
       <section className="my-section" aria-labelledby="people-title">
         <h2 id="people-title">People</h2>
-        <p className="dialog-note">
+        <p className="dialog-note section-note">
           The name, initials and colour shown for each person on the board. Agents are shown by
           their session name.
         </p>

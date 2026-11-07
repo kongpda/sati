@@ -20,11 +20,13 @@ export interface Task {
   milestoneId?: string | null;
   assigneeIds?: string[];
   checklist?: { text: string; done: boolean }[];
+  labels?: string[];
 }
 
 export interface Feature {
   id: string;
   title: string;
+  description: string;
   status: string;
   protected: boolean;
   paths: string[];

@@ -67,7 +67,7 @@ describe("sati init", () => {
     expect(r.data.tools).toContain("claude-code");
     const config = JSON.parse(readFileSync(join(dir, ".sati", "sati.config.json"), "utf8"));
     // The committed id must match the DB row, or a fresh clone would start a second project.
-    expect(config).toEqual({ version: 1, projectId: r.data.project.id, mode: "git" });
+    expect(config).toEqual({ version: 1, projectId: r.data.project.id, mode: "git", kind: "code" });
     expect(satiJson(dir, "task", "create", "x").code).toBe(0);
   });
 
@@ -236,13 +236,30 @@ describe("sati init", () => {
     expect(sati(dir, "init", "--yes", "--tools", "").code).toBe(0);
     expect(satiJson<{ kind: string }>(dir, "settings").data.kind).toBe("general");
     expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).not.toContain("feature_check");
-    // A teammate switches back to code and commits the config; the next import follows it.
+    // A config from before kinds existed says nothing, so an import leaves the project alone.
     writeFileSync(config, JSON.stringify({ version: 1, projectId, mode: "git" }));
     expect(sati(dir, "sync", "import").code).toBe(0);
+    expect(satiJson<{ kind: string }>(dir, "settings").data.kind).toBe("general");
+    // A teammate switches to code and commits the config; the next import follows it.
+    writeFileSync(config, JSON.stringify({ version: 1, projectId, mode: "git", kind: "code" }));
+    expect(sati(dir, "import").code).toBe(0);
     expect(satiJson<{ kind: string }>(dir, "settings").data.kind).toBe("code");
     // And `settings --kind` writes the config for everyone else.
     sati(dir, "settings", "--kind", "general");
     expect(JSON.parse(readFileSync(config, "utf8"))).toMatchObject({ kind: "general" });
+  });
+
+  // An explicit --kind in a clone wins, and is recorded so the git hooks do not switch it back.
+  it("records an explicit --kind over the committed one", async () => {
+    const dir = await tempRepo();
+    const config = join(dir, ".sati", "sati.config.json");
+    mkdirSync(join(dir, ".sati"));
+    const projectId = "prj_01M6G33B1G2RYG4BE041CCNFNM";
+    writeFileSync(config, JSON.stringify({ version: 1, projectId, mode: "git", kind: "general" }));
+    expect(sati(dir, "init", "--yes", "--tools", "", "--kind", "code").code).toBe(0);
+    expect(JSON.parse(readFileSync(config, "utf8"))).toMatchObject({ kind: "code" });
+    expect(sati(dir, "sync", "import").code).toBe(0);
+    expect(satiJson<{ kind: string }>(dir, "settings").data.kind).toBe("code");
   });
 
   // Why: a teammate who clones and runs init must see the shared tasks, not an empty project.

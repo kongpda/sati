@@ -147,6 +147,14 @@ describe("MCP server", () => {
       tags: ["comment"],
       links: [task.id],
     });
+    // A title or extra tags would be dropped, so they are refused instead.
+    const extra = await call(client, "note_upsert", {
+      body: "x",
+      title: "Mine",
+      tags: ["comment"],
+      links: [task.id],
+    });
+    expect(extra).toMatchObject({ isError: true, body: { error: { code: "VALIDATION" } } });
     const bad = await call(client, "note_upsert", { body: "x", links: ["tsk_zzzzzz"] });
     expect(bad).toMatchObject({ isError: true, body: { error: { code: "NOT_FOUND" } } });
   });

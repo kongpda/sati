@@ -4,9 +4,16 @@ import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { execute, openRuntime, output, readProjectConfig, snapshotDir } from "../runtime.js";
 
-const exportCmd = defineCommand({
+/** Also the top-level `sati export`; `--all` is kept for scripts and changes nothing. */
+export const exportCmd = defineCommand({
   meta: { name: "export", description: "Write changed records to .sati/ (run by pre-commit)" },
-  args: { ...json },
+  args: {
+    all: {
+      type: "boolean",
+      description: "Accepted for older scripts; the export is always complete",
+    },
+    ...json,
+  },
   run: ({ args }) =>
     execute(
       args.json,
@@ -15,7 +22,8 @@ const exportCmd = defineCommand({
     ),
 });
 
-const importCmd = defineCommand({
+/** Also the top-level `sati import`. */
+export const importCmd = defineCommand({
   meta: { name: "import", description: "Load newer records from .sati/ (run by git hooks)" },
   args: {
     quiet: { type: "boolean", description: "Print nothing unless records were imported" },
@@ -29,10 +37,10 @@ const importCmd = defineCommand({
       async () => {
         const rt = await openRuntime();
         const result = await importSnapshot(rt.ctx, snapshotDir(rt));
-        // A teammate's kind switch arrives in the committed config, not in the snapshot.
-        const config = readProjectConfig(rt.location.root);
-        const kind = config?.kind ?? "code";
-        if (config && readSettings(rt.project.settings).kind !== kind) {
+        // A teammate's kind switch arrives in the committed config, not in the snapshot. An
+        // older config without `kind` says nothing, so it never resets the project.
+        const kind = readProjectConfig(rt.location.root)?.kind;
+        if (kind && readSettings(rt.project.settings).kind !== kind) {
           await updateSettings(rt.ctx, { kind });
         }
         return result;

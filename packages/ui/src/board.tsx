@@ -14,7 +14,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef, useState } from "react";
 import { type Actor, ago, COLUMNS, dueLabel, type Feature, type Task } from "./api.js";
 import { Avatar } from "./people.js";
-import { fullTime } from "./words.js";
+import { capital, fullTime } from "./words.js";
 
 export function Board({
   tasks,
@@ -277,7 +277,7 @@ function CardBody({
           {ago(task.updatedAt)}
         </time>
         {feature ? ` · ${feature}` : ""}
-        {urgent ? ` · ${task.priority}` : ""}
+        {urgent ? ` · ${capital(task.priority)}` : ""}
         {due ? (
           <>
             {" · "}
@@ -287,6 +287,11 @@ function CardBody({
           </>
         ) : null}
         {steps.length ? ` · ${steps.filter((c) => c.done).length}/${steps.length} steps` : ""}
+        {(task.labels ?? []).map((l) => (
+          <span key={l} className="badge">
+            {l}
+          </span>
+        ))}
         {assignees.length ? (
           <span className="avatars">
             {assignees.map((a) => (

@@ -72,6 +72,19 @@ function Block({ text }: { text: string }) {
       </>
     );
   }
+  // A paragraph line followed by a list (or a quote or table) with no blank line between is
+  // still two blocks, as people type it: "Use the logo:\n- front\n- back".
+  const runs = runsOf(lines);
+  if (runs.length > 1) {
+    return (
+      <>
+        {runs.map((run, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: runs have no id and keep their order
+          <Block key={i} text={run.join("\n")} />
+        ))}
+      </>
+    );
+  }
   if (heading === 2) return <h2>{inline(first.slice(2))}</h2>;
   if (heading === 3) return <h3>{inline(first.slice(3))}</h3>;
   if (lines.every((line) => line.startsWith("- "))) {
@@ -82,6 +95,41 @@ function Block({ text }: { text: string }) {
           <li key={`${i}:${line}`}>{inline(line.slice(2))}</li>
         ))}
       </ul>
+    );
+  }
+  if (lines.every((line) => line.startsWith(">"))) {
+    return (
+      <blockquote>
+        <Block text={lines.map((line) => line.replace(/^> ?/u, "")).join("\n")} />
+      </blockquote>
+    );
+  }
+  if (isTable(lines)) {
+    const [head = [], , ...body] = lines.map(cells);
+    return (
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              {head.map((cell, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: cells repeat and keep their order
+                <th key={i}>{inline(cell)}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {body.map((row, r) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: rows have no id and keep their order
+              <tr key={r}>
+                {head.map((_, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: one cell per column
+                  <td key={i}>{inline(row[i] ?? "")}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     );
   }
   if (lines.every((line) => /^\d+\. /u.test(line))) {
@@ -95,6 +143,50 @@ function Block({ text }: { text: string }) {
     );
   }
   return <p>{inline(text)}</p>;
+}
+
+const lineKind = (line: string) =>
+  line.startsWith("- ")
+    ? "ul"
+    : /^\d+\. /u.test(line)
+      ? "ol"
+      : line.startsWith(">")
+        ? "quote"
+        : line.trimStart().startsWith("|")
+          ? "table"
+          : "text";
+
+/** Consecutive lines of the same kind, so a list after a paragraph line gets its own block. */
+function runsOf(lines: string[]): string[][] {
+  const runs: string[][] = [];
+  let kind = "";
+  for (const line of lines) {
+    const k = lineKind(line);
+    if (k === kind) runs[runs.length - 1]?.push(line);
+    else runs.push([line]);
+    kind = k;
+  }
+  return runs;
+}
+
+/** A pipe table: every line starts with `|`, and the second line is the `|---|` divider. */
+function isTable(lines: string[]): boolean {
+  const divider = lines[1] ?? "";
+  return (
+    lines.length >= 2 &&
+    lines.every((line) => line.trimStart().startsWith("|")) &&
+    /^\s*\|(\s*:?-+:?\s*\|)+\s*$/u.test(divider)
+  );
+}
+
+/** The cells of one table row, without the outer pipes. */
+function cells(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/u, "")
+    .replace(/\|$/u, "")
+    .split("|")
+    .map((c) => c.trim());
 }
 
 function inline(text: string): ReactNode[] {

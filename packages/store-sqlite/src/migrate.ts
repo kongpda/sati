@@ -11,16 +11,12 @@ export const LATEST_SCHEMA_VERSION = MIGRATIONS.length;
  * so other processes wait instead of reading a half-migrated schema.
  * Returns the resulting version (higher than LATEST if a newer binary already upgraded it).
  */
-export async function migrate(
-  db: Database.Database,
-  path: string,
-  backupDir?: string,
-): Promise<number> {
+export async function migrate(db: Database.Database, path: string): Promise<number> {
   const current = db.pragma("user_version", { simple: true }) as number;
   if (current >= LATEST_SCHEMA_VERSION) return current;
 
   if (current > 0 && path !== ":memory:" && existsSync(path)) {
-    const dir = backupDir ?? join(dirname(path), "backups");
+    const dir = join(dirname(path), "backups");
     mkdirSync(dir, { recursive: true });
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const target = join(dir, `${basename(path)}.v${current}.${stamp}.bak`);

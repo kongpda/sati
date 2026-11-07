@@ -53,13 +53,12 @@ statuses and acceptance criteria, decisions have reasons, and every write has an
   milestone or feature. `--since last-session` gives an agent exactly what others did while it was
   away, and the brief gains that section, which PLAN promised but the brief never had.
 - **Changelogs.** `task_complete` takes an optional one-line `releaseNote` written for users, next
-  to the developer `summary`. `sati changelog --since v1.1` prints Markdown in Keep a Changelog
-  style (Added / Changed / Fixed / Removed) or as release notes; tasks labelled `internal` are left
+  to the developer `summary`. `sati changes --since v1.1 --format changelog` prints Markdown in
+  Keep a Changelog style (Added / Changed / Fixed / Removed); `--format digest` gives a short
+  weekly summary; tasks labelled `internal` are left
   out. It prints to stdout, so the agent or person chooses where it goes; sati writes no user files.
 - **Feature lists.** `sati features --format md` prints what the product does today, from shipped
   features with their acceptance criteria, for a README, a sales sheet or a release page.
-- **Review.** `sati review --since` works without git, and points out finished work still waiting
-  for approval, decisions with no linked task, and shipped features with no tests.
 - **In the UI,** a Changes page shows the same timeline with filters and "Copy changelog" and
   "Copy feature list" buttons that use the same generators, so both ways give the same text.
 
@@ -150,11 +149,11 @@ section requires. Old binaries already refuse writes to a newer schema.
 | --- | --- | --- |
 | Phase 5b open items | the open list in PLAN.md | 1 week |
 | 7a Two ways to work | UI and agent parity, note tools, kind, people, due/assignee/checklist, comments, My work, plain words, Khmer, parity test | 3.5 weeks |
-| 7b Review and changelogs | release notes, `changes`, brief "since last session", changelog, feature list, review without git, Changes page | 1.5 weeks |
-| 7c Brain for agents | templates, calendar export | 0.5 week |
-| Phase 8 Knowledge brain | cards with facts, recall, compact answers, private memory, token ledger, Memory page | 2.5 weeks |
+| 7b Review and changelogs | release notes, `changes` with changelog and digest formats, brief "since last session", feature list, Changes page | 1.5 weeks |
+| 7c Brain for agents | templates | 0.5 week |
+| Phase 8 Knowledge brain | cards with facts, recall, private memory, Memory page | 2.5 weeks |
 | Phase 6 Hosted | as planned (Postgres, auth, sync, remote MCP) | 5–6 weeks |
-| 7d Without a terminal | team server UI, email sign-in, inbox and notifications, launcher, link attachments | 2–3 weeks |
+| 7d Without a terminal | team server UI, email sign-in, in-app inbox, launcher | 2–3 weeks |
 
 ## How we will know it works
 

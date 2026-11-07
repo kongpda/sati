@@ -48,7 +48,7 @@ import {
   warnIfNotOnPath,
   writePlanned,
 } from "../integrations.js";
-import { currentBranch, osUser, output, readProjectConfig } from "../runtime.js";
+import { currentBranch, osUser, output, readProjectConfig, writeConfigKind } from "../runtime.js";
 
 interface InitPlan {
   mode: Mode;
@@ -207,7 +207,7 @@ async function plan(
     agentFiles,
     hooks,
     mergeDriver,
-    config: { version: 1, projectId, mode, ...(kind === "general" ? { kind } : {}) },
+    config: { version: 1, projectId, mode, kind },
     upgrade: undefined,
   };
 }
@@ -327,6 +327,10 @@ async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
       const abs = join(p.root, config.path);
       mkdirSync(join(abs, ".."), { recursive: true });
       writeFileSync(abs, `${JSON.stringify(p.config, null, 2)}\n`, { flag: "wx" });
+    } else if (config) {
+      // An explicit --kind in a clone wins over the committed one; record it so the next
+      // `sync import` (run by git hooks) does not switch the project back.
+      writeConfigKind(p.root, p.kind);
     }
     writeManaged(p);
     warnIfNotOnPath(p.tools, isLocalInstall(p.root));
@@ -375,7 +379,10 @@ async function wizard(cwd: string, args: Parameters<typeof plan>[1]): Promise<In
   if (clack.isCancel(mode)) return null;
   const kind = await clack.select<ProjectKind>({
     message: "What is this project?",
-    initialValue: (args.kind as ProjectKind | undefined) ?? "code",
+    // A clone of a general project starts on general, so Enter keeps what teammates chose.
+    initialValue: (args.kind ??
+      readProjectConfig(where(cwd)?.root ?? cwd)?.kind ??
+      "code") as ProjectKind,
     options: [
       { value: "code", label: "code", hint: "software: features, file locks and the guard" },
       { value: "general", label: "general", hint: "plans, todos and notes, such as an event" },

@@ -25,6 +25,19 @@ const PAGES = [
 /** Pages a general project does without: it has no features, file reservations or guard. */
 const CODE_ONLY = new Set<string>(["/agents", "/features"]);
 
+/** Where a search hit of each kind opens, and the tag it shows. */
+const HIT_PAGES: Record<string, string> = {
+  note: "/notes",
+  decision: "/decisions",
+  feature: "/features",
+};
+const HIT_KINDS: Record<string, string> = {
+  task: "Task",
+  note: "Note",
+  decision: "Decision",
+  feature: "Feature",
+};
+
 export function App() {
   const query = useQuery({ queryKey: ["snapshot"], queryFn: api.snapshot });
   const client = useQueryClient();
@@ -147,15 +160,19 @@ export function App() {
     setSearched(false);
   }, []);
 
-  /** Resolves true when the task moved. Pass `quiet` to report failures yourself. */
-  async function move(id: string, status: string, quiet = false): Promise<boolean> {
+  /** Resolves true when the task moved. Pass `onFail` to report the reason yourself. */
+  async function move(
+    id: string,
+    status: string,
+    onFail?: (reason: string) => void,
+  ): Promise<boolean> {
     const current = client.getQueryData<Snapshot>(["snapshot"]);
     const item = current?.tasks.find((t) => t.id === id);
     if (!item || item.status === status) return false;
     // A person approves work waiting in review; anything else reaches done through
     // `task complete`, which records the summary and the files.
     if (status === "done" && item.status !== "review") {
-      setToast(
+      (onFail ?? setToast)(
         "Only work waiting for approval can be moved to Done. Whoever does the task finishes it with a summary.",
       );
       return false;
@@ -180,7 +197,8 @@ export function App() {
             }
           : snap,
       );
-      if (!quiet) fail(err);
+      if (onFail) onFail(plainError(err));
+      else fail(err);
       await client.invalidateQueries({ queryKey: ["snapshot"] });
       return false;
     }
@@ -188,10 +206,20 @@ export function App() {
 
   async function moveSelected(status: string) {
     const ids = [...selected];
-    const results = await Promise.all(ids.map((id) => move(id, status, true)));
+    // Say why once: the tasks usually fail for the same reason.
+    let reason = "";
+    const results = await Promise.all(
+      ids.map((id) =>
+        move(id, status, (why) => {
+          reason ||= why;
+        }),
+      ),
+    );
     const failed = ids.filter((_, i) => !results[i]);
     setSelected(new Set(failed));
-    if (failed.length > 0) setToast(`${failed.length} of ${ids.length} tasks did not move.`);
+    if (failed.length > 0) {
+      setToast(`${failed.length} of ${ids.length} tasks did not move. ${reason}`.trim());
+    }
   }
 
   useEffect(() => {
@@ -280,6 +308,15 @@ export function App() {
   useEffect(() => {
     if (general) setFeature("");
   }, [general]);
+  const pageLabel = pages.find(([href]) => href === path)?.[1];
+  const projectName = data?.project?.name;
+  // Each page names itself in the tab, and on a phone the nav bar scrolls to the current page.
+  useEffect(() => {
+    document.title = [pageLabel, projectName ?? __PRODUCT_NAME__].filter(Boolean).join(" · ");
+    document
+      .querySelector('.nav a[aria-current="page"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [pageLabel, projectName]);
   const tasks = (data?.tasks ?? []).filter((t) => {
     if (feature && t.featureId !== feature) return false;
     if (filter && !`${t.title} ${t.body}`.toLowerCase().includes(filter.toLowerCase()))
@@ -287,10 +324,14 @@ export function App() {
     return true;
   });
 
+  // While the task panel, New task or Search is open, the page behind it takes no focus or
+  // clicks, so Tab stays inside the dialog (aria-modal alone does not stop it).
+  const modal = creating || palette || (task !== null && !!data?.tasks.some((t) => t.id === task));
+
   return (
     <div className="app">
-      <nav className="nav">
-        <p className="brand">{data?.project?.name ?? "Sati"}</p>
+      <nav className="nav" inert={modal}>
+        <p className="brand">{data?.project?.name ?? __PRODUCT_NAME__}</p>
         {pages.map(([href, label]) => (
           <a
             key={href}
@@ -305,7 +346,7 @@ export function App() {
           </a>
         ))}
       </nav>
-      <main className="main">
+      <main className="main" inert={modal}>
         <div className="top">
           {/* The filters only narrow the board, so other pages do not show them. */}
           {path === "/" ? (
@@ -418,12 +459,11 @@ export function App() {
               </div>
             ) : null}
             {!data ? null : data.tasks.length === 0 ? (
-              <p className="empty">
-                No tasks yet. Use New task (or press c), ask your agent, or run {__CLI_NAME__} task
-                create "First task".
+              <p className="empty page">
+                No tasks yet. Use New task (or press c), or ask your agent to plan the work.
               </p>
             ) : tasks.length === 0 ? (
-              <p className="empty">No tasks match the filter.</p>
+              <p className="empty page">No tasks match the filter.</p>
             ) : (
               <Board
                 tasks={tasks}
@@ -645,56 +685,72 @@ export function App() {
               ref={searchRef}
               value={queryText}
               onChange={(e) => setQueryText(e.target.value)}
-              placeholder="Search tasks, notes, decisions"
+              placeholder="Search tasks, notes, decisions, features"
               aria-label="Search"
             />
             {searching ? <p className="meta">Searching…</p> : null}
+            {!searching && !searched ? <p className="meta">Press Enter to search.</p> : null}
             {searched && hits.length === 0 ? <p className="meta">No results</p> : null}
-            {hits.map((hit) => (
-              <button
-                type="button"
-                key={`${hit.entity}-${hit.id}`}
-                onClick={() => {
-                  closePalette();
-                  // A comment opens what it is on.
-                  const note = data?.notes.find((n) => n.id === hit.id);
-                  const on = note ? threadOf(note) : undefined;
-                  if (hit.entity === "task") go("/", hit.id);
-                  else if (on?.startsWith("tsk_")) go("/", on);
-                  else if (on?.startsWith("dec_")) go("/decisions");
-                  else
-                    go(
-                      hit.entity === "note"
-                        ? "/notes"
-                        : hit.entity === "decision"
-                          ? "/decisions"
-                          : "/features",
-                    );
-                }}
-              >
-                {hit.title}
-              </button>
-            ))}
+            {hits.map((hit) => {
+              const titleOf = (id: string) =>
+                (id.startsWith("tsk_")
+                  ? data?.tasks
+                  : id.startsWith("dec_")
+                    ? data?.decisions
+                    : data?.notes
+                )?.find((r) => r.id === id)?.title;
+              const note = data?.notes.find((n) => n.id === hit.id);
+              const on = note ? threadOf(note) : undefined;
+              const about = on ? titleOf(on) : undefined;
+              return (
+                <button
+                  type="button"
+                  key={`${hit.entity}-${hit.id}`}
+                  onClick={() => {
+                    closePalette();
+                    // A comment opens what it is on; one whose record was deleted says so.
+                    if (on && about === undefined)
+                      setToast("That comment is on something deleted.");
+                    else if (hit.entity === "task") go("/", hit.id);
+                    else if (on?.startsWith("tsk_")) go("/", on);
+                    else
+                      go(
+                        HIT_PAGES[
+                          on ? (on.startsWith("dec_") ? "decision" : "note") : hit.entity
+                        ] ?? "/",
+                      );
+                  }}
+                >
+                  <span className="badge">
+                    {on ? "Comment" : (HIT_KINDS[hit.entity] ?? hit.entity)}
+                  </span>{" "}
+                  {about ? `on ${about}` : hit.title}
+                </button>
+              );
+            })}
           </form>
         </div>
       ) : null}
       {toast ? (
         <div className="toast" role="status">
-          {toast.message}
-          {toast.undo ? (
-            <button
-              type="button"
-              onClick={() => {
-                toast.undo?.();
-                setToast(null);
-              }}
-            >
-              Undo
+          <span className="toast-text">{toast.message}</span>
+          <span className="toast-actions">
+            {toast.undo ? (
+              <button
+                type="button"
+                className="undo"
+                onClick={() => {
+                  toast.undo?.();
+                  setToast(null);
+                }}
+              >
+                Undo
+              </button>
+            ) : null}
+            <button type="button" onClick={() => setToast(null)}>
+              Dismiss
             </button>
-          ) : null}
-          <button type="button" onClick={() => setToast(null)}>
-            Dismiss
-          </button>
+          </span>
         </div>
       ) : null}
     </div>

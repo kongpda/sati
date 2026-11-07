@@ -418,12 +418,14 @@ export function readProjectConfig(root: string): SatiConfig | undefined {
 
 /**
  * Records the project kind in the committed config, so a teammate's clone gets it too (the
- * project row itself is not in the snapshot). Written only for `general`; stealth has no file.
+ * project row itself is not in the snapshot). Always written, both values: a config without
+ * `kind` (made before kinds existed) means "no opinion", never a switch. Stealth has no file.
  */
 export function writeConfigKind(root: string, kind: ProjectKind): void {
   const config = readProjectConfig(root);
-  if (!config || (config.kind ?? "code") === kind) return;
-  const { kind: _old, ...rest } = config;
-  const next = kind === "general" ? { ...rest, kind } : rest;
-  writeFileSync(join(root, CONFIG_DIR, CONFIG_FILE), `${JSON.stringify(next, null, 2)}\n`);
+  if (!config || config.kind === kind) return;
+  writeFileSync(
+    join(root, CONFIG_DIR, CONFIG_FILE),
+    `${JSON.stringify({ ...config, kind }, null, 2)}\n`,
+  );
 }

@@ -14,6 +14,7 @@ import {
   type ServiceContext,
   updateWithLog,
 } from "./context.js";
+import { DEFAULT_LEASE_MINUTES } from "./project.js";
 
 const LockPath = z
   .string()
@@ -125,7 +126,8 @@ export async function acquireLock(ctx: ServiceContext, input: unknown): Promise<
       );
     }
 
-    const length = data.leaseMinutes ?? (await w.getProject())?.settings.leaseMinutes ?? 30;
+    const length =
+      data.leaseMinutes ?? (await w.getProject())?.settings.leaseMinutes ?? DEFAULT_LEASE_MINUTES;
     const leaseUntil = new Date(ctx.clock.now().getTime() + length * 60_000).toISOString();
     const lock = await insertWithLog(w, ctx, "lock", {
       ...baseFields(ctx, "lock"),

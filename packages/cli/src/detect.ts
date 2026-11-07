@@ -20,14 +20,10 @@ const TOOLS = Object.keys(MARKERS);
  * Agent tools this project uses, from marker files in `root` plus the tool running this command
  * (if any).
  */
-function detectTools(
-  root: string,
-  runningTool: string | null,
-  exists: (path: string) => boolean = existsSync,
-): string[] {
+function detectTools(root: string, runningTool: string | null): string[] {
   const found = new Set<string>();
   for (const [tool, markers] of Object.entries(MARKERS)) {
-    if (markers.some((m) => exists(join(root, m)))) found.add(tool);
+    if (markers.some((m) => existsSync(join(root, m)))) found.add(tool);
   }
   if (runningTool) found.add(runningTool);
   return [...found].sort();

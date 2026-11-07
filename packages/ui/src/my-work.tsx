@@ -89,7 +89,16 @@ export function MyWork({
           <Row key={t.id} data={data} task={t} onOpen={onOpen} />
         ))}
       </Section>
-      <Section title={`Due by ${sunday}`} count={due.length} empty="Nothing else is due this week.">
+      <Section
+        title={`Due by ${sunday}`}
+        count={due.length}
+        empty={
+          // "else" only when tasks above are due this week too; each task shows once.
+          approval.length + assigned.length > 0
+            ? "Nothing else is due this week."
+            : "Nothing is due this week."
+        }
+      >
         {due.map((t) => (
           <Row key={t.id} data={data} task={t} onOpen={onOpen} />
         ))}

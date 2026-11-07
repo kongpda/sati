@@ -6,10 +6,13 @@
   --muted: #4d6256;
   --panel: #f6faf7;
   --line: #c5d4cb;
+  /* Borders of controls (fields, buttons): at least 3:1 against the panel and the page. */
+  --line-strong: #738a7d;
   --moss: #1b6a44;
   --clay: #8a3b2c;
   --live: #9a4a14;
   --focus: #1b6a44;
+  accent-color: var(--moss);
   color-scheme: light;
   font-family:
     "Avenir Next", "Segoe UI", "Noto Sans Khmer", "Khmer Sangam MN", "Leelawadee UI", sans-serif;
@@ -24,6 +27,7 @@
     --muted: #9eb0a4;
     --panel: #18211c;
     --line: #2a3a32;
+    --line-strong: #617a6c;
     --moss: #8dcead;
     --clay: #e7a598;
     --live: #e39a62;
@@ -58,7 +62,7 @@ textarea {
 button {
   cursor: pointer;
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
   padding: 2px 10px;
   min-height: 28px;
@@ -121,15 +125,19 @@ button {
   padding: 10px 14px;
   border-bottom: 1px solid var(--line);
 }
-.top > button {
+/* Search and New task sit at the right, with or without the board's filters before them. */
+.top > button:first-of-type {
   margin-left: auto;
+}
+.top > button {
+  white-space: nowrap;
 }
 .top input,
 .field,
 select,
 textarea {
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
   padding: 6px 8px;
 }
@@ -331,13 +339,33 @@ textarea {
   color: var(--paper);
   padding: 8px 12px;
   border-radius: 8px;
-  max-width: 420px;
+  width: max-content;
+  max-width: min(480px, calc(100% - 24px));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  z-index: 30;
+}
+.toast-text {
+  flex: 1 1 200px;
+  overflow-wrap: anywhere;
+}
+.toast-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
 }
 .toast button {
-  margin-left: 8px;
   background: transparent;
   color: inherit;
   border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.toast button.undo {
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
 }
 .bulk {
   display: flex;
@@ -402,6 +430,31 @@ textarea {
 }
 .prose a {
   color: var(--moss);
+}
+.prose blockquote {
+  margin: 0.5rem 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--line-strong);
+  color: var(--muted);
+}
+.prose .table-wrap {
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+.prose table {
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+.prose th,
+.prose td {
+  border: 1px solid var(--line);
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.prose th {
+  background: var(--paper);
+  font-weight: 600;
 }
 .palette {
   position: fixed;
@@ -468,6 +521,13 @@ textarea {
   }
   .brand {
     display: none;
+  }
+  /* The filter gets its own row instead of shrinking to nothing next to the buttons. */
+  .top {
+    flex-wrap: wrap;
+  }
+  .top input {
+    flex-basis: 100%;
   }
   .column {
     display: none;
@@ -623,7 +683,7 @@ form.dialog-form select {
   color: var(--ink);
   width: 100%;
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   padding: 6px 8px;
 }
 .dialog-row {
@@ -655,11 +715,14 @@ form.dialog-form select {
   font-size: 12px;
   color: var(--muted);
 }
+.section-note {
+  margin-bottom: 8px;
+}
 .palette form.dialog-form .dialog-actions button {
   display: inline-block;
   width: auto;
   text-align: center;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   padding: 4px 14px;
 }
 /* Long forms scroll inside the dialog; the actions stay pinned at its bottom edge. */
@@ -751,6 +814,38 @@ button.danger {
   font-size: 13px;
   color: var(--muted);
 }
+/* A value in a muted label is still a value, not a disabled control. */
+.sheet .sheet-label .field,
+.sheet .sheet-label select {
+  color: var(--ink);
+  font-size: 14px;
+}
+/* Status and Save share the last row. */
+.sheet form .sheet-label.sheet-status {
+  grid-column: auto;
+}
+.sheet form > button[type="submit"] {
+  align-self: end;
+}
+.sheet-meta {
+  margin: -6px 0 8px;
+}
+.done-summary {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--moss);
+  background: var(--paper);
+  border-radius: 0 6px 6px 0;
+}
+.done-summary h3 {
+  margin-top: 0;
+}
+.sheet-delete {
+  margin-top: 20px;
+}
+.row.replaced {
+  opacity: 0.75;
+}
 .sheet form .sheet-label,
 .sheet form fieldset {
   grid-column: 1 / -1;
@@ -837,6 +932,7 @@ button.danger {
   border: 0;
   margin: 0;
   padding: 0;
+  max-width: 720px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 10px;
@@ -982,7 +1078,7 @@ button.danger {
   display: grid;
   gap: 8px;
 }
-.thread li {
+.thread ol > li {
   border-left: 3px solid var(--line);
   padding: 2px 0 2px 10px;
   overflow-wrap: anywhere;
@@ -993,10 +1089,14 @@ button.danger {
   flex-wrap: wrap;
   gap: 6px;
 }
+.thread-head .avatar {
+  margin-right: 0;
+}
 .thread-head button {
   margin-left: auto;
 }
-.thread-add {
+.thread-add,
+.sheet form.thread-add {
   display: flex;
   gap: 8px;
   align-items: flex-end;

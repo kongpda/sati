@@ -71,8 +71,6 @@ const clampLimit = (n: number | undefined) => Math.min(Math.max(n ?? DEFAULT_LIM
 export interface OpenOptions {
   /** Open without migrating or writing (e.g. for `doctor`). */
   readonly?: boolean;
-  /** Directory for pre-migration backups. Defaults to next to the DB. */
-  backupDir?: string;
 }
 
 export class SqliteStore implements StorageAdapter {
@@ -110,7 +108,7 @@ export class SqliteStore implements StorageAdapter {
     db.pragma("foreign_keys = ON");
     const version = opts.readonly
       ? (db.pragma("user_version", { simple: true }) as number)
-      : await migrate(db, path, opts.backupDir);
+      : await migrate(db, path);
     return new SqliteStore(db, version);
   }
 

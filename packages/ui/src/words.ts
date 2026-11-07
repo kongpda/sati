@@ -10,6 +10,9 @@ export const STATUS_WORDS: Record<string, string> = Object.fromEntries(COLUMNS);
 
 export const statusWord = (status: string): string => STATUS_WORDS[status] ?? status;
 
+/** A one-word value as a label: "high" → "High", "building" → "Building". */
+export const capital = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
+
 /** What each kind of record is called in a sentence ("deleted the note"). */
 const KIND_WORDS: Record<string, string> = {
   task: "task",

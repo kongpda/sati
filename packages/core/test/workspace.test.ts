@@ -8,6 +8,7 @@ import {
   commentTarget,
   completeTask,
   createFeature,
+  createNote,
   createTask,
   deleteRecord,
   dirtyFromPorcelain,
@@ -22,6 +23,7 @@ import {
   takeOverTask,
   undoActivity,
   updateFeature,
+  updateNote,
   updateSettings,
   updateTask,
   writeHandoff,
@@ -119,8 +121,26 @@ describe("daily workspace", () => {
       /not on the comment/,
     );
     await expect(addComment(ctx, { on: task.id, body: "   " })).rejects.toThrow();
+    // Only addComment makes comments, and a comment cannot move, change kind or change author.
+    const other = await createTask(ctx, { title: "Other" });
+    await expect(createNote(ctx, { title: "x", tags: ["comment"] })).rejects.toThrow(/added to/);
+    const plain = await createNote(ctx, { title: "Plain" });
+    await expect(updateNote(ctx, plain.id, { tags: ["comment"] })).rejects.toThrow(/added to/);
+    await expect(updateNote(ctx, comment.id, { links: [other.id] })).rejects.toThrow(
+      /cannot change/,
+    );
+    await expect(updateNote(ctx, comment.id, { tags: [] })).rejects.toThrow(/cannot change/);
+    const ada = {
+      ...ctx,
+      actorId: (await ensureActor(ctx, { name: "ada@test", kind: "human" })).id,
+    };
+    await expect(updateNote(ada, comment.id, { body: "not what I said" })).rejects.toThrow(
+      /author/,
+    );
+    expect((await updateNote(ctx, comment.id, { body: "hi again" })).body).toBe("hi again");
     await deleteRecord(ctx, "task", task.id);
     await expect(addComment(ctx, { on: task.id, body: "late" })).rejects.toThrow();
+    await expect(listComments(ctx, task.id)).rejects.toThrow(/No task/);
   });
 
   it("creates subtasks whose dependsOn indexes point at siblings", async () => {

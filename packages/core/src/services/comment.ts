@@ -89,10 +89,11 @@ export function isThreadNote(note: Note, on?: string): boolean {
 
 /** The comments and handoffs on a record, oldest first. */
 export async function listComments(ctx: ServiceContext, on: string): Promise<Note[]> {
-  targetOf(on);
-  return ctx.store.read(async (r) =>
-    (await listAll(r, ctx, "note"))
+  return ctx.store.read(async (r) => {
+    // A deleted record has no thread to show, whether it is named by handle or full id.
+    await mustGet(r, ctx, targetOf(on), on);
+    return (await listAll(r, ctx, "note"))
       .filter((n) => isThreadNote(n, on))
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)),
-  );
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+  });
 }

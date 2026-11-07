@@ -105,11 +105,10 @@ if the file is unchanged. After reading a file, save a card with facts and `sour
 
 ### Measuring the saving
 
-sati records, per day, how many tokens it served (estimated from the text it returned) and, when a
-card was reused, the `sourceTokens` the agent would otherwise have spent. `sati stats tokens
---since 7d` and a small panel in the UI show: tokens served, tokens avoided by card reuse, card hit
-rate, average brief size and the saving from compact responses. These are estimates (about 4
-characters per token), stated as such.
+The saving is measured with the agent tool's own usage report, not by sati: the same questions are
+asked in a fresh session and the token counts compared (the Phase 8 gate). A sati-side token
+ledger (`sati stats tokens`) was moved to `docs/ideas.md` on 2026-11-07, because its estimates
+would invite more trust than they deserve.
 
 ## How it improves the work
 

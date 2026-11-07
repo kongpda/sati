@@ -24,6 +24,24 @@ describe("Markdown", () => {
     expect(out).not.toMatch(/href="(?:javascript|data):/u);
   });
 
+  it("renders pipe tables and quotes, escaping their text", () => {
+    const out = html("| Do | Don't |\n|---|:-:|\n| Sign up | <b>Register</b> |\n| Log in |");
+    expect(out).toContain("<thead><tr><th>Do</th><th>Don&#x27;t</th></tr></thead>");
+    // A short row still gets a cell per column; HTML in a cell stays text.
+    expect(out).toContain(
+      "<tr><td>Sign up</td><td>&lt;b&gt;Register&lt;/b&gt;</td></tr><tr><td>Log in</td><td></td></tr>",
+    );
+    expect(html("> Never deploy on **Fridays**.\n> Ask first.")).toContain(
+      "<blockquote><p>Never deploy on <strong>Fridays</strong>.\nAsk first.</p></blockquote>",
+    );
+    // A list right after a paragraph line, with no blank line, is still a list.
+    expect(html("Use the logo:\n- front\n- back")).toBe(
+      '<div class="prose"><p>Use the logo:</p><ul><li>front</li><li>back</li></ul></div>',
+    );
+    // Pipes without a divider line are a paragraph.
+    expect(html("| a | b |\n| c | d |")).toContain("<p>| a | b |");
+  });
+
   it("keeps a fenced block whole across blank lines", () => {
     expect(chunks("a\n\n```ts\nx\n\ny\n```\n\nb")).toEqual([
       { kind: "text", text: "a" },

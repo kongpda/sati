@@ -362,10 +362,13 @@ function registerTools(server: McpServer, ctx: ServiceContext, kind: ProjectKind
         if (id !== undefined) return updateNote(ctx, await resolveId(ctx, "note", id), input);
         // A new comment gets the same title and checks as one written in the UI or CLI.
         if (input.tags?.includes(COMMENT_TAG)) {
-          if (input.links?.length !== 1) {
+          // Refuse what addComment would drop, rather than lose it silently.
+          const extra =
+            input.title !== undefined || input.pinned !== undefined || input.tags.length > 1;
+          if (input.links?.length !== 1 || extra) {
             throw new SatiError(
               "VALIDATION",
-              "A comment links to exactly one task, note or decision.",
+              "A comment takes only body, tags [comment] and one link to a task, note or decision.",
             );
           }
           return addComment(ctx, { on: input.links[0], body: input.body ?? "" });

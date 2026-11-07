@@ -25,6 +25,9 @@ const fake = {
   jwt: `ey${"J"}hbGciOiJIUzI1.ey${"J"}zdWIiOiIxMjM0.SflKxwRJSMeKKF2QT4`,
   pem: `-----BEGIN RSA ${"PRIVATE"} KEY-----\nMIIE...\n-----END RSA PRIVATE KEY-----`,
   env: `DATABASE_URL=postgres://db\nSTRIPE_SECRET=${"r".repeat(4)}9a8b7c6d`,
+  url: `see postgres://admin:${"hunter"}22x@db.internal:5432/app`,
+  npm: `np${"m_"}${"a1".repeat(18)}`,
+  gitlab: `gl${"pat-"}${"Z9".repeat(10)}`,
 };
 
 describe("detectSecret", () => {
@@ -41,6 +44,8 @@ describe("detectSecret", () => {
     "API_KEY=$API_KEY\nSECRET_TOKEN=${SECRET_TOKEN}\nPASSWORD=<your password>",
     "GITHUB_TOKEN=xxxxxxxxxxxx",
     "PRIMARY_KEY_COLUMN=id",
+    "MAX_TOKENS=100000000\nPRIMARY_KEY=user_id_column\nSORT_KEY=created_at_desc",
+    "Connect with postgres://user:password@localhost/app or https://$USER:$PASS@host",
     "Use sk-learn for the model; see task-1234",
     "-----BEGIN PUBLIC KEY-----",
   ])("passes ordinary text: %s", (text) => {

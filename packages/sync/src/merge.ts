@@ -180,9 +180,10 @@ export function mergeRecord(base: Obj | undefined, ours: Obj, theirs: Obj): Reco
   record.version = Math.max(...versions) + 1;
   if (newer.updatedAt !== undefined) record.updatedAt = newer.updatedAt;
   if (Object.keys(stamps).length > 0) record.stamps = stamps;
-  if (conflict || revived.review || ours.needsReview === true || theirs.needsReview === true) {
-    record.needsReview = true;
-  }
+  // The flag merges three-way too: a side that cleared it after a review beats one that left it.
+  const flag = (side: Obj) => side.needsReview === true;
+  const flagged = flag(ours) === flag(theirs) || flag(ours) !== flag(b) ? flag(ours) : flag(theirs);
+  if (conflict || revived.review || flagged) record.needsReview = true;
   return { record, conflict: conflict || revived.review };
 }
 

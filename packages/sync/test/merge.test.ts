@@ -94,6 +94,14 @@ describe("mergeRecord", () => {
     expect(r.record.needsReview).toBe(true);
   });
 
+  it("keeps a teammate's review: a flag one side cleared stays cleared", () => {
+    const flagged = { ...task, needsReview: true };
+    const ours = { ...flagged, title: "Edited", updatedAt: T2 };
+    const theirs = { ...task, updatedAt: T3 };
+    expect(mergeRecord(flagged, ours, theirs).record.needsReview).toBeUndefined();
+    expect(mergeRecord(flagged, theirs, ours).record.needsReview).toBeUndefined();
+  });
+
   // PLAN: a clone whose wall clock is behind would win under updatedAt. The later HLC wins instead.
   it("prefers a later field stamp when that side's updatedAt is older", () => {
     const ahead = "2026-11-03T14:00:00.000Z#000000#clock-ahead";

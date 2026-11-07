@@ -1,14 +1,7 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
-import { findDependencyCycle } from "../domain/rules.js";
-import {
-  type Claim,
-  Completion,
-  LIMITS,
-  type Priority,
-  type Task,
-  TaskShape,
-} from "../domain/schemas.js";
+import { findDependencyCycle, PRIORITY_RANK } from "../domain/rules.js";
+import { type Claim, Completion, LIMITS, type Task, TaskShape } from "../domain/schemas.js";
 import { TASK_TRANSITIONS } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
 import type { StorageReader, StorageWriter } from "../ports/storage.js";
@@ -17,6 +10,7 @@ import {
   baseFields,
   ExpectedVersion,
   insertWithLog,
+  listAll,
   mustGet,
   nowIso,
   parseInput,
@@ -97,8 +91,18 @@ export type ClaimTaskInput = z.input<typeof ClaimTaskInput>;
 const UNCLAIMED_STATUSES: readonly string[] = ["backlog", "todo", "cancelled"];
 
 export async function createTask(ctx: ServiceContext, input: unknown): Promise<Task> {
-  const { subtasks = [], ...data } = parseInput(CreateTaskInput, input);
-  return ctx.store.write(async (w) => {
+  const data = parseInput(CreateTaskInput, input);
+  return ctx.store.write((w) => createTaskIn(w, ctx, data));
+}
+
+/** `createTask` inside a caller's transaction, for services that write several records at once. */
+export async function createTaskIn(
+  w: StorageWriter,
+  ctx: ServiceContext,
+  parsed: z.output<typeof CreateTaskInput>,
+): Promise<Task> {
+  const { subtasks = [], ...data } = parsed;
+  {
     const base = baseFields(ctx, "task");
     await checkLinks(w, ctx, base.id, data);
     const parent = await insertWithLog(w, ctx, "task", {
@@ -125,6 +129,16 @@ export async function createTask(ctx: ServiceContext, input: unknown): Promise<T
         });
       }
     }
+    // Subtask edges are indexes; cycles (and self-dependency) among them would never become ready.
+    const edges = (key: string) => subtasks[Number(key)]?.dependsOn?.map(String);
+    for (const [index, sub] of subtasks.entries()) {
+      const cycle = findDependencyCycle(String(index), (sub.dependsOn ?? []).map(String), edges);
+      if (cycle) {
+        throw new SatiError("VALIDATION", `Subtask dependency cycle: ${cycle.join(" -> ")}.`, {
+          details: { cycle },
+        });
+      }
+    }
     for (const [index, sub] of subtasks.entries()) {
       const id = childIds[index];
       if (!id) continue;
@@ -146,7 +160,7 @@ export async function createTask(ctx: ServiceContext, input: unknown): Promise<T
       });
     }
     return parent;
-  });
+  }
 }
 
 /** Edits a task. Use `completeTask` to reach `done`; reopening a done task clears its completion. */
@@ -158,7 +172,7 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
     await checkLinks(w, ctx, id, patch);
     const settings = readSettings((await w.getProject())?.settings);
     let completion = before.completion;
-    let reviewNote = before.reviewNote ?? null;
+    let reviewNote = before.reviewNote;
     if (patch.status && patch.status !== before.status) {
       if (patch.status === "done") {
         if (before.status !== "review" || completion === null) {
@@ -236,8 +250,6 @@ export async function completeTask(ctx: ServiceContext, id: string, input: unkno
  * naming the holder, while another actor's lease is live. Claiming again renews the lease.
  * Every claim returns a new fencing token in `claim.token`; later writes must present it.
  */
-const PRIORITY_RANK: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
-
 async function applyClaim(
   w: StorageWriter,
   ctx: ServiceContext,
@@ -370,14 +382,36 @@ async function lease(r: StorageReader, ctx: ServiceContext, minutes?: number): P
   };
 }
 
-/** Lists tasks; `ready: true` returns todo, unclaimed tasks whose dependencies are done. */
+/**
+ * Lists tasks; `ready: true` returns todo, unclaimed tasks whose dependencies are done.
+ * The store's ready query takes no filters, so the filters and paging apply here to up to 500
+ * ready tasks. `includeDeleted` has no effect on ready tasks: a deleted task is never ready.
+ */
 export async function listTasks(ctx: ServiceContext, input: unknown = {}): Promise<Task[]> {
   const { ready, ...query } = parseInput(ListTasksInput, input);
-  return ctx.store.read((r) =>
-    ready
-      ? r.readyTasks(ctx.projectId, nowIso(ctx), query.limit ?? 50)
-      : r.list("task", ctx.projectId, query),
-  );
+  if (!ready) return ctx.store.read((r) => r.list("task", ctx.projectId, query));
+  const { status, featureId, milestoneId, parentId, label } = query;
+  const { all, inMilestone } = await ctx.store.read(async (r) => {
+    const tasks = await r.readyTasks(ctx.projectId, nowIso(ctx), 500);
+    // Tasks have no milestone of their own; they belong to their feature's milestone.
+    const ids = new Set<string>();
+    if (milestoneId) {
+      for (const f of await listAll(r, ctx, "feature"))
+        if (f.milestoneId === milestoneId) ids.add(f.id);
+    }
+    return { all: tasks, inMilestone: ids };
+  });
+  const start = query.offset ?? 0;
+  return all
+    .filter(
+      (t) =>
+        (!status || status.includes(t.status)) &&
+        (!featureId || t.featureId === featureId) &&
+        (!milestoneId || (t.featureId !== null && inMilestone.has(t.featureId))) &&
+        (!parentId || t.parentId === parentId) &&
+        (!label || t.labels.includes(label)),
+    )
+    .slice(start, start + (query.limit ?? 50));
 }
 
 /** Checks that linked feature, parent and dependencies exist and form no cycle. */

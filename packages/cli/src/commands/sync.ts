@@ -1,23 +1,8 @@
-import { join } from "node:path";
-import { CONFIG_DIR, type ImportResult, SatiError } from "@sati/core";
+import type { ImportResult } from "@sati/core";
 import { type ExportResult, exportSnapshot, importSnapshot } from "@sati/sync";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { execute, openRuntime, output, type Runtime } from "../runtime.js";
-
-/** The `.sati/` folder. Only git mode has one: stealth and standalone commit nothing. */
-function snapshotDir(rt: Runtime): string {
-  if (rt.project.mode !== "git") {
-    throw new SatiError(
-      "USAGE",
-      `\`sati sync\` needs git mode; this project is ${rt.project.mode}.`,
-      {
-        hint: "Only git mode keeps a committed snapshot in .sati/.",
-      },
-    );
-  }
-  return join(rt.location.root, CONFIG_DIR);
-}
+import { execute, openRuntime, output, snapshotDir } from "../runtime.js";
 
 const exportCmd = defineCommand({
   meta: { name: "export", description: "Write changed records to .sati/ (run by pre-commit)" },
@@ -32,7 +17,10 @@ const exportCmd = defineCommand({
 
 const importCmd = defineCommand({
   meta: { name: "import", description: "Load newer records from .sati/ (run by git hooks)" },
-  args: { ...json },
+  args: {
+    quiet: { type: "boolean", description: "Print nothing unless records were imported" },
+    ...json,
+  },
   run: ({ args }) =>
     // Not `execute`: its export after writes would put newer DB records back into .sati/ after
     // checking out an older branch, leaving the tree dirty.
@@ -42,7 +30,10 @@ const importCmd = defineCommand({
         const rt = await openRuntime();
         return importSnapshot(rt.ctx, snapshotDir(rt));
       },
-      (r: ImportResult) => `Imported ${r.imported.length} newer, ${r.unchanged} unchanged.`,
+      (r: ImportResult) =>
+        args.quiet && r.imported.length === 0
+          ? ""
+          : `Imported ${r.imported.length} newer, ${r.unchanged} unchanged.`,
     ),
 });
 

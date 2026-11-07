@@ -1,4 +1,5 @@
 import {
+  CLI_NAME,
   claimNext,
   claimTask,
   completeTask,
@@ -15,7 +16,7 @@ import {
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
-import { execute, int, list, ref, refs } from "../runtime.js";
+import { execute, int, list, parseJson, ref, refs } from "../runtime.js";
 
 const token = {
   token: {
@@ -77,7 +78,7 @@ const create = defineCommand({
           labels: list(args.labels),
           branch: args.branch,
           worktree: args.worktree,
-          subtasks: args.subtasks ? JSON.parse(args.subtasks) : undefined,
+          subtasks: args.subtasks ? parseJson(args.subtasks, "--subtasks", "USAGE") : undefined,
         }),
       (t: Task) => `Created ${row(t)}`,
     ),
@@ -105,7 +106,8 @@ const ls = defineCommand({
           limit: int(args.limit, "limit"),
           offset: int(args.offset, "offset"),
         }),
-      (tasks: Task[]) => rows(tasks, 'No tasks. Create one with `sati task create "title"`.'),
+      (tasks: Task[]) =>
+        rows(tasks, `No tasks. Create one with \`${CLI_NAME} task create "title"\`.`),
     ),
 });
 

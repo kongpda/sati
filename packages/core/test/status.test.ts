@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  canTransition,
   FEATURE_STATUSES,
   FEATURE_TRANSITIONS,
   featureRemovalNeedsDecision,
@@ -8,6 +7,13 @@ import {
   TASK_STATUSES,
   TASK_TRANSITIONS,
 } from "../src/domain/status.js";
+
+// The production code asserts transitions in assertTransition; this keeps the table tests readable.
+const canTransition = <S extends string>(
+  machine: Readonly<Record<S, readonly S[]>>,
+  from: S,
+  to: S,
+): boolean => from === to || machine[from].includes(to);
 
 describe("task status machine", () => {
   it("follows the main flow backlog -> todo -> in_progress -> review -> done", () => {

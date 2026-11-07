@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
   CLI_NAME,
   CONFIG_DIR,
@@ -15,7 +15,14 @@ import {
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { type Change, rangeChanges, stagedChanges } from "../git.js";
-import { closeRuntime, list, openRuntime, printError, type Runtime } from "../runtime.js";
+import {
+  closeRuntime,
+  list,
+  openRuntime,
+  parseJson,
+  printError,
+  type Runtime,
+} from "../runtime.js";
 
 /** `SATI_GUARD=off` lets one blocked run through; the override is logged. */
 const overridden = () => process.env.SATI_GUARD === "off";
@@ -23,15 +30,37 @@ const overridden = () => process.env.SATI_GUARD === "off";
 function maxRemovalRatio(root: string): number | undefined {
   const file = join(root, CONFIG_DIR, CONFIG_FILE);
   if (!existsSync(file)) return undefined;
-  const parsed = SatiConfigSchema.safeParse(JSON.parse(readFileSync(file, "utf8")));
+  const parsed = SatiConfigSchema.safeParse(parseJson(readFileSync(file, "utf8"), file));
   if (!parsed.success) throw new SatiError("VALIDATION", `Invalid ${file}.`);
   return parsed.data.guard?.maxRemovalRatio;
 }
 
-/** Repo-relative form of a path given relative to `cwd`; undefined when it is outside the repo. */
-function inRepo(root: string, cwd: string, path: string): string | undefined {
-  const rel = relative(root, resolve(cwd, path));
-  return rel === "" || rel.startsWith("..") || isAbsolute(rel) ? undefined : rel;
+/** realpath of `path`, or of its deepest existing parent plus the missing tail (a new file). */
+function realish(path: string): string {
+  const tail: string[] = [];
+  let at = path;
+  for (;;) {
+    try {
+      return join(realpathSync.native(at), ...tail.reverse());
+    } catch {
+      const up = dirname(at);
+      if (up === at) return path;
+      tail.push(at.slice(up.length).replace(/^[\\/]+/, ""));
+      at = up;
+    }
+  }
+}
+
+/**
+ * Repo-relative form (with `/`) of a path given relative to `cwd`; undefined when it is outside
+ * the repo. Both sides go through realpath: with a symlinked cwd (/tmp -> /private/tmp) a plain
+ * `relative` calls everything outside the repo and the guard would pass silently.
+ */
+export function inRepo(root: string, cwd: string, path: string): string | undefined {
+  const rel = relative(realish(root), realish(resolve(cwd, path)));
+  // A file may be named `..foo`; only `..` itself or `../x` leaves the repo.
+  if (rel === "" || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) return undefined;
+  return rel.split(sep).join("/");
 }
 
 async function check(rt: Runtime, changes: Change[], record: boolean): Promise<GuardResult> {
@@ -74,7 +103,7 @@ interface HookInput {
 async function runHook(): Promise<void> {
   let rt: Runtime | undefined;
   try {
-    const input = JSON.parse(readFileSync(0, "utf8")) as HookInput;
+    const input = parseJson(readFileSync(0, "utf8"), "The hook input") as HookInput;
     const cwd = input.cwd ?? process.cwd();
     const command = input.tool_input?.command;
     const target = input.tool_input?.file_path ?? input.tool_input?.notebook_path;
@@ -136,13 +165,13 @@ export default defineCommand({
       const chosen = [args.staged, args.paths, args.range].filter(Boolean).length;
       if (chosen !== 1) {
         throw new SatiError("USAGE", "Say what to check.", {
-          hint: "Use `sati guard --staged`, `sati guard --paths src/a.ts`, or `sati guard --range origin/main...HEAD`.",
+          hint: `Use \`${CLI_NAME} guard --staged\`, \`${CLI_NAME} guard --paths src/a.ts\`, or \`${CLI_NAME} guard --range origin/main...HEAD\`.`,
         });
       }
       const rt = await openRuntime();
       if ((args.staged || args.range) && rt.location.mode !== "git") {
         throw new SatiError("USAGE", "A commit range needs a git repository.", {
-          hint: "Use `sati guard --paths <file>` instead.",
+          hint: `Use \`${CLI_NAME} guard --paths <file>\` instead.`,
         });
       }
       const cwd = process.cwd();

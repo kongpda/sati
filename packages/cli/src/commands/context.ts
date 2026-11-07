@@ -1,4 +1,5 @@
 import {
+  CLI_NAME,
   type ContextEntry,
   type ContextView,
   getContext,
@@ -31,7 +32,7 @@ const get = defineCommand({
           ? entries
               .map((e) => `${shortHandle(e.id)}  ${e.path}  [${state(e)}]\n  ${e.summary}`)
               .join("\n")
-          : 'No context entries. Add one with `sati context put src/area --summary "…"`.',
+          : `No context entries. Add one with \`${CLI_NAME} context put src/area --summary "…"\`.`,
     ),
 });
 

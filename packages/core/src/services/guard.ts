@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { normalizeLockPath, pathsOverlap } from "../domain/locks.js";
+import { isGuardedFeature } from "../domain/rules.js";
 import { type Feature, LIMITS, type Lock } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
 import { actorName, listAll, logActivity, parseInput, type ServiceContext } from "./context.js";
@@ -186,7 +187,7 @@ export async function checkChanges(ctx: ServiceContext, input: unknown): Promise
         findings.push(lockFinding(lock, await actorName(r, lock.actorId), paths));
     }
 
-    const shipped = (await listAll(r, ctx, "feature")).filter((f) => f.status === "shipped");
+    const shipped = (await listAll(r, ctx, "feature")).filter(isGuardedFeature);
     if (shipped.length > 0) {
       // The newest Decision listing each feature wins.
       const decisions = new Map<string, string>();

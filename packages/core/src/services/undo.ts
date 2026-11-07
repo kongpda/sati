@@ -1,7 +1,7 @@
 import { SatiError } from "../domain/errors.js";
 import type { StoredEntity } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
-import { nowIso, type ServiceContext, updateWithLog } from "./context.js";
+import { isCompacted, nowIso, type ServiceContext, updateWithLog } from "./context.js";
 
 const ENTITIES = new Set<StoredEntity>([
   "project",
@@ -63,6 +63,14 @@ export async function undoActivity(ctx: ServiceContext, activityId: string) {
     for (const [key, raw] of Object.entries(act.diff)) {
       const change = pair(raw);
       if (!change) continue;
+      // The log keeps only the length of long text, so there is nothing real to write back.
+      if (isCompacted(change.from) || isCompacted(change.to)) {
+        throw new SatiError(
+          "VALIDATION",
+          `${act.entity} ${act.entityId}: field "${key}" was too long to keep in the log, so it cannot be undone.`,
+          { hint: "Restore the text by hand, or from git history." },
+        );
+      }
       const now = (current as unknown as Record<string, unknown>)[key];
       if (JSON.stringify(now) !== JSON.stringify(change.to)) {
         throw new SatiError(

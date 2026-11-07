@@ -1,11 +1,13 @@
 import type { z } from "zod";
 import { Milestone } from "../domain/schemas.js";
 import { MILESTONE_TRANSITIONS } from "../domain/status.js";
+import type { StorageWriter } from "../ports/storage.js";
 import {
   assertTransition,
   baseFields,
   ExpectedVersion,
   insertWithLog,
+  listAll,
   mustGet,
   parseInput,
   type ServiceContext,
@@ -29,8 +31,19 @@ export const UpdateMilestoneInput = fields.partial().extend(ExpectedVersion);
 
 export async function createMilestone(ctx: ServiceContext, input: unknown): Promise<Milestone> {
   const data = parseInput(CreateMilestoneInput, input);
-  return ctx.store.write(async (w) => {
-    const order = data.order ?? (await w.list("milestone", ctx.projectId, { limit: 500 })).length;
+  return ctx.store.write((w) => createMilestoneIn(w, ctx, data));
+}
+
+/** `createMilestone` inside a caller's transaction. */
+export async function createMilestoneIn(
+  w: StorageWriter,
+  ctx: ServiceContext,
+  data: z.output<typeof CreateMilestoneInput>,
+): Promise<Milestone> {
+  {
+    // max+1, not a count: gaps would otherwise hand out a duplicate order.
+    const all = await listAll(w, ctx, "milestone");
+    const order = data.order ?? Math.max(-1, ...all.map((m) => m.order)) + 1;
     return insertWithLog(w, ctx, "milestone", {
       ...baseFields(ctx, "milestone"),
       goal: "",
@@ -39,7 +52,7 @@ export async function createMilestone(ctx: ServiceContext, input: unknown): Prom
       ...data,
       order,
     });
-  });
+  }
 }
 
 export async function updateMilestone(

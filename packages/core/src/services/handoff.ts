@@ -1,9 +1,14 @@
 import { z } from "zod";
-import { SatiError } from "../domain/errors.js";
 import { LIMITS } from "../domain/schemas.js";
-import { CLI_NAME } from "../name.js";
-import { listAll, mustGet, parseInput, type ServiceContext } from "./context.js";
-import { createNote, updateNote } from "./note.js";
+import {
+  baseFields,
+  insertWithLog,
+  listAll,
+  mustGet,
+  parseInput,
+  type ServiceContext,
+  updateWithLog,
+} from "./context.js";
 
 export const HANDOFF_TAG = "handoff";
 
@@ -47,26 +52,21 @@ export function handoffNext(body: string): string {
 /** Writes or replaces the handoff note linked to a task. One note per task. */
 export async function writeHandoff(ctx: ServiceContext, input: unknown) {
   const data = parseInput(HandoffInput, input);
-  const task = await ctx.store.read((r) => mustGet(r, ctx, "task", data.taskId));
   const body = handoffBody(data);
-  const existing = await ctx.store.read(async (r) =>
-    (await listAll(r, ctx, "note")).find(
+  // One transaction: two concurrent handoffs must not both see "no note" and each create one.
+  return ctx.store.write(async (w) => {
+    const task = await mustGet(w, ctx, "task", data.taskId);
+    const existing = (await listAll(w, ctx, "note")).find(
       (n) => n.tags.includes(HANDOFF_TAG) && n.links.includes(task.id),
-    ),
-  );
-  if (!existing) {
-    return createNote(ctx, {
+    );
+    if (existing) return updateWithLog(w, ctx, "note", existing, { body });
+    return insertWithLog(w, ctx, "note", {
+      ...baseFields(ctx, "note"),
       title: `Handoff ${task.title}`.slice(0, LIMITS.title),
       body,
       tags: [HANDOFF_TAG],
       links: [task.id],
+      pinned: false,
     });
-  }
-  return updateNote(ctx, existing.id, { body, expectedVersion: existing.version });
-}
-
-export function missingTask(): never {
-  throw new SatiError("USAGE", "A handoff needs a task.", {
-    hint: `Run \`${CLI_NAME} handoff <task> --next "where to continue"\`.`,
   });
 }

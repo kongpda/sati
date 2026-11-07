@@ -1,6 +1,7 @@
 import {
   type AcquireLockResult,
   acquireLock,
+  CLI_NAME,
   type Lock,
   listLocks,
   releaseLock,
@@ -75,7 +76,7 @@ const ls = defineCommand({
       (locks: Lock[]) =>
         locks.length
           ? locks.map(line).join("\n")
-          : 'No locks. Lock paths with `sati lock acquire "src/area/**"`.',
+          : `No locks. Lock paths with \`${CLI_NAME} lock acquire "src/area/**"\`.`,
     ),
 });
 

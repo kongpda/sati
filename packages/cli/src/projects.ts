@@ -1,8 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { CONFIG_DIR, CONFIG_FILE, SatiError } from "@sati/core";
+import { CLI_NAME, SatiError } from "@sati/core";
 import type { DbLocation } from "@sati/store-sqlite";
+import { parseJson } from "./runtime.js";
 
 export interface KnownProject {
   slug: string;
@@ -20,7 +21,7 @@ function file(home = homedir()): string {
 export function readProjects(home = homedir()): KnownProject[] {
   const path = file(home);
   if (!existsSync(path)) return [];
-  const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
+  const parsed = parseJson(readFileSync(path, "utf8"), path);
   if (!Array.isArray(parsed)) return [];
   return parsed.filter((row): row is KnownProject => {
     if (row === null || typeof row !== "object") return false;
@@ -45,7 +46,7 @@ export function projectLocation(slug: string, home = homedir()): DbLocation {
   const found = readProjects(home).find((p) => p.slug === slug);
   if (!found) {
     throw new SatiError("NOT_FOUND", `No project named ${slug} on this machine.`, {
-      hint: "Run `sati projects` to see them, or `sati init` in the repository.",
+      hint: `Run \`${CLI_NAME} projects\` to see them, or \`${CLI_NAME} init\` in the repository.`,
     });
   }
   return {
@@ -53,8 +54,4 @@ export function projectLocation(slug: string, home = homedir()): DbLocation {
     root: found.root,
     mode: found.mode === "standalone" ? "standalone" : "git",
   };
-}
-
-export function personalConfigPath(home = homedir()): string {
-  return join(home, CONFIG_DIR, CONFIG_FILE);
 }

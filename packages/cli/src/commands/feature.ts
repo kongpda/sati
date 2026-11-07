@@ -1,4 +1,5 @@
 import {
+  CLI_NAME,
   createFeature,
   type Feature,
   getRecord,
@@ -65,7 +66,7 @@ const ls = defineCommand({
           offset: int(args.offset, "offset"),
         }),
       (items: Feature[]) =>
-        rows(items, 'No features. Create one with `sati feature create "title"`.'),
+        rows(items, `No features. Create one with \`${CLI_NAME} feature create "title"\`.`),
     ),
 });
 

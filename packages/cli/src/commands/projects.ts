@@ -1,4 +1,4 @@
-import { listTasks, systemClock } from "@sati/core";
+import { CLI_NAME, listTasks, systemClock } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
@@ -49,6 +49,6 @@ export default defineCommand({
                   `${p.slug}  ready ${p.ready}  in_progress ${p.inProgress}  review ${p.review}  ${p.root}`,
               )
               .join("\n")
-          : "No projects yet. Run `sati init`.",
+          : `No projects yet. Run \`${CLI_NAME} init\`.`,
     ),
 });

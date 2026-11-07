@@ -123,7 +123,8 @@ export function mergeRecord(base: Obj | undefined, ours: Obj, theirs: Obj): Reco
   const stamps: Obj = {};
   const keys = new Set([...Object.keys(ours), ...Object.keys(theirs)]);
   for (const key of [...keys].sort()) {
-    if (META_FIELDS.has(key)) continue;
+    // Keys come from files anyone can push; assigning "__proto__" would swap the record's prototype.
+    if (META_FIELDS.has(key) || key === "__proto__") continue;
     const bv = b[key];
     const ov = ours[key];
     const tv = theirs[key];

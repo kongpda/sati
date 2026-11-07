@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { CONFIG_DIR } from "@sati/core";
 import { defineCommand } from "citty";
+import pkg from "../../package.json" with { type: "json" };
 import { openRuntime, printError } from "../runtime.js";
 
 /** Agents write in bursts; export once the burst is over. */
@@ -15,7 +16,7 @@ export default defineCommand({
       const { serveStdio } = await import("@sati/mcp");
       if (project.mode !== "git") {
         try {
-          await serveStdio(ctx);
+          await serveStdio(ctx, pkg.version);
         } finally {
           await ctx.store.close();
         }
@@ -33,7 +34,7 @@ export default defineCommand({
         (err) => printError(err, false),
       );
       try {
-        await serveStdio({ ...ctx, store: synced.store });
+        await serveStdio({ ...ctx, store: synced.store }, pkg.version);
       } finally {
         await synced.flush();
         await ctx.store.close();

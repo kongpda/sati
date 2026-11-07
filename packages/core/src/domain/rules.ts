@@ -1,4 +1,15 @@
-import type { Task } from "./schemas.js";
+import type { Feature, Priority, Task } from "./schemas.js";
+
+/** Sort order for priorities: lower ranks first. */
+export const PRIORITY_RANK: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+
+/**
+ * Only shipped features are guarded (the PLAN rule: a shipped feature warns on change; shipped
+ * and protected blocks deletion). The guard and the brief both use this, so they agree.
+ */
+export function isGuardedFeature(feature: Pick<Feature, "status">): boolean {
+  return feature.status === "shipped";
+}
 
 /**
  * Returns the cycle (as a list of task IDs, first repeated at the end) that adding

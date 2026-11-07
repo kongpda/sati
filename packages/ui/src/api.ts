@@ -145,14 +145,14 @@ export const api = {
     request<Note>("/api/notes", { method: "POST", body: JSON.stringify(body) }),
   patchNote: (id: string, body: Record<string, unknown>) =>
     request<Note>(`/api/notes/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
-  createDecision: (body: Record<string, unknown>) =>
-    request<Decision>("/api/decisions", { method: "POST", body: JSON.stringify(body) }),
   patchFeature: (id: string, body: Record<string, unknown>) =>
     request<Feature>(`/api/features/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
 };
 
 export function ago(iso: string, now = Date.now()): string {
-  const delta = Math.max(0, now - Date.parse(iso));
+  const then = Date.parse(iso);
+  if (Number.isNaN(then)) return "";
+  const delta = Math.max(0, now - then);
   const min = Math.floor(delta / 60000);
   if (min < 1) return "just now";
   if (min < 60) return `${min} min ago`;
@@ -168,4 +168,17 @@ export const COLUMNS = [
   ["review", "Review"],
   ["done", "Done"],
   ["blocked", "Blocked"],
+  ["cancelled", "Cancelled"],
 ] as const;
+
+/** Time left on a lease, for example "expires in 12m", or "expired". */
+export function leaseLeft(iso: string, now = Date.now()): string {
+  const until = Date.parse(iso);
+  if (Number.isNaN(until)) return "";
+  const min = Math.floor((until - now) / 60000);
+  if (until <= now) return "expired";
+  if (min < 1) return "expires in under 1m";
+  if (min < 60) return `expires in ${min}m`;
+  const hr = Math.floor(min / 60);
+  return hr < 24 ? `expires in ${hr}h` : `expires in ${Math.floor(hr / 24)}d`;
+}

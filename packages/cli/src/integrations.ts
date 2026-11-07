@@ -345,7 +345,7 @@ export function planIntegrations(
 }
 
 /** True when an executable named `name` is on PATH. */
-export function onPath(name: string, env: NodeJS.ProcessEnv = process.env): boolean {
+function onPath(name: string, env: NodeJS.ProcessEnv = process.env): boolean {
   const exts = process.platform === "win32" ? ["", ".cmd", ".exe"] : [""];
   return (env.PATH ?? "")
     .split(delimiter)

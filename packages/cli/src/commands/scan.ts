@@ -1,11 +1,22 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { createFeature } from "@sati/core";
+import { createFeature, listRecords } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { execute } from "../runtime.js";
 
-const SKIP = new Set(["node_modules", ".git", "dist", "coverage", ".sati", ".turbo"]);
+const SKIP = new Set([
+  "node_modules",
+  ".git",
+  "dist",
+  "coverage",
+  ".sati",
+  ".turbo",
+  "build",
+  "out",
+  "target",
+  "vendor",
+]);
 const ROUTE_ROOTS = ["src/app", "app", "src/pages", "src/routes", "app/routes"];
 const PAGE_FILES = ["page.tsx", "page.ts", "page.jsx", "+page.svelte", "route.ts"];
 
@@ -64,10 +75,17 @@ export default defineCommand({
           ...topLevel(rt.location.root),
           ...routeFolders(rt.location.root),
         ]);
+        // Skip what an earlier run (or a person) already made, so a rerun adds nothing.
+        const existing = await listRecords(rt.ctx, "feature", { limit: 500 });
+        const names = new Set(existing.map((f) => f.title.toLowerCase()));
+        const globs = new Set(existing.flatMap((f) => f.paths));
+        const fresh = proposals.filter(
+          (p) => !names.has(p.title.toLowerCase()) && !p.paths.some((g) => globs.has(g)),
+        );
         if (args.apply) {
-          for (const proposal of proposals) await createFeature(rt.ctx, proposal);
+          for (const proposal of fresh) await createFeature(rt.ctx, proposal);
         }
-        return { proposals, created: Boolean(args.apply) };
+        return { proposals: fresh, created: Boolean(args.apply) };
       },
       (result) =>
         result.proposals.length

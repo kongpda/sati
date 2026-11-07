@@ -47,10 +47,6 @@ export const MILESTONE_TRANSITIONS: Machine<MilestoneStatus> = {
   done: ["active"],
 };
 
-export function canTransition<S extends string>(machine: Machine<S>, from: S, to: S): boolean {
-  return from === to || machine[from].includes(to);
-}
-
 /** A feature that has been shipped can only be removed with a linked Decision. */
 export function featureRemovalNeedsDecision(from: FeatureStatus, to: FeatureStatus): boolean {
   return to === "removed" && (from === "shipped" || from === "deprecated");

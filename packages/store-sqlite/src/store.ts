@@ -5,6 +5,7 @@ import {
   type ActivityQuery,
   type EntityMap,
   type ListQuery,
+  PRIORITY_RANK,
   type Project,
   SatiError,
   SEARCHABLE,
@@ -35,7 +36,6 @@ const TABLES: Record<StoredEntity, s.EntityTable> = {
   actor: s.actors,
 };
 
-const PRIORITY_RANK = { urgent: 0, high: 1, medium: 2, low: 3 } as const;
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 500;
 
@@ -122,7 +122,18 @@ export class SqliteStore implements StorageAdapter {
   }
 
   read<T>(fn: (r: StorageReader) => Promise<T>): Promise<T> {
-    return this.exclusive(() => fn(this.reader));
+    // A deferred transaction pins one snapshot, so several reads in `fn` agree with each other.
+    return this.exclusive(async () => {
+      this.db.exec("BEGIN");
+      try {
+        const result = await fn(this.reader);
+        this.db.exec("COMMIT");
+        return result;
+      } catch (err) {
+        if (this.db.inTransaction) this.db.exec("ROLLBACK");
+        throw err;
+      }
+    });
   }
 
   write<T>(fn: (w: StorageWriter) => Promise<T>): Promise<T> {
@@ -180,8 +191,11 @@ export class SqliteStore implements StorageAdapter {
       const rows = this.orm
         .select({ data: t.data })
         .from(t)
-        .where(sql`upper(${t.id}) LIKE ${`%${suffix.toUpperCase().replace(/[%_\\]/g, "")}`}`)
-        .limit(10)
+        .where(
+          sql`upper(${t.id}) LIKE ${`%${suffix.toUpperCase().replace(/[%_\\]/g, "\\$&")}`} ESCAPE '\\'`,
+        )
+        // The caller filters by project afterwards, so keep enough rows for that to be safe.
+        .limit(100)
         .all();
       return rows.map((r) => JSON.parse(r.data) as EntityMap[E]);
     },
@@ -295,7 +309,10 @@ export class SqliteStore implements StorageAdapter {
         const t: s.EntityTable = TABLES[entity];
         this.orm.insert(t).values(toRow(entity, record)).run();
       } catch (err) {
-        if (err instanceof Database.SqliteError && err.code.startsWith("SQLITE_CONSTRAINT")) {
+        if (
+          err instanceof Database.SqliteError &&
+          (err.code === "SQLITE_CONSTRAINT_PRIMARYKEY" || err.code === "SQLITE_CONSTRAINT_UNIQUE")
+        ) {
           throw new SatiError("CONFLICT", `${entity} ${record.id} already exists`);
         }
         throw err;

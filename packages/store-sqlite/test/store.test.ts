@@ -127,7 +127,63 @@ describe("queries", () => {
     await store.write((w) => w.insert("task", t));
     const hits = await store.read((r) => r.findBySuffix("task", t.id.slice(-6).toLowerCase()));
     expect(hits.map((h) => h.id)).toEqual([t.id]);
-    expect(await store.read((r) => r.findBySuffix("task", "%"))).toHaveLength(1);
+  });
+
+  // A suffix typed as "%" must not turn into a match-everything wildcard that resolves a wrong id.
+  it("treats LIKE wildcards in a suffix literally", async () => {
+    await store.write(async (w) => {
+      await w.insert("task", task());
+      await w.insert("task", task());
+    });
+    expect(await store.read((r) => r.findBySuffix("task", "%"))).toHaveLength(0);
+    expect(await store.read((r) => r.findBySuffix("task", "_"))).toHaveLength(0);
+  });
+
+  // The caller filters by project after the lookup, so a small cap could hide the real match.
+  it("returns more than ten suffix candidates", async () => {
+    await store.write(async (w) => {
+      for (let i = 0; i < 15; i++) await w.insert("task", task({ id: `tsk_${i}SAME` }));
+    });
+    expect(await store.read((r) => r.findBySuffix("task", "same"))).toHaveLength(15);
+  });
+
+  // `read` promises one consistent snapshot: a commit from another process mid-read must not show.
+  it("gives a read one snapshot even if another connection commits meanwhile", async () => {
+    const other = await SqliteStore.open(path);
+    try {
+      const [before, after] = await store.read(async (r) => {
+        const first = await r.list("task", PROJECT_ID);
+        await other.write((w) => w.insert("task", task()));
+        return [first, await r.list("task", PROJECT_ID)] as const;
+      });
+      expect(after).toHaveLength(before.length);
+      expect(await store.read((r) => r.list("task", PROJECT_ID))).toHaveLength(1);
+    } finally {
+      await other.close();
+    }
+  });
+
+  // A read that throws must release its snapshot, or the next write could never see new data.
+  it("ends the read transaction when the read throws", async () => {
+    await store
+      .read(async () => {
+        throw new Error("boom");
+      })
+      .catch(() => undefined);
+    expect(store.db.inTransaction).toBe(false);
+  });
+
+  // Only duplicate keys mean "already exists"; other constraint failures are different bugs.
+  it("reports a duplicate id as CONFLICT but not other constraint errors", async () => {
+    const t = task();
+    await store.write((w) => w.insert("task", t));
+    const dup = await store.write((w) => w.insert("task", t)).catch((e) => e);
+    expect(dup).toBeInstanceOf(SatiError);
+    expect(dup.code).toBe("CONFLICT");
+    const bad = await store
+      .write((w) => w.insert("task", task({ createdAt: undefined as unknown as string })))
+      .catch((e) => e);
+    expect(bad).not.toBeInstanceOf(SatiError);
   });
 
   it("returns ready tasks: todo, deps done, claim expired or absent", async () => {

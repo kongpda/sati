@@ -36,10 +36,6 @@ export function parseId(id: string): { prefix: string; ulid: string } | undefine
   return { prefix, ulid };
 }
 
-export function isIdOf(entity: EntityName, id: string): boolean {
-  return parseId(id)?.prefix === ID_PREFIXES[entity];
-}
-
 /**
  * Short display handle, e.g. `tsk_8f3k2a`: the prefix plus the last 6 characters
  * (random part) of the ULID, lowercased. Not guaranteed unique; lookups must
@@ -56,11 +52,4 @@ export function parseHandle(input: string): { prefix: string; suffix: string } |
   const m = /^([a-z]+)_([0-9a-hjkmnp-tv-z]{4,25})$/i.exec(input);
   if (!m?.[1] || !m[2]) return undefined;
   return { prefix: m[1].toLowerCase(), suffix: m[2].toUpperCase() };
-}
-
-export function entityForPrefix(prefix: string): EntityName | undefined {
-  for (const [entity, p] of Object.entries(ID_PREFIXES)) {
-    if (p === prefix) return entity as EntityName;
-  }
-  return undefined;
 }

@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
-import { CLI_NAME, type DoctorCheck, doctorChecks } from "@sati/core";
+import { CLI_NAME, type DoctorCheck, doctorChecks, ERROR_EXIT_CODES } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
@@ -59,7 +59,10 @@ export default defineCommand({
             if (args.vacuum) store.db.exec("VACUUM");
           }
           if (rt.location.mode !== "standalone") checks.push(hooksCheck(rt.location.root));
-          return { ok: checks.every((c) => c.ok), checks };
+          const ok = checks.every((c) => c.ok);
+          // A failed check fails the command, or CI and scripts read a broken project as healthy.
+          if (!ok) process.exitCode = ERROR_EXIT_CODES.VALIDATION;
+          return { ok, checks };
         } finally {
           await closeRuntime();
         }

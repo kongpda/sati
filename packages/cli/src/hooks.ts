@@ -55,10 +55,15 @@ ${body}
 
 const GUARD = `# Override the guard once with SATI_GUARD=off (logged).
 ${CLI_NAME} guard --staged || exit $?`;
-const IMPORT = `${CLI_NAME} sync import`;
-const PUSH = `# A repository with no origin/main can still push.
-if git rev-parse --verify --quiet origin/main >/dev/null 2>&1; then
-  ${CLI_NAME} guard --range origin/main...HEAD || exit $?
+const IMPORT = `${CLI_NAME} sync import --quiet`;
+// origin/HEAD names the remote's default branch; origin/main is the fallback. With neither, say
+// so instead of letting every push go unguarded without a word.
+const PUSH = `base=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)
+[ -n "$base" ] || base=origin/main
+if git rev-parse --verify --quiet "$base" >/dev/null 2>&1; then
+  ${CLI_NAME} guard --range "$base...HEAD" || exit $?
+else
+  echo ${sh(`${CLI_NAME}: no origin/HEAD or origin/main to compare with, so this push was not guarded.`)} >&2
 fi`;
 
 /** The runners for each mode. Stealth commits nothing, so it only guards. */
@@ -102,7 +107,7 @@ ${END}
 }
 
 /** Puts our block into a hook file: replaces an old block, else goes right after the shebang. */
-export function chainInto(existing: string | undefined, name: string): string {
+function chainInto(existing: string | undefined, name: string): string {
   const block = chainBlock(name);
   if (existing === undefined) return `#!/bin/sh\n${block}`;
   const start = existing.indexOf(BEGIN);

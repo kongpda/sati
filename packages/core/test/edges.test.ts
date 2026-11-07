@@ -14,7 +14,6 @@ import {
   ensureActor,
   getProject,
   isSatiError,
-  missingTask,
   recordDecision,
   restoreRecord,
   undoActivity,
@@ -143,7 +142,6 @@ describe("edge branches", () => {
     const human = await ensureActor(ctx, { name: "ada@test", kind: "human" });
     const brief = await buildBrief({ ...ctx, actorId: human.id });
     expect(brief.markdown).toContain("Waiting for review");
-    expect(missingTask).toThrow();
   });
 
   it("checks feature removal, notes and settings", async () => {

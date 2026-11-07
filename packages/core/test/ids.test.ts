@@ -1,19 +1,10 @@
 import { describe, expect, it } from "vitest";
-import {
-  createIdFactory,
-  entityForPrefix,
-  isIdOf,
-  parseHandle,
-  parseId,
-  shortHandle,
-} from "../src/domain/ids.js";
+import { createIdFactory, parseHandle, parseId, shortHandle } from "../src/domain/ids.js";
 
 describe("ids", () => {
   it("creates prefixed ULIDs", () => {
     const id = createIdFactory()("task");
     expect(id).toMatch(/^tsk_[0-9A-HJKMNP-TV-Z]{26}$/);
-    expect(isIdOf("task", id)).toBe(true);
-    expect(isIdOf("feature", id)).toBe(false);
   });
 
   // IDs from different worktrees must sort by creation time and never clash.
@@ -37,11 +28,9 @@ describe("ids", () => {
     expect(parseHandle("tsk_abc!de")).toBeUndefined();
   });
 
-  it("parses full ids and maps prefixes back to entities", () => {
+  it("parses full ids", () => {
     expect(parseId("feat_01JC0000000000000000ABCDEF")?.prefix).toBe("feat");
     expect(parseId("feat_short")).toBeUndefined();
     expect(parseId("_01JC0000000000000000ABCDEF")).toBeUndefined();
-    expect(entityForPrefix("dec")).toBe("decision");
-    expect(entityForPrefix("zzz")).toBeUndefined();
   });
 });

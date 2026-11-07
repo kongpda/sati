@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { homedir, userInfo } from "node:os";
 import { dirname, join } from "node:path";
 import {
@@ -94,21 +94,29 @@ export function gitRepoIndex(root: string): RepoIndex {
         const blob = rec.slice(0, tab).split(" ")[1];
         if (blob) out.push({ path: rec.slice(tab + 1), blob });
       }
+      let status: string | undefined;
       try {
-        const status = git("status", "--porcelain=v1", "-z");
-        for (const change of dirtyFromPorcelain(status)) {
-          const blob =
-            change.kind === "deleted"
-              ? "wt:deleted"
-              : `wt:${createHash("sha256")
-                  .update(readFileSync(join(root, change.path)))
-                  .digest("hex")}`;
-          const at = out.findIndex((f) => f.path === change.path);
-          if (at >= 0) out[at] = { path: change.path, blob };
-          else out.push({ path: change.path, blob });
-        }
+        status = git("status", "--porcelain=v1", "-z");
       } catch {
         // No worktree (a bare repo, or git status failed). The index hash still stands.
+      }
+      for (const change of status === undefined ? [] : dirtyFromPorcelain(status)) {
+        let blob: string;
+        if (change.kind === "deleted") {
+          blob = "wt:deleted";
+        } else {
+          try {
+            const abs = join(root, change.path);
+            // An untracked folder is listed as one entry (`dir/`); it has no content to hash.
+            if (statSync(abs).isDirectory()) continue;
+            blob = `wt:${createHash("sha256").update(readFileSync(abs)).digest("hex")}`;
+          } catch {
+            continue; // vanished or unreadable: one file must not drop every other dirty hash
+          }
+        }
+        const at = out.findIndex((f) => f.path === change.path);
+        if (at >= 0) out[at] = { path: change.path, blob };
+        else out.push({ path: change.path, blob });
       }
       return out;
     },
@@ -242,11 +250,34 @@ export function list(value: string | undefined): string[] | undefined {
 
 export function int(value: string | undefined, flag: string): number | undefined {
   if (value === undefined) return undefined;
+  // Number() would take "", "1e3" and "0x10"; a flag is a plain decimal integer.
   const n = Number(value);
-  if (!Number.isInteger(n)) {
+  if (!/^-?\d+$/.test(value.trim()) || !Number.isSafeInteger(n)) {
     throw new SatiError("USAGE", `--${flag} must be a whole number, got "${value}".`);
   }
   return n;
+}
+
+/** `JSON.parse` for user input and files: bad JSON is the caller's mistake, not a bug in sati. */
+export function parseJson(
+  text: string,
+  what: string,
+  code: "USAGE" | "VALIDATION" = "VALIDATION",
+): unknown {
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    throw new SatiError(
+      code,
+      `${what} is not valid JSON: ${err instanceof Error ? err.message : String(err)}`,
+      {
+        hint:
+          code === "USAGE"
+            ? "Check the quoting of the value."
+            : "Fix the file, or restore it from git.",
+      },
+    );
+  }
 }
 
 export async function ref(
@@ -270,7 +301,7 @@ export function printError(err: unknown, json: boolean): number {
   const e = isSatiError(err)
     ? err
     : new SatiError("INTERNAL", err instanceof Error ? err.message : String(err), {
-        hint: "This is a bug in sati. Please report it with the command you ran.",
+        hint: `This is a bug in ${CLI_NAME}. Please report it with the command you ran.`,
       });
   if (json) {
     const error = { code: e.code, message: e.message, hint: e.hint ?? null, details: e.details };
@@ -302,7 +333,7 @@ export async function execute<T>(
  * is already dirty when git looks: `git commit -a` decides there is nothing to commit before the
  * pre-commit hook runs. A failed export (say, a secret in a record) warns but keeps the write.
  */
-async function withExport<T>(rt: Runtime, fn: (rt: Runtime) => Promise<T>): Promise<T> {
+export async function withExport<T>(rt: Runtime, fn: (rt: Runtime) => Promise<T>): Promise<T> {
   if (rt.project.mode !== "git") return fn(rt);
   const { afterWrites, exportSnapshot } = await import("@sati/sync");
   const dir = join(rt.location.root, CONFIG_DIR);
@@ -333,12 +364,26 @@ export async function output<T>(
 ): Promise<void> {
   try {
     const value = await fn();
-    process.stdout.write(json ? `${JSON.stringify(value, null, 2)}\n` : `${render(value)}\n`);
+    const text = json ? JSON.stringify(value, null, 2) : render(value);
+    // An empty rendering prints nothing at all (a quiet git hook), not a blank line.
+    if (text !== "") process.stdout.write(`${text}\n`);
   } catch (err) {
     process.exitCode = printError(err, json ?? false);
   } finally {
     await closeRuntime();
   }
+}
+
+/** The `.sati/` folder. Only git mode has one: stealth and standalone commit nothing. */
+export function snapshotDir(rt: Runtime): string {
+  if (rt.project.mode !== "git") {
+    throw new SatiError(
+      "USAGE",
+      `\`${CLI_NAME} sync\` needs git mode; this project is ${rt.project.mode}.`,
+      { hint: "Only git mode keeps a committed snapshot in .sati/." },
+    );
+  }
+  return join(rt.location.root, CONFIG_DIR);
 }
 
 /** Closes the DB opened by `openRuntime`, if any. */

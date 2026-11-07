@@ -115,12 +115,19 @@ const LONG = 200;
 const compact = (v: unknown): unknown =>
   typeof v === "string" && v.length > LONG ? `<${v.length} chars>` : v;
 
+/** True for the placeholder `changes` stores in place of long text; the original is gone. */
+export const isCompacted = (v: unknown): boolean =>
+  typeof v === "string" && /^<\d+ chars>$/.test(v);
+
 /** Field-level diff for the activity log. Long text is replaced by its length. */
 export function changes(before: object, after: object): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   const a = after as Record<string, unknown>;
-  for (const [key, from] of Object.entries(before)) {
+  const b = before as Record<string, unknown>;
+  // Union of keys: a patch can add an optional key that `before` does not have yet.
+  for (const key of new Set([...Object.keys(b), ...Object.keys(a)])) {
     if (key === "version" || key === "updatedAt" || key === "stamps" || key === "lastHlc") continue;
+    const from = b[key];
     const to = a[key];
     if (JSON.stringify(from) !== JSON.stringify(to)) {
       out[key] = { from: compact(from), to: compact(to) };

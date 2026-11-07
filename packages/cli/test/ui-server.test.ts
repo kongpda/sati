@@ -41,7 +41,7 @@ describe("ui server", () => {
     const guessed = await app.request("http://127.0.0.1/session?token=" + "x".repeat(token.length));
     expect(guessed.status).toBe(401);
     const forged = await app.request("http://127.0.0.1/api/snapshot", {
-      headers: { cookie: `sati_session=${token.slice(0, -1)}` },
+      headers: { cookie: `sati_session_80=${token.slice(0, -1)}` },
     });
     expect(forged.status).toBe(401);
 
@@ -51,7 +51,8 @@ describe("ui server", () => {
     const session = await app.request(`http://127.0.0.1/session?token=${token}`);
     expect(session.status).toBe(302);
     const cookie = cookieOf(session);
-    expect(cookie.startsWith("sati_session=")).toBe(true);
+    // The name carries the port (80 when the host has none), so two UIs do not share a cookie.
+    expect(cookie.startsWith("sati_session_80=")).toBe(true);
     expect(session.headers.get("set-cookie")).toContain("HttpOnly");
 
     const wrongOrigin = await app.request("http://127.0.0.1/api/snapshot", {
@@ -83,5 +84,26 @@ describe("ui server", () => {
       body: JSON.stringify({ title: "Big", body: "x".repeat(1024 * 1024 + 1) }),
     });
     expect(res.status).toBe(413);
+  });
+
+  // Why: bad JSON threw a bare parse error (500) and unknown /api paths fell through to the
+  // static handler; clients need a JSON 400 / 404. The cookie name carries the port so two UIs
+  // on one host do not overwrite each other's session.
+  it("answers malformed JSON with 400, unknown API paths with 404, and names the cookie by port", async () => {
+    const session = await app.request(`http://127.0.0.1:4321/session?token=${token}`);
+    const set = session.headers.get("set-cookie") ?? "";
+    expect(set.startsWith("sati_session_4321=")).toBe(true);
+    const cookie = set.split(";")[0] ?? "";
+    const bad = await app.request("http://127.0.0.1:4321/api/tasks", {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: "{nope",
+    });
+    expect(bad.status).toBe(400);
+    const missing = await app.request("http://127.0.0.1:4321/api/nothing-here", {
+      headers: { cookie },
+    });
+    expect(missing.status).toBe(404);
+    expect(((await missing.json()) as { error: { code: string } }).error.code).toBe("NOT_FOUND");
   });
 });

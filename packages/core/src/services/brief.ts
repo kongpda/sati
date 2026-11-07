@@ -1,6 +1,7 @@
 import micromatch from "micromatch";
 import { z } from "zod";
 import { shortHandle } from "../domain/ids.js";
+import { isGuardedFeature } from "../domain/rules.js";
 import type { Feature, Task } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
 import { actorName, listAll, nowIso, parseInput, type ServiceContext } from "./context.js";
@@ -78,7 +79,7 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
           (d) => d.createdAt >= since,
         );
     const allFeatures = short ? [] : await r.list("feature", ctx.projectId, { limit: 500 });
-    const guarded = allFeatures.filter((f) => f.protected && f.status !== "removed");
+    const guarded = allFeatures.filter((f) => f.protected && isGuardedFeature(f));
     // Features tied to my tasks come first: those are the ones I am most likely to touch.
     guarded.sort((a, b) => Number(features.has(b.id)) - Number(features.has(a.id)));
     const locks = short
@@ -118,6 +119,15 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
 
   // A glob that matches nothing is a stale feature path. `sati doctor` repeats this in Phase 5.
   const files = !short && ctx.repo ? (await ctx.repo.files()).map((f) => f.path) : [];
+  const globMatchers = new Map<string, (file: string) => boolean>();
+  const matcher = (glob: string) => {
+    let m = globMatchers.get(glob);
+    if (!m) {
+      m = micromatch.matcher(glob, { dot: true });
+      globMatchers.set(glob, m);
+    }
+    return m;
+  };
   const unmatched =
     files.length === 0 && !ctx.repo
       ? []
@@ -125,9 +135,11 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
           (f) =>
             f.status !== "removed" &&
             f.paths.length > 0 &&
-            !f.paths.some((glob) =>
-              files.some((file) => micromatch.isMatch(file, glob, { dot: true })),
-            ),
+            !f.paths.some((glob) => {
+              // Not `files.some(m)`: `some` passes the index, and picomatch reads it as returnObject.
+              const m = matcher(glob);
+              return files.some((file) => m(file));
+            }),
         );
 
   // Read after the DB snapshot: staleness needs the git index, which is outside the store.

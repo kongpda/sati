@@ -14,13 +14,13 @@ const MARKERS: Record<string, readonly string[]> = {
   kiro: [".kiro"],
 };
 
-export const TOOLS = Object.keys(MARKERS);
+const TOOLS = Object.keys(MARKERS);
 
 /**
  * Agent tools this project uses, from marker files in `root` plus the tool running this command
  * (if any).
  */
-export function detectTools(
+function detectTools(
   root: string,
   runningTool: string | null,
   exists: (path: string) => boolean = existsSync,

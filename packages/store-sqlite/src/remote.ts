@@ -29,15 +29,33 @@ function encode(value: unknown): Buffer {
   return Buffer.concat([head, body]);
 }
 
+/** Largest frame either side accepts. A bigger length prefix is treated as garbage. */
+const MAX_FRAME = 16 * 1024 * 1024;
+
+/** Splits the stream into frames. Bad input destroys the socket instead of throwing. */
 function decode(socket: Socket, onMessage: (msg: Message) => void): void {
   let buf = Buffer.alloc(0);
   socket.on("data", (chunk: Buffer) => {
     buf = Buffer.concat([buf, chunk]);
     while (buf.length >= 4) {
       const len = buf.readUInt32BE(0);
+      if (len > MAX_FRAME) {
+        socket.destroy();
+        return;
+      }
       if (buf.length < 4 + len) return;
-      const msg = JSON.parse(buf.subarray(4, 4 + len).toString("utf8")) as Message;
+      let msg: Message;
+      try {
+        msg = JSON.parse(buf.subarray(4, 4 + len).toString("utf8")) as Message;
+      } catch {
+        socket.destroy();
+        return;
+      }
       buf = buf.subarray(4 + len);
+      if (msg === null || typeof msg !== "object") {
+        socket.destroy();
+        return;
+      }
       onMessage(msg);
     }
   });
@@ -71,11 +89,26 @@ export function listenStore(store: StorageAdapter, socketPath: string): Server {
       number,
       { resolve: () => void; reject: (err: Error) => void; endId: number }
     >();
-    const send = (msg: unknown) => socket.write(encode(msg));
+    const send = (msg: unknown) => {
+      if (!socket.destroyed) socket.write(encode(msg));
+    };
+    let closed = false;
+    // A client that dies mid-transaction must not keep the write lock: rejecting the gate makes
+    // `store.write` ROLLBACK and frees the queue for everyone else.
+    const onGone = () => {
+      closed = true;
+      for (const gate of gates.values()) gate.reject(new Error("client disconnected"));
+    };
+    socket.on("error", onGone);
+    socket.on("close", onGone);
     decode(socket, (msg) => {
       if (msg.op === "begin" && msg.txn !== undefined) {
         const run = msg.mode === "write" ? store.write.bind(store) : store.read.bind(store);
+        let started = false;
         void run(async (access) => {
+          // The client may have gone while this call waited in the queue.
+          if (closed) throw new Error("client disconnected");
+          started = true;
           sessions.set(msg.txn ?? 0, access);
           send({ id: msg.id, ok: true });
           await new Promise<void>((resolve, reject) => {
@@ -94,7 +127,9 @@ export function listenStore(store: StorageAdapter, socketPath: string): Server {
               err instanceof SatiError
                 ? { code: err.code, message: err.message, hint: err.hint ?? null }
                 : { code: "INTERNAL", message: err instanceof Error ? err.message : String(err) };
-            if (gate) send({ id: gate.endId || msg.id, ok: false, error });
+            // Failed before `fn` ran (schema too new, busy): the client is still waiting on `begin`.
+            if (!started) send({ id: msg.id, ok: false, error });
+            else if (gate) send({ id: gate.endId || msg.id, ok: false, error });
             gates.delete(msg.txn ?? 0);
             sessions.delete(msg.txn ?? 0);
           },
@@ -142,6 +177,22 @@ export function connectStore(socketPath: string): StorageAdapter {
   const socket = createConnection(socketPath);
   let seq = 0;
   const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
+  const failAll = (reason: string) => {
+    const err = new SatiError("INTERNAL", `Lost the connection to the sati daemon (${reason}).`, {
+      hint: "Restart `sati serve` and retry.",
+    });
+    for (const wait of pending.values()) wait.reject(err);
+    pending.clear();
+  };
+  let down: string | undefined;
+  socket.on("error", (err) => {
+    down ??= err.message;
+    failAll(err.message);
+  });
+  socket.on("close", () => {
+    down ??= "connection closed";
+    failAll(down);
+  });
   decode(socket, (msg) => {
     const wait = pending.get(msg.id);
     if (!wait) return;
@@ -152,6 +203,10 @@ export function connectStore(socketPath: string): StorageAdapter {
   const request = <T = unknown>(msg: Omit<Message, "id">) =>
     new Promise<T>((resolve, reject) => {
       const id = ++seq;
+      if (down !== undefined) {
+        reject(new SatiError("INTERNAL", `Lost the connection to the sati daemon (${down}).`));
+        return;
+      }
       pending.set(id, { resolve: (value) => resolve(value as T), reject });
       socket.write(encode({ ...msg, id }));
     });

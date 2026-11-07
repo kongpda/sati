@@ -15,6 +15,7 @@ import {
 } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import pkg from "../package.json" with { type: "json" };
 import { createServer } from "../src/index.js";
 
 let dir: string;
@@ -284,5 +285,11 @@ describe("MCP server", () => {
     const res = await client.getPrompt({ name: "start-task", arguments: { taskId: "tsk_abc123" } });
     const msg = res.messages[0]?.content as { text: string };
     expect(msg.text).toContain("task_claim with id tsk_abc123");
+  });
+
+  // Why: the server announced a hard-coded version, so clients saw a stale number after a release.
+  it("announces the package version", async () => {
+    const client = await connect();
+    expect(client.getServerVersion()?.version).toBe(pkg.version);
   });
 });

@@ -718,3 +718,20 @@ until the `pele` licence is checked. Playwright, axe, and the 2,000-card frame b
   teammate does not need a separate `sync import`. Only git mode with a kept config imports;
   a first init has nothing to load. If the snapshot is invalid, init has already set up the
   project, so the error says to fix the files and run `sync import`.
+
+## Review and polish pass (2026-11-07)
+
+- A full review found about 50 issues across core, store, sync, cli, mcp and the UI. The high and
+  medium ones are fixed, each with a test that fails when its fix is reverted.
+- Ambiguous items and the choices made:
+  - Undo of a field the activity log shortened to `<N chars>` is refused with a hint. Storing full
+    values would grow every activity row.
+  - Guarded features are `shipped` ones only, per PLAN. The brief now lists only shipped protected
+    features, so planned or building protected features no longer appear there.
+  - `doctor` exits 5 (VALIDATION) when a check fails; no exit code was documented before.
+  - `export --all` stays as a declared no-op, because the guide still mentions it.
+  - Readiness with a cancelled or deleted dependency is unchanged (PLAN line 134 requires `done`);
+    logged in `docs/ideas.md` for the owner.
+- Deferred: Windows paths in guard, a `--no-verify` deny-list, UI token rotation, project registry
+  slug collisions, a guard hook pre-filter, lefthook-local overwrite, `findBySuffix` project
+  scoping, card memoisation, routing 404s, and tests for the new markdown and shortcut behaviour.

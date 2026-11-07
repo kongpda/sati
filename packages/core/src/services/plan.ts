@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import type { StorageReader, StorageWriter } from "../ports/storage.js";
 import { listAll, parseInput, type ServiceContext } from "./context.js";
-import { createMilestone } from "./milestone.js";
-import { createTask } from "./task.js";
+import { createMilestoneIn } from "./milestone.js";
+import { createTaskIn } from "./task.js";
 
 export const ImportPlanInput = z.strictObject({
   markdown: z.string().max(2_000_000),
@@ -52,40 +53,41 @@ export function parsePlan(markdown: string): Item[] {
 export async function importPlan(ctx: ServiceContext, input: unknown): Promise<PlanImport> {
   const { markdown, dryRun } = parseInput(ImportPlanInput, input);
   const items = parsePlan(markdown);
-  const existing = await ctx.store.read(async (r) => ({
-    milestones: await listAll(r, ctx, "milestone"),
-    tasks: await listAll(r, ctx, "task"),
-  }));
-  const result: PlanImport = { added: [], skipped: [] };
-  const milestoneId = new Map(existing.milestones.map((m) => [m.title, m.id]));
-  const taskKeys = new Set(
-    existing.tasks.flatMap((t) => t.labels.filter((l) => l.startsWith("plan:"))),
-  );
-  const headings = [...new Set(items.map((i) => i.heading))];
-  for (const title of headings) {
-    const key = `plan:${createHash("sha256").update(title).digest("hex").slice(0, 16)}`;
-    if (milestoneId.has(title)) {
-      result.skipped.push({ kind: "milestone", title, key });
-      continue;
+  // Everything is parsed above, before the first write. The whole import is one transaction, so a
+  // failure part-way leaves nothing behind. Deleted records count as existing, so a task someone
+  // deleted is not silently re-created.
+  const run = async (w: StorageReader | StorageWriter, write: StorageWriter | undefined) => {
+    const existing = {
+      milestones: await listAll(w, ctx, "milestone", { includeDeleted: true }),
+      tasks: await listAll(w, ctx, "task", { includeDeleted: true }),
+    };
+    const result: PlanImport = { added: [], skipped: [] };
+    const milestoneTitles = new Set(existing.milestones.map((m) => m.title));
+    const taskKeys = new Set(
+      existing.tasks.flatMap((t) => t.labels.filter((l) => l.startsWith("plan:"))),
+    );
+    const headings = [...new Set(items.map((i) => i.heading))];
+    for (const title of headings) {
+      const key = `plan:${createHash("sha256").update(title).digest("hex").slice(0, 16)}`;
+      if (milestoneTitles.has(title)) {
+        result.skipped.push({ kind: "milestone", title, key });
+        continue;
+      }
+      result.added.push({ kind: "milestone", title, key });
+      if (write) await createMilestoneIn(write, ctx, { title, goal: "" });
     }
-    result.added.push({ kind: "milestone", title, key });
-    if (!dryRun) {
-      const created = await createMilestone(ctx, { title, goal: "" });
-      milestoneId.set(title, created.id);
+    for (const item of items) {
+      const label = `plan:${item.key}`;
+      const change = { kind: "task" as const, title: item.title, key: label };
+      if (taskKeys.has(label)) {
+        result.skipped.push(change);
+        continue;
+      }
+      result.added.push(change);
+      taskKeys.add(label);
+      if (write) await createTaskIn(write, ctx, { title: item.title, labels: [label] });
     }
-  }
-  for (const item of items) {
-    const label = `plan:${item.key}`;
-    const change = { kind: "task" as const, title: item.title, key: label };
-    if (taskKeys.has(label)) {
-      result.skipped.push(change);
-      continue;
-    }
-    result.added.push(change);
-    taskKeys.add(label);
-    if (!dryRun) {
-      await createTask(ctx, { title: item.title, labels: [label] });
-    }
-  }
-  return result;
+    return result;
+  };
+  return dryRun ? ctx.store.read((r) => run(r, undefined)) : ctx.store.write((w) => run(w, w));
 }

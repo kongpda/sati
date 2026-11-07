@@ -1,4 +1,5 @@
-import { ago, type Snapshot } from "./api.js";
+import { useEffect, useRef } from "react";
+import { ago, leaseLeft, type Snapshot } from "./api.js";
 import { Markdown } from "./markdown.js";
 
 export function Agents({ data, onRelease }: { data: Snapshot; onRelease: () => void }) {
@@ -23,18 +24,22 @@ export function Agents({ data, onRelease }: { data: Snapshot; onRelease: () => v
               </div>
               {tasks.map((t) => (
                 <div key={t.id}>
-                  Holding {t.title} until {t.claim?.leaseUntil.slice(11, 16)}Z
+                  Holding {t.title}
+                  {t.claim ? ` (${leaseLeft(t.claim.leaseUntil)})` : ""}
                 </div>
               ))}
               {locks.map((l) => (
                 <div key={l.id} className="meta">
-                  {l.mode} lock on {l.paths.join(", ")} by {name.get(l.actorId)}
+                  {l.mode} lock on {l.paths.join(", ")} by {name.get(l.actorId) ?? l.actorId}
                 </div>
               ))}
               {tasks.length === 0 && locks.length === 0 ? <div className="meta">Idle</div> : null}
             </article>
           );
         })}
+        {data.actors.length === 0 ? (
+          <p className="empty">No agents yet. They appear when one claims a task.</p>
+        ) : null}
       </div>
     </div>
   );
@@ -66,18 +71,27 @@ export function Features({
                 </button>
               ) : null}
             </div>
+            {f.acceptance.length > 0 ? (
+              <ul className="acceptance">
+                {f.acceptance.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : null}
             <form
+              className="paths"
               onSubmit={(e) => {
                 e.preventDefault();
                 const input = new FormData(e.currentTarget).get("paths");
                 onSavePaths(f.id, String(input ?? ""), f.version);
               }}
             >
-              <input
+              <textarea
                 className="field"
                 name="paths"
-                defaultValue={f.paths.join(", ")}
-                aria-label={`Paths for ${f.title}`}
+                rows={Math.max(2, f.paths.length)}
+                defaultValue={f.paths.join("\n")}
+                aria-label={`Paths for ${f.title}, one per line`}
               />
               <button type="submit">Save paths</button>
             </form>
@@ -137,7 +151,7 @@ export function Notes({
   onReviewed,
 }: {
   data: Snapshot;
-  onCreate: (title: string, body: string) => void;
+  onCreate: (title: string, body: string) => Promise<void>;
   onReviewed: (id: string, version: number) => void;
 }) {
   return (
@@ -147,9 +161,13 @@ export function Notes({
         className="list"
         onSubmit={(e) => {
           e.preventDefault();
-          const form = new FormData(e.currentTarget);
-          onCreate(String(form.get("title") ?? ""), String(form.get("body") ?? ""));
-          e.currentTarget.reset();
+          const element = e.currentTarget;
+          const form = new FormData(element);
+          // Keep the draft when the save fails.
+          onCreate(String(form.get("title") ?? ""), String(form.get("body") ?? "")).then(
+            () => element.reset(),
+            () => undefined,
+          );
         }}
       >
         <input
@@ -187,6 +205,9 @@ export function Notes({
             <Backlinks notes={data.notes} id={n.id} />
           </article>
         ))}
+        {data.notes.length === 0 ? (
+          <p className="empty">No notes yet. Write one above, or an agent records one.</p>
+        ) : null}
       </div>
     </div>
   );
@@ -214,6 +235,18 @@ export function Decisions({ data }: { data: Snapshot }) {
               {d.supersedes ? ` · supersedes ${titles.get(d.supersedes) ?? d.supersedes}` : ""}
             </div>
             <Markdown source={d.decision} />
+            {d.context ? (
+              <>
+                <h3 className="row-sub">Context</h3>
+                <Markdown source={d.context} />
+              </>
+            ) : null}
+            {d.consequences ? (
+              <>
+                <h3 className="row-sub">Consequences</h3>
+                <Markdown source={d.consequences} />
+              </>
+            ) : null}
           </article>
         ))}
         {data.decisions.length === 0 ? (
@@ -226,6 +259,14 @@ export function Decisions({ data }: { data: Snapshot }) {
 
 export function Activity({ data }: { data: Snapshot }) {
   const names = new Map(data.actors.map((a) => [a.id, a.name]));
+  // Name the record each row touched when it is still on screen elsewhere in the snapshot.
+  const titles = new Map<string, string>([
+    ...data.tasks.map((t) => [t.id, t.title] as const),
+    ...data.features.map((f) => [f.id, f.title] as const),
+    ...data.notes.map((n) => [n.id, n.title] as const),
+    ...data.decisions.map((d) => [d.id, d.title] as const),
+    ...data.milestones.map((m) => [m.id, m.title] as const),
+  ]);
   return (
     <div className="page">
       <h1>Activity</h1>
@@ -233,6 +274,9 @@ export function Activity({ data }: { data: Snapshot }) {
         {data.activity.map((row) => (
           <article key={row.id} className="row">
             <strong>{names.get(row.actorId) ?? row.actorId}</strong> {row.verb} {row.entity}
+            {titles.has(row.entityId) ? (
+              <span className="subject"> {titles.get(row.entityId)}</span>
+            ) : null}
             <div className="meta">
               <time dateTime={row.at} title={row.at}>
                 {ago(row.at)}
@@ -241,11 +285,17 @@ export function Activity({ data }: { data: Snapshot }) {
             </div>
           </article>
         ))}
+        {data.activity.length === 0 ? (
+          <p className="empty">No activity yet. Changes appear here as they happen.</p>
+        ) : null}
       </div>
     </div>
   );
 }
 
+const EDITABLE = ["backlog", "todo", "in_progress", "review", "blocked", "cancelled"];
+
+/** Keep this keyed by task id: it moves focus into the dialog on open and back on close. */
 export function TaskSheet({
   data,
   id,
@@ -257,23 +307,38 @@ export function TaskSheet({
   onClose: () => void;
   onSave: (id: string, patch: Record<string, unknown>) => void;
 }) {
+  const heading = useRef<HTMLHeadingElement>(null);
   const task = data.tasks.find((t) => t.id === id);
+  const found = task !== undefined;
+  useEffect(() => {
+    if (!found) return;
+    const previous = document.activeElement;
+    heading.current?.focus();
+    return () => {
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+    };
+  }, [found]);
   if (!task) return null;
   const feature = data.features.find((f) => f.id === task.featureId);
   return (
-    <aside className="sheet" role="dialog" aria-label={task.title}>
+    <aside className="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
       <button type="button" onClick={onClose}>
         Close
       </button>
-      <h2>{task.title}</h2>
+      <h2 id="sheet-title" ref={heading} tabIndex={-1}>
+        {task.title}
+      </h2>
+      {/* Keyed by version, so a change made elsewhere reloads the fields instead of being overwritten. */}
       <form
+        key={task.version}
         onSubmit={(e) => {
           e.preventDefault();
           const form = new FormData(e.currentTarget);
+          const status = String(form.get("status") ?? task.status);
           onSave(task.id, {
             title: String(form.get("title") ?? ""),
             body: String(form.get("body") ?? ""),
-            status: String(form.get("status") ?? task.status),
+            ...(status === task.status ? {} : { status }),
             expectedVersion: task.version,
           });
         }}
@@ -287,7 +352,7 @@ export function TaskSheet({
           aria-label="Body"
         />
         <select name="status" defaultValue={task.status} aria-label="Status">
-          {["backlog", "todo", "in_progress", "review", "blocked", "cancelled"].map((s) => (
+          {(EDITABLE.includes(task.status) ? EDITABLE : [task.status, ...EDITABLE]).map((s) => (
             <option key={s} value={s}>
               {s}
             </option>

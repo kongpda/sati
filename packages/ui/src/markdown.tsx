@@ -60,15 +60,38 @@ function Chunk({ chunk }: { chunk: ReturnType<typeof chunks>[number] }) {
 }
 
 function Block({ text }: { text: string }) {
-  if (text.startsWith("# ")) return <h2>{inline(text.slice(2))}</h2>;
-  if (text.startsWith("## ")) return <h3>{inline(text.slice(3))}</h3>;
-  if (text.split("\n").every((line) => line.startsWith("- "))) {
+  const lines = text.split("\n");
+  const first = lines[0] ?? "";
+  const heading = first.startsWith("## ") ? 3 : first.startsWith("# ") ? 2 : 0;
+  if (heading > 0 && lines.length > 1) {
+    // The heading line ends at its newline; the lines after it are their own block.
+    return (
+      <>
+        <Block text={first} />
+        <Block text={lines.slice(1).join("\n")} />
+      </>
+    );
+  }
+  if (heading === 2) return <h2>{inline(first.slice(2))}</h2>;
+  if (heading === 3) return <h3>{inline(first.slice(3))}</h3>;
+  if (lines.every((line) => line.startsWith("- "))) {
     return (
       <ul>
-        {text.split("\n").map((line) => (
-          <li key={line}>{inline(line.slice(2))}</li>
+        {lines.map((line, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: lines repeat and keep their order
+          <li key={`${i}:${line}`}>{inline(line.slice(2))}</li>
         ))}
       </ul>
+    );
+  }
+  if (lines.every((line) => /^\d+\. /u.test(line))) {
+    return (
+      <ol>
+        {lines.map((line, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: lines repeat and keep their order
+          <li key={`${i}:${line}`}>{inline(line.replace(/^\d+\. /u, ""))}</li>
+        ))}
+      </ol>
     );
   }
   return <p>{inline(text)}</p>;

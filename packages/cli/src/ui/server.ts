@@ -4,25 +4,33 @@ import type { AddressInfo } from "node:net";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import {
+  CLI_NAME,
   createMilestone,
   createNote,
   createTask,
   isSatiError,
   recordDecision,
   releaseExpiredClaims,
+  SatiError,
   type ServiceContext,
+  type StorageAdapter,
   updateFeature,
   updateMilestone,
   updateNote,
   updateTask,
 } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { getCookie, setCookie } from "hono/cookie";
 import micromatch from "micromatch";
 
-const COOKIE = "sati_session";
+/**
+ * Cookies are shared by every port on 127.0.0.1, so two `sati ui` servers would overwrite each
+ * other's session under one name. The name carries the port the request came in on.
+ */
+const cookieName = (host: string) => `sati_session_${host.split(":")[1] ?? "80"}`;
+const hostOf = (c: Context) => c.req.header("host") ?? new URL(c.req.url).host;
 /** Largest request body the API reads. Records are capped at 100 KB, so this is generous. */
 const MAX_BODY_BYTES = 1024 * 1024;
 
@@ -47,6 +55,17 @@ const CSP = [
 
 export interface UiRuntime {
   ctx: ServiceContext;
+  /** The store `data_version` is read from, when `ctx.store` is a wrapper around it. */
+  dataStore?: StorageAdapter;
+}
+
+/** A JSON request body. Malformed JSON is the client's mistake: 400, not a 500 "server failed". */
+async function body(c: Context): Promise<unknown> {
+  try {
+    return await c.req.json();
+  } catch {
+    throw new SatiError("USAGE", "The request body is not valid JSON.");
+  }
 }
 
 function httpStatus(code: string): 400 | 404 | 409 | 500 {
@@ -56,8 +75,8 @@ function httpStatus(code: string): 400 | 404 | 409 | 500 {
   return 500;
 }
 
-function dataVersion(ctx: ServiceContext): number {
-  const store = ctx.store;
+function dataVersion(rt: UiRuntime): number {
+  const store = rt.dataStore ?? rt.ctx.store;
   if (!(store instanceof SqliteStore)) return 0;
   return Number(store.db.pragma("data_version", { simple: true }));
 }
@@ -65,7 +84,7 @@ function dataVersion(ctx: ServiceContext): number {
 function openApi() {
   return {
     openapi: "3.1.0",
-    info: { title: "sati local ui", version: "0.0.0" },
+    info: { title: `${CLI_NAME} local ui`, version: "0.0.0" },
     paths: {
       "/api/snapshot": { get: { summary: "Board payload" } },
       "/api/search": {
@@ -139,7 +158,7 @@ async function snapshot(rt: UiRuntime) {
   return {
     project: project ? { id: project.id, name: project.name, slug: project.slug } : null,
     you: ctx.actorId,
-    version: dataVersion(ctx),
+    version: dataVersion(rt),
     tasks,
     features: featuresWithMatches,
     notes,
@@ -155,7 +174,7 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   const app = new Hono();
 
   app.use("*", async (c, next) => {
-    const host = c.req.header("host") ?? new URL(c.req.url).host;
+    const host = hostOf(c);
     const hostname = host.split(":")[0];
     if (hostname !== "127.0.0.1" && hostname !== "localhost") {
       return c.text("This server only answers on localhost.", 403);
@@ -181,14 +200,19 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
 
   app.get("/session", (c) => {
     if (!sameToken(c.req.query("token"), token)) return c.text("Sign-in token refused.", 401);
-    setCookie(c, COOKIE, token, { httpOnly: true, sameSite: "Strict", path: "/", secure: false });
+    setCookie(c, cookieName(hostOf(c)), token, {
+      httpOnly: true,
+      sameSite: "Strict",
+      path: "/",
+      secure: false,
+    });
     return c.redirect("/");
   });
 
   app.use("*", async (c, next) => {
-    if (sameToken(getCookie(c, COOKIE), token)) return next();
+    if (sameToken(getCookie(c, cookieName(hostOf(c))), token)) return next();
     return c.json(
-      { error: { code: "USAGE", message: "Open this board from `sati ui`.", hint: null } },
+      { error: { code: "USAGE", message: `Open this board from \`${CLI_NAME} ui\`.`, hint: null } },
       401,
     );
   });
@@ -214,39 +238,42 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
     return c.json({ hits });
   });
 
-  app.post("/api/tasks", async (c) => c.json(await createTask(rt.ctx, await c.req.json())));
+  app.post("/api/tasks", async (c) => c.json(await createTask(rt.ctx, await body(c))));
   app.patch("/api/tasks/:id", async (c) =>
-    c.json(await updateTask(rt.ctx, c.req.param("id"), await c.req.json())),
+    c.json(await updateTask(rt.ctx, c.req.param("id"), await body(c))),
   );
   app.post("/api/claims/release-expired", async (c) => c.json(await releaseExpiredClaims(rt.ctx)));
 
-  app.post("/api/notes", async (c) => c.json(await createNote(rt.ctx, await c.req.json())));
+  app.post("/api/notes", async (c) => c.json(await createNote(rt.ctx, await body(c))));
   app.patch("/api/notes/:id", async (c) =>
-    c.json(await updateNote(rt.ctx, c.req.param("id"), await c.req.json())),
+    c.json(await updateNote(rt.ctx, c.req.param("id"), await body(c))),
   );
 
-  app.post("/api/decisions", async (c) => c.json(await recordDecision(rt.ctx, await c.req.json())));
+  app.post("/api/decisions", async (c) => c.json(await recordDecision(rt.ctx, await body(c))));
 
   app.patch("/api/features/:id", async (c) =>
-    c.json(await updateFeature(rt.ctx, c.req.param("id"), await c.req.json())),
+    c.json(await updateFeature(rt.ctx, c.req.param("id"), await body(c))),
   );
 
-  app.post("/api/milestones", async (c) =>
-    c.json(await createMilestone(rt.ctx, await c.req.json())),
-  );
+  app.post("/api/milestones", async (c) => c.json(await createMilestone(rt.ctx, await body(c))));
   app.patch("/api/milestones/:id", async (c) =>
-    c.json(await updateMilestone(rt.ctx, c.req.param("id"), await c.req.json())),
+    c.json(await updateMilestone(rt.ctx, c.req.param("id"), await body(c))),
+  );
+
+  // An unknown API path is a 404, not the SPA page with a 200 that a client would try to parse.
+  app.all("/api/*", (c) =>
+    c.json({ error: { code: "NOT_FOUND", message: "No such API path.", hint: null } }, 404),
   );
 
   app.get("/events", () => {
-    let last = dataVersion(rt.ctx);
+    let last = dataVersion(rt);
     let timer: ReturnType<typeof setInterval> | undefined;
     const stream = new ReadableStream({
       start(controller) {
         const send = (chunk: string) => controller.enqueue(new TextEncoder().encode(chunk));
         send(`data: ${JSON.stringify({ version: last })}\n\n`);
         timer = setInterval(() => {
-          const version = dataVersion(rt.ctx);
+          const version = dataVersion(rt);
           if (version === last) return;
           last = version;
           send(`data: ${JSON.stringify({ version })}\n\n`);

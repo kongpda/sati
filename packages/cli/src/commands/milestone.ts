@@ -1,4 +1,5 @@
 import {
+  CLI_NAME,
   createMilestone,
   getRecord,
   listRecords,
@@ -40,7 +41,7 @@ const ls = defineCommand({
           offset: int(args.offset, "offset"),
         }),
       (items: Milestone[]) =>
-        rows(items, "No milestones. Create one with `sati milestone create`."),
+        rows(items, `No milestones. Create one with \`${CLI_NAME} milestone create\`.`),
     ),
 });
 

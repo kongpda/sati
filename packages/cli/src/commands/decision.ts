@@ -1,4 +1,5 @@
 import {
+  CLI_NAME,
   type Decision,
   deleteRecord,
   getRecord,
@@ -51,7 +52,10 @@ const ls = defineCommand({
           offset: int(args.offset, "offset"),
         }),
       (items: Decision[]) =>
-        rows(items, 'No decisions. Record one with `sati decision record "title" --decision "…"`.'),
+        rows(
+          items,
+          `No decisions. Record one with \`${CLI_NAME} decision record "title" --decision "…"\`.`,
+        ),
     ),
 });
 

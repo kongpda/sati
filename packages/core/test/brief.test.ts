@@ -20,7 +20,7 @@ describe("buildBrief", () => {
     const feat = await createFeature(ctx, {
       title: "Login",
       protected: true,
-      status: "building",
+      status: "shipped",
       paths: ["src/login/**"],
       acceptance: ["Wrong password shows an error", "Session survives reload"],
     });
@@ -39,7 +39,7 @@ describe("buildBrief", () => {
     // Only decisions from the last 7 days.
     expect(md).toContain(`${shortHandle(recent.id)} Use cookies`);
     expect(md).not.toContain(shortHandle(old.id));
-    expect(md).toContain(`${shortHandle(feat.id)} Login (building): src/login/**`);
+    expect(md).toContain(`${shortHandle(feat.id)} Login (shipped): src/login/**`);
     expect(brief.omitted).toBe(0);
     expect(brief.tokens).toBe(estimateTokens(md));
   });

@@ -1,4 +1,5 @@
 import {
+  CLI_NAME,
   createNote,
   deleteRecord,
   getRecord,
@@ -53,7 +54,8 @@ const ls = defineCommand({
           limit: int(args.limit, "limit"),
           offset: int(args.offset, "offset"),
         }),
-      (items: Note[]) => rows(items, 'No notes. Write one with `sati note create "title"`.'),
+      (items: Note[]) =>
+        rows(items, `No notes. Write one with \`${CLI_NAME} note create "title"\`.`),
     ),
 });
 

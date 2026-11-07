@@ -8,7 +8,7 @@
   --line: #c5d4cb;
   --moss: #1b6a44;
   --clay: #8a3b2c;
-  --live: #c56a2d;
+  --live: #9a4a14;
   --focus: #1b6a44;
   color-scheme: light;
   font-family:
@@ -57,6 +57,16 @@ textarea {
 }
 button {
   cursor: pointer;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 10px;
+  min-height: 28px;
+}
+@media (pointer: coarse) {
+  button {
+    min-height: 40px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   * {
@@ -84,8 +94,7 @@ button {
   letter-spacing: -0.03em;
   margin: 0 8px 12px;
 }
-.nav a,
-.nav button.link {
+.nav a {
   display: block;
   text-align: left;
   background: none;
@@ -196,18 +205,58 @@ textarea {
 }
 .card.fresh {
   box-shadow: inset 3px 0 0 var(--live);
+  border-left: 3px solid var(--live);
+}
+.new-badge {
+  color: var(--live);
+  font-weight: 600;
+  margin-right: 6px;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+.card.ghost {
+  opacity: 0.4;
+}
+.card.dragging {
+  box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
+  cursor: grabbing;
+}
+.card-head {
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+}
+.card-head .title {
+  flex: 1;
+  min-width: 0;
+}
+.card .handle,
+.meta button.handle {
+  margin: 0;
+  flex: none;
+  cursor: grab;
+  padding: 0 6px;
+  touch-action: none;
+}
+.banner {
+  margin: 0;
+  padding: 8px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  color: var(--clay);
 }
 .card.selected {
   border-color: var(--moss);
 }
 .card .title {
   display: block;
-  cursor: grab;
   background: none;
   border: 0;
   padding: 0;
+  min-height: 0;
   text-align: left;
   width: 100%;
+  overflow-wrap: anywhere;
 }
 .meta {
   color: var(--muted);
@@ -304,6 +353,41 @@ textarea {
 .prose {
   line-height: 1.5;
 }
+.prose h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+}
+.prose h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.5rem;
+}
+.prose ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.prose ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+.prose code {
+  background: var(--paper);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.9em;
+}
+.prose pre code {
+  background: none;
+  padding: 0;
+}
+.row-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 8px 0 0;
+}
 .prose pre {
   overflow: auto;
   background: var(--paper);
@@ -319,9 +403,11 @@ textarea {
   background: rgb(0 0 0 / 35%);
   display: flex;
   justify-content: center;
+  align-items: flex-start;
   padding-top: 12vh;
 }
 .palette button.palette-dismiss {
+  min-height: 0;
   position: absolute;
   inset: 0;
   width: 100%;
@@ -338,6 +424,8 @@ textarea {
   border-radius: 10px;
   border: 1px solid var(--line);
   padding: 8px;
+  max-height: 70vh;
+  overflow: auto;
 }
 .palette input {
   width: 100%;
@@ -345,7 +433,7 @@ textarea {
   background: transparent;
   padding: 8px;
 }
-.palette button {
+.palette form button {
   display: block;
   width: 100%;
   text-align: left;
@@ -353,9 +441,6 @@ textarea {
   border: 0;
   padding: 6px 8px;
   border-radius: 6px;
-}
-.palette button[aria-selected="true"] {
-  background: var(--paper);
 }
 .mobile-status {
   display: none;
@@ -423,4 +508,61 @@ textarea {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+.sheet ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.sheet > button:first-child {
+  float: right;
+}
+.sheet h2 {
+  margin: 4px 0 12px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.sheet h2:focus {
+  outline: none;
+}
+.sheet h3 {
+  margin: 16px 0 6px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+/* Title and body stack full width; the status select and Save share the last row. */
+.sheet form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.sheet form .field {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+/* A feature's acceptance criteria, then its path globs with Save under them. */
+.row .acceptance {
+  list-style: disc;
+  margin: 6px 0 0;
+  padding-left: 1.25rem;
+}
+.paths {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  margin-top: 8px;
+}
+.paths .field {
+  width: 100%;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+}
+
+/* The record an activity row touched, after its verb. */
+.subject {
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }

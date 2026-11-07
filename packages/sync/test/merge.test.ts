@@ -250,3 +250,17 @@ describe("merge properties", () => {
     );
   });
 });
+
+describe("mergeRecord with hostile keys", () => {
+  // Records come from files in a shared repo; "__proto__" must stay a plain key, never rewrite
+  // the prototype of the merged record.
+  it("does not let a __proto__ key pollute the merged record", () => {
+    const evil = JSON.parse(
+      '{"id":"tsk_1","version":2,"updatedAt":"x","__proto__":{"polluted":1}}',
+    );
+    const { record } = mergeRecord(undefined, evil, { ...task });
+    expect(Object.getPrototypeOf(record)).toBe(Object.prototype);
+    expect((record as { polluted?: number }).polluted).toBeUndefined();
+    expect(({} as { polluted?: number }).polluted).toBeUndefined();
+  });
+});

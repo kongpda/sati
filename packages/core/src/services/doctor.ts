@@ -1,4 +1,4 @@
-import { nowIso, type ServiceContext } from "./context.js";
+import { listAll, nowIso, type ServiceContext } from "./context.js";
 
 export interface DoctorCheck {
   name: string;
@@ -15,11 +15,11 @@ export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> 
       limit: 500,
     }),
     locks: await r.list("lock", ctx.projectId, { limit: 500 }),
-    review: await r.list("task", ctx.projectId, { limit: 500 }),
+    review: (await listAll(r, ctx, "task")).filter((t) => t.needsReview === true),
   }));
   const stale = data.tasks.filter((t) => t.claim && t.claim.leaseUntil <= now);
   const expiredLocks = data.locks.filter((l) => l.leaseUntil <= now);
-  const flagged = data.review.filter((t) => t.needsReview === true);
+  const flagged = data.review;
   return [
     {
       name: "claims",

@@ -47,9 +47,10 @@ import {
   WORKFLOW,
 } from "@sati/core";
 import { z } from "zod";
+import pkg from "../package.json" with { type: "json" };
 
-/** Bumped with the published package; reported to clients on connect. */
-const VERSION = "0.0.0";
+/** Reported to clients on connect. The CLI passes its own (published) version instead. */
+const VERSION: string = pkg.version;
 
 const Ref = z.string().trim().min(1).max(60).describe("Full id or short handle, e.g. tsk_8f3k2a");
 
@@ -79,9 +80,9 @@ async function run(fn: () => Promise<unknown>): Promise<CallToolResult> {
  * Builds the MCP server for one project and caller. Tools are thin wrappers over core services,
  * which validate input again and run each write in one transaction with an activity row.
  */
-export function createServer(ctx: ServiceContext): McpServer {
+export function createServer(ctx: ServiceContext, version: string = VERSION): McpServer {
   const server = new McpServer(
-    { name: CLI_NAME, version: VERSION },
+    { name: CLI_NAME, version },
     {
       instructions: `Shared project memory for agents. Start with ${CLI_NAME}_brief, claim a task before coding, finish with task_complete. Full rules: ${CLI_NAME}://workflow.`,
     },
@@ -131,6 +132,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
       description:
         "Create a task. New tasks start in todo (or backlog). The result lists `similar` existing tasks; if one is the same work, cancel the new task and use that one.",
       inputSchema: CreateTaskInput,
+      annotations: { destructiveHint: false },
     },
     (input) =>
       run(async () => {
@@ -147,6 +149,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
       description:
         "Claim a task before working on it: moves it to in_progress with a lease and returns claim.token. Pass that token to task_update and task_complete. Fails with the holder's name if another agent has it.",
       inputSchema: ClaimTaskInput.extend({ id: Ref.optional() }),
+      annotations: { destructiveHint: false },
     },
     ({ id, ...input }) =>
       run(async () => (id ? claimTask(ctx, await task(id), input) : claimNext(ctx, input))),
@@ -184,6 +187,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
           .default("modify")
           .describe("delete when the paths will be removed"),
       }),
+      annotations: { readOnlyHint: true },
     },
     ({ paths, change }) =>
       run(async () =>
@@ -202,6 +206,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
       description:
         "Lock repo-relative paths or globs before editing a shared area. exclusive (default) blocks other agents; shared only warns. Fails with the holder's name on overlap. Pass taskId so task_complete releases it.",
       inputSchema: AcquireLockInput.extend({ taskId: Ref.optional() }),
+      annotations: { destructiveHint: false },
     },
     ({ taskId, ...input }) =>
       run(async () =>
@@ -244,6 +249,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
       description:
         "Record why something changed or was rejected. Required before removing a shipped feature.",
       inputSchema: RecordDecisionInput,
+      annotations: { destructiveHint: false },
     },
     (input) => run(() => recordDecision(ctx, input)),
   );
@@ -265,6 +271,7 @@ function registerTools(server: McpServer, ctx: ServiceContext): void {
       description:
         "Save what you learned about a module: a path or glob, a short summary and key files. Never paste code. Replaces the entry for the same path.",
       inputSchema: PutContextInput,
+      annotations: { idempotentHint: true },
     },
     (input) => run(() => putContext(ctx, input)),
   );

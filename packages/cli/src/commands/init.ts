@@ -46,7 +46,7 @@ import {
   warnIfNotOnPath,
   writePlanned,
 } from "../integrations.js";
-import { currentBranch, osUser, output } from "../runtime.js";
+import { currentBranch, osUser, output, parseJson } from "../runtime.js";
 
 interface InitPlan {
   mode: Mode;
@@ -78,7 +78,7 @@ export interface InitResult {
 }
 
 /** Turns a folder name into a valid project slug. */
-export function slugify(name: string): string {
+function slugify(name: string): string {
   const slug = name
     .toLowerCase()
     .replace(/[^a-z0-9-]+/g, "-")
@@ -98,7 +98,7 @@ function where(cwd: string): DbLocation | undefined {
 
 function readConfig(file: string): SatiConfig | undefined {
   if (!existsSync(file)) return undefined;
-  const parsed = SatiConfigSchema.safeParse(JSON.parse(readFileSync(file, "utf8")));
+  const parsed = SatiConfigSchema.safeParse(parseJson(readFileSync(file, "utf8"), file));
   if (!parsed.success) throw new SatiError("VALIDATION", `Invalid ${file}.`);
   return parsed.data;
 }
@@ -141,12 +141,12 @@ async function plan(
   }
   if (mode !== "standalone" && !inGit) {
     throw new SatiError("VALIDATION", `${mode} mode needs a git repository.`, {
-      hint: "Run `git init` first, or use `sati init --mode standalone`.",
+      hint: `Run \`git init\` first, or use \`${CLI_NAME} init --mode standalone\`.`,
     });
   }
   if (mode === "standalone" && inGit) {
     throw new SatiError("VALIDATION", "Standalone mode is for folders outside git.", {
-      hint: "Use `sati init --mode git`, or `--mode stealth` to commit nothing.",
+      hint: `Use \`${CLI_NAME} init --mode git\`, or \`--mode stealth\` to commit nothing.`,
     });
   }
   const root = loc?.root ?? cwd;
@@ -162,12 +162,12 @@ async function plan(
   const found = await alreadyInitialized(db);
   if (found && !args.upgrade) {
     throw new SatiError("CONFLICT", `This project is already initialized as "${found.slug}".`, {
-      hint: "Run `sati init --upgrade` to update its git hooks, merge driver and .gitattributes.",
+      hint: `Run \`${CLI_NAME} init --upgrade\` to update its git hooks, merge driver and .gitattributes.`,
     });
   }
   if (!found && args.upgrade) {
     throw new SatiError("NOT_INITIALIZED", "There is no project here to upgrade.", {
-      hint: "Run `sati init`.",
+      hint: `Run \`${CLI_NAME} init\`.`,
     });
   }
   if (found) return upgradePlan(root, db, found);
@@ -318,12 +318,8 @@ async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
       writeFileSync(abs, `${JSON.stringify(p.config, null, 2)}\n`, { flag: "wx" });
     }
     writeManaged(p);
-    // A fresh clone already has teammates' records in .sati/; without this it starts empty.
-    const imported =
-      p.mode === "git" && config?.action === "keep"
-        ? await importClone(p.root, { ...deps, projectId: project.id, actorId: actor.id })
-        : 0;
     warnIfNotOnPath(p.tools, isLocalInstall(p.root));
+    // Register first: if the snapshot import below fails, the project still exists and is known.
     const { rememberProject } = await import("../projects.js");
     rememberProject({
       slug: project.slug,
@@ -333,6 +329,11 @@ async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
       mode: project.mode,
       db: p.db,
     });
+    // A fresh clone already has teammates' records in .sati/; without this it starts empty.
+    const imported =
+      p.mode === "git" && config?.action === "keep"
+        ? await importClone(p.root, { ...deps, projectId: project.id, actorId: actor.id })
+        : 0;
     return { project, actor, db: p.db, tools: p.tools, files: p.files, imported };
   } finally {
     await store.close();
@@ -342,10 +343,10 @@ async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
 /** The wizard: asks for mode and name, shows the preview, and confirms. */
 async function wizard(cwd: string, args: Parameters<typeof plan>[1]): Promise<InitPlan | null> {
   const clack = await import("@clack/prompts");
-  clack.intro("sati init");
+  clack.intro(`${CLI_NAME} init`);
   const inGit = where(cwd)?.mode === "git";
   const mode = await clack.select<Mode>({
-    message: "Where should sati keep this project?",
+    message: `Where should ${CLI_NAME} keep this project?`,
     initialValue: (args.mode as Mode | undefined) ?? (inGit ? "git" : "standalone"),
     options: inGit
       ? [
@@ -365,7 +366,7 @@ async function wizard(cwd: string, args: Parameters<typeof plan>[1]): Promise<In
   const name = await clack.text({ message: "Project name", initialValue: draft.name });
   if (clack.isCancel(name)) return null;
   const final = await plan(cwd, { ...args, mode, name, slug: args.slug ?? slugify(name) });
-  clack.note(preview(final), "sati will write");
+  clack.note(preview(final), `${CLI_NAME} will write`);
   const ok = await clack.confirm({ message: "Create the project?" });
   if (clack.isCancel(ok) || !ok) return null;
   return final;
@@ -374,7 +375,7 @@ async function wizard(cwd: string, args: Parameters<typeof plan>[1]): Promise<In
 /** `--upgrade` asks nothing but whether to go ahead. */
 async function confirmUpgrade(p: InitPlan): Promise<InitPlan | null> {
   const clack = await import("@clack/prompts");
-  clack.note(preview(p), "sati will write");
+  clack.note(preview(p), `${CLI_NAME} will write`);
   const ok = await clack.confirm({ message: "Apply these changes?" });
   return clack.isCancel(ok) || !ok ? null : p;
 }
@@ -402,7 +403,7 @@ function render(r: InitResult | UpgradeResult | null): string {
 }
 
 export default defineCommand({
-  meta: { name: "init", description: "Set up sati for this project" },
+  meta: { name: "init", description: `Set up ${CLI_NAME} for this project` },
   args: {
     mode: { type: "string", description: "git | stealth | standalone" },
     name: { type: "string", description: "Project name (default: folder name)" },
@@ -440,7 +441,7 @@ export default defineCommand({
         }
         const p = await plan(cwd, opts);
         const yes = args.upgrade ? "--upgrade --yes" : "--yes";
-        throw new SatiError("USAGE", `sati init needs --yes when it cannot ask questions.`, {
+        throw new SatiError("USAGE", `${CLI_NAME} init needs --yes when it cannot ask questions.`, {
           hint: `Run \`sati init ${yes}\`, or add \`--json\` to see what it would write.`,
           details: {
             preview: {

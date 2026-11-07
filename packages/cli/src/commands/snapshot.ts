@@ -1,18 +1,8 @@
-import { join } from "node:path";
-import { CONFIG_DIR, type ImportResult, SatiError } from "@sati/core";
+import type { ImportResult } from "@sati/core";
 import { type ExportResult, exportSnapshot, importSnapshot } from "@sati/sync";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { execute, openRuntime, output, type Runtime } from "../runtime.js";
-
-function snapshotDir(rt: Runtime): string {
-  if (rt.project.mode !== "git") {
-    throw new SatiError("USAGE", `This project is ${rt.project.mode}; the snapshot is git-only.`, {
-      hint: "Git mode keeps the committed copy in .sati/.",
-    });
-  }
-  return join(rt.location.root, CONFIG_DIR);
-}
+import { execute, openRuntime, output, snapshotDir } from "../runtime.js";
 
 export const exportCommand = defineCommand({
   meta: { name: "export", description: "Write every record to .sati/" },

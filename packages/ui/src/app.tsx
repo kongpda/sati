@@ -32,6 +32,9 @@ export function App() {
   const [palette, setPalette] = useState(false);
   const [queryText, setQueryText] = useState("");
   const [hits, setHits] = useState<{ entity: string; id: string; title: string }[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [offline, setOffline] = useState(false);
   const cursor = useRef(0);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -46,6 +49,11 @@ export function App() {
 
   useEffect(() => {
     const source = new EventSource("/events");
+    source.onopen = () => {
+      setOffline(false);
+      void client.invalidateQueries({ queryKey: ["snapshot"] });
+    };
+    source.onerror = () => setOffline(true);
     source.onmessage = () => {
       const previous = client.getQueryData<Snapshot>(["snapshot"]);
       void client.invalidateQueries({ queryKey: ["snapshot"] }).then(() => {
@@ -71,25 +79,35 @@ export function App() {
   const fail = useCallback((err: unknown) => {
     const message = err instanceof ApiError ? err.message : "That change did not save.";
     const hint = err instanceof ApiError ? err.hint : null;
-    setToast(hint ? `${message} ${hint}` : message);
+    setToast((hint ? `${message} ${hint}` : message).replaceAll("`", ""));
   }, []);
 
-  async function move(id: string, status: string) {
+  const closePalette = useCallback(() => {
+    setPalette(false);
+    setQueryText("");
+    setHits([]);
+    setSearching(false);
+    setSearched(false);
+  }, []);
+
+  /** Resolves true when the task moved. Pass `quiet` to report failures yourself. */
+  async function move(id: string, status: string, quiet = false): Promise<boolean> {
     const current = client.getQueryData<Snapshot>(["snapshot"]);
     const item = current?.tasks.find((t) => t.id === id);
-    if (!item || item.status === status) return;
+    if (!item || item.status === status) return false;
     if (status === "done") {
-      setToast(
-        `Done needs \`${__CLI_NAME__} task complete\`, so the summary and files are recorded.`,
-      );
-      return;
+      setToast(`Done needs ${__CLI_NAME__} task complete, so the summary and files are recorded.`);
+      return false;
     }
+    // A refetch already in flight would overwrite the optimistic status with the old one.
+    await client.cancelQueries({ queryKey: ["snapshot"] });
     client.setQueryData<Snapshot>(["snapshot"], (snap) =>
       snap ? { ...snap, tasks: snap.tasks.map((t) => (t.id === id ? { ...t, status } : t)) } : snap,
     );
     try {
       await api.patchTask(id, { status, expectedVersion: item.version });
       await client.invalidateQueries({ queryKey: ["snapshot"] });
+      return true;
     } catch (err) {
       // Revert only this task: other moves may be in flight, and a whole-snapshot restore
       // would undo them or bring back their refused state.
@@ -101,9 +119,18 @@ export function App() {
             }
           : snap,
       );
-      fail(err);
+      if (!quiet) fail(err);
       await client.invalidateQueries({ queryKey: ["snapshot"] });
+      return false;
     }
+  }
+
+  async function moveSelected(status: string) {
+    const ids = [...selected];
+    const results = await Promise.all(ids.map((id) => move(id, status, true)));
+    const failed = ids.filter((_, i) => !results[i]);
+    setSelected(new Set(failed));
+    if (failed.length > 0) setToast(`${failed.length} of ${ids.length} tasks did not move.`);
   }
 
   useEffect(() => {
@@ -119,12 +146,17 @@ export function App() {
         setPalette(true);
         return;
       }
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.key === "Escape") {
-        setPalette(false);
-        if (task) go(path);
+        if (palette) closePalette();
+        else if (typing)
+          target?.blur(); // The sheet stays open, so typed edits are kept.
+        else if (task) go(path);
         return;
       }
-      if (typing) return;
+      if (palette || typing) return;
+      // Buttons and links use these keys themselves, and the sheet is a dialog of its own.
+      if (target?.closest(".sheet, button, a")) return;
       if (event.key === "j" || event.key === "k") {
         const list = (client.getQueryData<Snapshot>(["snapshot"])?.tasks ?? []).filter((t) => {
           if (feature && t.featureId !== feature) return false;
@@ -159,10 +191,15 @@ export function App() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [client, fail, feature, filter, go, path, task]);
+  }, [client, closePalette, fail, feature, filter, go, palette, path, task]);
 
   useEffect(() => {
-    if (palette) searchRef.current?.focus();
+    if (!palette) return;
+    const previous = document.activeElement;
+    searchRef.current?.focus();
+    return () => {
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+    };
   }, [palette]);
 
   useEffect(() => {
@@ -226,6 +263,30 @@ export function App() {
             Search
           </button>
         </div>
+        {offline ? (
+          <p className="banner" role="status">
+            Live updates disconnected. Reconnecting…
+          </p>
+        ) : null}
+        {query.isLoading ? <p className="empty page">Loading…</p> : null}
+        {query.isError && !data ? (
+          <div className="empty page" role="alert">
+            <p>
+              Could not load. {query.error instanceof ApiError ? query.error.message : "Try again."}
+            </p>
+            <button type="button" onClick={() => void query.refetch()}>
+              Retry
+            </button>
+          </div>
+        ) : null}
+        {query.isError && data ? (
+          <p className="banner" role="alert">
+            The latest refresh failed, so this may be out of date.{" "}
+            <button type="button" onClick={() => void query.refetch()}>
+              Retry
+            </button>
+          </p>
+        ) : null}
         {path === "/" ? (
           <>
             <h1 className="sr-only">Board</h1>
@@ -264,9 +325,9 @@ export function App() {
                   defaultValue=""
                   onChange={(e) => {
                     const status = e.target.value;
+                    e.target.value = "";
                     if (!status) return;
-                    for (const id of selected) void move(id, status);
-                    setSelected(new Set());
+                    void moveSelected(status);
                   }}
                 >
                   <option value="">Move to…</option>
@@ -278,14 +339,7 @@ export function App() {
                 </select>
               </div>
             ) : null}
-            {query.isLoading ? (
-              <p className="empty">Loading the board…</p>
-            ) : query.isError ? (
-              <p className="empty" role="alert">
-                The board could not load.{" "}
-                {query.error instanceof ApiError ? query.error.message : "Reload this page."}
-              </p>
-            ) : data && data.tasks.length === 0 ? (
+            {!data ? null : data.tasks.length === 0 ? (
               <p className="empty">
                 No tasks yet. Press c, or run {__CLI_NAME__} task create "First task".
               </p>
@@ -338,7 +392,7 @@ export function App() {
               void api
                 .patchFeature(id, {
                   paths: paths
-                    .split(",")
+                    .split(/\r?\n/u)
                     .map((p) => p.trim())
                     .filter(Boolean),
                   expectedVersion: version,
@@ -359,10 +413,14 @@ export function App() {
           <Notes
             data={data}
             onCreate={(title, body) =>
-              void api
+              api
                 .createNote({ title, body })
                 .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
-                .catch(fail)
+                .then(() => undefined)
+                .catch((err: unknown) => {
+                  fail(err);
+                  throw err;
+                })
             }
             onReviewed={(id, version) =>
               void api
@@ -377,6 +435,7 @@ export function App() {
       </main>
       {data && task ? (
         <TaskSheet
+          key={task}
           data={data}
           id={task}
           onClose={() => go(path)}
@@ -394,15 +453,24 @@ export function App() {
             type="button"
             className="palette-dismiss"
             aria-label="Close search"
-            onClick={() => setPalette(false)}
+            tabIndex={-1}
+            onClick={closePalette}
           />
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              const text = queryText.trim();
+              if (!text) return;
+              setSearching(true);
+              setSearched(false);
               void api
-                .search(queryText)
-                .then((res) => setHits(res.hits))
-                .catch(fail);
+                .search(text)
+                .then((res) => {
+                  setHits(res.hits);
+                  setSearched(true);
+                })
+                .catch(fail)
+                .finally(() => setSearching(false));
             }}
           >
             <input
@@ -412,12 +480,14 @@ export function App() {
               placeholder="Search tasks, notes, decisions"
               aria-label="Search"
             />
+            {searching ? <p className="meta">Searching…</p> : null}
+            {searched && hits.length === 0 ? <p className="meta">No results</p> : null}
             {hits.map((hit) => (
               <button
                 type="button"
                 key={`${hit.entity}-${hit.id}`}
                 onClick={() => {
-                  setPalette(false);
+                  closePalette();
                   if (hit.entity === "task") go("/", hit.id);
                   else
                     go(

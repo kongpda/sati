@@ -1,8 +1,8 @@
-import { execFileSync } from "node:child_process";
-import { checkChanges, listRecords, SatiError } from "@sati/core";
+import { CLI_NAME, checkChanges, listRecords, SatiError } from "@sati/core";
 import { defineCommand } from "citty";
 import micromatch from "micromatch";
 import { json } from "../args.js";
+import { defaultBase, rangeChanges } from "../git.js";
 import { execute } from "../runtime.js";
 
 export default defineCommand({
@@ -23,28 +23,22 @@ export default defineCommand({
       args.json,
       async (rt) => {
         if (rt.location.mode !== "git") {
-          throw new SatiError("USAGE", "sati review needs a git checkout.");
+          throw new SatiError("USAGE", `${CLI_NAME} review needs a git checkout.`);
         }
-        const range = args.range ?? "origin/main...HEAD";
-        let names = "";
-        try {
-          names = execFileSync("git", ["diff", "--name-only", range], {
-            cwd: rt.location.root,
-            encoding: "utf8",
-          });
-        } catch {
-          throw new SatiError("USAGE", `Could not diff ${range}.`, {
-            hint: "Pass a range git can resolve, such as main...HEAD.",
+        const range = args.range ?? defaultBase(rt.location.root);
+        if (range === undefined) {
+          throw new SatiError("USAGE", "No origin/HEAD or origin/main to compare with.", {
+            hint: `Pass a range: \`${CLI_NAME} review main...HEAD\`.`,
           });
         }
-        const paths = names
-          .split("\n")
-          .map((p) => p.trim())
-          .filter(Boolean);
-        const guard = paths.length
-          ? await checkChanges(rt.ctx, {
-              changes: paths.map((path) => ({ path, kind: "modified" as const })),
-            })
+        // The default is a branch, not a range: compare it with HEAD from their merge-base.
+        const span = args.range === undefined ? `${range}...HEAD` : range;
+        // rangeChanges validates the range, reads names with -z and tells deletions from edits,
+        // as `guard --range` does.
+        const changes = rangeChanges(rt.location.root, span);
+        const paths = changes.map((c) => c.path);
+        const guard = changes.length
+          ? await checkChanges(rt.ctx, { changes })
           : { verdict: "ok" as const, findings: [] };
         const features = await listRecords(rt.ctx, "feature", { limit: 500 });
         const touched = features.filter((f) =>
@@ -52,7 +46,7 @@ export default defineCommand({
         );
         const decisions = await listRecords(rt.ctx, "decision", { limit: 20 });
         return {
-          range,
+          range: span,
           paths,
           features: touched.map((f) => ({ id: f.id, title: f.title })),
           guard,

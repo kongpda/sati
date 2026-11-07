@@ -1088,8 +1088,14 @@ Three read-only reviews (bugs in the last two commits, unused code, every UI pag
   import`, so `import` also adopts a kind switch; `export --all` is still accepted), the unused
   `backupDir` store option, `IdPrefix`, `detectTools`'s unused parameter, the unused
   `__CLI_NAME__` define, and two `?? 30` lease literals (now `DEFAULT_LEASE_MINUTES`).
-- Not changed, noted for later: the short brief used after a resume or compaction has no latest
-  comment; MCP has no tool to read a whole thread (search and `note_get` reach comments); the
-  board loads the newest 2,000 notes, comments included; test-only exports in core stay so tests
-  can reach them; `SNAPSHOT_SCHEMA_VERSION` is still unread and needs an owner decision.
+- Not changed, noted for later: MCP has no tool to read a whole thread (search and `note_get`
+  reach comments); the board loads the newest 2,000 notes, comments included; test-only exports
+  in core stay so tests can reach them; `SNAPSHOT_SCHEMA_VERSION` is still unread and needs an
+  owner decision.
 
+## 2026-11-07 — Latest comment in the short brief
+
+The resume and compact hooks run `brief --format=short`, which read no notes, so an agent that
+resumed mid-task missed a person's new comment until its next fresh session. The short brief now
+shows the newest comment by someone else on each claimed task, as the full brief does. It reads
+notes only when the caller holds a task; handoffs stay out of it, as before.

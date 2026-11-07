@@ -18,7 +18,10 @@ const LINE_CHARS = 160;
 const SECTION_LINES = 40;
 
 export const BriefInput = z.strictObject({
-  /** `short` is for resumed or compacted sessions: your tasks and the top 3 ready tasks. */
+  /**
+   * `short` is for resumed or compacted sessions: your tasks with their latest comment, and the
+   * top 3 ready tasks.
+   */
   format: z.enum(["agent", "short"]).optional(),
   maxTokens: z.number().int().min(200).max(BRIEF_TOKEN_CAP).optional(),
 });
@@ -90,7 +93,9 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
         );
     const held = [];
     for (const l of locks) held.push({ ...l, holder: await actorName(r, l.actorId) });
-    const notes = short ? [] : await listAll(r, ctx, "note");
+    // A short brief reads notes only for the latest comment on your tasks, so a resumed agent
+    // still hears "use the blue logo"; with no claimed task there is nothing to read them for.
+    const notes = short && mine.length === 0 ? [] : await listAll(r, ctx, "note");
     const handoffs = new Map<string, string>();
     // The newest comment by someone else on each record: a person's "use the blue logo" reaches
     // the agent. The caller's own replies are left out; they already know what they said.
@@ -106,7 +111,8 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
         if (!seen || older) comments.set(link, note);
       }
     }
-    for (const note of notes) {
+    // Handoffs stay out of the short brief, as before: it lists no task's history.
+    for (const note of short ? [] : notes) {
       if (!note.tags.includes(HANDOFF_TAG)) continue;
       const next = handoffNext(note.body);
       for (const link of note.links) if (next) handoffs.set(link, next);

@@ -106,6 +106,9 @@ describe("daily workspace", () => {
     expect(brief.markdown).toContain("latest comment: Actually the red one");
     expect(brief.markdown).not.toContain("latest comment: Use the blue logo");
     expect(brief.markdown).not.toContain("Will do");
+    // A resumed or compacted session gets the short brief; the comment reaches it too.
+    const resumed = await buildBrief(ctx, { format: "short" });
+    expect(resumed.markdown).toContain("latest comment: Actually the red one");
     expect(await commentTarget(ctx, shortHandle(task.id))).toBe(task.id);
   });
 

@@ -4,20 +4,11 @@
   "createdAt": "2026-11-07T04:54:00.570Z",
   "createdBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
   "decision": "releaseTask with force and takeOverTask refuse unless the caller is a human actor; the holder can always release, and anyone can release an expired claim. Rejected: letting any actor force, which would let agents take work from each other and undo atomic claims.",
-  "deletedAt": null,
-  "featureIds": [],
   "id": "dec_01M6T5PF3TD4Y0BGB783GT7BMK",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "consequences": "2026-11-07T04:54:00.585Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "context": "2026-11-07T04:54:00.585Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "decision": "2026-11-07T04:54:00.585Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "deletedAt": "2026-11-07T04:54:00.585Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "featureIds": "2026-11-07T04:54:00.585Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "supersedes": "2026-11-07T04:54:00.585Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "title": "2026-11-07T04:54:00.585Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+    "*": "2026-11-07T04:54:00.585Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
   },
-  "supersedes": null,
   "title": "Only people can end another actor's live claim",
   "updatedAt": "2026-11-07T04:54:00.570Z",
   "version": 1

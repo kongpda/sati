@@ -1,7 +1,4 @@
 {
-  "body": "",
-  "branch": null,
-  "claim": null,
   "completion": {
     "completedAt": "2026-11-07T12:59:43.146Z",
     "completedBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
@@ -25,34 +22,19 @@
   },
   "createdAt": "2026-11-07T12:32:14.965Z",
   "createdBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
-  "deletedAt": null,
-  "dependsOn": [],
-  "featureId": null,
   "id": "tsk_01M6TZXH3P7RH1M7VDPWGSKGEM",
-  "labels": [],
-  "parentId": null,
   "priority": "high",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "reviewNote": null,
   "stamps": {
-    "body": "2026-11-07T12:32:14.969Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "branch": "2026-11-07T12:32:14.969Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "*": "2026-11-07T12:32:14.969Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
     "claim": "2026-11-07T12:59:43.148Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
     "completion": "2026-11-07T12:59:43.148Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "deletedAt": "2026-11-07T12:32:14.969Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "dependsOn": "2026-11-07T12:32:14.969Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "featureId": "2026-11-07T12:32:14.969Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "labels": "2026-11-07T12:32:14.969Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "parentId": "2026-11-07T12:32:14.969Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "priority": "2026-11-07T12:32:14.969Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
     "reviewNote": "2026-11-07T14:04:08.393Z#000000#actr_01M6V55S9RG60S9CTSRK8E49MY",
-    "status": "2026-11-07T14:04:08.393Z#000000#actr_01M6V55S9RG60S9CTSRK8E49MY",
-    "title": "2026-11-07T12:32:14.969Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "worktree": "2026-11-07T12:32:14.969Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+    "status": "2026-11-07T14:04:08.393Z#000000#actr_01M6V55S9RG60S9CTSRK8E49MY"
   },
   "status": "done",
   "title": "Phase 7b: release notes, sati changes, changelog and feature list",
   "updatedAt": "2026-11-07T14:04:08.394Z",
-  "version": 4,
-  "worktree": null
+  "version": 4
 }

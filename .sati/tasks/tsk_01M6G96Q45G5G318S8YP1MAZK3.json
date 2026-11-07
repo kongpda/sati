@@ -1,7 +1,4 @@
 {
-  "body": "",
-  "branch": null,
-  "claim": null,
   "completion": {
     "completedAt": "2026-11-03T08:43:02.057Z",
     "completedBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
@@ -17,17 +14,11 @@
   },
   "createdAt": "2026-11-03T08:42:54.468Z",
   "createdBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
-  "deletedAt": null,
-  "dependsOn": [],
-  "featureId": null,
   "id": "tsk_01M6G96Q45G5G318S8YP1MAZK3",
-  "labels": [],
-  "parentId": null,
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "status": "done",
   "title": "Export / import engine and git sync hooks",
   "updatedAt": "2026-11-03T08:43:02.058Z",
-  "version": 3,
-  "worktree": null
+  "version": 3
 }

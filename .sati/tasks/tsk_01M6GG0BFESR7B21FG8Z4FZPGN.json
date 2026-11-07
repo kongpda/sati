@@ -1,7 +1,4 @@
 {
-  "body": "",
-  "branch": null,
-  "claim": null,
   "completion": {
     "completedAt": "2026-11-03T10:41:46.195Z",
     "completedBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
@@ -17,17 +14,11 @@
   },
   "createdAt": "2026-11-03T10:41:45.965Z",
   "createdBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
-  "deletedAt": null,
-  "dependsOn": [],
-  "featureId": null,
   "id": "tsk_01M6GG0BFESR7B21FG8Z4FZPGN",
-  "labels": [],
-  "parentId": null,
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "status": "done",
   "title": "Context cache with git-hash staleness",
   "updatedAt": "2026-11-03T10:41:46.196Z",
-  "version": 3,
-  "worktree": null
+  "version": 3
 }

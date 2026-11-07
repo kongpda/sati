@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { CLI_NAME } from "@sati/core";
-import { mergeRecord, parseRecord, stableJson } from "@sati/sync";
+import { decodeRecord, encodeRecord, mergeRecord, parseRecord, stableJson } from "@sati/sync";
 import { defineCommand } from "citty";
 
 /**
@@ -22,12 +22,15 @@ export default defineCommand({
     try {
       const read = (file: string) => (existsSync(file) ? readFileSync(file, "utf8") : "");
       const baseText = read(args.base);
-      const base = baseText.trim() === "" ? undefined : parseRecord(baseText, "base");
-      const ours = parseRecord(read(args.ours), "ours");
-      const theirs = parseRecord(read(args.theirs), "theirs");
+      // Each side may be in the compact or the full form; the merge works on full records.
+      const side = (text: string, name: string) =>
+        decodeRecord(parseRecord(text, name)) as ReturnType<typeof parseRecord>;
+      const base = baseText.trim() === "" ? undefined : side(baseText, "base");
+      const ours = side(read(args.ours), "ours");
+      const theirs = side(read(args.theirs), "theirs");
       const { record, conflict } = mergeRecord(base, ours, theirs);
       const tmp = `${args.ours}.${process.pid}.tmp`;
-      writeFileSync(tmp, stableJson(record));
+      writeFileSync(tmp, stableJson(encodeRecord(record)));
       renameSync(tmp, args.ours);
       if (conflict) {
         process.stderr.write(

@@ -1,6 +1,7 @@
 import { execFileSync, spawn } from "node:child_process";
 import { readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { decodeRecord } from "@sati/sync";
 import { describe, expect, it } from "vitest";
 import { bin, type Result, sati, tempRepo } from "./helpers.js";
 
@@ -246,7 +247,10 @@ describe("e2e: four agents in four worktrees", () => {
         expect(sati(dir, "sync", "export").code).toBe(0);
         const actors = new Map<string, number>();
         for (const name of readdirSync(join(dir, ".sati/tasks"))) {
-          const t = JSON.parse(readFileSync(join(dir, ".sati/tasks", name), "utf8")) as {
+          // Read the file as sati does: empty fields such as `claim: null` are left out of it.
+          const t = decodeRecord(
+            JSON.parse(readFileSync(join(dir, ".sati/tasks", name), "utf8")),
+          ) as {
             id: string;
             status: string;
             claim: { actorId: string } | null;

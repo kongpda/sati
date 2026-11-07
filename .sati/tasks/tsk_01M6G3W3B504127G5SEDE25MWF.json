@@ -1,7 +1,4 @@
 {
-  "body": "",
-  "branch": null,
-  "claim": null,
   "completion": {
     "completedAt": "2026-11-03T07:31:19.159Z",
     "completedBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
@@ -13,19 +10,14 @@
   },
   "createdAt": "2026-11-03T07:09:43.653Z",
   "createdBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
-  "deletedAt": null,
-  "dependsOn": [],
-  "featureId": null,
   "id": "tsk_01M6G3W3B504127G5SEDE25MWF",
   "labels": [
     "phase-2"
   ],
-  "parentId": null,
   "priority": "high",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "status": "done",
   "title": "Claude Code hooks: SessionStart brief (startup, compact, resume) and Stop nudge",
   "updatedAt": "2026-11-03T07:31:19.161Z",
-  "version": 3,
-  "worktree": null
+  "version": 3
 }

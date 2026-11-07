@@ -1320,3 +1320,22 @@ notes only when the caller holds a task; handoffs stay out of it, as before.
   covers part of the board, and the "Assigned to" list in the panel clips its last row.
 - Not done: `sati rules sync` has not been run on this repo, so `.claude/skills/sati/SKILL.md`
   still has the old workflow text.
+
+### Compact snapshot files (2026-11-07)
+
+- Asked by the owner after measuring the footprint: a new task's file was 1.6 KB, over half of
+  it the same clock stamp repeated per field.
+- `packages/sync/src/format.ts` encodes on export and in the merge driver, and decodes on
+  import and before a merge. Required fields at their empty value (the first of null, [], "",
+  false the Zod schema accepts) are left out; the most common stamp is written once as
+  `stamps["*"]` and applies, on read, to every field outside a fixed unstamped set that has no
+  stamp of its own.
+- Every record is decoded again before it is written; one that would not come back exactly
+  (a field without a stamp, say) is written with full stamps, or in the full form. So the format
+  cannot lose a field or a stamp; a property test checks the round trip, and fails when the
+  fallback or the rule for stamps of cleared fields is removed.
+- Old full-form files read unchanged. The first export after upgrading rewrites every file once.
+  A sati build from before this rejects compact files on import (strict schema); nothing is
+  published yet, so no one has one.
+- Measured, 200 new tasks: 343,917 bytes to 107,917 on disk; 43 KiB to 30 KiB packed in git.
+

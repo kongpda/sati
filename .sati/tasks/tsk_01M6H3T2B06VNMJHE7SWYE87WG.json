@@ -1,7 +1,4 @@
 {
-  "body": "",
-  "branch": null,
-  "claim": null,
   "completion": {
     "completedAt": "2026-11-03T16:27:51.992Z",
     "completedBy": "actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
@@ -14,20 +11,15 @@
   },
   "createdAt": "2026-11-03T16:27:51.520Z",
   "createdBy": "actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
-  "deletedAt": null,
-  "dependsOn": [],
-  "featureId": null,
   "id": "tsk_01M6H3T2B06VNMJHE7SWYE87WG",
   "labels": [
     "cli",
     "sync"
   ],
-  "parentId": null,
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "status": "done",
   "title": "Fix record-only git commit -a: CLI writes export .sati/",
   "updatedAt": "2026-11-03T16:27:51.993Z",
-  "version": 3,
-  "worktree": null
+  "version": 3
 }

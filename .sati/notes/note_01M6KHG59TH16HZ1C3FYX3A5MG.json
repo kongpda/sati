@@ -2,20 +2,14 @@
   "body": "## Done so far\nLocal checkpoint fde5ab0 contains the seeded worktree fixture, CI matrix, and event-aware guard against the base snapshot. Lint, typecheck and tests passed.\n\n## Next step\nPush the checkpoint branch, verify the 100 CI runs and guard fixture, then continue the remaining local phases.\n\n## Open questions\nNone.\n\n## Files in flight\n- .github/workflows/ci.yml\n- packages/cli/test/concurrency.test.ts",
   "createdAt": "2026-11-04T15:05:35.801Z",
   "createdBy": "actr_01M6H685BMQWVNDQ0GEZGBA8VT",
-  "deletedAt": null,
   "id": "note_01M6KHG59TH16HZ1C3FYX3A5MG",
   "links": [
     "tsk_01M6KHF4NSBGJ04MB59J033MHG"
   ],
-  "pinned": false,
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "body": "2026-11-05T04:07:00.070Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
-    "deletedAt": "2026-11-04T15:05:35.804Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
-    "links": "2026-11-04T15:05:35.804Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
-    "pinned": "2026-11-04T15:05:35.804Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
-    "tags": "2026-11-04T15:05:35.804Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
-    "title": "2026-11-04T15:05:35.804Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT"
+    "*": "2026-11-04T15:05:35.804Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "body": "2026-11-05T04:07:00.070Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT"
   },
   "tags": [
     "handoff"

@@ -21,6 +21,7 @@ import {
   scanRecord,
   snapshotRecords,
 } from "@sati/core";
+import { decodeRecord, encodeRecord, snapshotEntityOf } from "./format.js";
 
 /** A record file larger than this cannot be valid (bodies are capped at 100 KB). */
 const MAX_FILE_BYTES = 1024 * 1024;
@@ -72,7 +73,7 @@ export async function exportSnapshot(ctx: ServiceContext, dir: string): Promise<
     // Reported paths use `/` on every OS, like git does.
     const rel = posix.join(SNAPSHOT_DIRS[entity], `${record.id}.json`);
     const file = join(dir, rel);
-    const content = stableJson(record);
+    const content = stableJson(encodeRecord(record));
     if (existsSync(file) && readFileSync(file, "utf8") === content) {
       result.unchanged++;
       continue;
@@ -131,7 +132,9 @@ export function readSnapshot(dir: string): ImportRecordsInput {
       }
       const id = (record as { id?: unknown } | null)?.id;
       if (`${String(id)}.json` !== name) fail("the file name does not match the record id");
-      out.push({ entity, source, record });
+      // A record of another entity in this folder stays as it is, and validation names it.
+      const full = snapshotEntityOf(record) === entity ? decodeRecord(record) : record;
+      out.push({ entity, source, record: full });
     }
   }
   return out;

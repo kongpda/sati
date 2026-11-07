@@ -1,7 +1,4 @@
 {
-  "body": "",
-  "branch": null,
-  "claim": null,
   "completion": {
     "completedAt": "2026-11-07T11:37:01.447Z",
     "completedBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
@@ -23,32 +20,17 @@
   },
   "createdAt": "2026-11-07T10:51:36.395Z",
   "createdBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
-  "deletedAt": null,
-  "dependsOn": [],
-  "featureId": null,
   "id": "tsk_01M6TT582B7WN284SZAKF7PG6P",
-  "labels": [],
-  "parentId": null,
   "priority": "high",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "body": "2026-11-07T10:51:36.399Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "branch": "2026-11-07T10:51:36.399Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "*": "2026-11-07T10:51:36.399Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
     "claim": "2026-11-07T11:37:01.449Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
     "completion": "2026-11-07T11:37:01.449Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "deletedAt": "2026-11-07T10:51:36.399Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "dependsOn": "2026-11-07T10:51:36.399Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "featureId": "2026-11-07T10:51:36.399Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "labels": "2026-11-07T10:51:36.399Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "parentId": "2026-11-07T10:51:36.399Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "priority": "2026-11-07T10:51:36.399Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "status": "2026-11-07T11:37:01.449Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "title": "2026-11-07T10:51:36.399Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "worktree": "2026-11-07T10:51:36.399Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+    "status": "2026-11-07T11:37:01.449Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
   },
   "status": "review",
   "title": "Polish pass: review bugs, dead code and UI design on every page",
   "updatedAt": "2026-11-07T11:37:01.453Z",
-  "version": 3,
-  "worktree": null
+  "version": 3
 }

@@ -1,7 +1,4 @@
 {
-  "body": "",
-  "branch": null,
-  "claim": null,
   "completion": {
     "completedAt": "2026-11-06T17:57:11.135Z",
     "completedBy": "actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
@@ -19,32 +16,17 @@
   },
   "createdAt": "2026-11-04T15:05:02.391Z",
   "createdBy": "actr_01M6H685BMQWVNDQ0GEZGBA8VT",
-  "deletedAt": null,
-  "dependsOn": [],
-  "featureId": null,
   "id": "tsk_01M6KHF4NSBGJ04MB59J033MHG",
-  "labels": [],
-  "parentId": null,
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "body": "2026-11-04T15:05:02.395Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
-    "branch": "2026-11-04T15:05:02.395Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "*": "2026-11-04T15:05:02.395Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "claim": "2026-11-06T17:57:11.137Z#000000#actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
     "completion": "2026-11-06T17:57:11.137Z#000000#actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
-    "deletedAt": "2026-11-04T15:05:02.395Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
-    "dependsOn": "2026-11-04T15:05:02.395Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
-    "featureId": "2026-11-04T15:05:02.395Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
-    "labels": "2026-11-04T15:05:02.395Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
-    "parentId": "2026-11-04T15:05:02.395Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
-    "priority": "2026-11-04T15:05:02.395Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
-    "status": "2026-11-06T17:57:11.137Z#000000#actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
-    "title": "2026-11-04T15:05:02.395Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
-    "worktree": "2026-11-04T15:05:02.395Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT"
+    "status": "2026-11-06T17:57:11.137Z#000000#actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE"
   },
   "status": "review",
   "title": "Implement Phase 3 four-worktree coordination gate",
   "updatedAt": "2026-11-06T17:57:11.140Z",
-  "version": 7,
-  "worktree": null
+  "version": 7
 }

@@ -16,6 +16,7 @@ import { SqliteStore } from "@sati/store-sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   afterWrites,
+  encodeRecord,
   exportSnapshot,
   importSnapshot,
   readSnapshot,
@@ -80,7 +81,9 @@ describe("exportSnapshot / importSnapshot", () => {
 
     const out = await exportSnapshot(a, dir);
     expect(out.written.sort()).toEqual([`notes/${note.id}.json`, `tasks/${task.id}.json`].sort());
-    expect(readFileSync(join(dir, `tasks/${task.id}.json`), "utf8")).toBe(stableJson(task));
+    expect(readFileSync(join(dir, `tasks/${task.id}.json`), "utf8")).toBe(
+      stableJson(encodeRecord(task)),
+    );
 
     const r = await importSnapshot(b, dir);
     expect(r.imported).toHaveLength(2);

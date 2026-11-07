@@ -1,7 +1,4 @@
 {
-  "body": "",
-  "branch": null,
-  "claim": null,
   "completion": {
     "completedAt": "2026-11-03T13:15:21.355Z",
     "completedBy": "actr_01M6GRSJMGZ0H1TWWFVG96D8X8",
@@ -13,17 +10,11 @@
   },
   "createdAt": "2026-11-03T13:15:21.111Z",
   "createdBy": "actr_01M6GRSJMGZ0H1TWWFVG96D8X8",
-  "deletedAt": null,
-  "dependsOn": [],
-  "featureId": null,
   "id": "tsk_01M6GRSJMQBD1DWSQ57CGNW6MQ",
-  "labels": [],
-  "parentId": null,
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "status": "done",
   "title": "Rename product to sati",
   "updatedAt": "2026-11-03T13:15:21.356Z",
-  "version": 3,
-  "worktree": null
+  "version": 3
 }

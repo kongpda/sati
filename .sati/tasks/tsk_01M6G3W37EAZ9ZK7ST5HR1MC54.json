@@ -1,7 +1,4 @@
 {
-  "body": "",
-  "branch": null,
-  "claim": null,
   "completion": {
     "completedAt": "2026-11-03T07:26:15.290Z",
     "completedBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
@@ -13,19 +10,14 @@
   },
   "createdAt": "2026-11-03T07:09:43.534Z",
   "createdBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
-  "deletedAt": null,
-  "dependsOn": [],
-  "featureId": null,
   "id": "tsk_01M6G3W37EAZ9ZK7ST5HR1MC54",
   "labels": [
     "phase-2"
   ],
-  "parentId": null,
   "priority": "high",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "status": "done",
   "title": "brain init writes .mcp.json, rules blocks and Codex/Cursor/Gemini configs",
   "updatedAt": "2026-11-03T07:26:15.291Z",
-  "version": 3,
-  "worktree": null
+  "version": 3
 }

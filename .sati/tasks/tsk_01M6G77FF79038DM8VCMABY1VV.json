@@ -1,7 +1,4 @@
 {
-  "body": "",
-  "branch": null,
-  "claim": null,
   "completion": {
     "completedAt": "2026-11-03T08:08:22.448Z",
     "completedBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
@@ -15,17 +12,11 @@
   },
   "createdAt": "2026-11-03T08:08:22.247Z",
   "createdBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
-  "deletedAt": null,
-  "dependsOn": [],
-  "featureId": null,
   "id": "tsk_01M6G77FF79038DM8VCMABY1VV",
-  "labels": [],
-  "parentId": null,
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "status": "done",
   "title": "Phase 3: path locks with overlap detection",
   "updatedAt": "2026-11-03T08:08:22.449Z",
-  "version": 3,
-  "worktree": null
+  "version": 3
 }

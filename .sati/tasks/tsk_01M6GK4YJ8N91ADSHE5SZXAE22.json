@@ -1,7 +1,4 @@
 {
-  "body": "",
-  "branch": null,
-  "claim": null,
   "completion": {
     "completedAt": "2026-11-03T11:36:42.526Z",
     "completedBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
@@ -19,17 +16,11 @@
   },
   "createdAt": "2026-11-03T11:36:42.311Z",
   "createdBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
-  "deletedAt": null,
-  "dependsOn": [],
-  "featureId": null,
   "id": "tsk_01M6GK4YJ8N91ADSHE5SZXAE22",
-  "labels": [],
-  "parentId": null,
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "status": "done",
   "title": "Secret scanner on export",
   "updatedAt": "2026-11-03T11:36:42.526Z",
-  "version": 3,
-  "worktree": null
+  "version": 3
 }

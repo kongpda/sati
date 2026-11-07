@@ -1,7 +1,4 @@
 {
-  "body": "",
-  "branch": null,
-  "claim": null,
   "completion": {
     "completedAt": "2026-11-03T09:15:16.485Z",
     "completedBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
@@ -17,17 +14,11 @@
   },
   "createdAt": "2026-11-03T09:15:16.216Z",
   "createdBy": "actr_01M6G3W2S8THS1TXFAX10M8TPP",
-  "deletedAt": null,
-  "dependsOn": [],
-  "featureId": null,
   "id": "tsk_01M6GB1ZBSA612YQAJX8FMKZW8",
-  "labels": [],
-  "parentId": null,
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "status": "done",
   "title": "Merge driver with field-level three-way merge",
   "updatedAt": "2026-11-03T09:15:16.486Z",
-  "version": 3,
-  "worktree": null
+  "version": 3
 }

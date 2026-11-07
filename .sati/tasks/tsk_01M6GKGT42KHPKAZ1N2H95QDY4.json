@@ -1,7 +1,4 @@
 {
-  "body": "",
-  "branch": null,
-  "claim": null,
   "completion": {
     "completedAt": "2026-11-03T11:43:11.247Z",
     "completedBy": "actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
@@ -23,17 +20,11 @@
   },
   "createdAt": "2026-11-03T11:43:10.978Z",
   "createdBy": "actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
-  "deletedAt": null,
-  "dependsOn": [],
-  "featureId": null,
   "id": "tsk_01M6GKGT42KHPKAZ1N2H95QDY4",
-  "labels": [],
-  "parentId": null,
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "status": "done",
   "title": "Fencing tokens",
   "updatedAt": "2026-11-03T11:43:11.248Z",
-  "version": 3,
-  "worktree": null
+  "version": 3
 }

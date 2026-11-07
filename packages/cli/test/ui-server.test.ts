@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createIdFactory, createTask, initProject, systemClock } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { createUiApp, sessionToken } from "../src/ui/server.js";
 
 const dir = mkdtempSync(join(tmpdir(), "sati-ui-"));
@@ -25,7 +25,7 @@ await createTask(ctx, { title: "Paint the board" });
 const token = sessionToken();
 const app = createUiApp({ ctx }, token, dir);
 
-afterEach(async () => {
+afterAll(async () => {
   await store.close();
 });
 
@@ -105,5 +105,23 @@ describe("ui server", () => {
     });
     expect(missing.status).toBe(404);
     expect(((await missing.json()) as { error: { code: string } }).error.code).toBe("NOT_FOUND");
+  });
+
+  // PLAN: live updates under 500 ms. A write made through this server must reach other tabs.
+  it("tells the event stream about a write made through this server", async () => {
+    const cookie = cookieOf(await app.request(`http://127.0.0.1/session?token=${token}`));
+    const events = await app.request("http://127.0.0.1/events", { headers: { cookie } });
+    const reader = events.body?.getReader();
+    if (!reader) throw new Error("no event stream");
+    const next = async () => new TextDecoder().decode((await reader.read()).value);
+    const first = await next();
+    await app.request("http://127.0.0.1/api/tasks", {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({ title: "From another tab" }),
+    });
+    const second = await next();
+    await reader.cancel();
+    expect(second).not.toBe(first);
   });
 });

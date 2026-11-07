@@ -295,6 +295,12 @@ export function Activity({ data }: { data: Snapshot }) {
 
 const EDITABLE = ["backlog", "todo", "in_progress", "review", "blocked", "cancelled"];
 
+/** A person approves work in review by moving it to done; done is otherwise read-only here. */
+function statusOptions(status: string): string[] {
+  if (status === "review") return [...EDITABLE, "done"];
+  return EDITABLE.includes(status) ? EDITABLE : [status, ...EDITABLE];
+}
+
 /** Keep this keyed by task id: it moves focus into the dialog on open and back on close. */
 export function TaskSheet({
   data,
@@ -352,7 +358,7 @@ export function TaskSheet({
           aria-label="Body"
         />
         <select name="status" defaultValue={task.status} aria-label="Status">
-          {(EDITABLE.includes(task.status) ? EDITABLE : [task.status, ...EDITABLE]).map((s) => (
+          {statusOptions(task.status).map((s) => (
             <option key={s} value={s}>
               {s}
             </option>

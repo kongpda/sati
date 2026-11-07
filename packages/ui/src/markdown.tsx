@@ -99,7 +99,7 @@ function Block({ text }: { text: string }) {
 
 function inline(text: string): ReactNode[] {
   const out: ReactNode[] = [];
-  const re = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)|`([^`]+)`/gu;
+  const re = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)|`([^`]+)`|\*\*([^*]+)\*\*|\*([^*\s][^*]*)\*/gu;
   let last = 0;
   for (const match of text.matchAll(re)) {
     const index = match.index ?? 0;
@@ -112,6 +112,10 @@ function inline(text: string): ReactNode[] {
       );
     } else if (match[3]) {
       out.push(<code key={index}>{match[3]}</code>);
+    } else if (match[4]) {
+      out.push(<strong key={index}>{match[4]}</strong>);
+    } else if (match[5]) {
+      out.push(<em key={index}>{match[5]}</em>);
     }
     last = index + match[0].length;
   }

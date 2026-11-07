@@ -24,6 +24,7 @@ import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { getCookie, setCookie } from "hono/cookie";
 import micromatch from "micromatch";
+import { z } from "zod";
 
 /**
  * Cookies are shared by every port on 127.0.0.1, so two `sati ui` servers would overwrite each
@@ -170,8 +171,14 @@ async function snapshot(rt: UiRuntime) {
   };
 }
 
+const SearchQuery = z.string().max(500);
+
 export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   const app = new Hono();
+  // `PRAGMA data_version` only moves for commits from other connections, so writes made through
+  // this server are counted here; otherwise a second tab never hears about them.
+  let ownWrites = 0;
+  const version = () => dataVersion(rt) + ownWrites;
 
   app.use("*", async (c, next) => {
     const host = hostOf(c);
@@ -232,8 +239,15 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   app.get("/api/openapi.json", (c) => c.json(openApi()));
   app.get("/api/snapshot", async (c) => c.json(await snapshot(rt)));
 
+  app.use("/api/*", async (c, next) => {
+    await next();
+    if (c.req.method !== "GET" && c.res.ok) ownWrites++;
+  });
+
   app.get("/api/search", async (c) => {
-    const q = c.req.query("q") ?? "";
+    const parsed = SearchQuery.safeParse(c.req.query("q") ?? "");
+    if (!parsed.success) throw new SatiError("VALIDATION", "The search is over 500 characters.");
+    const q = parsed.data;
     const hits = await rt.ctx.store.read((r) => r.search(rt.ctx.projectId, q, { limit: 20 }));
     return c.json({ hits });
   });
@@ -266,17 +280,17 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   );
 
   app.get("/events", () => {
-    let last = dataVersion(rt);
+    let last = version();
     let timer: ReturnType<typeof setInterval> | undefined;
     const stream = new ReadableStream({
       start(controller) {
         const send = (chunk: string) => controller.enqueue(new TextEncoder().encode(chunk));
         send(`data: ${JSON.stringify({ version: last })}\n\n`);
         timer = setInterval(() => {
-          const version = dataVersion(rt);
-          if (version === last) return;
-          last = version;
-          send(`data: ${JSON.stringify({ version })}\n\n`);
+          const now = version();
+          if (now === last) return;
+          last = now;
+          send(`data: ${JSON.stringify({ version: now })}\n\n`);
         }, 250);
       },
       cancel() {

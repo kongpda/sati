@@ -31,4 +31,17 @@ describe("Markdown", () => {
       { kind: "text", text: "b" },
     ]);
   });
+
+  it("keeps a heading to its line, numbers lists, and marks bold and italic", () => {
+    expect(html("# Launch\nThe body")).toBe(
+      '<div class="prose"><h2>Launch</h2><p>The body</p></div>',
+    );
+    expect(html("1. Book the hall\n2. Print flyers")).toContain(
+      "<ol><li>Book the hall</li><li>Print flyers</li></ol>",
+    );
+    expect(html("- a\n- a")).toContain("<ul><li>a</li><li>a</li></ul>");
+    expect(html("**Due** Friday, *not* Monday")).toContain(
+      "<strong>Due</strong> Friday, <em>not</em> Monday",
+    );
+  });
 });

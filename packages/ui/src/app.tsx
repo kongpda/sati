@@ -95,7 +95,9 @@ export function App() {
     const current = client.getQueryData<Snapshot>(["snapshot"]);
     const item = current?.tasks.find((t) => t.id === id);
     if (!item || item.status === status) return false;
-    if (status === "done") {
+    // A person approves work waiting in review; anything else reaches done through
+    // `task complete`, which records the summary and the files.
+    if (status === "done" && item.status !== "review") {
       setToast(`Done needs ${__CLI_NAME__} task complete, so the summary and files are recorded.`);
       return false;
     }
@@ -140,7 +142,8 @@ export function App() {
         target &&
         (target.tagName === "INPUT" ||
           target.tagName === "TEXTAREA" ||
-          target.tagName === "SELECT");
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setPalette(true);
@@ -154,7 +157,8 @@ export function App() {
         else if (task) go(path);
         return;
       }
-      if (palette || typing) return;
+      // Ctrl+C, Cmd+X and other chords belong to the browser, not to the board's letters.
+      if (palette || typing || event.metaKey || event.ctrlKey || event.altKey) return;
       // Buttons and links use these keys themselves, and the sheet is a dialog of its own.
       if (target?.closest(".sheet, button, a")) return;
       if (event.key === "j" || event.key === "k") {

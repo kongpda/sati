@@ -62,7 +62,7 @@ test("creates, edits, filters and bulk-moves tasks", async ({ page }) => {
   await sheet.getByLabel("Status").selectOption("in_progress");
   await sheet.getByRole("button", { name: "Save" }).click();
   await expect(
-    column(page, "In progress").getByRole("button", {
+    column(page, "Working on it").getByRole("button", {
       name: "Write release notes for 1.0",
       exact: true,
     }),
@@ -106,17 +106,17 @@ test("creates, edits, filters and bulk-moves tasks", async ({ page }) => {
   await expect(page.getByText("2 selected")).toBeVisible();
   await page.getByLabel("Move selected").selectOption("review");
   await expect(page.locator(".toast[role=status]")).toContainText("2 of 2 tasks did not move.");
-  const todo = column(page, "Todo");
+  const todo = column(page, "To do");
   for (const title of titles)
     await expect(todo.getByRole("button", { name: title, exact: true })).toBeVisible();
-  await expect(column(page, "Review").locator(".card")).toHaveCount(0);
+  await expect(column(page, "Waiting for approval").locator(".card")).toHaveCount(0);
   expect(await statuses()).toEqual(["todo", "todo"]);
 
   // An allowed bulk move lands on the server too.
   // Refused tasks stay selected, so the next move applies to them without picking again.
   await expect(page.getByText("2 selected")).toBeVisible();
   await page.getByLabel("Move selected").selectOption("in_progress");
-  const doing = column(page, "In progress");
+  const doing = column(page, "Working on it");
   for (const title of titles)
     await expect(doing.getByRole("button", { name: title, exact: true })).toBeVisible();
   await expect.poll(statuses).toEqual(["in_progress", "in_progress"]);
@@ -474,5 +474,31 @@ test("sets a person's display name, initials and colour, shown on the board", as
   ).actors.find((a) => a.id === you);
   expect(actor).toMatchObject({ color: "plum" });
   expect(actor?.initials).toBeUndefined();
+  expect(await problems()).toEqual([]);
+});
+
+// PLAN Phase 7a: the board speaks plainly; the CLI and MCP keep their terms.
+test("uses plain words for statuses, activity and times", async ({ page }) => {
+  const problems = await watch(page);
+  const t = await ui.api<{ id: string }>("POST", "/api/tasks", { title: "Write the toast" });
+  ui.sati("task", "claim", t.id);
+  await page.goto(`${ui.signIn}`);
+  await page.goto(`${ui.origin}/?task=${t.id}`);
+  const sheet = page.getByRole("dialog", { name: "Write the toast" });
+  // "You are working on this until 2:32 PM", not a lease timestamp.
+  const claim = sheet.getByRole("region", { name: "Who is working on this" });
+  await expect(claim).toContainText("You are working on this until");
+  await expect(claim).not.toContainText("Z.");
+  await expect(claim.locator("time")).not.toHaveAttribute("title", /T\d\d:/u);
+  await expect(sheet.getByLabel("Status").locator("option:checked")).toHaveText("Working on it");
+  await page.keyboard.press("Escape");
+  await expect(column(page, "Working on it")).toContainText("Write the toast");
+
+  await page.getByRole("link", { name: "Activity", exact: true }).click();
+  const row = page.locator("article").filter({ hasText: "Write the toast" }).first();
+  await expect(row).toContainText("started working on the task");
+  await expect(page.locator("article").filter({ hasText: "added the task" }).first()).toBeVisible();
+  // The CLI still says in_progress.
+  expect(ui.sati<{ status: string }>("task", "show", t.id).status).toBe("in_progress");
   expect(await problems()).toEqual([]);
 });

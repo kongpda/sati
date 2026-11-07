@@ -14,6 +14,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef, useState } from "react";
 import { type Actor, ago, COLUMNS, dueLabel, type Feature, type Task } from "./api.js";
 import { Avatar } from "./people.js";
+import { fullTime } from "./words.js";
 
 export function Board({
   tasks,
@@ -269,7 +270,7 @@ function CardBody({
       {onToggle ? null : <div className="title">{task.title}</div>}
       <div className="meta">
         {fresh ? <span className="new-badge">new</span> : null}
-        <time dateTime={task.updatedAt} title={task.updatedAt}>
+        <time dateTime={task.updatedAt} title={fullTime(task.updatedAt)}>
           {ago(task.updatedAt)}
         </time>
         {feature ? ` · ${feature}` : ""}
@@ -291,9 +292,16 @@ function CardBody({
           </span>
         ) : null}
         {onReviewed && task.needsReview ? (
-          <button type="button" onClick={() => onReviewed(task.id)}>
-            mark reviewed
-          </button>
+          <>
+            {" · edited in two places "}
+            <button
+              type="button"
+              aria-label={`${task.title} looks right after the merge`}
+              onClick={() => onReviewed(task.id)}
+            >
+              Looks right
+            </button>
+          </>
         ) : null}
         {onToggle ? (
           <button

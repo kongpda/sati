@@ -1,14 +1,7 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
-import {
-  ApiError,
-  api,
-  type Decision,
-  type Milestone,
-  type Note,
-  type Snapshot,
-  type Task,
-} from "./api.js";
+import { api, type Decision, type Milestone, type Note, type Snapshot, type Task } from "./api.js";
 import { Avatar, personName } from "./people.js";
+import { plainError } from "./words.js";
 
 const PRIORITIES = ["low", "medium", "high", "urgent"] as const;
 
@@ -108,8 +101,7 @@ export function FormDialog({
           setError(null);
           void onSubmit(new FormData(e.currentTarget))
             .catch((err: unknown) => {
-              const hint = err instanceof ApiError && err.hint ? ` ${err.hint}` : "";
-              setError(err instanceof ApiError ? `${err.message}${hint}` : "That did not save.");
+              setError(plainError(err));
             })
             .finally(() => setSaving(false));
         }}

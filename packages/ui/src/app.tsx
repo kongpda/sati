@@ -7,6 +7,7 @@ import { MyWork } from "./my-work.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
 import { nameOf } from "./people.js";
 import { Settings } from "./settings.js";
+import { plainError } from "./words.js";
 
 const PAGES = [
   ["/", "Board"],
@@ -90,9 +91,7 @@ export function App() {
 
   const fail = useCallback(
     (err: unknown) => {
-      const message = err instanceof ApiError ? err.message : "That change did not save.";
-      const hint = err instanceof ApiError ? err.hint : null;
-      setToast((hint ? `${message} ${hint}` : message).replaceAll("`", ""));
+      setToast(plainError(err));
     },
     [setToast],
   );
@@ -141,7 +140,9 @@ export function App() {
     // A person approves work waiting in review; anything else reaches done through
     // `task complete`, which records the summary and the files.
     if (status === "done" && item.status !== "review") {
-      setToast(`Done needs ${__CLI_NAME__} task complete, so the summary and files are recorded.`);
+      setToast(
+        "Only work waiting for approval can be moved to Done. Whoever does the task finishes it with a summary.",
+      );
       return false;
     }
     // A refetch already in flight would overwrite the optimistic status with the old one.
@@ -463,7 +464,9 @@ export function App() {
               const name = nameOf(data, t?.claim?.actorId);
               const ok =
                 t?.claim?.actorId === data.you ||
-                window.confirm(`Release ${t?.title ?? id} from ${name}? Their claim ends.`);
+                window.confirm(
+                  `Stop ${name} working on ${t?.title ?? id}? Their next save will be refused.`,
+                );
               if (!ok) return;
               void api
                 .releaseTask(id, t?.claim?.actorId !== data.you)

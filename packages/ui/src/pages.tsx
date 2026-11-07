@@ -1,16 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  ago,
-  clockTime,
-  type Decision,
-  leaseLeft,
-  type Milestone,
-  type Note,
-  type Snapshot,
-} from "./api.js";
+import { ago, type Decision, type Milestone, type Note, type Snapshot } from "./api.js";
 import { Assignees, DecisionForm, MilestoneForm, NoteForm } from "./forms.js";
 import { Markdown } from "./markdown.js";
 import { Avatar, nameOf, personName } from "./people.js";
+import { activityWords, dayWords, fullTime, statusWord, untilTime } from "./words.js";
 
 export function Agents({
   data,
@@ -25,7 +18,7 @@ export function Agents({
     <div className="page">
       <h1>Agents</h1>
       <button type="button" onClick={onRelease}>
-        Release expired claims
+        Free up tasks whose time ran out
       </button>
       <div className="list" style={{ marginTop: 12 }}>
         {data.actors.map((actor) => {
@@ -38,7 +31,7 @@ export function Agents({
                 {personName(actor)}
               </strong>
               <div className="meta">
-                {actor.kind}
+                {actor.kind === "human" ? "Person" : "AI agent"}
                 {actor.tool ? ` · ${actor.tool}` : ""}
                 {actor.worktree ? ` · ${actor.worktree}` : ""}
               </div>
@@ -46,7 +39,11 @@ export function Agents({
                 <div key={t.id} className="claim-row">
                   <span>
                     Working on {t.title}
-                    {t.claim ? ` (${leaseLeft(t.claim.leaseUntil)})` : ""}
+                    {t.claim
+                      ? Date.parse(t.claim.leaseUntil) > Date.now()
+                        ? ` until ${untilTime(t.claim.leaseUntil)}`
+                        : `, time ran out at ${untilTime(t.claim.leaseUntil)}`
+                      : ""}
                   </span>
                   <button
                     type="button"
@@ -59,7 +56,8 @@ export function Agents({
               ))}
               {locks.map((l) => (
                 <div key={l.id} className="meta">
-                  {l.mode} lock on {l.paths.join(", ")} by {nameOf(data, l.actorId)}
+                  {l.mode === "exclusive" ? "Reserved" : "Sharing"} {l.paths.join(", ")} for editing
+                  until {untilTime(l.leaseUntil)}
                 </div>
               ))}
               {tasks.length === 0 && locks.length === 0 ? <div className="meta">Idle</div> : null}
@@ -95,9 +93,16 @@ export function Features({
               {f.protected ? " · protected" : ""}
               {f.matchCount === null ? "" : ` · matches ${f.matchCount} files`}
               {f.needsReview ? (
-                <button type="button" onClick={() => onReviewed(f.id, f.version)}>
-                  mark reviewed
-                </button>
+                <>
+                  {" · edited in two places "}
+                  <button
+                    type="button"
+                    aria-label={`${f.title} looks right after the merge`}
+                    onClick={() => onReviewed(f.id, f.version)}
+                  >
+                    Looks right
+                  </button>
+                </>
               ) : null}
             </div>
             {f.acceptance.length > 0 ? (
@@ -148,7 +153,9 @@ export function Roadmap({ data, onSaved }: { data: Snapshot; onSaved: (message: 
       <div className="timeline">
         {data.milestones.map((m) => (
           <div key={m.id} className="tick">
-            <time dateTime={m.targetDate ?? undefined}>{m.targetDate ?? "open"}</time>
+            <time dateTime={m.targetDate ?? undefined}>
+              {m.targetDate ? dayWords(m.targetDate) : "No date"}
+            </time>
             <strong>{m.title}</strong>
           </div>
         ))}
@@ -163,7 +170,7 @@ export function Roadmap({ data, onSaved }: { data: Snapshot; onSaved: (message: 
               <h2 className="row-title">{m.title}</h2>
               <div className="meta">
                 {m.status}
-                {m.targetDate ? ` · ${m.targetDate}` : ""}
+                {m.targetDate ? ` · ${dayWords(m.targetDate)}` : ""}
                 {tasks.length ? ` · ${done}/${tasks.length} tasks done` : ""}
                 <button type="button" aria-label={`Edit ${m.title}`} onClick={() => setEditing(m)}>
                   Edit
@@ -271,17 +278,21 @@ export function Notes({
               {n.title}
             </h2>
             <div className="meta">
-              <time dateTime={n.updatedAt} title={n.updatedAt}>
+              <time dateTime={n.updatedAt} title={fullTime(n.updatedAt)}>
                 {ago(n.updatedAt)}
               </time>
               {n.tags.length ? ` · ${n.tags.join(", ")}` : ""}
               {n.needsReview ? (
-                <button
-                  type="button"
-                  onClick={() => onPatch(n.id, { reviewed: true, expectedVersion: n.version })}
-                >
-                  mark reviewed
-                </button>
+                <>
+                  {" · edited in two places "}
+                  <button
+                    type="button"
+                    aria-label={`${n.title} looks right after the merge`}
+                    onClick={() => onPatch(n.id, { reviewed: true, expectedVersion: n.version })}
+                  >
+                    Looks right
+                  </button>
+                </>
               ) : null}
               <button type="button" aria-label={`Edit ${n.title}`} onClick={() => setEditing(n)}>
                 Edit
@@ -358,7 +369,7 @@ export function Decisions({
           <article key={d.id} className="row">
             <h2 className="row-title">{d.title}</h2>
             <div className="meta">
-              <time dateTime={d.createdAt} title={d.createdAt}>
+              <time dateTime={d.createdAt} title={fullTime(d.createdAt)}>
                 {ago(d.createdAt)}
               </time>
               {d.supersedes ? ` · replaces ${titles.get(d.supersedes) ?? d.supersedes}` : ""}
@@ -428,17 +439,20 @@ export function Activity({ data }: { data: Snapshot }) {
     ...data.milestones.map((m) => [m.id, m.title] as const),
   ]);
   return (
-    <div className="page">
-      <h1>Activity</h1>
+    // Rows have no controls, so the scrolling page itself takes focus (WCAG scrollable region).
+    // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be keyboard-reachable
+    <section className="page" tabIndex={0} aria-labelledby="activity-title">
+      <h1 id="activity-title">Activity</h1>
       <div className="list">
         {data.activity.map((row) => (
           <article key={row.id} className="row">
-            <strong>{nameOf(data, row.actorId)}</strong> {row.verb} {row.entity}
+            <strong>{nameOf(data, row.actorId)}</strong>{" "}
+            {activityWords(row.verb, row.entity, row.diff)}
             {titles.has(row.entityId) ? (
               <span className="subject"> {titles.get(row.entityId)}</span>
             ) : null}
             <div className="meta">
-              <time dateTime={row.at} title={row.at}>
+              <time dateTime={row.at} title={fullTime(row.at)}>
                 {ago(row.at)}
               </time>
               {row.branch ? ` · ${row.branch}` : ""}
@@ -449,7 +463,7 @@ export function Activity({ data }: { data: Snapshot }) {
           <p className="empty">No activity yet. Changes appear here as they happen.</p>
         ) : null}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -553,7 +567,7 @@ export function TaskSheet({
         <select name="status" defaultValue={task.status} aria-label="Status">
           {statusOptions(task.status).map((s) => (
             <option key={s} value={s}>
-              {s}
+              {statusWord(s)}
             </option>
           ))}
         </select>
@@ -694,18 +708,20 @@ function ClaimBox({
   const name = nameOf(data, claim.actorId);
   const live = Date.parse(claim.leaseUntil) > Date.now();
   const until = (
-    <time dateTime={claim.leaseUntil} title={claim.leaseUntil}>
-      {clockTime(claim.leaseUntil)}
+    <time dateTime={claim.leaseUntil} title={fullTime(claim.leaseUntil)}>
+      {untilTime(claim.leaseUntil)}
     </time>
   );
   const confirmed = (action: string) =>
     !live ||
-    window.confirm(`${action} from ${name}? Their claim ends and their next save is refused.`);
+    window.confirm(
+      `${action} from ${name}? They stop working on it, and their next save will be refused.`,
+    );
   return (
     <section className="claim" aria-label="Who is working on this">
       <p>
         {live ? `${mine ? "You are" : `${name} is`} working on this until ` : ""}
-        {live ? null : `${mine ? "Your" : `${name}'s`} claim ran out at `}
+        {live ? null : `${mine ? "Your" : `${name}'s`} time on this ran out at `}
         {until}.
       </p>
       <div className="claim-actions">

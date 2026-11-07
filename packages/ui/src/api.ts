@@ -115,9 +115,12 @@ export type Deletable = "task" | "note" | "decision";
 
 export class ApiError extends Error {
   hint: string | null;
-  constructor(message: string, hint: string | null) {
+  /** The server's error code, such as CONFLICT or VALIDATION. */
+  code: string;
+  constructor(message: string, hint: string | null, code = "INTERNAL") {
     super(message);
     this.hint = hint;
+    this.code = code;
   }
 }
 
@@ -128,11 +131,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as {
-      error?: { message?: string; hint?: string | null };
+      error?: { code?: string; message?: string; hint?: string | null };
     } | null;
     throw new ApiError(
       body?.error?.message ?? `Request failed (${res.status})`,
       body?.error?.hint ?? null,
+      body?.error?.code,
     );
   }
   return (await res.json()) as T;
@@ -188,9 +192,9 @@ export function ago(iso: string, now = Date.now()): string {
 
 export const COLUMNS = [
   ["backlog", "Backlog"],
-  ["todo", "Todo"],
-  ["in_progress", "In progress"],
-  ["review", "Review"],
+  ["todo", "To do"],
+  ["in_progress", "Working on it"],
+  ["review", "Waiting for approval"],
   ["done", "Done"],
   ["blocked", "Blocked"],
   ["cancelled", "Cancelled"],
@@ -216,21 +220,4 @@ export function dueLabel(
   const text = `due ${date.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}`;
   const open = status !== "done" && status !== "cancelled";
   return { text, late: open && day < today(now) };
-}
-
-/** A clock time in the reader's own time zone, for example "14:32". */
-export function clockTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-/** Time left on a lease, for example "expires in 12m", or "expired". */
-export function leaseLeft(iso: string, now = Date.now()): string {
-  const until = Date.parse(iso);
-  if (Number.isNaN(until)) return "";
-  const min = Math.floor((until - now) / 60000);
-  if (until <= now) return "expired";
-  if (min < 1) return "expires in under 1m";
-  if (min < 60) return `expires in ${min}m`;
-  const hr = Math.floor(min / 60);
-  return hr < 24 ? `expires in ${hr}h` : `expires in ${Math.floor(hr / 24)}d`;
 }

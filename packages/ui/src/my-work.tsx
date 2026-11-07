@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from "react";
 import { dueLabel, type Snapshot, type Task, today } from "./api.js";
 import { nameOf } from "./people.js";
+import { statusWord } from "./words.js";
 
 const CLOSED = new Set(["done", "cancelled"]);
 
@@ -140,7 +141,7 @@ function Row({
         {task.title}
       </button>
       <div className="meta">
-        {task.status.replace("_", " ")}
+        {statusWord(task.status)}
         {task.priority === "high" || task.priority === "urgent" ? ` · ${task.priority}` : ""}
         {due ? (
           <>

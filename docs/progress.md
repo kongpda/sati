@@ -930,3 +930,24 @@ fixed the same bug (undo of shortened text, subtask cycles, 400 for bad JSON, th
   order, each with the version the previous save returned.
 - Colour radios meet the WCAG 2.2 target size (axe flagged the default 13 px radios).
 - Checked in Chrome at 1280 px; axe on Settings and the Edit person dialog at 1280 and 375 px.
+
+### Phase 7a: plain words in the UI (2026-11-07)
+
+- All board wording lives in `packages/ui/src/words.ts`; `docs/guide/glossary.md` maps it to the
+  CLI, MCP and file terms, which do not change.
+- Columns and status pickers: To do, Working on it (`in_progress`), Waiting for approval
+  (`review`). Values sent to the server are unchanged.
+- Times: claims, leases and reservations read "until 2:32 PM" in the reader's zone and clock
+  style, with the day added when it is not today; tooltips show the local date and time instead
+  of the ISO string; milestone dates use the reader's date format.
+- Activity rows are sentences ("started working on the task", "finished the task and sent it
+  for approval", "joined the project", "restored the note").
+- Refused saves: the server's messages are for agents, so the UI rewrites the common ones
+  (stale version, task held by someone, reserved files) and drops hints that name a CLI command.
+  The server and CLI messages stay as they are.
+- Agents page: "Person" / "AI agent", "Reserved src/** for editing until …" instead of
+  "exclusive lock", "Free up tasks whose time ran out". Merge flags read "edited in two places ·
+  Looks right".
+- The longer Activity sentences made the page scroll at 375 px with nothing focusable, so axe
+  flagged it; the Activity page is now a focusable region.
+- Checked in Chrome at 1280 px: board, task panel, Agents and Activity.

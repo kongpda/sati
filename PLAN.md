@@ -640,7 +640,7 @@ A capability is not done until both ways have it, with tests on both. sati itsel
 - [x] Task fields `dueDate` (date), `assigneeIds[]` (people or agents, separate from the claim) and `checklist[]` (text, done); MCP, CLI (`--due`, `--assign`, `task checklist`) and UI (New task form, task panel, due and steps on cards) accept them; `task_list` filters by `dueBy` (inclusive) and `assigneeId`. The fields are optional and written only once set, so existing records and `.sati/` files stay valid without a migration
 - [ ] Comments: a new `comment` entity on tasks, notes and decisions (author, Markdown body), exported to `.sati/` and searchable; `sati handoff` writes one
 - [x] "My work" page: waiting for my approval (review tasks assigned to me or to nobody, with Approve and Send back with a reason), then tasks assigned to me, then due by Sunday including late ones; each task appears once, in the first list it fits
-- [ ] Plain words in the UI: "working on it" for a claim, "waiting for approval" for review, "until 14:32" in local time; one glossary in the docs, with no change to CLI or MCP terms
+- [x] Plain words in the UI: "working on it" for a claim and `in_progress`, "waiting for approval" for review, "until 2:32 PM" in local time and clock style, activity as sentences, refused saves explained without versions or commands; one glossary (`docs/guide/glossary.md`, words in `packages/ui/src/words.ts`), with no change to CLI or MCP terms
 - [ ] Khmer and English UI strings (`Intl` dates and numbers, `lang` per note), the bundled Khmer font, and line-height for Khmer script
 - [ ] Parity test: one scripted scenario per capability runs through MCP and through the UI (Playwright) and checks both produce the same records
 

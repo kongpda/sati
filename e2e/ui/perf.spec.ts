@@ -33,7 +33,7 @@ test.afterAll(async () => {
 // PLAN Phase 4 gate: the UI loads in under 1 s with 2,000 cards.
 test("loads a 2,000-card board in under 1 s", async ({ page }) => {
   await page.goto(ui.signIn);
-  await expect(page.getByRole("heading", { name: `Todo ${CARDS}` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `To do ${CARDS}` })).toBeVisible();
   const times: number[] = [];
   for (let i = 0; i < 3; i++) {
     const start = Date.now();
@@ -51,8 +51,8 @@ test("loads a 2,000-card board in under 1 s", async ({ page }) => {
 // so scrolling costs the same at any board size.
 test("scrolls a 2,000-card column at 60 fps", async ({ page }) => {
   await page.goto(ui.signIn);
-  const todo = page.getByRole("region", { name: "Todo", exact: true });
-  await expect(todo.getByRole("heading", { name: `Todo ${CARDS}` })).toBeVisible();
+  const todo = page.getByRole("region", { name: "To do", exact: true });
+  await expect(todo.getByRole("heading", { name: `To do ${CARDS}` })).toBeVisible();
   expect(await page.locator(".card").count()).toBeLessThan(150);
 
   const frames = await todo.locator(".cards").evaluate(

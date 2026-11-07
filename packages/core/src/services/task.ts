@@ -173,7 +173,7 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
   const { expectedVersion, token, reviewed, reason, ...patch } = parseInput(UpdateTaskInput, input);
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "task", id);
-    checkToken(before, token);
+    checkToken(before, token, ctx.actorId);
     await checkLinks(w, ctx, id, patch);
     const settings = readSettings((await w.getProject())?.settings);
     let completion = before.completion;
@@ -224,7 +224,7 @@ export async function completeTask(ctx: ServiceContext, id: string, input: unkno
   const { expectedVersion, token, ...data } = parseInput(CompleteTaskInput, input);
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "task", id);
-    checkToken(before, token);
+    checkToken(before, token, ctx.actorId);
     const actor = await w.get("actor", ctx.actorId);
     const settings = readSettings((await w.getProject())?.settings);
     const gated =
@@ -428,14 +428,23 @@ export async function releaseExpiredClaims(ctx: ServiceContext): Promise<Task[]>
 }
 
 /**
- * Fencing: while a task is claimed, a write must present the claim's token. A token from a claim
- * that was lost (expired, released, or taken by another agent) no longer matches, so a paused
- * agent that wakes up late cannot overwrite the new holder's work.
+ * Fencing: while a task is claimed, a write must present the claim's token, and come from the
+ * actor that holds the claim. A token from a claim that was lost (expired, released, or taken by
+ * another agent) no longer matches, so a paused agent that wakes up late cannot overwrite the new
+ * holder's work; and a token read from `task show` does not let anyone else write either.
+ * The holder may still write after its lease ran out while nobody else has claimed the task.
  */
-function checkToken(task: Task, token: number | undefined): void {
+function checkToken(task: Task, token: number | undefined, actorId: string): void {
   const current = task.claim?.token;
   if (token === undefined && current === undefined) return;
-  if (token === current) return;
+  if (token === current && task.claim?.actorId === actorId) return;
+  const details = { token: token ?? null, holder: task.claim?.actorId ?? null };
+  if (token !== undefined && token === current) {
+    throw new SatiError("CONFLICT", `Task ${task.id} is claimed by another actor.`, {
+      hint: `Only the holder writes with its token. A person can run \`${CLI_NAME} task take-over ${task.id}\`.`,
+      details,
+    });
+  }
   const hint =
     token === undefined
       ? `Claim it with \`${CLI_NAME} task claim ${task.id}\` and pass the token it returns.`
@@ -445,7 +454,7 @@ function checkToken(task: Task, token: number | undefined): void {
     token === undefined
       ? `Task ${task.id} is claimed; this write needs the claim's fencing token.`
       : `Fencing token ${token} is stale for task ${task.id}.`,
-    { hint, details: { token: token ?? null, holder: task.claim?.actorId ?? null } },
+    { hint, details },
   );
 }
 

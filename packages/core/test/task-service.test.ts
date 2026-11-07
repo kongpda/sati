@@ -260,14 +260,23 @@ describe("claimTask", () => {
     expect((await listTasks(ctx, { ready: true })).map((x) => x.id)).toEqual([t.id]);
   });
 
-  it("does not renew another actor's lease on their update", async () => {
-    const { ctx } = await setup();
+  // PLAN Phase 5b: the token is readable with `task show`, so it alone must not let another
+  // actor write. Only the holder writes, and the claim stays as it was.
+  it("refuses another actor's write even with the holder's token", async () => {
+    const { ctx, store } = await setup();
     const t = await createTask(ctx, { title: "x" });
     const claimed = await claimTask(ctx, t.id);
     const other = await otherActor(ctx);
     const token = claimed.claim?.token;
-    const updated = await updateTask(other, t.id, { body: "note", token });
-    expect(updated.claim).toEqual(claimed.claim);
+    await expect(updateTask(other, t.id, { body: "note", token })).rejects.toMatchObject({
+      code: "CONFLICT",
+      hint: expect.stringContaining("take-over"),
+    });
+    await expect(
+      completeTask(other, t.id, { summary: "Not mine", filesTouched: ["a.ts"], token }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    const after = await store.read((r) => r.get("task", t.id));
+    expect(after).toMatchObject({ body: "", claim: claimed.claim });
   });
 });
 
@@ -295,6 +304,17 @@ describe("fencing tokens", () => {
       status: "in_progress",
       claim: { actorId: b.actorId, token: bToken },
     });
+  });
+
+  // Holder-only fencing covers completion: after its lease ran out, the holder may still finish
+  // while nobody else has claimed the task, because its token is still the current one.
+  it("lets the holder complete after its lease ran out when nobody took the task", async () => {
+    const { ctx, clock } = await setup();
+    const t = await createTask(ctx, { title: "Long job" });
+    const token = (await claimTask(ctx, t.id)).claim?.token;
+    clock.advance(45 * 60_000);
+    const done = await completeTask(ctx, t.id, { summary: "Done", filesTouched: ["a.ts"], token });
+    expect(["review", "done"]).toContain(done.status);
   });
 
   it("refuses a write without the token while claimed, and a token once the claim is gone", async () => {

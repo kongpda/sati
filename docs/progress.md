@@ -791,3 +791,18 @@ fixed the same bug (undo of shortened text, subtask cycles, 400 for bad JSON, th
   Take over and Release; Take over asks first, then reads "You are working on this"; the activity
   log shows release and claim by the person.
 
+### Fencing tokens and timestamps (2026-11-07)
+
+- `checkToken` now also requires the caller to be the claim holder. The token is the task
+  version and `task show` prints it, so the token alone proved nothing. A person who needs the
+  task uses `task take-over`, which the error hint names.
+- Choice on "refuse completion under an expired claim": the holder may still complete after its
+  lease ran out, as long as nobody else has claimed the task (its token is still current).
+  Agents often work for more than 30 minutes without a sati write, and refusing would make them
+  claim again for no safety gain. Another actor completing with the token is what was unsafe,
+  and holder-only fencing refuses that.
+- The shared `ts` schema rewrites every parsed timestamp with `toISOString()`, so imported
+  records always carry exactly three fraction digits. Leases are compared as strings in core and
+  in SQL, and `…:00Z` sorted after `…:00.500Z`, so such a lease looked live after it ran out.
+- `pnpm test:e2e --repeat 3` (4 agents, 4 worktrees, 1,000 steps each) passes.
+

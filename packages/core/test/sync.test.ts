@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { createNote, createTask, importRecords, snapshotRecords } from "../src/index.js";
+import {
+  claimTask,
+  createNote,
+  createTask,
+  ensureActor,
+  importRecords,
+  snapshotRecords,
+} from "../src/index.js";
 import { setup } from "./support/setup.js";
 
 const LATER = "2026-11-04T09:00:00.000Z";
@@ -87,5 +94,27 @@ describe("importRecords", () => {
     ).rejects.toMatchObject({ message: expect.stringContaining("belongs to project") });
     expect(await store.read((r) => r.get("task", good.id))).toBeUndefined();
     expect(store.activity.length).toBe(before);
+  });
+});
+
+describe("timestamps", () => {
+  // PLAN Phase 5b: leases compare as strings, and "…:00Z" sorts after "…:00.500Z". An imported
+  // lease without milliseconds looked live after it had run out, so nobody could claim the task.
+  it("stores imported timestamps with milliseconds, so an expired lease reads as expired", async () => {
+    const { ctx, clock } = await setup();
+    const other = await ensureActor(ctx, { name: "codex@b", kind: "agent", tool: "codex" });
+    const task = await createTask(ctx, { title: "Imported" });
+    const claim = {
+      actorId: other.id,
+      leaseUntil: "2026-11-03T12:00:00Z",
+      heartbeatAt: "2026-11-03T11:30:00Z",
+      token: 2,
+    };
+    const record = { ...task, status: "in_progress", claim, version: 2, updatedAt: LATER };
+    await importRecords(ctx, [{ entity: "task", source: "tasks/a.json", record }]);
+    const stored = (await snapshotRecords(ctx)).find((r) => r.record.id === task.id)?.record;
+    expect(stored).toMatchObject({ claim: { leaseUntil: "2026-11-03T12:00:00.000Z" } });
+    clock.advance(500);
+    expect((await claimTask(ctx, task.id)).claim?.actorId).toBe(ctx.actorId);
   });
 });

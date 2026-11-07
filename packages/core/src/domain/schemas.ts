@@ -12,7 +12,12 @@ export const LIMITS = {
 
 export const SNAPSHOT_SCHEMA_VERSION = 1;
 
-const ts = z.iso.datetime({ offset: false });
+/**
+ * A UTC timestamp, stored with exactly millisecond precision. Leases and claims are compared as
+ * strings (in SQL too), which is only correct when every value has the same shape, so an
+ * imported `…T00:00:00Z` or `…T00:00:00.123456Z` is rewritten to `…T00:00:00.000Z`.
+ */
+const ts = z.iso.datetime({ offset: false }).transform((v) => new Date(v).toISOString());
 const title = z.string().trim().min(1).max(LIMITS.title);
 const body = z.string().max(LIMITS.body);
 const shortText = z.string().max(LIMITS.shortText);

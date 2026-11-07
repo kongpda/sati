@@ -7,10 +7,12 @@ import {
   deleteRecord,
   getRecord,
   listTasks,
+  releaseTask,
   resolveId,
   restoreRecord,
   type ServiceContext,
   type Task,
+  takeOverTask,
   updateTask,
 } from "@sati/core";
 import { defineCommand } from "citty";
@@ -217,6 +219,49 @@ const restore = defineCommand({
     ),
 });
 
+const release = defineCommand({
+  meta: {
+    name: "release",
+    description: "Give up a claim (an in_progress task goes back to todo)",
+  },
+  args: {
+    ...id("Task"),
+    force: {
+      type: "boolean",
+      description: "Release another actor's live claim (people only; logged)",
+    },
+    ...json,
+  },
+  run: ({ args }) =>
+    execute(
+      args.json,
+      async ({ ctx }) =>
+        releaseTask(ctx, await resolveId(ctx, "task", args.id), { force: args.force ?? false }),
+      (t: Task) => `Released ${row(t)}`,
+    ),
+});
+
+const takeOver = defineCommand({
+  meta: {
+    name: "take-over",
+    description: "Take a task from its holder and claim it yourself (people only; logged)",
+  },
+  args: {
+    ...id("Task"),
+    lease: { type: "string", description: "Lease length in minutes (default: project setting)" },
+    ...json,
+  },
+  run: ({ args }) =>
+    execute(
+      args.json,
+      async ({ ctx }) =>
+        takeOverTask(ctx, await resolveId(ctx, "task", args.id), {
+          leaseMinutes: int(args.lease, "lease"),
+        }),
+      (t: Task) => `Took over ${row(t)} until ${t.claim?.leaseUntil}, token ${t.claim?.token}`,
+    ),
+});
+
 const complete = defineCommand({
   meta: { name: "complete", description: "Finish a task with a summary of what changed" },
   args: {
@@ -245,5 +290,16 @@ const complete = defineCommand({
 
 export default defineCommand({
   meta: { name: "task", description: "Create, list and finish tasks" },
-  subCommands: { create, list: ls, show, update, claim, complete, delete: remove, restore },
+  subCommands: {
+    create,
+    list: ls,
+    show,
+    update,
+    claim,
+    release,
+    "take-over": takeOver,
+    complete,
+    delete: remove,
+    restore,
+  },
 });

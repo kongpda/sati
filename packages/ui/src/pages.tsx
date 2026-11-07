@@ -1,8 +1,16 @@
 import { useEffect, useRef } from "react";
-import { ago, leaseLeft, type Snapshot } from "./api.js";
+import { ago, clockTime, leaseLeft, type Snapshot } from "./api.js";
 import { Markdown } from "./markdown.js";
 
-export function Agents({ data, onRelease }: { data: Snapshot; onRelease: () => void }) {
+export function Agents({
+  data,
+  onRelease,
+  onReleaseTask,
+}: {
+  data: Snapshot;
+  onRelease: () => void;
+  onReleaseTask: (id: string) => void;
+}) {
   const name = new Map(data.actors.map((a) => [a.id, a.name]));
   return (
     <div className="page">
@@ -23,9 +31,18 @@ export function Agents({ data, onRelease }: { data: Snapshot; onRelease: () => v
                 {actor.worktree ? ` · ${actor.worktree}` : ""}
               </div>
               {tasks.map((t) => (
-                <div key={t.id}>
-                  Holding {t.title}
-                  {t.claim ? ` (${leaseLeft(t.claim.leaseUntil)})` : ""}
+                <div key={t.id} className="claim-row">
+                  <span>
+                    Working on {t.title}
+                    {t.claim ? ` (${leaseLeft(t.claim.leaseUntil)})` : ""}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={`Release ${t.title}`}
+                    onClick={() => onReleaseTask(t.id)}
+                  >
+                    Release
+                  </button>
                 </div>
               ))}
               {locks.map((l) => (
@@ -307,11 +324,15 @@ export function TaskSheet({
   id,
   onClose,
   onSave,
+  onRelease,
+  onTakeOver,
 }: {
   data: Snapshot;
   id: string;
   onClose: () => void;
   onSave: (id: string, patch: Record<string, unknown>) => void;
+  onRelease: (id: string, force: boolean) => void;
+  onTakeOver: (id: string) => void;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const task = data.tasks.find((t) => t.id === id);
@@ -334,6 +355,14 @@ export function TaskSheet({
       <h2 id="sheet-title" ref={heading} tabIndex={-1}>
         {task.title}
       </h2>
+      {task.claim ? (
+        <ClaimBox
+          data={data}
+          claim={task.claim}
+          onRelease={(force) => onRelease(task.id, force)}
+          onTakeOver={() => onTakeOver(task.id)}
+        />
+      ) : null}
       {/* Keyed by version, so a change made elsewhere reloads the fields instead of being overwritten. */}
       <form
         key={task.version}
@@ -378,5 +407,55 @@ export function TaskSheet({
       ) : null}
       <Markdown source={task.body} />
     </aside>
+  );
+}
+
+/**
+ * Who is working on the task, in plain words, with the way out: the holder releases it; anyone
+ * else may take it over or release it, which ends the holder's claim, so it asks first.
+ */
+function ClaimBox({
+  data,
+  claim,
+  onRelease,
+  onTakeOver,
+}: {
+  data: Snapshot;
+  claim: { actorId: string; leaseUntil: string };
+  onRelease: (force: boolean) => void;
+  onTakeOver: () => void;
+}) {
+  const mine = claim.actorId === data.you;
+  const name = data.actors.find((a) => a.id === claim.actorId)?.name ?? claim.actorId;
+  const live = Date.parse(claim.leaseUntil) > Date.now();
+  const until = (
+    <time dateTime={claim.leaseUntil} title={claim.leaseUntil}>
+      {clockTime(claim.leaseUntil)}
+    </time>
+  );
+  const confirmed = (action: string) =>
+    !live ||
+    window.confirm(`${action} from ${name}? Their claim ends and their next save is refused.`);
+  return (
+    <section className="claim" aria-label="Who is working on this">
+      <p>
+        {live ? `${mine ? "You are" : `${name} is`} working on this until ` : ""}
+        {live ? null : `${mine ? "Your" : `${name}'s`} claim ran out at `}
+        {until}.
+      </p>
+      <div className="claim-actions">
+        {mine ? null : (
+          <button type="button" onClick={() => confirmed("Take this over") && onTakeOver()}>
+            Take over
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => (mine || confirmed("Release this")) && onRelease(!mine)}
+        >
+          Release
+        </button>
+      </div>
+    </section>
   );
 }

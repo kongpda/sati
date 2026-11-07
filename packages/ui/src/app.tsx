@@ -387,6 +387,18 @@ export function App() {
                 .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
                 .catch(fail)
             }
+            onReleaseTask={(id) => {
+              const t = data.tasks.find((x) => x.id === id);
+              const name = data.actors.find((a) => a.id === t?.claim?.actorId)?.name ?? "them";
+              const ok =
+                t?.claim?.actorId === data.you ||
+                window.confirm(`Release ${t?.title ?? id} from ${name}? Their claim ends.`);
+              if (!ok) return;
+              void api
+                .releaseTask(id, t?.claim?.actorId !== data.you)
+                .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
+                .catch(fail);
+            }}
           />
         ) : null}
         {data && path === "/features" ? (
@@ -446,6 +458,18 @@ export function App() {
           onSave={(id, patch) =>
             void api
               .patchTask(id, patch)
+              .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
+              .catch(fail)
+          }
+          onRelease={(id, force) =>
+            void api
+              .releaseTask(id, force)
+              .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
+              .catch(fail)
+          }
+          onTakeOver={(id) =>
+            void api
+              .takeOver(id)
               .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
               .catch(fail)
           }

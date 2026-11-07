@@ -139,6 +139,10 @@ export const api = {
     request<Task>("/api/tasks", { method: "POST", body: JSON.stringify({ title }) }),
   patchTask: (id: string, body: Record<string, unknown>) =>
     request<Task>(`/api/tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  releaseTask: (id: string, force: boolean) =>
+    request<Task>(`/api/tasks/${id}/release`, { method: "POST", body: JSON.stringify({ force }) }),
+  takeOver: (id: string) =>
+    request<Task>(`/api/tasks/${id}/take-over`, { method: "POST", body: "{}" }),
   releaseExpired: () =>
     request<Task[]>("/api/claims/release-expired", { method: "POST", body: "{}" }),
   createNote: (body: Record<string, unknown>) =>
@@ -170,6 +174,11 @@ export const COLUMNS = [
   ["blocked", "Blocked"],
   ["cancelled", "Cancelled"],
 ] as const;
+
+/** A clock time in the reader's own time zone, for example "14:32". */
+export function clockTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
 /** Time left on a lease, for example "expires in 12m", or "expired". */
 export function leaseLeft(iso: string, now = Date.now()): string {

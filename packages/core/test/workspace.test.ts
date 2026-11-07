@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  acquireLock,
   buildBrief,
   claimNext,
   claimTask,
@@ -12,7 +13,9 @@ import {
   ensureActor,
   importPlan,
   recordDecision,
+  releaseTask,
   restoreRecord,
+  takeOverTask,
   undoActivity,
   updateFeature,
   updateSettings,
@@ -154,6 +157,47 @@ describe("daily workspace", () => {
     // Another actor may not edit a claimed task through undo, which carries no fencing token.
     await expect(undoActivity(ctx, rename?.id ?? "")).rejects.toMatchObject({ code: "CONFLICT" });
     expect((await claimTask(otherCtx, task.id)).claim?.actorId).toBe(claimed.claim?.actorId);
+  });
+
+  // PLAN Phase 5b: a person can take over or release a task an agent holds, from the UI.
+  it("lets a person take over or release an agent's claim, and keeps agents from doing it", async () => {
+    const { ctx, store } = await setup();
+    const human = await ensureActor(ctx, { name: "dara@office", kind: "human" });
+    const other = await ensureActor(ctx, { name: "codex@b", kind: "agent", tool: "codex" });
+    const person = { ...ctx, actorId: human.id };
+    const agentB = { ...ctx, actorId: other.id };
+    const task = await createTask(ctx, { title: "Design flyer" });
+    const held = await claimTask(ctx, task.id);
+    await acquireLock(ctx, { paths: ["design/**"], taskId: task.id });
+    const liveLocks = async () =>
+      (await store.read((r) => r.list("lock", ctx.projectId, {}))).filter((l) => !l.deletedAt);
+    expect(await liveLocks()).toHaveLength(1);
+
+    // Another agent may neither release nor take over a live claim, even with force.
+    await expect(releaseTask(agentB, task.id)).rejects.toMatchObject({ code: "CONFLICT" });
+    await expect(releaseTask(agentB, task.id, { force: true })).rejects.toMatchObject({
+      code: "CONFLICT",
+    });
+    await expect(takeOverTask(agentB, task.id)).rejects.toMatchObject({ code: "CONFLICT" });
+    // A person needs force to release it; taking over is explicit, so it needs no flag.
+    await expect(releaseTask(person, task.id)).rejects.toMatchObject({ code: "CONFLICT" });
+    const taken = await takeOverTask(person, task.id);
+    expect(taken).toMatchObject({ status: "in_progress", claim: { actorId: human.id } });
+    expect(taken.claim?.token).not.toBe(held.claim?.token);
+    // The agent's lock for the task went with its claim, and its old token no longer writes.
+    expect(await liveLocks()).toHaveLength(0);
+    await expect(
+      updateTask(ctx, task.id, { title: "Late write", token: held.claim?.token }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    // Both steps are logged as the person, and the holder can release its own claim.
+    const rows = store.activity.filter((row) => row.entityId === task.id).slice(-2);
+    expect(rows.map((row) => [row.verb, row.actorId])).toEqual([
+      ["release", human.id],
+      ["claim", human.id],
+    ]);
+    const freed = await releaseTask(person, task.id);
+    expect(freed).toMatchObject({ status: "todo", claim: null });
+    await expect(releaseTask(person, task.id)).rejects.toMatchObject({ code: "VALIDATION" });
   });
 
   it("clears needsReview and reports it from doctor", async () => {

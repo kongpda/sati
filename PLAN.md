@@ -565,6 +565,7 @@ Added 2026-11-07 at the owner's request, after a full review of core, store, CLI
 - [x] Ctrl/Cmd/Alt chords such as Ctrl+C fired board shortcuts (Esc in a field was fixed in `d42377f`)
 - [x] A person could not approve work in review from the UI; review → done now works from the board and the panel
 - [x] Markdown: bold and italic (headings, numbered lists and styling were fixed in `d42377f`)
+- [x] A person could not move or edit a claimed task in the UI. The task panel now shows who is working on it with "Take over" and "Release", the Agents page releases per task, and the CLI has `task release [--force]` and `task take-over`. Only people may end another actor's live claim; it asks first and is logged as them
 - [x] UI tests in `flows.spec.ts` broke on the new card buttons, toast and kept selection; updated
 - [x] The secret scanner blocked `MAX_TOKENS=100000` and `SORT_KEY=created_at_desc`, and missed passwords in URLs, npm and GitLab tokens
 
@@ -572,7 +573,6 @@ Added 2026-11-07 at the owner's request, after a full review of core, store, CLI
 
 - [ ] Normalise timestamps to millisecond precision on parse; several lease and claim checks compare ISO strings, which breaks for `…T00:00:00Z`
 - [ ] Fencing token is the task version and readable by anyone; bind it to the claiming actor and refuse completion under an expired claim
-- [ ] A person cannot move or edit a claimed task in the UI (no token); add per-task "take over" and "release", logged with the actor
 - [ ] Moving a task to `in_progress` through `task update` leaves it with no claim; claim it for the caller instead
 - [ ] Owner decision: a deleted or cancelled dependency blocks its dependents forever (PLAN requires `done`); options are in `docs/ideas.md`
 - [ ] `importRecords` skips dependency-cycle and link checks

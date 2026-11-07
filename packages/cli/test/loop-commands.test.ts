@@ -45,6 +45,28 @@ describe("loop commands", () => {
     expect(off.data.autoContinue).toBe(false);
   });
 
+  // PLAN Phase 5b: a person takes over or releases an agent's task; another agent cannot.
+  it("releases and takes over claims: people may, other agents may not", async () => {
+    const dir = await tempRepo({ init: true });
+    const agent = (name: string) => ({ SATI_ACTOR: name, AI_AGENT: "codex_1_agent" });
+    const created = satiJson<{ id: string }>(dir, "task", "create", "Design flyer");
+    const id = created.data.id;
+    expect(run(dir, ["task", "claim", id], agent("codex-a")).code).toBe(0);
+    // Exit 4 is CONFLICT: the claim is live and belongs to someone else.
+    expect(run(dir, ["task", "release", id, "--force"], agent("codex-b")).code).toBe(4);
+    expect(run(dir, ["task", "take-over", id], agent("codex-b")).code).toBe(4);
+    expect(run(dir, ["task", "release", id], { SATI_ACTOR: "dara" }).code).toBe(4);
+    const taken = run(dir, ["task", "take-over", id, "--json"], { SATI_ACTOR: "dara" });
+    expect(taken.code).toBe(0);
+    const task = JSON.parse(taken.stdout) as { status: string; claim: { token: number } };
+    expect(task.status).toBe("in_progress");
+    // The person's own writes carry their token, and the agent's no longer go through.
+    expect(run(dir, ["task", "update", id, "--body", "v2"], { SATI_ACTOR: "dara" }).code).toBe(0);
+    expect(run(dir, ["task", "update", id, "--body", "v3"], agent("codex-a")).code).toBe(4);
+    const freed = run(dir, ["task", "release", id, "--json"], { SATI_ACTOR: "dara" });
+    expect(JSON.parse(freed.stdout)).toMatchObject({ status: "todo", claim: null });
+  });
+
   it("keeps commas inside a brace glob and names the right command in usage hints", async () => {
     const dir = await tempRepo({ init: true });
     const args = ["feature", "create", "Docs", "--paths", "src/{a,b}/**,docs/**"];

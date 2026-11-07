@@ -1,7 +1,14 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createIdFactory, createTask, initProject, systemClock } from "@sati/core";
+import {
+  claimTask,
+  createIdFactory,
+  createTask,
+  ensureActor,
+  initProject,
+  systemClock,
+} from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
 import { afterAll, describe, expect, it } from "vitest";
 import { createUiApp, sessionToken } from "../src/ui/server.js";
@@ -123,5 +130,27 @@ describe("ui server", () => {
     const second = await next();
     await reader.cancel();
     expect(second).not.toBe(first);
+  });
+
+  // PLAN Phase 5b: the person at the board takes over an agent's task, then edits it.
+  it("takes over an agent's claim and saves edits with the person's own token", async () => {
+    const agent = await ensureActor(ctx, { name: "codex@b", kind: "agent", tool: "codex" });
+    const task = await createTask(ctx, { title: "Book the venue" });
+    await claimTask({ ...ctx, actorId: agent.id }, task.id);
+    const cookie = cookieOf(await app.request(`http://127.0.0.1/session?token=${token}`));
+    const post = (path: string, payload: unknown, method = "POST") =>
+      app.request(`http://127.0.0.1${path}`, {
+        method,
+        headers: { cookie, "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    // Without the claim's token the edit is refused, as before.
+    expect((await post(`/api/tasks/${task.id}`, { body: "x" }, "PATCH")).status).toBe(409);
+    const taken = await post(`/api/tasks/${task.id}/take-over`, {});
+    expect(taken.status).toBe(200);
+    expect(((await taken.json()) as { claim: { actorId: string } }).claim.actorId).toBe(actor.id);
+    expect((await post(`/api/tasks/${task.id}`, { body: "Hall B" }, "PATCH")).status).toBe(200);
+    const released = await post(`/api/tasks/${task.id}/release`, { force: false });
+    expect(((await released.json()) as { status: string }).status).toBe("todo");
   });
 });

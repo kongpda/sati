@@ -566,3 +566,25 @@ textarea {
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+
+/* Who is working on a task, with release and take-over. */
+.claim {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+}
+.claim p {
+  margin: 0 0 8px;
+}
+.claim-actions {
+  display: flex;
+  gap: 8px;
+}
+.claim-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}

@@ -163,15 +163,17 @@ export async function releaseLock(
   });
 }
 
-/** Releases the caller's locks tied to a task. Call inside `store.write`. */
+/**
+ * Releases the locks `holder` (default: the caller) holds for a task. Call inside `store.write`.
+ * The release is logged with the caller, so a person releasing an agent's claim is recorded.
+ */
 export async function releaseTaskLocks(
   w: StorageWriter,
   ctx: ServiceContext,
   taskId: string,
+  holder: string = ctx.actorId,
 ): Promise<Lock[]> {
-  const mine = (await allLocks(w, ctx)).filter(
-    (l) => l.taskId === taskId && l.actorId === ctx.actorId,
-  );
+  const mine = (await allLocks(w, ctx)).filter((l) => l.taskId === taskId && l.actorId === holder);
   const out: Lock[] = [];
   for (const l of mine) out.push(await softDelete(w, ctx, l));
   return out;

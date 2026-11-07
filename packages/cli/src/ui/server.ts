@@ -11,9 +11,11 @@ import {
   isSatiError,
   recordDecision,
   releaseExpiredClaims,
+  releaseTask,
   SatiError,
   type ServiceContext,
   type StorageAdapter,
+  takeOverTask,
   updateFeature,
   updateMilestone,
   updateNote,
@@ -93,6 +95,8 @@ function openApi() {
       },
       "/api/tasks": { post: { summary: "Create a task" } },
       "/api/tasks/{id}": { patch: { summary: "Update a task" } },
+      "/api/tasks/{id}/release": { post: { summary: "Release a claim (force: people only)" } },
+      "/api/tasks/{id}/take-over": { post: { summary: "Take a task over (people only)" } },
       "/api/claims/release-expired": { post: { summary: "Release expired claims" } },
       "/api/notes": { post: { summary: "Create a note" } },
       "/api/notes/{id}": { patch: { summary: "Update a note" } },
@@ -253,8 +257,23 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   });
 
   app.post("/api/tasks", async (c) => c.json(await createTask(rt.ctx, await body(c))));
-  app.patch("/api/tasks/:id", async (c) =>
-    c.json(await updateTask(rt.ctx, c.req.param("id"), await body(c))),
+  app.patch("/api/tasks/:id", async (c) => {
+    const id = c.req.param("id");
+    const patch = await body(c);
+    // Like the CLI, a write by the person who holds the claim carries their fencing token.
+    const held = await rt.ctx.store.read((r) => r.get("task", id));
+    const own = held?.claim?.actorId === rt.ctx.actorId ? held.claim.token : undefined;
+    const withToken =
+      own !== undefined && patch !== null && typeof patch === "object" && !("token" in patch)
+        ? { ...patch, token: own }
+        : patch;
+    return c.json(await updateTask(rt.ctx, id, withToken));
+  });
+  app.post("/api/tasks/:id/release", async (c) =>
+    c.json(await releaseTask(rt.ctx, c.req.param("id"), await body(c))),
+  );
+  app.post("/api/tasks/:id/take-over", async (c) =>
+    c.json(await takeOverTask(rt.ctx, c.req.param("id"), await body(c))),
   );
   app.post("/api/claims/release-expired", async (c) => c.json(await releaseExpiredClaims(rt.ctx)));
 

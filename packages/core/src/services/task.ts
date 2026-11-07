@@ -80,12 +80,17 @@ export const ClaimTaskInput = z.strictObject({
     .max(24 * 60)
     .optional(),
 });
+export const ReleaseTaskInput = z.strictObject({
+  /** Release another actor's live claim. Only a person may; the release is logged. */
+  force: z.boolean().optional(),
+});
 export const ListTasksInput = listInput("task").extend({ ready: z.boolean().optional() });
 export type CreateTaskInput = z.input<typeof CreateTaskInput>;
 export type UpdateTaskInput = z.input<typeof UpdateTaskInput>;
 export type CompleteTaskInput = z.input<typeof CompleteTaskInput>;
 export type ListTasksInput = z.input<typeof ListTasksInput>;
 export type ClaimTaskInput = z.input<typeof ClaimTaskInput>;
+export type ReleaseTaskInput = z.input<typeof ReleaseTaskInput>;
 
 /** Statuses that put a task back in the pool, so moving there drops the claim. */
 const UNCLAIMED_STATUSES: readonly string[] = ["backlog", "todo", "cancelled"];
@@ -289,6 +294,79 @@ export async function claimTask(
   return ctx.store.write(async (w) =>
     applyClaim(w, ctx, await mustGet(w, ctx, "task", id), leaseMinutes),
   );
+}
+
+/**
+ * Drops a task's claim inside `w`: an `in_progress` task goes back to `todo`, other statuses stay,
+ * and the holder's locks for the task are released. The holder may always release; anyone may
+ * release an expired claim; another actor's live claim needs `force`, which only a person may use,
+ * so agents cannot take work from each other. The new version invalidates the old fencing token.
+ */
+async function applyRelease(
+  w: StorageWriter,
+  ctx: ServiceContext,
+  before: Task,
+  force: boolean,
+): Promise<Task> {
+  const held = before.claim;
+  if (!held) {
+    throw new SatiError("VALIDATION", `Task ${before.id} is not claimed.`, {
+      hint: `Claim it with \`${CLI_NAME} task claim ${before.id}\`.`,
+    });
+  }
+  const live = held.leaseUntil > nowIso(ctx);
+  if (held.actorId !== ctx.actorId && live) {
+    const holder = await w.get("actor", held.actorId);
+    const name = holder?.name ?? held.actorId;
+    const details = { holder: held.actorId, holderName: name, leaseUntil: held.leaseUntil };
+    if (!force) {
+      throw new SatiError("CONFLICT", `Task ${before.id} is claimed by ${name}.`, {
+        hint: "Only the holder releases a live claim. A person can override with --force; it is logged.",
+        details,
+      });
+    }
+    if ((await w.get("actor", ctx.actorId))?.kind !== "human") {
+      throw new SatiError("CONFLICT", `Only a person can take task ${before.id} from ${name}.`, {
+        hint: `Pick another ready task with \`${CLI_NAME} task list --ready\`.`,
+        details,
+      });
+    }
+  }
+  await releaseTaskLocks(w, ctx, before.id, held.actorId);
+  const status = before.status === "in_progress" ? "todo" : before.status;
+  return updateWithLog(w, ctx, "task", before, { status, claim: null }, { verb: "release" });
+}
+
+/** Releases a task's claim; see `applyRelease` for who may. */
+export async function releaseTask(
+  ctx: ServiceContext,
+  id: string,
+  input: unknown = {},
+): Promise<Task> {
+  const { force } = parseInput(ReleaseTaskInput, input);
+  return ctx.store.write(async (w) =>
+    applyRelease(w, ctx, await mustGet(w, ctx, "task", id), force ?? false),
+  );
+}
+
+/**
+ * A person takes a task over in one transaction: the current claim is released (forced and
+ * logged when it is someone else's and still live), then the caller claims it with a new token,
+ * so the previous holder's next write is refused.
+ */
+export async function takeOverTask(
+  ctx: ServiceContext,
+  id: string,
+  input: unknown = {},
+): Promise<Task> {
+  const { leaseMinutes } = parseInput(ClaimTaskInput, input);
+  return ctx.store.write(async (w) => {
+    let task = await mustGet(w, ctx, "task", id);
+    if (task.claim && task.claim.actorId !== ctx.actorId) {
+      task = await applyRelease(w, ctx, task, true);
+    }
+    return applyClaim(w, ctx, task, leaseMinutes);
+  });
 }
 
 /**

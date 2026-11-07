@@ -772,3 +772,22 @@ fixed the same bug (undo of shortened text, subtask cycles, 400 for bad JSON, th
 - **Secret scanner.** All-digit values and identifier-like `*_KEY` values pass; URL passwords
   (except placeholders and the literal words password, pass and secret), npm and GitLab tokens
   are found.
+
+### Take over and release (2026-11-07)
+
+- `releaseTask` and `takeOverTask` in core, `sati task release [--force]` and
+  `sati task take-over`, `POST /api/tasks/:id/release` and `/take-over`, and buttons in the task
+  panel and on the Agents page.
+- Who may: the holder always releases; anyone releases an expired claim; another actor's live
+  claim needs `force` (take-over implies it) and only a human actor may use it, so agents still
+  cannot take work from each other. Chosen over letting any actor force, which would undo the
+  atomic-claim guarantee.
+- Releasing drops the holder's locks for that task, logged as the person who released. Take-over
+  is a release and a claim in one transaction, so the old holder's token stops working.
+- The UI server adds the person's own token to their edits, as the CLI does, so a task they took
+  over is editable from the panel and the board.
+- No new MCP tool: agents keep moving a task back to `todo` to give it up.
+- Checked in Chrome: the panel says "codex@feature-b is working on this until 05:20 AM" with
+  Take over and Release; Take over asks first, then reads "You are working on this"; the activity
+  log shows release and claim by the person.
+

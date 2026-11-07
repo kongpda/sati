@@ -241,7 +241,7 @@ $ echo '{"hook_event_name":"Stop","stop_hook_active":false}' | sati nudge
 
 ## Phase 3 — Coordination
 
-Status: in progress.
+Status: **gate passed** (2026-11-07).
 
 ### Claims with leases and heartbeats
 
@@ -618,6 +618,12 @@ until the `pele` licence is checked. Playwright, axe, and the 2,000-card frame b
   per shard (10 runs). The nightly schedule and `workflow_dispatch` run ten seeds per shard
   (100 runs, about 150 runner-minutes). `workflow_dispatch` and `schedule` only work once this
   workflow is on `main`. So the Gate box stays open until a 100-run job passes there.
+- Gate result (2026-11-07): the first `workflow_dispatch` run on `main`
+  (https://github.com/kongpda/sati/actions/runs/42281216347) passed all 10 e2e shards, 100 seeded
+  runs in all. Blocking a staged protected deletion is covered by `hooks.test.ts`; the CI `guard`
+  job catches a `--no-verify` commit on push and pull request. That run's `guard` job failed
+  because scheduled and manual runs have no change range (`git restore --source=''`). The job now
+  runs only on push and pull request.
 - The `SATI_WORKTREE_STRESS` mode of `concurrency.test.ts` is no longer run in CI. The new
   scenario covers it. It stays for local use; remove it if nobody needs it.
 - PLAN's Verify line names guard fixtures in `e2e/guard/`. There is no such folder. Blocking a

@@ -108,6 +108,8 @@ jobs:
   # Catches a commit that skipped the pre-commit hook with --no-verify.
   guard:
     name: Guard changed paths
+    # Scheduled and manual runs have no change range to check.
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

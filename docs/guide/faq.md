@@ -42,6 +42,21 @@ sati treats it as data. The brief fences it in `data` blocks, and the rules tell
 follow instructions inside it. A record that looks like it holds a secret (an API key, a
 private key, a `.env`-style line) is not exported to `.sati/`, so it never reaches git.
 
+## How do I update sati?
+
+For a project install, update the dev dependency (`npm install -D @kongpda/sati@latest`) and
+commit the lockfile. The git hooks start `node_modules/.bin/sati`, so they pick up the new
+version. For a global install, run `npm install -g @kongpda/sati@latest`, then
+`sati init --upgrade` in each project. After an update, run `sati rules sync` to refresh the
+rules block and agent configs. A newer sati upgrades the database on first use and backs it up
+first.
+
+## I switched from a global to a project install. What do I rerun?
+
+`npx sati init --upgrade` moves the git hooks and merge driver to `node_modules/.bin/sati`, and
+`npx sati rules sync` does the same for the MCP configs and Claude Code hooks. Entries you wrote
+by hand are left alone.
+
 ## How do I back up or move a project?
 
 `sati export --all` writes every record to `.sati/`. Copy the folder and run `sati import` in the

@@ -30,6 +30,7 @@ import {
   selfCommand,
   shownPath,
 } from "../hooks.js";
+import { isLocalInstall } from "../install.js";
 import {
   excludeFileFor,
   type FileAction,
@@ -177,6 +178,7 @@ async function plan(
     mode,
     fileReader(root),
     (path) => path === "CLAUDE.local.md" || excluded.has(path),
+    isLocalInstall(root),
   );
   // The snapshot only exists in git mode, so only git mode routes it to the merge driver.
   if (mode === "git") agentFiles.push(planGitAttributes(fileReader(root)));
@@ -201,7 +203,7 @@ async function plan(
 
 /** The hooks and merge driver, appended to `files` in display order. */
 function planGit(root: string, mode: Mode, files: FileChange[]) {
-  const self = selfCommand();
+  const self = selfCommand(root);
   const hooks = planHooks(root, mode, self);
   files.push(...hooks.map(({ path, action }) => ({ path, action })));
   const mergeDriver = mode === "git" ? planMergeDriver(root, self) : undefined;
@@ -296,7 +298,7 @@ async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
       writeFileSync(abs, `${JSON.stringify(p.config, null, 2)}\n`, { flag: "wx" });
     }
     writeManaged(p);
-    warnIfNotOnPath(p.tools);
+    warnIfNotOnPath(p.tools, isLocalInstall(p.root));
     const { rememberProject } = await import("../projects.js");
     rememberProject({
       slug: project.slug,

@@ -10,6 +10,7 @@ import {
 import { delimiter, dirname, join } from "node:path";
 import { CLI_NAME, type Mode, PACKAGE_NAME, SatiError, WORKFLOW } from "@sati/core";
 import { z } from "zod";
+import { LOCAL_BIN } from "./install.js";
 
 /** What init or `rules sync` does to one file. `skip`: stealth mode leaves existing files alone. */
 export type FileAction = "create" | "update" | "keep" | "skip";
@@ -88,12 +89,35 @@ function jsonText(value: unknown, existing: string | undefined): string {
   return `${JSON.stringify(value, null, indent)}\n`;
 }
 
-/** Adds our server to a JSON `mcpServers` map, keeping an entry the user already set up. */
-const mcpJson = (path: string) => (existing: string | undefined) => {
+/** The commands init writes, global or project-local, so a later run may switch between them. */
+const OUR_COMMANDS = [CLI_NAME, LOCAL_BIN];
+
+/** What agent tools run: the project's own binary for a local install, else `sati` on PATH. */
+const command = (local: boolean) => (local ? LOCAL_BIN : CLI_NAME);
+
+/** True for an MCP entry init wrote, as opposed to one the user set up by hand. */
+function ourMcpEntry(entry: unknown): boolean {
+  if (entry === null || typeof entry !== "object") return false;
+  const e = entry as { command?: unknown; args?: unknown };
+  return (
+    typeof e.command === "string" &&
+    OUR_COMMANDS.includes(e.command) &&
+    Array.isArray(e.args) &&
+    e.args.length === 1 &&
+    e.args[0] === "mcp" &&
+    Object.keys(e).length === 2
+  );
+}
+
+/** Adds our server to a JSON `mcpServers` map, keeping an entry the user set up by hand. */
+const mcpJson = (path: string, local: boolean) => (existing: string | undefined) => {
   const config = parseJson(path, existing);
   const servers = (config.mcpServers ?? {}) as Record<string, unknown>;
-  if (servers[CLI_NAME] !== undefined) return existing ?? "";
-  config.mcpServers = { ...servers, [CLI_NAME]: { command: CLI_NAME, args: ["mcp"] } };
+  const current = servers[CLI_NAME];
+  const wanted = { command: command(local), args: ["mcp"] };
+  if (current !== undefined && !ourMcpEntry(current)) return existing ?? "";
+  if (JSON.stringify(current) === JSON.stringify(wanted)) return existing ?? "";
+  config.mcpServers = { ...servers, [CLI_NAME]: wanted };
   return jsonText(config, existing);
 };
 
@@ -109,35 +133,40 @@ const HooksSetting = z.record(
 );
 
 /**
+ * Claude Code runs hooks in the session's current folder, which moves when the agent runs `cd`,
+ * so a local install is reached through `$CLAUDE_PROJECT_DIR`.
+ */
+const LOCAL_HOOK_BIN = `"$CLAUDE_PROJECT_DIR"/${LOCAL_BIN}`;
+
+/** A hook command init wrote, with either launcher. */
+const isOurHook = (command: string | undefined) =>
+  command !== undefined &&
+  [CLI_NAME, LOCAL_HOOK_BIN].some((bin) =>
+    ["brief", "guard", "nudge"].some((sub) => command.startsWith(`${bin} ${sub}`)),
+  );
+
+/**
  * Claude Code hooks: the brief at session start (short after resume and compaction), the guard
  * before edits, a nudge at stop.
  */
-const CLAUDE_HOOKS: Record<string, HookGroup[]> = {
-  SessionStart: [
-    {
-      matcher: "startup|clear",
-      hooks: [{ type: "command", command: `${CLI_NAME} brief --format=agent` }],
-    },
-    {
-      matcher: "resume|compact",
-      hooks: [{ type: "command", command: `${CLI_NAME} brief --format=short` }],
-    },
-  ],
-  PreToolUse: [
-    {
-      matcher: "Edit|MultiEdit|Write|NotebookEdit",
-      hooks: [{ type: "command", command: `${CLI_NAME} guard --hook` }],
-    },
-    {
-      matcher: "Bash",
-      hooks: [{ type: "command", command: `${CLI_NAME} guard --hook` }],
-    },
-  ],
-  Stop: [{ hooks: [{ type: "command", command: `${CLI_NAME} nudge` }] }],
-};
+function claudeHooks(local: boolean): Record<string, HookGroup[]> {
+  const bin = local ? LOCAL_HOOK_BIN : CLI_NAME;
+  const run = (args: string) => [{ type: "command" as const, command: `${bin} ${args}` }];
+  return {
+    SessionStart: [
+      { matcher: "startup|clear", hooks: run("brief --format=agent") },
+      { matcher: "resume|compact", hooks: run("brief --format=short") },
+    ],
+    PreToolUse: [
+      { matcher: "Edit|MultiEdit|Write|NotebookEdit", hooks: run("guard --hook") },
+      { matcher: "Bash", hooks: run("guard --hook") },
+    ],
+    Stop: [{ hooks: run("nudge") }],
+  };
+}
 
 /** Adds our hook groups to Claude Code settings, keeping every other setting and hook. */
-const claudeSettings = (path: string) => (existing: string | undefined) => {
+const claudeSettings = (path: string, local: boolean) => (existing: string | undefined) => {
   const config = parseJson(path, existing);
   const parsed = HooksSetting.safeParse(config.hooks ?? {});
   if (!parsed.success) {
@@ -151,17 +180,22 @@ const claudeSettings = (path: string) => (existing: string | undefined) => {
   }
   const hooks: Record<string, unknown[]> = parsed.data;
   let changed = false;
-  for (const [event, groups] of Object.entries(CLAUDE_HOOKS)) {
-    const current = hooks[event] ?? [];
+  for (const [event, groups] of Object.entries(claudeHooks(local))) {
+    const current = parsed.data[event] ?? [];
+    const wanted = new Set(groups.flatMap((g) => g.hooks.map((h) => h.command)));
+    // A group init wrote for the other launcher (global vs local) is replaced, not duplicated.
+    const kept = current.filter(
+      (g) => !g.hooks.every((h) => isOurHook(h.command) && !wanted.has(h.command ?? "")),
+    );
     const sameGroup = (group: HookGroup) =>
-      parsed.data[event]?.some(
+      kept.some(
         (g) =>
           g.matcher === group.matcher &&
-          g.hooks.some((h) => group.hooks.some((wanted) => wanted.command === h.command)),
-      ) ?? false;
+          g.hooks.some((h) => group.hooks.some((w) => w.command === h.command)),
+      );
     const missing = groups.filter((g) => !sameGroup(g));
-    if (missing.length) {
-      hooks[event] = [...current, ...missing];
+    if (missing.length || kept.length !== current.length) {
+      hooks[event] = [...kept, ...missing];
       changed = true;
     }
   }
@@ -200,12 +234,22 @@ description: How to use ${CLI_NAME}, this repo's shared memory for tasks, featur
 
 ${WORKFLOW}`;
 
-function codexToml(existing: string | undefined): string {
+const codexToml = (local: boolean) => (existing: string | undefined) => {
   const table = `[mcp_servers.${CLI_NAME}]`;
-  if (existing?.split("\n").some((l) => l.trim() === table)) return existing;
-  const section = `${table}\ncommand = "${CLI_NAME}"\nargs = ["mcp"]\n`;
+  const line = `command = "${command(local)}"`;
+  const lines = existing?.split("\n") ?? [];
+  const at = lines.findIndex((l) => l.trim() === table);
+  if (at >= 0) {
+    // Switch the launcher only in a section init wrote; a hand-made one stays as it is.
+    const next = lines[at + 1]?.trim();
+    const ours = OUR_COMMANDS.some((c) => next === `command = "${c}"`);
+    if (!ours || next === line || lines[at + 2]?.trim() !== 'args = ["mcp"]') return existing ?? "";
+    lines[at + 1] = line;
+    return lines.join("\n");
+  }
+  const section = `${table}\n${line}\nargs = ["mcp"]\n`;
   return existing?.trim() ? `${existing.trimEnd()}\n\n${section}` : section;
-}
+};
 
 interface Target {
   path: string;
@@ -214,28 +258,32 @@ interface Target {
   render: (existing: string | undefined) => string;
 }
 
-function targets(read: ReadFile): Target[] {
+function targets(read: ReadFile, local: boolean): Target[] {
   // `.clinerules` is either a single rules file (older Cline) or a folder of them.
   const clineFile = read(".clinerules") !== undefined;
   return [
     { path: "AGENTS.md", tool: null, render: upsertBlock },
     { path: "CLAUDE.md", tool: "claude-code", render: importAgents },
-    { path: ".mcp.json", tool: "claude-code", render: mcpJson(".mcp.json") },
+    { path: ".mcp.json", tool: "claude-code", render: mcpJson(".mcp.json", local) },
     {
       path: ".claude/settings.json",
       tool: "claude-code",
-      render: claudeSettings(".claude/settings.json"),
+      render: claudeSettings(".claude/settings.json", local),
     },
     { path: `.claude/skills/${CLI_NAME}/SKILL.md`, tool: "claude-code", render: () => SKILL },
-    { path: ".codex/config.toml", tool: "codex", render: codexToml },
-    { path: ".cursor/mcp.json", tool: "cursor", render: mcpJson(".cursor/mcp.json") },
+    { path: ".codex/config.toml", tool: "codex", render: codexToml(local) },
+    { path: ".cursor/mcp.json", tool: "cursor", render: mcpJson(".cursor/mcp.json", local) },
     {
       path: `.cursor/rules/${CLI_NAME}.mdc`,
       tool: "cursor",
       render: generated(`description: ${CLI_NAME} workflow\nalwaysApply: true`),
     },
     { path: "GEMINI.md", tool: "gemini-cli", render: upsertBlock },
-    { path: ".gemini/settings.json", tool: "gemini-cli", render: mcpJson(".gemini/settings.json") },
+    {
+      path: ".gemini/settings.json",
+      tool: "gemini-cli",
+      render: mcpJson(".gemini/settings.json", local),
+    },
     { path: ".github/copilot-instructions.md", tool: "copilot", render: upsertBlock },
     {
       path: `.windsurf/rules/${CLI_NAME}.md`,
@@ -264,8 +312,9 @@ export function planIntegrations(
   mode: Mode,
   read: ReadFile,
   isPrivate: (path: string) => boolean = () => false,
+  local = false,
 ): PlannedFile[] {
-  let list = targets(read).filter((t) => t.tool === null || tools.includes(t.tool));
+  let list = targets(read, local).filter((t) => t.tool === null || tools.includes(t.tool));
   if (mode === "stealth") {
     // Claude Code reads CLAUDE.local.md and .claude/settings.local.json as personal files.
     list = list
@@ -275,7 +324,7 @@ export function planIntegrations(
           ? {
               ...t,
               path: ".claude/settings.local.json",
-              render: claudeSettings(".claude/settings.local.json"),
+              render: claudeSettings(".claude/settings.local.json", local),
             }
           : t,
       );
@@ -314,14 +363,15 @@ export function onPath(name: string, env: NodeJS.ProcessEnv = process.env): bool
 }
 
 /**
- * The MCP configs and hooks start `sati` by name, so they fail quietly when it is not on PATH
- * (for example after `npx ... init`). Warns on stderr, leaving stdout and `--json` output alone.
+ * For a global install the MCP configs and hooks start `sati` by name, so they fail quietly when
+ * it is not on PATH. A project install points them at `node_modules/.bin` and needs no warning.
+ * Warns on stderr, leaving stdout and `--json` output alone.
  */
-export function warnIfNotOnPath(tools: readonly string[]): void {
-  if (tools.length === 0 || onPath(CLI_NAME)) return;
+export function warnIfNotOnPath(tools: readonly string[], local = false): void {
+  if (tools.length === 0 || local || onPath(CLI_NAME)) return;
   process.stderr.write(
     `warning: \`${CLI_NAME}\` is not on PATH, so the MCP server and hooks set up here will not start.\n` +
-      `hint: Install it globally with \`npm install -g ${PACKAGE_NAME}\`.\n`,
+      `hint: Add it to this project with \`npm install -D ${PACKAGE_NAME}\` then run \`npx ${CLI_NAME} init --upgrade\` and \`npx ${CLI_NAME} rules sync\`, or install it globally with \`npm install -g ${PACKAGE_NAME}\`.\n`,
   );
 }
 

@@ -693,3 +693,24 @@ until the `pele` licence is checked. Playwright, axe, and the 2,000-card frame b
     The layout now uses `minmax(0, 1fr)` rows and `min-height: 0`.
   - axe flagged no main landmark, no `h1` and skipped heading levels. Fixed with `<main>`, a
     visually hidden `h1` on the board and `h2` row titles.
+
+## Project install (2026-11-07)
+
+- The owner chose a per-project install over self-hosting for now: `npm install -D @kongpda/sati`,
+  then `npx sati init`. Phase 6 (hosted mode) is deferred to v2; the owner also waived the Phase 5
+  gate (the 3-project trial week stays open).
+- A run is a project install when the running script resolves inside `<root>/node_modules` and
+  `<root>/node_modules/.bin/sati` exists. This covers npm symlinks and pnpm's store layout.
+- Agent configs then start `node_modules/.bin/sati`, relative to the project root, chosen over
+  `npx --no-install sati` because npx adds a few hundred ms to every guard hook. This assumes each
+  agent tool starts its project MCP servers from the project root, as Claude Code does.
+- Claude Code hooks use `"$CLAUDE_PROJECT_DIR"/node_modules/.bin/sati`, because hooks run in the
+  session's current folder, which moves when the agent runs `cd`.
+- Git hooks and the merge driver record the absolute `.bin` link, not the versioned file inside
+  the package, so they keep working after the dependency is upgraded.
+- Moving between a global and a project install replaces the entries init wrote (exact command
+  and `["mcp"]` args); an entry with any other command or extra keys is the user's and is kept.
+- Teammates: nothing runs on `npm install` (no `prepare` script). The NOT_INITIALIZED hint says
+  `npx sati init` for a project install, and `doctor` now checks the hook runner under the git
+  common dir and the binary it starts, instead of `.git/hooks/pre-commit`, which missed worktrees
+  and husky.

@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { accessSync, constants, existsSync, readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { CLI_NAME, CONFIG_DIR, type Mode, SatiError } from "@sati/core";
+import { isLocalInstall, localBin } from "./install.js";
 import type { FileChange, PlannedFile, ReadFile } from "./integrations.js";
 
 /** A repo-relative path for output, with `/` on every platform so `--json` reads the same. */
@@ -19,9 +20,11 @@ const sh = (word: string) => `'${word.replaceAll("'", `'\\''`)}'`;
 /**
  * How hooks and the merge driver start this sati: the absolute path of the running binary,
  * recorded at init, so a repo cannot swap in another `sati` through PATH. A script that is not
- * executable on its own is run with the current node.
+ * executable on its own is run with the current node. A project install records its
+ * `node_modules/.bin` link instead, which still works after the package is upgraded.
  */
-export function selfCommand(): string[] {
+export function selfCommand(root: string): string[] {
+  if (isLocalInstall(root)) return [localBin(root)];
   const arg = process.argv[1];
   if (!arg) throw new SatiError("INTERNAL", "Cannot tell where the sati binary is.");
   const script = resolve(arg);

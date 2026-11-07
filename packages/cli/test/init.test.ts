@@ -1,5 +1,6 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -10,6 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { bin, run, sati, satiJson, tempRepo } from "./helpers.js";
 
@@ -116,6 +118,56 @@ describe("sati init", () => {
     });
     expect(found.code).toBe(0);
     expect(found.stderr).toBe("");
+  });
+
+  // A project install (`npm install -D`, then `npx sati init`) must not depend on PATH: every
+  // teammate gets the same version from the lockfile, and nothing global is needed.
+  it("points agent configs and git hooks at node_modules/.bin for a project install", async () => {
+    const dir = await tempRepo();
+    const pkg = join(dir, "node_modules", "@kongpda", "sati", "dist");
+    mkdirSync(pkg, { recursive: true });
+    const entry = join(pkg, "index.mjs");
+    writeFileSync(
+      entry,
+      `#!/usr/bin/env node\nimport ${JSON.stringify(pathToFileURL(bin).href)};\n`,
+    );
+    chmodSync(entry, 0o755);
+    mkdirSync(join(dir, "node_modules", ".bin"));
+    symlinkSync(entry, join(dir, "node_modules", ".bin", "sati"));
+    const base = [dirname(process.execPath), "/usr/bin", "/bin"].join(delimiter);
+    const r = spawnSync(
+      process.execPath,
+      [entry, "init", "--yes", "--tools", "claude-code,codex"],
+      { cwd: dir, encoding: "utf8", env: { ...process.env, PATH: base, SATI_ACTOR: "tester" } },
+    );
+    expect(r.status).toBe(0);
+    // No PATH warning: the configs no longer need `sati` on PATH.
+    expect(r.stderr).toBe("");
+    expect(JSON.parse(readFileSync(join(dir, ".mcp.json"), "utf8")).mcpServers.sati).toEqual({
+      command: "node_modules/.bin/sati",
+      args: ["mcp"],
+    });
+    expect(readFileSync(join(dir, ".codex", "config.toml"), "utf8")).toContain(
+      'command = "node_modules/.bin/sati"',
+    );
+    const settings = readFileSync(join(dir, ".claude", "settings.json"), "utf8");
+    expect(settings).toContain('"\\"$CLAUDE_PROJECT_DIR\\"/node_modules/.bin/sati guard --hook"');
+    expect(settings).not.toMatch(/"sati /);
+    // The hooks record the .bin link, which survives a package upgrade, not the versioned file.
+    const runner = readFileSync(join(dir, ".git", "sati", "hooks", "pre-commit"), "utf8");
+    expect(runner).toContain(`'${join(dir, "node_modules", ".bin", "sati")}'`);
+    expect(runner).not.toContain(entry);
+  });
+
+  // Git hooks live in each clone's .git, so a teammate's fresh clone has none until they run
+  // init. doctor must say so, with the fix, instead of reporting the hooks as fine.
+  it("doctor flags a clone without git hooks and passes after init --upgrade", async () => {
+    const dir = await tempRepo({ init: true });
+    type Doctor = { checks: { name: string; ok: boolean; detail: string }[] };
+    const hooks = () => satiJson<Doctor>(dir, "doctor").data.checks.find((c) => c.name === "hooks");
+    expect(hooks()).toMatchObject({ ok: false, detail: expect.stringContaining("init --upgrade") });
+    expect(sati(dir, "init", "--upgrade", "--yes").code).toBe(0);
+    expect(hooks()?.ok).toBe(true);
   });
 
   it("stealth mode with no agent tools writes nothing into the working tree", async () => {

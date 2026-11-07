@@ -539,11 +539,14 @@ Verify: an e2e test for the loop and a concurrency test for `sati next`.
 - [x] Security review against the Security checklist; fuzz the JSON importer
 - [x] `sati review <branch>`: features touched, decisions recorded and guard warnings before merge
 - [x] `sati scan`: propose features from folders and routes for an existing codebase
+- [x] Project install: `npm install -D` plus `npx sati init`; agent configs and git hooks start `node_modules/.bin/sati`, not PATH
 - [ ] Try it on 3 real projects (including one stealth-mode client repo) for 1 week
 
 **Gate:** v1.0.0 on npm; install-to-first-task under 2 minutes on a fresh machine.
 
-### Phase 6 — Hosted mode (weeks 12–17)
+### Phase 6 — Hosted mode (deferred to v2)
+
+Deferred by the owner on 2026-11-07: v1 stays local-first. See `docs/progress.md`.
 
 - [ ] PostgreSQL adapter, multi-tenant schema, row-level security
 - [ ] Better Auth, organisations, invites, scoped agent tokens

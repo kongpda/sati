@@ -7,9 +7,24 @@ work in one repository and see the same tasks, features and decisions.
 
 sati needs Node.js 22 or newer.
 
+Add it to the project as a dev dependency, so every teammate and CI get the same version from
+the lockfile:
+
+```bash
+cd my-project
+npm install -D @kongpda/sati   # or: pnpm add -D, yarn add -D
+npx sati --version
+```
+
+Then run every command below through `npx` (`npx sati init`, `npx sati brief`). The agent
+configs and git hooks that `init` writes start `node_modules/.bin/sati`, so nothing has to be on
+your PATH.
+
+For stealth mode in a client repo, or a project without a `package.json`, install it globally
+instead and drop the `npx`:
+
 ```bash
 npm install -g @kongpda/sati
-sati --version
 ```
 
 ## Set up a project
@@ -17,9 +32,13 @@ sati --version
 Run `init` at the root of a git repository:
 
 ```bash
-cd my-project
-sati init
+npx sati init
 ```
+
+Each clone needs its own `init`, because the git hooks and the live database live in `.git`. A
+teammate runs `npm install`, then `npx sati init` (it keeps the project id from the committed
+config) and `npx sati sync import` to load the committed `.sati/` snapshot. `sati doctor`
+reports a clone that has no hooks yet.
 
 `init` asks for a mode and the agent tools to set up. To skip the prompts:
 

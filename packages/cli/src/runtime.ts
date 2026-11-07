@@ -34,6 +34,7 @@ import {
   socketPath as socketPathFor,
   standaloneDbPath,
 } from "@sati/store-sqlite";
+import { runHint } from "./install.js";
 
 export interface Runtime {
   ctx: ServiceContext;
@@ -195,8 +196,8 @@ async function ensurePersonal(): Promise<DbLocation> {
 export async function openRuntime(cwd: string = process.cwd()): Promise<Runtime> {
   const location = await resolveLocation(cwd);
   if (!existsSync(location.path)) {
-    throw new SatiError("NOT_INITIALIZED", "This project has no sati yet.", {
-      hint: "Run `sati init`.",
+    throw new SatiError("NOT_INITIALIZED", `This project has no ${CLI_NAME} yet.`, {
+      hint: `Run \`${runHint(location.root, "init")}\`.`,
     });
   }
   const socketPath = socketPathFor(location.path);

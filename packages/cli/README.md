@@ -19,10 +19,14 @@ paths another agent has locked, and from deleting features that already ship.
 Node.js 22 or newer:
 
 ```bash
-npm install -g @kongpda/sati
 cd my-project
-sati init
+npm install -D @kongpda/sati   # or: pnpm add -D, yarn add -D
+npx sati init
 ```
+
+The agent configs and git hooks then start `node_modules/.bin/sati`, and every teammate gets the
+version in the lockfile. For stealth mode or a repo without a `package.json`, use
+`npm install -g @kongpda/sati` and run `sati init`.
 
 ## Use
 

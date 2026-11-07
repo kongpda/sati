@@ -126,6 +126,48 @@ describe("agent file planning", () => {
     ]);
   });
 
+  // Moving between a global and a project install must swap the launcher in place. Leaving the
+  // old entry would keep agents on PATH; adding a second would run every hook twice.
+  it("switches its own MCP entries and hooks between global and local, never a user's", () => {
+    const tools = ["claude-code", "codex", "cursor"];
+    const files: Record<string, string> = {};
+    for (const f of planIntegrations(tools, "git", reader(files))) files[f.path] = f.content;
+    const local = byPath(planIntegrations(tools, "git", reader(files), undefined, true));
+    expect(JSON.parse(local[".mcp.json"]?.content ?? "").mcpServers.sati.command).toBe(
+      "node_modules/.bin/sati",
+    );
+    expect(local[".codex/config.toml"]?.content).toBe(
+      '[mcp_servers.sati]\ncommand = "node_modules/.bin/sati"\nargs = ["mcp"]\n',
+    );
+    const hooks = JSON.parse(local[".claude/settings.json"]?.content ?? "").hooks;
+    expect(hooks.Stop).toEqual([
+      {
+        hooks: [{ type: "command", command: '"$CLAUDE_PROJECT_DIR"/node_modules/.bin/sati nudge' }],
+      },
+    ]);
+    expect(hooks.PreToolUse).toHaveLength(2);
+    for (const f of Object.values(local)) files[f.path] = f.content;
+    expect(
+      planIntegrations(tools, "git", reader(files), undefined, true).every(
+        (f) => f.action === "keep",
+      ),
+    ).toBe(true);
+
+    const mine = { mcpServers: { sati: { command: "npx", args: ["@kongpda/sati", "mcp"] } } };
+    const hand = '[mcp_servers.sati]\ncommand = "/opt/sati"\nargs = ["mcp"]\n';
+    const kept = byPath(
+      planIntegrations(
+        ["claude-code", "codex"],
+        "git",
+        reader({ ".mcp.json": JSON.stringify(mine), ".codex/config.toml": hand }),
+        undefined,
+        true,
+      ),
+    );
+    expect(kept[".mcp.json"]?.action).toBe("keep");
+    expect(kept[".codex/config.toml"]?.action).toBe("keep");
+  });
+
   it("refuses to merge into a malformed hooks setting instead of crashing", () => {
     const bad = JSON.stringify({ hooks: { Stop: "sati nudge" } });
     expect(() =>

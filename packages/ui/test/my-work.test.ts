@@ -55,6 +55,40 @@ describe("myWork", () => {
     expect(titles(lists.due)).toEqual(["late, theirs", "Sunday"]);
     expect(lists.end).toBe("2026-11-08");
   });
+
+  // PLAN Phase 5c: an agent's question comes before approvals, and a task asks only once.
+  it("puts questions, then blocked tasks, under Needs you, ahead of approval", () => {
+    const live = "2026-11-04T16:00:00.000Z";
+    const ask = (text: string, since: string) => ({
+      actorId: other,
+      leaseUntil: live,
+      waiting: { kind: "question" as const, text, since },
+    });
+    const tasks = [
+      task({ title: "blocked", status: "blocked", blockedReason: "no key" }),
+      task({
+        title: "asks later",
+        status: "in_progress",
+        claim: ask("b?", "2026-11-04T14:30:00.000Z"),
+      }),
+      task({ title: "asks first", status: "review", claim: ask("a?", "2026-11-04T14:00:00.000Z") }),
+      task({
+        title: "theirs asks",
+        status: "in_progress",
+        assigneeIds: [other],
+        claim: ask("c?", "2026-11-04T14:00:00.000Z"),
+      }),
+      task({
+        title: "lease over",
+        status: "in_progress",
+        claim: { ...ask("d?", "2026-11-04T13:00:00.000Z"), leaseUntil: "2026-11-04T14:59:00.000Z" },
+      }),
+    ];
+    const lists = myWork(snap(tasks), new Date("2026-11-04T15:00:00.000Z"));
+    expect(lists.needs.map((t) => t.title)).toEqual(["asks first", "asks later", "blocked"]);
+    // In review and asking: it shows under Needs you only.
+    expect(lists.approval).toEqual([]);
+  });
 });
 
 describe("board words", () => {

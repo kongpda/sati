@@ -1,0 +1,46 @@
+{
+  "body": "",
+  "branch": "main",
+  "claim": null,
+  "completion": {
+    "branch": "main",
+    "commit": "b5b7e629a44c6812805a1c85dd7c6aa90be6cbf9",
+    "completedAt": "2026-11-08T04:53:47.146Z",
+    "completedBy": "actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "filesTouched": [
+      "packages/store-sqlite/src/fts.ts",
+      "packages/store-sqlite/test/store.test.ts"
+    ],
+    "summary": "buildFtsQuery turns punctuation inside a term into spaces and quotes the parts as a phrase, matching the unicode61 tokenizer."
+  },
+  "createdAt": "2026-11-08T04:53:46.370Z",
+  "createdBy": "actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+  "deletedAt": null,
+  "dependsOn": [],
+  "featureId": null,
+  "id": "tsk_01M6WR2R8214PN1B8P86DG0NKF",
+  "labels": [],
+  "parentId": null,
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "body": "2026-11-08T04:53:46.385Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "branch": "2026-11-08T04:53:46.751Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "claim": "2026-11-08T04:53:47.154Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "completion": "2026-11-08T04:53:47.154Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "deletedAt": "2026-11-08T04:53:46.385Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "dependsOn": "2026-11-08T04:53:46.385Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "featureId": "2026-11-08T04:53:46.385Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "labels": "2026-11-08T04:53:46.385Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "parentId": "2026-11-08T04:53:46.385Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "priority": "2026-11-08T04:53:46.385Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "status": "2026-11-08T04:53:47.154Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "title": "2026-11-08T04:53:46.385Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "worktree": "2026-11-08T04:53:46.751Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX"
+  },
+  "status": "review",
+  "title": "Search splits terms on punctuation, as the FTS index does",
+  "updatedAt": "2026-11-08T04:53:47.170Z",
+  "version": 3,
+  "worktree": "/home/user/workspace/repo"
+}

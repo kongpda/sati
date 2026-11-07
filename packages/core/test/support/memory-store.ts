@@ -128,15 +128,19 @@ export class MemoryStore implements StorageAdapter {
         }
         return hits;
       },
-      listActivity: async (projectId, q = {}) =>
-        s.activity
+      listActivity: async (projectId, q = {}) => {
+        const start = q.after === undefined ? 0 : s.activity.findIndex((a) => a.id === q.after);
+        if (start < 0) throw new SatiError("NOT_FOUND", `No activity with id ${q.after}.`);
+        const rows = s.activity
+          .slice(q.after === undefined ? 0 : start + 1)
           .filter((a) => a.projectId === projectId)
           .filter((a) => (q.actorId ? a.actorId === q.actorId : true))
           .filter((a) => (q.entityId ? a.entityId === q.entityId : true))
-          .filter((a) => (q.since ? a.at >= q.since : true))
-          .reverse()
+          .filter((a) => (q.since ? a.at >= q.since : true));
+        return (q.after === undefined ? rows.reverse() : rows)
           .slice(0, q.limit ?? Number.POSITIVE_INFINITY)
-          .map(clone),
+          .map(clone);
+      },
       getActivity: async (id) => clone(s.activity.find((a) => a.id === id)),
       insert: async (e, rec) => {
         if (table(e).has(rec.id)) throw new SatiError("CONFLICT", `duplicate ${rec.id}`);

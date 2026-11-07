@@ -11,6 +11,7 @@ import {
 } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
 import type { Clock } from "../ports/clock.js";
+import type { ProcessProbe } from "../ports/process.js";
 import type { RepoIndex } from "../ports/repo.js";
 import type { StorageAdapter, StorageReader, StorageWriter } from "../ports/storage.js";
 
@@ -26,6 +27,8 @@ export interface ServiceContext {
   branch: string | null;
   /** The git index, for context-cache hashes. Absent outside a git repo. */
   repo?: RepoIndex;
+  /** Whether claim holders still run, so claims of exited agents are released early. */
+  processes?: ProcessProbe;
 }
 
 export type Verb = (typeof VERBS)[number];

@@ -4,12 +4,15 @@ import { findDependencyCycle, PRIORITY_RANK } from "../domain/rules.js";
 import {
   BodyText,
   type Claim,
+  CommitSha,
   Completion,
   IsoDay,
   LIMITS,
+  type Note,
   type Task,
   TaskShape,
   utf8Bytes,
+  WAITING_KINDS,
 } from "../domain/schemas.js";
 import { TASK_TRANSITIONS } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
@@ -26,6 +29,7 @@ import {
   type ServiceContext,
   updateWithLog,
 } from "./context.js";
+import { HANDOFF_TAG } from "./handoff.js";
 import { releaseTaskLocks } from "./lock.js";
 import { DEFAULT_LEASE_MINUTES, readSettings } from "./project.js";
 import { listInput } from "./query.js";
@@ -92,8 +96,18 @@ export const UpdateTaskInput = fields
   .extend({
     /** Clear `needsReview` after a person has looked at the merge. */
     reviewed: z.literal(true).optional(),
-    /** Required when sending a review task back to todo. Shown to the next claimer. */
+    /**
+     * Required when sending a review task back to todo; shown to the next claimer. With the move
+     * to `blocked`, it says what the task waits on.
+     */
     reason: z.string().trim().min(1).max(LIMITS.shortText).optional(),
+    /** The holder asks a person a question and waits for the answer. Cleared by its next write. */
+    needsInput: z.string().trim().min(1).max(LIMITS.waitingText).optional(),
+    /**
+     * Approving a review: the branch commit the reviewer looked at. Refused when the branch has
+     * moved on since, so nobody approves code they did not see.
+     */
+    approvedCommit: CommitSha.optional(),
   });
 export const CompleteTaskInput = Completion.pick({
   summary: true,
@@ -111,6 +125,18 @@ export const ClaimTaskInput = z.strictObject({
     .max(24 * 60)
     .optional(),
 });
+export const WaitingInput = z.strictObject({
+  /** The task; without it, every task the caller holds. */
+  taskId: z.string().trim().min(1).max(60).optional(),
+  /** What the holder waits for, or null when the person has answered. */
+  waiting: z
+    .strictObject({
+      kind: z.enum(WAITING_KINDS).default("question"),
+      text: z.string().trim().min(1).max(LIMITS.waitingText),
+    })
+    .nullable(),
+});
+export type WaitingInput = z.input<typeof WaitingInput>;
 export const ReleaseTaskInput = z.strictObject({
   /** Release another actor's live claim. Only a person may; the release is logged. */
   force: z.boolean().optional(),
@@ -207,7 +233,10 @@ export async function createTaskIn(
 
 /** Edits a task. Use `completeTask` to reach `done`; reopening a done task clears its completion. */
 export async function updateTask(ctx: ServiceContext, id: string, input: unknown): Promise<Task> {
-  const { expectedVersion, token, reviewed, reason, ...patch } = parseInput(UpdateTaskInput, input);
+  const { expectedVersion, token, reviewed, reason, needsInput, approvedCommit, ...patch } =
+    parseInput(UpdateTaskInput, input);
+  // Git is read outside the transaction: the approval compares with the branch as it is now.
+  const approving = patch.status === "done" ? await branchHeadOf(ctx, id) : undefined;
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "task", id);
     checkToken(before, token, ctx.actorId);
@@ -232,6 +261,19 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
           });
         }
         reviewNote = null;
+        const head = approving && approving.branch === completion.branch ? approving.head : null;
+        if (approvedCommit && head && head !== approvedCommit) {
+          throw new SatiError(
+            "CONFLICT",
+            `Branch ${completion.branch} moved to ${head.slice(0, 12)} after the commit you approved.`,
+            {
+              hint: "Look at the new commits, then approve again.",
+              details: { approvedCommit, head },
+            },
+          );
+        }
+        const approved = approvedCommit ?? head ?? completion.commit;
+        if (approved) completion = { ...completion, approvedCommit: approved };
       }
       assertTransition(TASK_TRANSITIONS, "task", before.status, patch.status);
       if (before.status === "done") completion = null;
@@ -244,11 +286,27 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
         reviewNote = reason;
       }
     }
+    let blockedReason = before.blockedReason;
+    if (patch.status === "blocked" && before.status !== "blocked") blockedReason = reason ?? null;
+    else if (patch.status && patch.status !== "blocked") blockedReason = null;
+    else if (before.status === "blocked" && reason) blockedReason = reason;
     let claim = before.claim;
+    if (needsInput && claim?.actorId !== ctx.actorId) {
+      throw new SatiError(
+        "VALIDATION",
+        "Only the agent working on a task can ask for input on it.",
+        {
+          hint: `Claim it first with \`${CLI_NAME} task claim ${id}\`.`,
+        },
+      );
+    }
     if (patch.status && UNCLAIMED_STATUSES.includes(patch.status)) claim = null;
-    else if (claim?.actorId === ctx.actorId)
-      claim = { ...(await lease(w, ctx)), token: claim.token };
-    else if (patch.status === "in_progress" && claim === null) {
+    else if (claim?.actorId === ctx.actorId) {
+      // Any write by the holder renews its lease and means it is no longer waiting, unless this
+      // write is the question.
+      claim = { ...(await lease(w, ctx, undefined, claim)), token: claim.token };
+      if (needsInput) claim.waiting = { kind: "question", text: needsInput, since: nowIso(ctx) };
+    } else if (patch.status === "in_progress" && claim === null) {
       // Starting work is claiming it: an in_progress task with no claim would look free to
       // others and never time out. The token is the new version, as in applyClaim.
       claim = { ...(await lease(w, ctx)), token: before.version + 1 };
@@ -258,7 +316,13 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
       ctx,
       "task",
       before,
-      { ...patch, completion, claim, reviewNote },
+      {
+        ...patch,
+        completion,
+        claim,
+        reviewNote,
+        ...(blockedReason !== undefined ? { blockedReason } : {}),
+      },
       { expectedVersion, clear: reviewed ? ["needsReview"] : [] },
     );
   });
@@ -267,6 +331,8 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
 /** Marks a task done with a summary and the files touched, and releases its claim and locks. */
 export async function completeTask(ctx: ServiceContext, id: string, input: unknown): Promise<Task> {
   const { expectedVersion, token, ...data } = parseInput(CompleteTaskInput, input);
+  // The commit the work was finished at, so a reviewer can see what moved after it.
+  const commit = (await ctx.repo?.head()) ?? null;
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "task", id);
     checkToken(before, token, ctx.actorId);
@@ -292,6 +358,8 @@ export async function completeTask(ctx: ServiceContext, id: string, input: unkno
       filesTouched,
       completedAt: nowIso(ctx),
       completedBy: ctx.actorId,
+      ...(commit ? { commit } : {}),
+      ...(commit && ctx.branch ? { branch: ctx.branch } : {}),
     };
     await releaseTaskLocks(w, ctx, id);
     return updateWithLog(
@@ -316,7 +384,7 @@ async function applyClaim(
   ctx: ServiceContext,
   before: Task,
   leaseMinutes: number | undefined,
-): Promise<Task> {
+): Promise<Task & { handoff?: DeliveredHandoff }> {
   const held = before.claim;
   if (held && held.actorId !== ctx.actorId && held.leaseUntil > nowIso(ctx)) {
     const holder = await w.get("actor", held.actorId);
@@ -338,14 +406,65 @@ async function applyClaim(
     );
   }
   const claim = { ...(await lease(w, ctx, leaseMinutes)), token: before.version + 1 };
-  return updateWithLog(w, ctx, "task", before, { status: "in_progress", claim }, { verb: "claim" });
+  const actor = await w.get("actor", ctx.actorId);
+  // Where the work happens, so worktree checks and cleanup can find the task's branch.
+  const place = {
+    ...(ctx.branch ? { branch: ctx.branch } : {}),
+    ...(actor?.worktree ? { worktree: actor.worktree } : {}),
+  };
+  const task = await updateWithLog(
+    w,
+    ctx,
+    "task",
+    before,
+    { status: "in_progress", claim, ...place },
+    { verb: "claim" },
+  );
+  const handoff = await deliverHandoff(w, ctx, task.id);
+  return handoff ? { ...task, handoff } : task;
+}
+
+/** What a claim hands the new holder: the handoff note left on the task, as data. */
+export interface DeliveredHandoff {
+  id: string;
+  from: string;
+  body: string;
+}
+
+/**
+ * The claim result carries the task's unread handoff, so the new holder gets it with the claim;
+ * delivering it acknowledges it in the same transaction. A handoff addressed to someone else
+ * stays unread for them.
+ */
+async function deliverHandoff(
+  w: StorageWriter,
+  ctx: ServiceContext,
+  taskId: string,
+): Promise<DeliveredHandoff | undefined> {
+  const notes = await listAll(w, ctx, "note");
+  const note = notes.find(
+    (n: Note) =>
+      n.tags.includes(HANDOFF_TAG) &&
+      n.links.includes(taskId) &&
+      n.acknowledged === undefined &&
+      (n.handoffTo === undefined || n.handoffTo === ctx.actorId),
+  );
+  if (!note) return undefined;
+  if (note.createdBy === ctx.actorId && note.handoffTo === undefined) {
+    // Your own note, read back by you: deliver it, but leave it for whoever comes next.
+    return { id: note.id, from: note.createdBy, body: note.body };
+  }
+  await updateWithLog(w, ctx, "note", note, {
+    acknowledged: { by: ctx.actorId, at: nowIso(ctx) },
+  });
+  return { id: note.id, from: note.createdBy, body: note.body };
 }
 
 export async function claimTask(
   ctx: ServiceContext,
   id: string,
   input: unknown = {},
-): Promise<Task> {
+): Promise<Task & { handoff?: DeliveredHandoff }> {
   const { leaseMinutes } = parseInput(ClaimTaskInput, input);
   return ctx.store.write(async (w) =>
     applyClaim(w, ctx, await mustGet(w, ctx, "task", id), leaseMinutes),
@@ -414,7 +533,7 @@ export async function takeOverTask(
   ctx: ServiceContext,
   id: string,
   input: unknown = {},
-): Promise<Task> {
+): Promise<Task & { handoff?: DeliveredHandoff }> {
   const { leaseMinutes } = parseInput(ClaimTaskInput, input);
   return ctx.store.write(async (w) => {
     let task = await mustGet(w, ctx, "task", id);
@@ -432,7 +551,7 @@ export async function takeOverTask(
 export async function claimNext(
   ctx: ServiceContext,
   input: unknown = {},
-): Promise<{ task: Task; acceptance: string[] }> {
+): Promise<{ task: Task & { handoff?: DeliveredHandoff }; acceptance: string[] }> {
   const { leaseMinutes } = parseInput(ClaimTaskInput, input);
   return ctx.store.write(async (w) => {
     const ready = await w.readyTasks(ctx.projectId, nowIso(ctx), 500);
@@ -451,29 +570,79 @@ export async function claimNext(
   });
 }
 
+/** A holder that wrote within this window is never called gone, whatever the process check says. */
+export const HOLDER_QUIET_MS = 60_000;
+/** When at least this many claims look gone at once, and most of them do, release none. */
+const MASS_GONE_MIN = 3;
+
+export interface ClaimHealth {
+  /** Live claims whose holder process has exited on this machine and has been quiet a minute. */
+  gone: Task[];
+  /**
+   * True when most probed holders looked gone at once, which points at the check (a container
+   * that cannot see the host's processes, say), not at that many agents dying. Nothing is gone.
+   */
+  tripped: boolean;
+  /** How many claims could be checked: they name a holder on this machine. */
+  probed: number;
+}
+
 /**
- * Clears claims whose lease has run out, so abandoned work returns to the pool: an
- * `in_progress` task goes back to `todo`; `review` and `blocked` tasks keep their status.
- * Writes only when something expired. Returns the released tasks.
+ * Which live claims belong to an agent whose process is gone. Only a definite "exited" from
+ * the process check counts; an unknown answer, another host or a recent write keeps the claim
+ * until its lease runs out.
+ */
+export function claimHealth(ctx: ServiceContext, tasks: readonly Task[]): ClaimHealth {
+  const probe = ctx.processes;
+  const now = ctx.clock.now().getTime();
+  const nowText = new Date(now).toISOString();
+  const quietSince = new Date(now - HOLDER_QUIET_MS).toISOString();
+  if (!probe) return { gone: [], tripped: false, probed: 0 };
+  let probed = 0;
+  const gone: Task[] = [];
+  for (const t of tasks) {
+    const c = t.claim;
+    if (!c?.holder || c.leaseUntil <= nowText) continue;
+    const alive = probe.alive(c.holder);
+    if (alive === null) continue;
+    probed++;
+    if (alive === false && c.heartbeatAt <= quietSince) gone.push(t);
+  }
+  if (gone.length >= MASS_GONE_MIN && gone.length * 2 > probed) {
+    return { gone: [], tripped: true, probed };
+  }
+  return { gone, tripped: false, probed };
+}
+
+/**
+ * Clears claims whose lease has run out, or whose holder process has exited (see
+ * `claimHealth`), so abandoned work returns to the pool: an `in_progress` task goes back to
+ * `todo`; `review` and `blocked` tasks keep their status. Writes only when something is
+ * released. Returns the released tasks.
  */
 export async function releaseExpiredClaims(ctx: ServiceContext): Promise<Task[]> {
   const now = nowIso(ctx);
   const expired = (t: Task) => t.claim !== null && t.claim.leaseUntil <= now;
-  const candidates = await ctx.store.read(async (r) =>
-    (
-      await r.list("task", ctx.projectId, {
-        status: ["in_progress", "review", "blocked"],
-        limit: 500,
-      })
-    ).filter(expired),
+  const active = await ctx.store.read(async (r) =>
+    r.list("task", ctx.projectId, {
+      status: ["in_progress", "review", "blocked"],
+      limit: 500,
+    }),
   );
+  const goneIds = new Set(claimHealth(ctx, active).gone.map((t) => t.id));
+  const candidates = active.filter((t) => expired(t) || goneIds.has(t.id));
   if (candidates.length === 0) return [];
   return ctx.store.write(async (w) => {
     const released: Task[] = [];
     for (const { id } of candidates) {
       // Re-read inside the transaction: the holder may have renewed since the check above.
       const before = await w.get("task", id);
-      if (!before || !expired(before)) continue;
+      const stillGone =
+        before?.claim != null &&
+        goneIds.has(id) &&
+        before.claim.heartbeatAt <=
+          new Date(ctx.clock.now().getTime() - HOLDER_QUIET_MS).toISOString();
+      if (!before || !(expired(before) || stillGone)) continue;
       const status = before.status === "in_progress" ? "todo" : before.status;
       released.push(
         await updateWithLog(w, ctx, "task", before, { status, claim: null }, { verb: "release" }),
@@ -514,15 +683,115 @@ function checkToken(task: Task, token: number | undefined, actorId: string): voi
   );
 }
 
-/** A fresh lease for the calling actor, defaulting to the project's lease length. */
-async function lease(r: StorageReader, ctx: ServiceContext, minutes?: number): Promise<Claim> {
+/**
+ * A fresh lease for the calling actor, defaulting to the project's lease length. It names this
+ * process as the holder when it is a long-lived one, else keeps the holder `prev` named.
+ */
+async function lease(
+  r: StorageReader,
+  ctx: ServiceContext,
+  minutes?: number,
+  prev?: Claim,
+): Promise<Claim> {
   const now = ctx.clock.now();
   const length = minutes ?? (await r.getProject())?.settings.leaseMinutes ?? DEFAULT_LEASE_MINUTES;
+  const holder = ctx.processes?.self ?? prev?.holder;
   return {
     actorId: ctx.actorId,
     leaseUntil: new Date(now.getTime() + length * 60_000).toISOString(),
     heartbeatAt: now.toISOString(),
+    ...(holder ? { holder: { ...holder } } : {}),
   };
+}
+
+/**
+ * Marks the caller's held tasks as waiting on a person, or clears that. The holder sets it;
+ * the holder or a person clears it (a person answered in the agent's session). Setting it is a
+ * holder write, so it renews the lease: an agent waiting on a person keeps its task.
+ */
+export async function markWaiting(ctx: ServiceContext, input: unknown): Promise<Task[]> {
+  const { taskId, waiting } = parseInput(WaitingInput, input);
+  return ctx.store.write(async (w) => {
+    const now = nowIso(ctx);
+    const caller = await w.get("actor", ctx.actorId);
+    const person = caller?.kind === "human";
+    const tasks = taskId
+      ? [await mustGet(w, ctx, "task", taskId)]
+      : (
+          await w.list("task", ctx.projectId, {
+            status: ["in_progress", "review", "blocked"],
+            limit: 500,
+          })
+        ).filter((t) => t.claim?.actorId === ctx.actorId && t.claim.leaseUntil > now);
+    const out: Task[] = [];
+    for (const t of tasks) {
+      const claim = t.claim;
+      const mine = claim?.actorId === ctx.actorId && claim.leaseUntil > now;
+      if (!claim || (!mine && (waiting !== null || !person))) {
+        if (taskId) {
+          throw new SatiError(
+            "CONFLICT",
+            waiting === null
+              ? `Only the holder or a person can mark task ${t.id} answered.`
+              : `Only the agent working on task ${t.id} can say it is waiting.`,
+          );
+        }
+        continue;
+      }
+      if (waiting === null && claim.waiting === undefined) {
+        out.push(t);
+        continue;
+      }
+      const { waiting: _old, ...rest } = claim;
+      const next: Claim = mine
+        ? { ...(await lease(w, ctx, undefined, claim)), token: claim.token }
+        : rest;
+      if (waiting) next.waiting = { ...waiting, since: claim.waiting?.since ?? now };
+      out.push(await updateWithLog(w, ctx, "task", t, { claim: next }));
+    }
+    return out;
+  });
+}
+
+/** The commit a task's branch points at now, read from git, for approving a review. */
+async function branchHeadOf(
+  ctx: ServiceContext,
+  taskId: string,
+): Promise<{ branch: string; head: string | null } | undefined> {
+  const task = await ctx.store.read((r) => r.get("task", taskId));
+  const branch = task?.completion?.branch;
+  if (!branch || !ctx.repo?.branchHead) return undefined;
+  return { branch, head: await ctx.repo.branchHead(branch) };
+}
+
+/** Where a task in review stands against its branch: whether commits landed after it was sent. */
+export interface ReviewDrift {
+  commit: string;
+  branch: string;
+  /** The branch's commit now; null when the branch is gone. */
+  head: string | null;
+  /** True when the branch points elsewhere than the commit the work was sent at. */
+  moved: boolean;
+}
+
+/** Review drift for each task that was finished at a known commit. Needs git; empty without it. */
+export async function reviewDrift(
+  ctx: ServiceContext,
+  tasks: readonly Task[],
+): Promise<Map<string, ReviewDrift>> {
+  const out = new Map<string, ReviewDrift>();
+  const branchHead = ctx.repo?.branchHead?.bind(ctx.repo);
+  if (!branchHead) return out;
+  const heads = new Map<string, string | null>();
+  for (const t of tasks) {
+    const c = t.completion;
+    if (!c?.commit || !c.branch) continue;
+    if (!heads.has(c.branch)) heads.set(c.branch, await branchHead(c.branch));
+    const head = heads.get(c.branch) ?? null;
+    const seen = c.approvedCommit ?? c.commit;
+    out.set(t.id, { commit: seen, branch: c.branch, head, moved: head !== null && head !== seen });
+  }
+  return out;
 }
 
 /**

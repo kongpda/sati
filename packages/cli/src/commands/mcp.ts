@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { CONFIG_DIR, readSettings } from "@sati/core";
 import { defineCommand } from "citty";
 import pkg from "../../package.json" with { type: "json" };
-import { openRuntime, printError } from "../runtime.js";
+import { openRuntime, printError, processProbe } from "../runtime.js";
 import { readTemplateFiles } from "../templates.js";
 
 /** Agents write in bursts; export once the burst is over. */
@@ -12,7 +12,10 @@ export default defineCommand({
   meta: { name: "mcp", description: "Serve the MCP tools over stdio (started by your agent)" },
   run: async () => {
     try {
-      const { ctx, project, location } = await openRuntime();
+      const rt = await openRuntime();
+      const { project, location } = rt;
+      // The MCP server lives as long as the agent session, so its claims name it as the holder.
+      const ctx = { ...rt.ctx, processes: processProbe(true) };
       // Loaded here so the MCP SDK never slows down the other commands.
       const { serveStdio } = await import("@sati/mcp");
       const { kind } = readSettings(project.settings);

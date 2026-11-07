@@ -1,0 +1,49 @@
+{
+  "body": "",
+  "branch": "main",
+  "claim": null,
+  "completion": {
+    "branch": "main",
+    "commit": "f4e824e2b89bd840e1ffc901d8b22a01ea15c01b",
+    "completedAt": "2026-11-08T04:57:18.491Z",
+    "completedBy": "actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "filesTouched": [
+      "packages/ui/src/app.tsx",
+      "packages/ui/src/board.tsx",
+      "packages/ui/src/forms.tsx",
+      "packages/ui/src/styles.css",
+      "packages/cli/test/ui-server.test.ts"
+    ],
+    "summary": "Wide screens pad the main area for the panel, outline the open card and scroll it into view; fieldset lists scroll in an inner element; lint cleared."
+  },
+  "createdAt": "2026-11-08T04:57:17.938Z",
+  "createdBy": "actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+  "deletedAt": null,
+  "dependsOn": [],
+  "featureId": null,
+  "id": "tsk_01M6WR96VKJFVXG265TH13JERQ",
+  "labels": [],
+  "parentId": null,
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "body": "2026-11-08T04:57:17.948Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "branch": "2026-11-08T04:57:18.224Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "claim": "2026-11-08T04:57:18.495Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "completion": "2026-11-08T04:57:18.495Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "deletedAt": "2026-11-08T04:57:17.948Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "dependsOn": "2026-11-08T04:57:17.948Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "featureId": "2026-11-08T04:57:17.948Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "labels": "2026-11-08T04:57:17.948Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "parentId": "2026-11-08T04:57:17.948Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "priority": "2026-11-08T04:57:17.948Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "status": "2026-11-08T04:57:18.495Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "title": "2026-11-08T04:57:17.948Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "worktree": "2026-11-08T04:57:18.224Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX"
+  },
+  "status": "review",
+  "title": "Task panel leaves room for the board; choice lists scroll under their legend",
+  "updatedAt": "2026-11-08T04:57:18.507Z",
+  "version": 3,
+  "worktree": "/home/user/workspace/repo"
+}

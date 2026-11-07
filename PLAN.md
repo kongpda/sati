@@ -614,6 +614,20 @@ Added 2026-11-07 at the owner's request, after a full review of core, store, CLI
 
 **Gate:** every open item above is fixed with a regression test, or moved to `docs/ideas.md` with a reason.
 
+### Phase 5c — Coordination signals (2026-11-07)
+
+Added 2026-11-07 at the owner's request, after reviewing [agent-orchestrator](https://github.com/OrchestratorInc/agent-orchestrator) at `049a10c9`. The owner asked to build all seven ideas from that review, so this phase starts before the Phase 5b gate closes. Every new field is optional, so existing records and `.sati/` files stay valid without a migration. Details are in `docs/progress.md`.
+
+- [x] Review pinned to a commit: `task_complete` records the branch and commit (`completion.commit`, `branch`); approving records `approvedCommit` and is refused when the branch moved past the commit the person approved; the brief, `sati review` and My work flag work whose branch moved after it was sent
+- [x] Waiting on a person: `claim.waiting` (`question` or `permission`) set by `task_update --needs-input`, `sati wait`, or the Claude Code `Notification` hook, and cleared by the holder's next write, the `UserPromptSubmit` hook or a person ("I answered"); a person's brief and My work show it under "Needs you"; `blocked` carries a `blockedReason`
+- [x] Overlap and conflict warnings without locks: the brief and the Stop nudge warn a claim holder about files another active worktree changed that no lock covers, and about conflicts with the base branch (`git merge-tree --write-tree`); `.sati/` is ignored
+- [x] Claims of stopped agents: the MCP server records its host (hashed) and PID on its claims; the brief and `doctor` release a claim whose process has exited and was quiet for a minute; an unknown answer never counts, and when most probed holders look stopped at once none are released
+- [x] Activity cursor: `sati activity --after <id>` returns rows in commit order; the UI's event stream sends activity ids and resumes from `Last-Event-ID`, so a reconnect with nothing missed refetches nothing
+- [x] Acknowledged handoffs: `sati handoff --to <actor>` and `--ack`; `task_claim` returns the unread handoff and marks it read; a rewrite is unread again; the brief lists "Handoffs for you"; the task panel shows who read it
+- [x] Worktree cleanup report: `sati doctor` lists linked worktrees that are clean, merged into the base and used by no open task, with a quoted `git worktree remove` command; it never removes one
+
+**Gate:** each item has a regression test that fails without it; `pnpm lint && pnpm typecheck && pnpm test` pass; the UI states are checked in a browser.
+
 ### Phase 6 — Hosted mode (deferred to v2)
 
 Deferred by the owner on 2026-11-07: v1 stays local-first. See `docs/progress.md`.

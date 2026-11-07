@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { ago, type Decision, type Milestone, type Note, type Snapshot } from "./api.js";
+import {
+  ago,
+  type Decision,
+  type Milestone,
+  type Note,
+  type Snapshot,
+  type Task,
+  waitingOn,
+} from "./api.js";
 import { Assignees, DecisionForm, MilestoneForm, NoteForm, PlanForm, PlanSelect } from "./forms.js";
 import { Markdown } from "./markdown.js";
 import { Avatar, nameOf, personName } from "./people.js";
@@ -625,6 +633,7 @@ export function TaskSheet({
           onTakeOver={() => onTakeOver(task.id)}
         />
       ) : null}
+      <TaskSignals data={data} task={task} />
       <form
         key={formKey.current.n}
         onSubmit={(e) => {
@@ -713,6 +722,56 @@ export function TaskSheet({
         </button>
       )}
     </aside>
+  );
+}
+
+/**
+ * What the task waits on and what came with it: the agent's question, why it is blocked, the
+ * handoff left on it, and whether its branch moved after it was sent for approval. Agent text
+ * is rendered as plain text, never as Markdown, because it is data.
+ */
+function TaskSignals({ data, task }: { data: Snapshot; task: Task }) {
+  const waiting = waitingOn(task);
+  const who = nameOf(data, task.claim?.actorId);
+  const handoff = data.notes.find((n) => n.tags.includes("handoff") && n.links.includes(task.id));
+  const drift = data.drift?.[task.id];
+  if (!waiting && !(task.status === "blocked") && !handoff && !drift?.moved) return null;
+  return (
+    <section className="signals" aria-label="What this task waits on">
+      {waiting ? (
+        <p className="asking">
+          <strong>
+            {waiting.kind === "permission" ? `${who} needs your permission` : `${who} asks`}
+          </strong>
+          <span className="quote">{waiting.text}</span>
+        </p>
+      ) : null}
+      {task.status === "blocked" ? (
+        <p className="asking">
+          <strong>Blocked</strong>
+          <span className="quote">{task.blockedReason || "No reason given."}</span>
+        </p>
+      ) : null}
+      {drift?.moved ? (
+        <p className="drift" role="note">
+          {drift.branch} has new commits since this was sent ({drift.commit.slice(0, 7)} →{" "}
+          {drift.head?.slice(0, 7)}).
+        </p>
+      ) : null}
+      {handoff ? (
+        <p className="handoff">
+          <strong>
+            Handoff from {nameOf(data, handoff.createdBy)}
+            {handoff.handoffTo ? ` for ${nameOf(data, handoff.handoffTo)}` : ""}
+          </strong>
+          <span className="meta">
+            {handoff.acknowledged
+              ? ` · read by ${nameOf(data, handoff.acknowledged.by)} ${ago(handoff.acknowledged.at)}`
+              : " · not read yet"}
+          </span>
+        </p>
+      ) : null}
+    </section>
   );
 }
 

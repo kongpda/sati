@@ -54,6 +54,8 @@ const DROP = new Set([
   "leaseUntil",
   "heartbeatAt",
   "token",
+  // Only the long-lived MCP server names its process as a claim's holder; a person in the UI has none.
+  "holder",
   // Milestones are numbered in creation order, so the second one made is always one later.
   "order",
 ]);

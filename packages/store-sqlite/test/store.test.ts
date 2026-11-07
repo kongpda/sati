@@ -415,6 +415,34 @@ describe("activity", () => {
       "act_01JC0000000000000000000001",
     ]);
   });
+
+  // A reader resuming from a cursor must see every later write once, even when another
+  // process's clock made its ids and times sort before rows it already read.
+  it("resumes after a cursor in commit order, not id or time order", async () => {
+    const mk = (n: number, at: string) => ({
+      id: `act_01JC000000000000000000000${n}`,
+      projectId: PROJECT_ID,
+      actorId: "actr_01JC0000000000000000000000",
+      verb: "create" as const,
+      entity: "task",
+      entityId: "tsk_01JC0000000000000000000001",
+      diff: {},
+      branch: null,
+      at,
+    });
+    await store.write((w) => w.appendActivity(mk(5, "2026-11-03T12:00:00.000Z")));
+    await store.write((w) => w.appendActivity(mk(3, "2026-11-03T11:00:00.000Z")));
+    await store.write((w) => w.appendActivity(mk(9, "2026-11-03T13:00:00.000Z")));
+    await store.write((w) => w.appendActivity(mk(1, "2026-11-03T10:00:00.000Z")));
+    const after = (id: string, limit?: number) =>
+      store.read((r) => r.listActivity(PROJECT_ID, { after: id, limit }));
+    expect((await after(mk(5, "").id)).map((a) => a.id.at(-1))).toEqual(["3", "9", "1"]);
+    expect((await after(mk(3, "").id, 1)).map((a) => a.id.at(-1))).toEqual(["9"]);
+    expect(await after(mk(1, "").id)).toEqual([]);
+    await expect(after("act_01JC0000000000000000000007")).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+  });
 });
 
 // Read budgets (150 ms p95) hold on large projects only if lists stop after `limit` rows

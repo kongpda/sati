@@ -33,6 +33,10 @@ scripts and agents do not break. This table maps one to the other; the board's w
 | Since my last visit | `--since last-session` | From your previous session's last write; for an agent, its previous session with the same name. |
 | Copy feature list | `sati feature list --format md` | Shipped features with their acceptance criteria, by plan. |
 | New plan | `sati template apply <name>`, MCP `roadmap_upsert` with `template` | A milestone and its tasks from a template (event, campaign, release, or `.sati/templates/<name>.md`). Each stage waits for the one before; due dates count back from the day. |
+| Needs you · "Codex asks" · I answered | `claim.waiting`, `sati wait`, `needsInput`, `POST …/answered` | An agent waits on a person for an answer or a permission. Answer it in the agent's session, then mark it answered. |
+| Blocked: "…" | `blockedReason`, `--status blocked --reason` | What a blocked task waits on. |
+| "has new commits since this was sent" · Approve latest | `completion.commit`, `approvedCommit` | The branch moved after the work was sent for approval; the approval records the commit you saw. |
+| Handoff · not read yet / read by | handoff note, `handoffTo`, `acknowledged`, `sati handoff --to / --ack` | Where the last agent stopped. The next claimer reads it once. |
 
 Times on the board are in your own time zone and clock style, with the full date in the
 tooltip. Due dates are calendar days ("by Friday") and never shift between time zones.

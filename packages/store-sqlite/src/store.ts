@@ -295,6 +295,30 @@ export class SqliteStore implements StorageAdapter {
       if (q.entityId) where.push(eq(a.entityId, q.entityId));
       if (q.actorId) where.push(eq(a.actorId, q.actorId));
       if (q.since) where.push(sql`${a.at} >= ${q.since}`);
+      if (q.after !== undefined) {
+        // Rows are appended inside the write transaction and writers queue, so rowid order is
+        // commit order. Ids and `at` come from each process's clock and can disagree with it.
+        // VACUUM may renumber rowids but keeps their order, and the cursor is looked up by id.
+        const cursor = this.orm
+          .select({ seq: sql<number>`rowid` })
+          .from(a)
+          .where(and(eq(a.id, q.after), eq(a.projectId, projectId)))
+          .get();
+        if (!cursor) {
+          throw new SatiError("NOT_FOUND", `No activity with id ${q.after}.`, {
+            hint: "Start again without a cursor; the row may have been compacted.",
+          });
+        }
+        where.push(sql`rowid > ${cursor.seq}`);
+        return this.orm
+          .select({ data: a.data })
+          .from(a)
+          .where(and(...where))
+          .orderBy(sql`rowid`)
+          .limit(clampLimit(q.limit))
+          .all()
+          .map((r) => JSON.parse(r.data) as Activity);
+      }
       const rows = this.orm
         .select({ data: a.data })
         .from(a)

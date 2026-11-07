@@ -1282,3 +1282,41 @@ notes only when the caller holds a task; handoffs stay out of it, as before.
   and `sourceSeen` stays free text; with staleness outside git it is now only for people.
 - PLAN "Try it on 3 real projects for 1 week" stays open: this was one simulated project in an
   afternoon, with the owner's real folders still to come.
+### Phase 5c: coordination signals (2026-11-07)
+
+- Started before the Phase 5b gate closed, at the owner's request ("add it all"). 5b's open
+  items stay open.
+- No schema migration: `claim.waiting`, `claim.holder`, `completion.commit|branch|approvedCommit`,
+  `blockedReason`, `note.handoffTo` and `note.acknowledged` are optional and written only once
+  set.
+- Commit order for the cursor is the SQLite `rowid` of the activity row, because writers queue
+  and append inside their transaction. Ids and `at` come from each process's clock and can sort
+  differently. `VACUUM` keeps rowid order. An unknown cursor is NOT_FOUND, and the UI then
+  starts over.
+- Stopped holders: only the MCP server names itself on a claim (`ProcessProbe.self`), because
+  a CLI command exits at once and would look dead. `kill(pid, 0)` returning `ESRCH` is the only
+  proof; `EPERM` counts as alive, and another host is unknown. The host is a SHA-256 prefix of
+  the hostname, since claims are exported to `.sati/`. Breaker: 3 or more stopped holders that
+  are also the majority of probed ones means the check is wrong (a container, another PID
+  namespace), so none are released and `doctor` says why.
+- Waiting: a person may clear another actor's wait; only the holder may set one. Setting it
+  renews the lease, so an agent waiting on a person keeps its task. The `Notification` hook
+  marks every task the caller holds; `UserPromptSubmit` clears them. Both hooks never block.
+- Review pin: the approval compares `approvedCommit` with the branch head read from git before
+  the transaction. Without `approvedCommit`, the approval records the head it happened at. The
+  board sends the head it showed, so a push between seeing and clicking is refused.
+- Overlaps read `git diff <base>...HEAD` plus `git status` per worktree, only for worktrees git
+  lists (`git worktree list`), so a task record cannot point sati at an arbitrary folder. Up to
+  10 worktrees and 20 overlaps; computed only for agents holding a claim. `.sati/` and untracked
+  folders are ignored: every agent's writes export to `.sati/`, which the first real-git test
+  caught.
+- Handoffs: reading your own unaddressed handoff back on a re-claim does not mark it read, so
+  the next agent still gets it.
+- The UI's "Needs you" says to answer in the agent's session: sati does not pass messages.
+  Agent text is rendered as plain text.
+- Checked in Chrome at 1280 px: My work (Needs you, review drift with "Approve latest"), board
+  card badges ("needs you", blocked reason), the task panel handoff box, and "I answered"
+  clearing a question without taking the claim. Seen but not changed: the open task panel
+  covers part of the board, and the "Assigned to" list in the panel clips its last row.
+- Not done: `sati rules sync` has not been run on this repo, so `.claude/skills/sati/SKILL.md`
+  still has the old workflow text.

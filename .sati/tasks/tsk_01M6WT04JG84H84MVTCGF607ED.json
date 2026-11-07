@@ -1,0 +1,49 @@
+{
+  "body": "",
+  "branch": "main",
+  "claim": null,
+  "completion": {
+    "branch": "main",
+    "commit": "e708d52518c32861db2ee2579f67e44fc7291a29",
+    "completedAt": "2026-11-08T05:34:14.104Z",
+    "completedBy": "actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "filesTouched": [
+      "packages/cli/src/hooks.ts",
+      "packages/cli/src/commands/init.ts",
+      "packages/cli/src/integrations.ts",
+      "packages/cli/test/hooks.test.ts",
+      "packages/cli/test/integrations.test.ts"
+    ],
+    "summary": "init holds back global core.hooksPath hooks (asks interactively, --yes skips), skips non-sh hooks, keeps .claude/settings.json key order, prints hook notes on first init"
+  },
+  "createdAt": "2026-11-08T05:27:17.839Z",
+  "createdBy": "actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+  "deletedAt": null,
+  "dependsOn": [],
+  "featureId": null,
+  "id": "tsk_01M6WT04JG84H84MVTCGF607ED",
+  "labels": [],
+  "parentId": null,
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "body": "2026-11-08T05:27:17.845Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "branch": "2026-11-08T05:27:18.069Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "claim": "2026-11-08T05:34:14.109Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "completion": "2026-11-08T05:34:14.109Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "deletedAt": "2026-11-08T05:27:17.845Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "dependsOn": "2026-11-08T05:27:17.845Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "featureId": "2026-11-08T05:27:17.845Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "labels": "2026-11-08T05:27:17.845Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "parentId": "2026-11-08T05:27:17.845Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "priority": "2026-11-08T05:27:17.845Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "status": "2026-11-08T05:34:14.109Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "title": "2026-11-08T05:27:17.845Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "worktree": "2026-11-08T05:27:18.069Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX"
+  },
+  "status": "review",
+  "title": "Phase 5b: init hooks (global core.hooksPath, non-sh hooks, settings key order)",
+  "updatedAt": "2026-11-08T05:34:14.121Z",
+  "version": 3,
+  "worktree": "/home/user/workspace/repo"
+}

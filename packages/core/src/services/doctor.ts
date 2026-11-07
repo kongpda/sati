@@ -3,6 +3,7 @@ import { findDependencyCycle } from "../domain/rules.js";
 import type { Task } from "../domain/schemas.js";
 import type { StorageReader } from "../ports/storage.js";
 import { listAll, nowIso, type ServiceContext } from "./context.js";
+import { claimHealth } from "./task.js";
 
 export interface DoctorCheck {
   name: string;
@@ -62,8 +63,8 @@ export async function linkProblems(
 }
 
 /**
- * Stale claims, locks whose lease has ended, tasks flagged needsReview, broken links, and the
- * private notes and cards that never leave this machine.
+ * Stale claims, claims whose agent has stopped, expired locks, tasks flagged needsReview, broken
+ * links, and the private notes and cards that never leave this machine.
  */
 export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> {
   const now = nowIso(ctx);
@@ -81,14 +82,34 @@ export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> 
     ],
   }));
   const stale = data.tasks.filter((t) => t.claim && t.claim.leaseUntil <= now);
+  const health = claimHealth(ctx, data.tasks);
   const expiredLocks = data.locks.filter((l) => l.leaseUntil <= now);
   const flagged = data.review;
-  return [
+  const claimProblems = [
+    stale.length > 0 ? `${stale.length} expired claim(s)` : "",
+    health.gone.length > 0
+      ? `${health.gone.length} claim(s) whose agent has stopped (${health.gone.map((t) => t.id).join(", ")})`
+      : "",
+  ].filter(Boolean);
+  const checks: DoctorCheck[] = [
     {
       name: "claims",
-      ok: stale.length === 0,
-      detail: stale.length === 0 ? "No expired claims." : `${stale.length} expired claim(s).`,
+      ok: claimProblems.length === 0,
+      detail:
+        claimProblems.length === 0
+          ? "No expired claims and no stopped agents."
+          : `${claimProblems.join("; ")}. The next brief releases them.`,
     },
+  ];
+  if (health.tripped) {
+    // Informational: nothing is released, so nothing is broken; the leases still run out.
+    checks.push({
+      name: "holders",
+      ok: true,
+      detail: `Most claim holders (${health.probed}) look stopped at once, so none were treated as stopped. This usually means the process check cannot see them (a container or another PID namespace); their leases still expire.`,
+    });
+  }
+  checks.push(
     {
       name: "locks",
       ok: expiredLocks.length === 0,
@@ -120,5 +141,65 @@ export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> 
           ? "Nothing is private; every note and card is shared through .sati/."
           : `${data.private.length} private item(s) stay on this machine only: ${data.private.slice(0, 5).join(", ")}${data.private.length > 5 ? ` …and ${data.private.length - 5} more` : ""}.`,
     },
-  ];
+  );
+  return checks;
+}
+
+/** A linked git worktree as the CLI reads it. */
+export interface LinkedWorktree {
+  path: string;
+  /** Its branch, or null when HEAD is detached. */
+  branch: string | null;
+  /** No staged, unstaged or untracked changes. */
+  clean: boolean;
+  /** Its HEAD is already in the base branch. */
+  merged: boolean;
+}
+
+/** A worktree that can be removed, and the command that removes it. */
+export interface RemovableWorktree {
+  path: string;
+  branch: string | null;
+  command: string;
+}
+
+/**
+ * Linked worktrees that are safe to remove: clean, merged into the base branch, and not the place
+ * of any open task or live claim. This only lists them; it never removes a worktree, and one with
+ * uncommitted work is never listed.
+ */
+export async function removableWorktrees(
+  ctx: ServiceContext,
+  worktrees: readonly LinkedWorktree[],
+): Promise<RemovableWorktree[]> {
+  const now = nowIso(ctx);
+  const { tasks, actors } = await ctx.store.read(async (r) => ({
+    tasks: await r.list("task", ctx.projectId, {
+      status: ["backlog", "todo", "in_progress", "review", "blocked"],
+      limit: 500,
+    }),
+    actors: await listAll(r, ctx, "actor"),
+  }));
+  const busy = new Set<string>();
+  for (const t of tasks) {
+    if (t.worktree) busy.add(`wt:${t.worktree}`);
+    if (t.branch) busy.add(`br:${t.branch}`);
+    const holder = t.claim && t.claim.leaseUntil > now ? t.claim.actorId : undefined;
+    const place = holder ? actors.find((a) => a.id === holder)?.worktree : undefined;
+    if (place) busy.add(`wt:${place}`);
+  }
+  return worktrees
+    .filter(
+      (w) =>
+        w.clean &&
+        w.merged &&
+        !busy.has(`wt:${w.path}`) &&
+        (w.branch === null || !busy.has(`br:${w.branch}`)),
+    )
+    .map((w) => ({
+      path: w.path,
+      branch: w.branch,
+      // Single quotes, so a path with `$` or a backtick cannot run anything when pasted.
+      command: `git worktree remove '${w.path.replaceAll("'", "'\\''")}'`,
+    }));
 }

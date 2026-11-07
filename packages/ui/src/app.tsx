@@ -55,6 +55,12 @@ const HIT_KINDS: Record<string, string> = {
   context: "Card",
 };
 
+/** The branch commit a person sees when approving, so a later push is not approved unseen. */
+function approvedCommit(data: Snapshot, id: string): { approvedCommit?: string } {
+  const head = data.drift?.[id]?.head;
+  return head ? { approvedCommit: head } : {};
+}
+
 export function App() {
   const query = useQuery({ queryKey: ["snapshot"], queryFn: api.snapshot });
   const client = useQueryClient();
@@ -114,10 +120,9 @@ export function App() {
 
   useEffect(() => {
     const source = new EventSource("/events");
-    source.onopen = () => {
-      setOffline(false);
-      void client.invalidateQueries({ queryKey: ["snapshot"] });
-    };
+    // No refetch on (re)connect: the server sends a message at once when anything was written
+    // since the last event this tab saw (Last-Event-ID), and stays quiet when nothing was.
+    source.onopen = () => setOffline(false);
     source.onerror = () => setOffline(true);
     source.onmessage = () => {
       const previous = client.getQueryData<Snapshot>(["snapshot"]);
@@ -218,7 +223,11 @@ export function App() {
       snap ? { ...snap, tasks: snap.tasks.map((t) => (t.id === id ? { ...t, status } : t)) } : snap,
     );
     try {
-      await api.patchTask(id, { status, expectedVersion: item.version });
+      await api.patchTask(id, {
+        status,
+        expectedVersion: item.version,
+        ...(status === "done" && current ? approvedCommit(current, id) : {}),
+      });
       await client.invalidateQueries({ queryKey: ["snapshot"] });
       return true;
     } catch (err) {
@@ -561,8 +570,19 @@ export function App() {
             onOpen={(id) => go(path, id)}
             onApprove={(t) =>
               void api
-                .patchTask(t.id, { status: "done", expectedVersion: t.version })
+                .patchTask(t.id, {
+                  status: "done",
+                  expectedVersion: t.version,
+                  // The commit shown: refused if the branch moves again before the click lands.
+                  ...approvedCommit(data, t.id),
+                })
                 .then(() => saved(`Approved ${t.title}.`))
+                .catch(fail)
+            }
+            onAnswered={(t) =>
+              void api
+                .answered(t.id)
+                .then(() => saved(`${t.title} no longer waits on you.`))
                 .catch(fail)
             }
             onSendBack={(t, reason) =>

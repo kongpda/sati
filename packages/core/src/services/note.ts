@@ -12,6 +12,7 @@ import {
   type ServiceContext,
   updateWithLog,
 } from "./context.js";
+import { acknowledgeHandoff } from "./handoff.js";
 
 const fields = Note.pick({ title: true, body: true, tags: true, links: true, pinned: true });
 /**
@@ -32,7 +33,11 @@ export const UpdateNoteInput = fields
   .partial()
   .extend(ExpectedVersion)
   .extend(Private)
-  .extend({ reviewed: z.literal(true).optional() });
+  .extend({
+    reviewed: z.literal(true).optional(),
+    /** Mark a handoff note read; see `acknowledgeHandoff` for who may. */
+    acknowledge: z.literal(true).optional(),
+  });
 export type CreateNoteInput = z.input<typeof CreateNoteInput>;
 
 /**
@@ -107,9 +112,16 @@ export async function updateNote(ctx: ServiceContext, id: string, input: unknown
   const {
     expectedVersion,
     reviewed,
+    acknowledge,
     private: hidden,
     ...patch
   } = parseInput(UpdateNoteInput, input);
+  if (acknowledge) {
+    if (Object.keys(patch).length > 0 || reviewed || hidden !== undefined) {
+      throw new SatiError("VALIDATION", "Acknowledge a handoff on its own, without other changes.");
+    }
+    return acknowledgeHandoff(ctx, id);
+  }
   refuseSecrets("note", patch);
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "note", id);

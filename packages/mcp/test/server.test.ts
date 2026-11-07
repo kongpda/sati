@@ -17,6 +17,7 @@ import {
   updateSettings,
   updateTask,
   WORKFLOW,
+  writeHandoff,
 } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -582,6 +583,34 @@ describe("MCP server", () => {
     const res = await client.getPrompt({ name: "start-task", arguments: { taskId: "tsk_abc123" } });
     const msg = res.messages[0]?.content as { text: string };
     expect(msg.text).toContain("task_claim with id tsk_abc123");
+  });
+
+  // PLAN Phase 5c: the coordination fields reach agents through the existing tools.
+  it("asks a person through task_update and hands off through task_claim", async () => {
+    const client = await connect();
+    const created = await call(client, "task_create", { title: "Choose a host" });
+    const claimed = await call(client, "task_claim", { id: created.body.id });
+    const token = claimed.body.claim.token;
+    const asked = await call(client, "task_update", {
+      id: created.body.id,
+      token,
+      needsInput: "Fly or Render?",
+    });
+    expect(asked.body.claim.waiting).toMatchObject({ kind: "question", text: "Fly or Render?" });
+    const person = await ensureActor(ctx, { name: "dara", kind: "human" });
+    // The brief is Markdown, not JSON, so it is read as text.
+    const res = await (await connect({ ...ctx, actorId: person.id })).callTool({
+      name: "sati_brief",
+      arguments: {},
+    });
+    expect((res.content as { text: string }[])[0]?.text).toContain("asks: Fly or Render?");
+
+    await updateTask(ctx, created.body.id, { token, status: "todo" });
+    const next = await ensureActor(ctx, { name: "codex@b", kind: "agent", tool: "codex" });
+    await writeHandoff(ctx, { taskId: created.body.id, next: "Ask Dara about the host" });
+    const other = await connect({ ...ctx, actorId: next.id });
+    const taken = await call(other, "task_claim", { id: created.body.id });
+    expect(taken.body.handoff.body).toContain("Ask Dara about the host");
   });
 
   // Why: the server announced a hard-coded version, so clients saw a stale number after a release.

@@ -26,7 +26,11 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
 ## While working
 - `task_update` to record progress, tick the checklist or change status. Any write you make
   renews your lease.
-- If you stop without finishing, move the task back to `todo` so others can take it.
+- If you stop without finishing, write `sati handoff <task> --next "…"`, then move the task back
+  to `todo`. The next claimer gets the handoff with its `task_claim` result.
+- Stuck on a person: `task_update` with `needsInput: "the question"` (or `sati wait "…"`). The
+  task shows under "Needs you" until your next write. Moving a task to `blocked` takes a
+  `reason` saying what it waits on.
 
 ## Record what you learn
 - `note_upsert` for knowledge worth keeping: facts, contacts, research, meeting notes. Tag it

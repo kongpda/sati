@@ -9,12 +9,14 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { homedir, userInfo } from "node:os";
+import { homedir, hostname, userInfo } from "node:os";
 import { dirname, join } from "node:path";
 import {
   type Actor,
   actorIdentity,
+  type BaseConflicts,
   CLI_NAME,
+  type ClaimHolder,
   CONFIG_DIR,
   CONFIG_FILE,
   createIdFactory,
@@ -24,6 +26,7 @@ import {
   initProject,
   isSatiError,
   listAll,
+  type ProcessProbe,
   type Project,
   type ProjectKind,
   type RepoFile,
@@ -47,6 +50,7 @@ import {
   socketPath as socketPathFor,
   standaloneDbPath,
 } from "@sati/store-sqlite";
+import { defaultBase } from "./git.js";
 import { runHint } from "./install.js";
 
 export interface Runtime {
@@ -140,6 +144,24 @@ export function gitRepoIndex(root: string): RepoIndex {
         return null; // no commits yet
       }
     },
+    branchHead: async (branch) => {
+      try {
+        // `--end-of-options` and the refs/heads/ prefix: a branch name is never an option or a SHA.
+        return (
+          git(
+            "rev-parse",
+            "--verify",
+            "-q",
+            "--end-of-options",
+            `refs/heads/${branch}^{commit}`,
+          ).trim() || null
+        );
+      } catch {
+        return null; // the branch is gone
+      }
+    },
+    changedFiles: async (worktree) => changedFiles(root, worktree),
+    baseConflicts: async () => baseConflicts(root),
   };
 }
 
@@ -184,6 +206,107 @@ export function folderIndex(root: string): RepoIndex {
     },
     head: async () => null,
   };
+}
+
+const gitIn = (cwd: string, args: string[]): string =>
+  execFileSync("git", args, {
+    cwd,
+    encoding: "utf8",
+    maxBuffer: LS_FILES_BUFFER,
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+
+/** Paths of the linked worktrees of the repo at `root`, from `git worktree list --porcelain -z`. */
+export function worktreePaths(root: string): { path: string; branch: string | null }[] {
+  const out: { path: string; branch: string | null }[] = [];
+  let current: { path: string; branch: string | null } | undefined;
+  for (const field of gitIn(root, ["worktree", "list", "--porcelain", "-z"]).split("\0")) {
+    if (field.startsWith("worktree ")) {
+      current = { path: field.slice(9), branch: null };
+      out.push(current);
+    } else if (field.startsWith("branch refs/heads/") && current) {
+      current.branch = field.slice(18);
+    }
+  }
+  return out;
+}
+
+/**
+ * What a worktree of this repo changed against the base branch: committed since the merge-base,
+ * staged, unstaged and untracked. Null for a path that is not one of the repo's worktrees, so a
+ * task record cannot make sati read an arbitrary folder.
+ */
+function changedFiles(root: string, worktree: string): string[] | null {
+  try {
+    if (!worktreePaths(root).some((w) => w.path === worktree)) return null;
+    const files = new Set<string>();
+    const base = defaultBase(worktree);
+    if (base) {
+      const committed = gitIn(worktree, [
+        "diff",
+        "--name-only",
+        "-z",
+        "--end-of-options",
+        `${base}...HEAD`,
+      ]);
+      for (const f of committed.split("\0")) if (f) files.add(f);
+    }
+    for (const change of dirtyFromPorcelain(gitIn(worktree, ["status", "--porcelain=v1", "-z"]))) {
+      files.add(change.path);
+    }
+    return [...files];
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Files where HEAD would conflict with the base branch, from `git merge-tree --write-tree`
+ * (git 2.38+), which merges in memory and touches neither the index nor the worktree.
+ * Null when there is no base, git is older, or it fails for another reason.
+ */
+function baseConflicts(root: string): BaseConflicts | null {
+  const base = defaultBase(root);
+  if (!base) return null;
+  const args = ["merge-tree", "--write-tree", "--name-only", "--no-messages", "-z", base, "HEAD"];
+  let out: string;
+  try {
+    out = gitIn(root, args);
+  } catch (err) {
+    // Exit 1 means "merged with conflicts", and the output still lists them.
+    const e = err as { status?: number; stdout?: string };
+    if (e.status !== 1 || typeof e.stdout !== "string") return null;
+    out = e.stdout;
+  }
+  // Tree id, then each conflicted path once per stage it appears in.
+  const [, ...paths] = out.split("\0").filter(Boolean);
+  return { base, files: [...new Set(paths)] };
+}
+
+/**
+ * Process checks for claim holders. A process on this host is alive while `kill(pid, 0)`
+ * succeeds or is refused for permission; `ESRCH` is the one answer that proves it has exited.
+ * Another host, or any other error, is unknown. `self` names this process for long-lived
+ * servers only (see ProcessProbe).
+ */
+export function processProbe(long: boolean): ProcessProbe {
+  // Claims are exported to `.sati/` and committed, so the machine is named by a hash, not by name.
+  const host = `h:${createHash("sha256").update(hostname()).digest("hex").slice(0, 16)}`;
+  const probe: ProcessProbe = {
+    alive: (holder: ClaimHolder) => {
+      if (holder.host !== host) return null;
+      try {
+        process.kill(holder.pid, 0);
+        return true;
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code === "EPERM") return true;
+        return code === "ESRCH" ? false : null;
+      }
+    },
+  };
+  if (long) probe.self = { host, pid: process.pid };
+  return probe;
 }
 
 async function resolveLocation(cwd: string): Promise<DbLocation> {
@@ -290,7 +413,12 @@ export async function openRuntime(cwd: string = process.cwd()): Promise<Runtime>
   };
   const identity = actorIdentity({ env: process.env, worktree: location.root, user: osUser() });
   const actor = await ensureActor({ ...deps, projectId: project.id }, identity);
-  const ctx: ServiceContext = { ...deps, projectId: project.id, actorId: actor.id };
+  const ctx: ServiceContext = {
+    ...deps,
+    projectId: project.id,
+    actorId: actor.id,
+    processes: processProbe(false),
+  };
   ctx.repo =
     location.mode === "standalone" ? folderIndex(location.root) : gitRepoIndex(location.root);
   return { ctx, project, actor, location };

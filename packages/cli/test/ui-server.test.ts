@@ -7,6 +7,7 @@ import {
   createTask,
   ensureActor,
   initProject,
+  markWaiting,
   systemClock,
 } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
@@ -191,6 +192,65 @@ describe("ui server", () => {
     const second = await next();
     await reader.cancel();
     expect(second).not.toBe(first);
+  });
+
+  // PLAN Phase 5c: a browser that reconnects with nothing missed is not told to refetch the board,
+  // and one that missed a write is.
+  it("resumes the event stream from Last-Event-ID", async () => {
+    const cookie = cookieOf(await app.request(`http://127.0.0.1/session?token=${token}`));
+    const open = async (lastEventId?: string) => {
+      const headers: Record<string, string> = { cookie };
+      if (lastEventId) headers["last-event-id"] = lastEventId;
+      const res = await app.request("http://127.0.0.1/events", { headers });
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("no event stream");
+      return async () => {
+        const text = new TextDecoder().decode((await reader.read()).value);
+        return { text, id: /^id: (\S+)$/m.exec(text)?.[1], stop: () => reader.cancel() };
+      };
+    };
+    const first = await (await open())();
+    expect(first.id).toMatch(/^act_/);
+    await first.stop();
+
+    // Nothing written since: the first message to arrive is the next write, not a replay.
+    const quiet = await open(first.id);
+    // Through the API, as another tab would; the server counts its own writes.
+    await app.request("http://127.0.0.1/api/tasks", {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({ title: "Written while connected" }),
+    });
+    const after = await quiet();
+    expect(after.id).not.toBe(first.id);
+    await after.stop();
+
+    // A write while disconnected arrives at once, with the newer id.
+    await createTask(ctx, { title: "Written while away" });
+    const missed = await (await open(after.id))();
+    expect(missed.id).not.toBe(after.id);
+    await missed.stop();
+  });
+
+  // PLAN Phase 5c: the person answers an agent's question from the board.
+  it("marks an agent's question answered without taking its claim", async () => {
+    const agent = await ensureActor(ctx, { name: "codex@q", kind: "agent", tool: "codex" });
+    const task = await createTask(ctx, { title: "Pick a colour" });
+    const as = { ...ctx, actorId: agent.id };
+    const claimed = await claimTask(as, task.id);
+    await markWaiting(as, { taskId: task.id, waiting: { text: "Red or blue?" } });
+    const cookie = cookieOf(await app.request(`http://127.0.0.1/session?token=${token}`));
+    const res = await app.request(`http://127.0.0.1/api/tasks/${task.id}/answered`, {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: "{}",
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      claim: { actorId: string; token: number; waiting?: unknown };
+    };
+    expect(body.claim).toMatchObject({ actorId: agent.id, token: claimed.claim?.token });
+    expect(body.claim.waiting).toBeUndefined();
   });
 
   // PLAN Phase 5b: the person at the board takes over an agent's task, then edits it.

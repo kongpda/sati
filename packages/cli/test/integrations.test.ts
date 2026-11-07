@@ -161,6 +161,8 @@ describe("agent file planning", () => {
           { matcher: "Edit|MultiEdit|Write|NotebookEdit", hooks: run("guard --hook") },
           { matcher: "Bash", hooks: run("guard --hook") },
         ],
+        Notification: [{ hooks: run("wait --hook") }],
+        UserPromptSubmit: [{ hooks: run("wait --hook") }],
       },
       env: theirs.env,
       permissions: { deny: ["Bash(git commit --no-verify:*)", "Bash(git commit -n:*)"] },

@@ -12,7 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef, useState } from "react";
-import { type Actor, ago, COLUMNS, dueLabel, type Feature, type Task } from "./api.js";
+import { type Actor, ago, COLUMNS, dueLabel, type Feature, type Task, waitingOn } from "./api.js";
 import { Avatar } from "./people.js";
 import { capital, fullTime } from "./words.js";
 
@@ -292,6 +292,11 @@ function CardBody({
       <div className="meta">
         <span className="meta-text">
           {fresh ? <span className="new-badge">new</span> : null}
+          {waitingOn(task) ? (
+            <span className="needs-badge" title={waitingOn(task)?.text}>
+              needs you
+            </span>
+          ) : null}
           <time dateTime={task.updatedAt} title={fullTime(task.updatedAt)}>
             {ago(task.updatedAt)}
           </time>
@@ -306,6 +311,11 @@ function CardBody({
             </>
           ) : null}
           {steps.length ? ` · ${steps.filter((c) => c.done).length}/${steps.length} steps` : ""}
+          {task.status === "blocked" && task.blockedReason ? (
+            <span className="blocked-reason" title={task.blockedReason}>
+              {` · blocked: ${task.blockedReason.length > 60 ? `${task.blockedReason.slice(0, 59)}…` : task.blockedReason}`}
+            </span>
+          ) : null}
           {/* A plan's later stages sit in To do from the start; say which ones cannot start yet. */}
           {waiting > 0 && task.status === "todo" ? (
             <span className="waits">

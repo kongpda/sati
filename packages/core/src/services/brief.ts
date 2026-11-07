@@ -9,8 +9,10 @@ import { type ChangeItem, lastSession, readChanges } from "./changes.js";
 import { COMMENT_TAG, isThreadNote } from "./comment.js";
 import { actorName, listAll, nowIso, parseInput, type ServiceContext } from "./context.js";
 import { getContext } from "./context-cache.js";
-import { HANDOFF_TAG, handoffNext } from "./handoff.js";
-import { releaseExpiredClaims } from "./task.js";
+import { handoffNext, unreadHandoff } from "./handoff.js";
+import { warningLines, worktreeWarnings } from "./overlap.js";
+import { readSettings } from "./project.js";
+import { releaseExpiredClaims, reviewDrift } from "./task.js";
 
 /** PLAN: the brief stays under 1,500 tokens so it is cheap to inject at every session start. */
 export const BRIEF_TOKEN_CAP = 1_500;
@@ -106,6 +108,8 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
     // A short brief reads notes only for the latest comment on your tasks, so a resumed agent
     // still hears "use the blue logo"; with no claimed task there is nothing to read them for.
     const notes = short && mine.length === 0 ? [] : await listAll(r, ctx, "note");
+    // Unread handoffs only: an acknowledged one has been delivered and drops out of the brief.
+    const unread = notes.filter(unreadHandoff);
     const handoffs = new Map<string, string>();
     // The newest comment by someone else on each record: a person's "use the blue logo" reaches
     // the agent. The caller's own replies are left out; they already know what they said.
@@ -121,11 +125,14 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
         if (!seen || older) comments.set(link, note);
       }
     }
-    // Handoffs stay out of the short brief, as before: it lists no task's history.
-    for (const note of short ? [] : notes) {
-      if (!note.tags.includes(HANDOFF_TAG)) continue;
+    for (const note of unread) {
+      if (short || (note.handoffTo !== undefined && note.handoffTo !== ctx.actorId)) continue;
       const next = handoffNext(note.body);
       for (const link of note.links) if (next) handoffs.set(link, next);
+    }
+    const forMe = [];
+    for (const note of unread.filter((n) => n.handoffTo === ctx.actorId)) {
+      forMe.push({ note, from: await actorName(r, note.createdBy) });
     }
     // Knowledge: pinned notes (brand voice, policies, contacts), newest first, and the cards
     // tied to my tasks, through their feature's paths or a label shared with the card's tags.
@@ -142,12 +149,26 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
           owned.some((p) => pathsOverlap(p, c.path)) || (c.tags ?? []).some((t) => labels.has(t)),
       )
       .slice(0, LINKED_CARDS);
-    const waiting =
-      actor?.kind === "human"
-        ? (await r.list("task", ctx.projectId, { status: ["review"], limit: 500 })).filter(
-            (t) => t.claim === null || t.claim.leaseUntil <= now,
-          )
-        : [];
+    const person = actor?.kind === "human";
+    const waiting = person
+      ? (await r.list("task", ctx.projectId, { status: ["review"], limit: 500 })).filter(
+          (t) => t.claim === null || t.claim.leaseUntil <= now,
+        )
+      : [];
+    // What agents wait on a person for: a question or a permission prompt, then blocked tasks.
+    const needs = [];
+    if (person) {
+      for (const t of active) {
+        const c = t.claim;
+        const asking = c?.waiting && c.leaseUntil > now ? c.waiting : undefined;
+        if (asking) needs.push({ task: t, who: await actorName(r, c?.actorId ?? ""), asking });
+      }
+      for (const t of active) {
+        if (t.status === "blocked" && !needs.some((n) => n.task.id === t.id)) {
+          needs.push({ task: t, who: "", asking: undefined });
+        }
+      }
+    }
     // What others did since your last session; your own work you already know.
     const others: (ChangeItem & { who: string })[] = [];
     let othersTotal = 0;
@@ -177,9 +198,18 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       allFeatures,
       handoffs,
       comments,
+      forMe,
       waiting,
+      needs,
     };
   });
+  const code = readSettings(data.project?.settings).kind !== "general";
+  // Collisions matter to an agent holding work; git is read only then, to keep the brief fast.
+  const warnings =
+    code && data.mine.length > 0 && data.actor?.kind === "agent"
+      ? warningLines(await worktreeWarnings(ctx))
+      : [];
+  const drift = await reviewDrift(ctx, data.waiting);
 
   // A glob that matches nothing is a stale feature path. `sati doctor` repeats this in Phase 5.
   const withPaths = data.allFeatures.some((f) => f.paths.length > 0);
@@ -253,9 +283,37 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       items: mine,
     },
     {
+      title: "Needs you",
+      empty: null,
+      items: data.needs.map(({ task, who, asking }) => {
+        const what = asking
+          ? `${clip(who, 60)} ${asking.kind === "permission" ? "needs a permission" : "asks"}: ${clip(asking.text, 200)}`
+          : `blocked: ${clip(task.blockedReason ?? "no reason given", 200)}`;
+        return `${taskLine(task)}\n  \`\`\`data\n  ${what}\n  \`\`\``;
+      }),
+    },
+    {
+      title: "Handoffs for you",
+      empty: null,
+      items: data.forMe.map(
+        ({ note, from }) =>
+          `- ${shortHandle(note.id)} from ${clip(from, 60)} on ${note.links.map(shortHandle).join(", ")}\n  \`\`\`data\n  ${clip(handoffNext(note.body) || note.title, 200)}\n  \`\`\``,
+      ),
+    },
+    {
+      title: "Watch out (before you commit)",
+      empty: null,
+      items: warnings.map((line) => `- ${clip(line, 240)}`),
+    },
+    {
       title: "Waiting for review",
       empty: null,
-      items: data.waiting.map((t) => taskLine(t)),
+      items: data.waiting.map((t) =>
+        taskLine(
+          t,
+          drift.get(t.id)?.moved ? " (the branch changed after it was sent; look again)" : "",
+        ),
+      ),
     },
     {
       title: short ? "Ready (top 3)" : "Ready (top 5)",

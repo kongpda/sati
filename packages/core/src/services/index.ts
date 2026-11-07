@@ -12,6 +12,7 @@ export * from "./handoff.js";
 export * from "./lock.js";
 export * from "./milestone.js";
 export * from "./note.js";
+export * from "./overlap.js";
 export * from "./plan.js";
 export * from "./project.js";
 export * from "./query.js";

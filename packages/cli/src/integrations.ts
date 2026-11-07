@@ -171,12 +171,13 @@ const LOCAL_HOOK_BIN = `"$CLAUDE_PROJECT_DIR"/${LOCAL_BIN}`;
 const isOurHook = (command: string | undefined) =>
   command !== undefined &&
   [CLI_NAME, LOCAL_HOOK_BIN].some((bin) =>
-    ["brief", "guard", "nudge"].some((sub) => command.startsWith(`${bin} ${sub}`)),
+    ["brief", "guard", "nudge", "wait"].some((sub) => command.startsWith(`${bin} ${sub}`)),
   );
 
 /**
  * Claude Code hooks: the brief at session start (short after resume and compaction), the guard
- * before edits, a nudge at stop.
+ * before edits, a nudge at stop. A notification (a permission prompt or a question) marks the
+ * agent's tasks as waiting on a person, and the person's next prompt clears that.
  */
 function claudeHooks(local: boolean): Record<string, HookGroup[]> {
   const bin = local ? LOCAL_HOOK_BIN : CLI_NAME;
@@ -191,6 +192,8 @@ function claudeHooks(local: boolean): Record<string, HookGroup[]> {
       { matcher: "Bash", hooks: run("guard --hook") },
     ],
     Stop: [{ hooks: run("nudge") }],
+    Notification: [{ hooks: run("wait --hook") }],
+    UserPromptSubmit: [{ hooks: run("wait --hook") }],
   };
 }
 

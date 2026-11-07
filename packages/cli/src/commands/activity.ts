@@ -9,6 +9,10 @@ export default defineCommand({
     actor: { type: "string", description: "Actor id or name" },
     task: { type: "string", description: "Task id or handle" },
     since: { type: "string", description: "UTC time, inclusive" },
+    after: {
+      type: "string",
+      description: "Only rows written after this activity id, oldest first (a cursor)",
+    },
     limit: { type: "string", description: "Max rows (default 50)" },
     ...json,
   },
@@ -23,6 +27,7 @@ export default defineCommand({
             actorId,
             entityId,
             since: args.since,
+            after: args.after,
             limit: int(args.limit, "limit"),
           }),
         );

@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from "react";
-import { dueLabel, type Snapshot, type Task, today } from "./api.js";
+import { dueLabel, type Snapshot, type Task, today, waitingOn } from "./api.js";
 import { nameOf } from "./people.js";
 import { statusWord } from "./words.js";
 
@@ -21,25 +21,30 @@ function byDue(a: Task, b: Task): number {
 }
 
 /**
- * The three lists a person starts the day with. Each task shows once, in the first list it fits:
- * waiting for approval (in review, assigned to you or to nobody), then assigned to you, then due
- * by Sunday (late ones included), so the same task never asks for attention twice.
+ * The lists a person starts the day with. Each task shows once, in the first list it fits:
+ * needs you (an agent asks a question or waits for a permission, or the task is blocked), then
+ * waiting for approval (in review), both for tasks assigned to you or to nobody; then assigned to
+ * you, then due by Sunday (late ones included), so the same task never asks for attention twice.
  */
 export function myWork(data: Snapshot, now = new Date()) {
   const you = data.you;
   const open = data.tasks.filter((t) => !CLOSED.has(t.status));
-  const approval = open.filter(
-    (t) =>
-      t.status === "review" && ((t.assigneeIds ?? []).length === 0 || t.assigneeIds?.includes(you)),
-  );
-  const shown = new Set(approval.map((t) => t.id));
+  const yours = (t: Task) => (t.assigneeIds ?? []).length === 0 || t.assigneeIds?.includes(you);
+  const asking = open
+    .filter((t) => yours(t) && waitingOn(t, now.getTime()))
+    .sort((a, b) => ((a.claim?.waiting?.since ?? "") < (b.claim?.waiting?.since ?? "") ? -1 : 1));
+  const blocked = open.filter((t) => yours(t) && t.status === "blocked" && !asking.includes(t));
+  const needs = [...asking, ...blocked];
+  const shown = new Set(needs.map((t) => t.id));
+  const approval = open.filter((t) => !shown.has(t.id) && t.status === "review" && yours(t));
+  for (const t of approval) shown.add(t.id);
   const assigned = open.filter((t) => !shown.has(t.id) && t.assigneeIds?.includes(you)).sort(byDue);
   for (const t of assigned) shown.add(t.id);
   const end = weekEnd(now);
   const due = open
     .filter((t) => !shown.has(t.id) && t.dueDate != null && t.dueDate <= end)
     .sort(byDue);
-  return { approval, assigned, due, end };
+  return { needs, approval, assigned, due, end };
 }
 
 export function MyWork({
@@ -47,14 +52,17 @@ export function MyWork({
   onOpen,
   onApprove,
   onSendBack,
+  onAnswered,
 }: {
   data: Snapshot;
   onOpen: (id: string) => void;
   onApprove: (task: Task) => void;
+  /** The person answered the agent where it runs; the task stops asking. */
+  onAnswered: (task: Task) => void;
   /** Rejects when refused, so the reason typed stays in the box. */
   onSendBack: (task: Task, reason: string) => Promise<unknown>;
 }) {
-  const { approval, assigned, due, end } = myWork(data);
+  const { needs, approval, assigned, due, end } = myWork(data);
   const [y, m, d] = end.split("-").map(Number);
   const sunday = new Date(y ?? 0, (m ?? 1) - 1, d ?? 1).toLocaleDateString([], {
     weekday: "long",
@@ -64,6 +72,13 @@ export function MyWork({
   return (
     <div className="page">
       <h1>My work</h1>
+      {needs.length ? (
+        <Section title="Needs you" count={needs.length} empty="">
+          {needs.map((t) => (
+            <Needs key={t.id} data={data} task={t} onOpen={onOpen} onAnswered={onAnswered} />
+          ))}
+        </Section>
+      ) : null}
       <Section
         title="Waiting for your approval"
         count={approval.length}
@@ -168,6 +183,55 @@ function Row({
   );
 }
 
+/**
+ * What an agent waits on a person for, in its own words, and where to answer: in the agent's
+ * session, since sati does not pass messages. "Answered" clears it here once that is done.
+ */
+function Needs({
+  data,
+  task,
+  onOpen,
+  onAnswered,
+}: {
+  data: Snapshot;
+  task: Task;
+  onOpen: (id: string) => void;
+  onAnswered: (task: Task) => void;
+}) {
+  const waiting = waitingOn(task);
+  const who = nameOf(data, task.claim?.actorId);
+  return (
+    <Row data={data} task={task} onOpen={onOpen}>
+      {waiting ? (
+        <>
+          <p className="asking">
+            <strong>
+              {waiting.kind === "permission" ? `${who} needs your permission` : `${who} asks`}
+            </strong>
+            {/* The agent's text is data: rendered as text, never as Markdown or HTML. */}
+            <span className="quote">{waiting.text}</span>
+          </p>
+          <p className="hint">Answer in {who}'s session, then mark it answered here.</p>
+          <div className="approval-actions">
+            <button
+              type="button"
+              aria-label={`${task.title}: I answered`}
+              onClick={() => onAnswered(task)}
+            >
+              I answered
+            </button>
+          </div>
+        </>
+      ) : (
+        <p className="asking">
+          <strong>Blocked</strong>
+          <span className="quote">{task.blockedReason || "No reason given."}</span>
+        </p>
+      )}
+    </Row>
+  );
+}
+
 /** A task in review: what was done and by whom, with Approve or Send back (which needs a why). */
 function Approval({
   data,
@@ -185,6 +249,7 @@ function Approval({
   const [sending, setSending] = useState(false);
   const by = task.completion ? nameOf(data, task.completion.completedBy) : null;
   const files = task.completion?.filesTouched.length ?? 0;
+  const drift = data.drift?.[task.id];
   return (
     <Row data={data} task={task} onOpen={onOpen}>
       {task.completion ? (
@@ -192,6 +257,12 @@ function Approval({
           {by ? `${by}: ` : ""}
           {task.completion.summary}
           {files ? ` (${files} file${files === 1 ? "" : "s"})` : ""}
+        </p>
+      ) : null}
+      {drift?.moved ? (
+        <p className="drift" role="note">
+          {drift.branch} has new commits since this was sent ({drift.commit.slice(0, 7)} →{" "}
+          {drift.head?.slice(0, 7)}). Look at them before you approve.
         </p>
       ) : null}
       {sending ? (
@@ -228,7 +299,7 @@ function Approval({
             aria-label={`Approve ${task.title}`}
             onClick={() => onApprove(task)}
           >
-            Approve
+            {drift?.moved ? "Approve latest" : "Approve"}
           </button>
           <button
             type="button"

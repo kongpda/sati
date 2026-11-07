@@ -214,7 +214,18 @@ const update = defineCommand({
     ...expectedVersion,
     ...token,
     reviewed: { type: "boolean", description: "Clear needsReview" },
-    reason: { type: "string", description: "Why a review task is going back to todo" },
+    reason: {
+      type: "string",
+      description: "Why a review task goes back to todo, or what a blocked task waits on",
+    },
+    "needs-input": {
+      type: "string",
+      description: "Ask a person this question; your next write clears it",
+    },
+    "approved-commit": {
+      type: "string",
+      description: "Approving: the commit you looked at; refused if the branch moved since",
+    },
     ...json,
   },
   run: ({ args }) =>
@@ -223,6 +234,8 @@ const update = defineCommand({
       async ({ ctx }) => {
         const taskId = await resolveId(ctx, "task", args.id);
         return updateTask(ctx, taskId, {
+          needsInput: args["needs-input"],
+          approvedCommit: args["approved-commit"],
           title: args.title,
           body: args.body,
           status: args.status,

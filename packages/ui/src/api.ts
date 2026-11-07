@@ -1,6 +1,8 @@
 export interface Claim {
   actorId: string;
   leaseUntil: string;
+  /** The agent is stuck until a person answers its question or allows what its tool asked. */
+  waiting?: { kind: "question" | "permission"; text: string; since: string };
 }
 
 export interface Task {
@@ -14,7 +16,16 @@ export interface Task {
   updatedAt: string;
   claim: Claim | null;
   needsReview?: boolean;
-  completion: { summary: string; filesTouched: string[]; completedBy: string } | null;
+  completion: {
+    summary: string;
+    filesTouched: string[];
+    completedBy: string;
+    commit?: string;
+    branch?: string;
+    approvedCommit?: string;
+  } | null;
+  /** What a blocked task waits on. */
+  blockedReason?: string | null;
   dueDate?: string | null;
   /** The plan it belongs to directly; a task can also be in one through its feature. */
   milestoneId?: string | null;
@@ -53,6 +64,9 @@ export interface Note {
   createdBy: string;
   updatedAt: string;
   version: number;
+  /** A handoff for one actor; without it, for whoever takes the task next. */
+  handoffTo?: string;
+  acknowledged?: { by: string; at: string };
 }
 
 export interface Decision {
@@ -122,6 +136,8 @@ export interface Snapshot {
   activity: Activity[];
   locks: Lock[];
   cards: Card[];
+  /** Tasks waiting for approval whose branch moved on since they were sent, by task id. */
+  drift?: Record<string, Drift>;
 }
 
 /** What an agent or person learned about a file or folder; sati never opens the file. */
@@ -199,6 +215,19 @@ export interface TemplateSummary {
   stages: { title: string; offsetDays: number | null; tasks: number }[];
 }
 
+export interface Drift {
+  commit: string;
+  branch: string;
+  head: string | null;
+  moved: boolean;
+}
+
+/** True while the agent holding the task waits on a person. */
+export function waitingOn(task: Task, now = Date.now()): Claim["waiting"] | undefined {
+  const c = task.claim;
+  return c?.waiting && Date.parse(c.leaseUntil) > now ? c.waiting : undefined;
+}
+
 /** Records a person can delete from the board and bring back with Undo. */
 export type Deletable = "task" | "note" | "decision";
 
@@ -245,6 +274,8 @@ export const api = {
     request<Task>(`/api/tasks/${id}/release`, { method: "POST", body: JSON.stringify({ force }) }),
   takeOver: (id: string) =>
     request<Task>(`/api/tasks/${id}/take-over`, { method: "POST", body: "{}" }),
+  answered: (id: string) =>
+    request<Task>(`/api/tasks/${id}/answered`, { method: "POST", body: "{}" }),
   releaseExpired: () =>
     request<Task[]>("/api/claims/release-expired", { method: "POST", body: "{}" }),
   createNote: (body: Record<string, unknown>) =>

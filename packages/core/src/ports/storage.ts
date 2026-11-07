@@ -47,6 +47,11 @@ export interface ActivityQuery {
   actorId?: string | undefined;
   /** Inclusive lower bound on `at` (UTC ISO). */
   since?: string | undefined;
+  /**
+   * Cursor: only rows written after the row with this id, oldest first, in the order the writes
+   * committed (not by id or clock, which can disagree across processes). NOT_FOUND if unknown.
+   */
+  after?: string | undefined;
   limit?: number | undefined;
 }
 

@@ -11,6 +11,7 @@ export const LIMITS = {
   shortText: 2_000,
   array: 500,
   path: 1_000,
+  waitingText: 500,
 } as const;
 
 export const SNAPSHOT_SCHEMA_VERSION = 1;
@@ -168,6 +169,15 @@ export const Feature = z.strictObject({
 });
 export type Feature = z.infer<typeof Feature>;
 
+/** Why a claim's holder waits on a person: it asked a question, or its tool needs a permission. */
+export const WAITING_KINDS = ["question", "permission"] as const;
+export type WaitingKind = (typeof WAITING_KINDS)[number];
+
+/** A full git commit id (SHA-1 or SHA-256). */
+export const CommitSha = z
+  .string()
+  .regex(/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/, "expected a commit id");
+
 export const Claim = z.strictObject({
   actorId: ActorId,
   leaseUntil: ts,
@@ -178,6 +188,27 @@ export const Claim = z.strictObject({
    * before tokens existed have none.
    */
   token: z.number().int().positive().optional(),
+  /**
+   * The holder is blocked on a person: a question it asked, or a permission prompt in its tool.
+   * Cleared by the holder's next write, by the person's reply (a hook) or when the claim ends.
+   */
+  waiting: z
+    .strictObject({
+      kind: z.enum(WAITING_KINDS),
+      text: z.string().trim().min(1).max(LIMITS.waitingText),
+      since: ts,
+    })
+    .optional(),
+  /**
+   * The long-lived process that holds the claim (the agent's MCP server), so a claim whose
+   * process has exited can be released before its lease runs out. Absent for CLI-only claims.
+   */
+  holder: z
+    .strictObject({
+      host: z.string().min(1).max(255),
+      pid: z.number().int().positive(),
+    })
+    .optional(),
 });
 export type Claim = z.infer<typeof Claim>;
 
@@ -196,6 +227,11 @@ export const Completion = z.strictObject({
   filesTouched: list(pathGlob),
   completedAt: ts,
   completedBy: ActorId,
+  /** The commit and branch the work was finished at, so a review sees what moved after it. */
+  commit: CommitSha.optional(),
+  branch: z.string().min(1).max(LIMITS.path).optional(),
+  /** The commit a person approved: the branch head at approval, or `commit` if the branch is gone. */
+  approvedCommit: CommitSha.optional(),
 });
 export type Completion = z.infer<typeof Completion>;
 
@@ -224,6 +260,8 @@ export const TaskShape = z.strictObject({
   completion: Completion.nullable(),
   /** Why a reviewer sent the task back to todo. The next claimer sees it in the brief. */
   reviewNote: shortText.nullable().optional(),
+  /** Why the task is blocked. Set with the move to `blocked`, cleared when it leaves. */
+  blockedReason: shortText.nullable().optional(),
   /*
    * The planning fields are optional and written only once set, so records and `.sati/` files
    * from before them stay valid, and only tasks that use them carry the new keys.
@@ -278,6 +316,10 @@ export const Note = z.strictObject({
   pinned: z.boolean(),
   /** Kept in this machine's database only: never exported to `.sati/` or synced. Absent when shared. */
   private: z.literal(true).optional(),
+  /** A handoff addressed to one actor; without it the handoff is for whoever claims the task. */
+  handoffTo: ActorId.optional(),
+  /** Who read and acknowledged the handoff, and when. Cleared when the handoff is rewritten. */
+  acknowledged: z.strictObject({ by: ActorId, at: ts }).optional(),
 });
 export type Note = z.infer<typeof Note>;
 

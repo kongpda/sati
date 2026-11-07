@@ -17,6 +17,7 @@ import {
   getContext,
   isSatiError,
   listChanges,
+  markWaiting,
   ProjectKind,
   putContext,
   readSettings,
@@ -25,6 +26,7 @@ import {
   releaseExpiredClaims,
   releaseTask,
   restoreRecord,
+  reviewDrift,
   SatiError,
   type ServiceContext,
   type StorageAdapter,
@@ -169,6 +171,9 @@ function openApi() {
       "/api/tasks/{id}/restore": { post: { summary: "Restore a deleted task" } },
       "/api/tasks/{id}/release": { post: { summary: "Release a claim (force: people only)" } },
       "/api/tasks/{id}/take-over": { post: { summary: "Take a task over (people only)" } },
+      "/api/tasks/{id}/answered": {
+        post: { summary: "A person answered: the agent stops waiting on them" },
+      },
       "/api/claims/release-expired": { post: { summary: "Release expired claims" } },
       "/api/notes": { post: { summary: "Create a note" } },
       "/api/comments": { post: { summary: "Comment on a task, note or decision" } },
@@ -182,7 +187,11 @@ function openApi() {
       "/api/milestones/{id}": { patch: { summary: "Update a milestone" } },
       "/api/actors/{id}": { patch: { summary: "Set a person's display name, initials, colour" } },
       "/api/settings": { patch: { summary: "Set the project kind: code or general" } },
-      "/events": { get: { summary: "Server-sent events when the database changes" } },
+      "/events": {
+        get: {
+          summary: "Server-sent events when the database changes; resumes with Last-Event-ID",
+        },
+      },
     },
   };
 }
@@ -241,6 +250,13 @@ async function snapshot(rt: UiRuntime) {
   const project = await ctx.store.read((r) => r.getProject());
   // Cards with their git staleness; read after the snapshot, as the brief does.
   const cards = await getContext(ctx);
+  // Work waiting for approval whose branch moved on since it was sent, so a person looks again.
+  const drift = Object.fromEntries(
+    await reviewDrift(
+      ctx,
+      tasks.filter((t) => t.status === "review"),
+    ),
+  );
   return {
     project: project
       ? {
@@ -261,8 +277,29 @@ async function snapshot(rt: UiRuntime) {
     activity,
     locks,
     cards,
+    drift,
   };
 }
+
+/**
+ * The newest activity row in commit order: the newest by time, then every row committed after it
+ * (a process with a slow clock writes rows that sort earlier but commit later).
+ */
+async function tailCursor(rt: UiRuntime, from?: string): Promise<string | undefined> {
+  const { ctx } = rt;
+  return ctx.store.read(async (r) => {
+    let cursor = from ?? (await r.listActivity(ctx.projectId, { limit: 1 }))[0]?.id;
+    for (let page = 0; cursor && page < 20; page++) {
+      const rows = await r.listActivity(ctx.projectId, { after: cursor, limit: 500 });
+      if (rows.length === 0) break;
+      cursor = rows[rows.length - 1]?.id ?? cursor;
+    }
+    return cursor;
+  });
+}
+
+/** An activity id as SSE sends it back in Last-Event-ID; anything else is ignored. */
+const ActivityCursor = z.string().regex(/^act_[0-9A-HJKMNP-TV-Z]{26}$/);
 
 const SearchQuery = z.string().max(500);
 const SettingsPatch = z.strictObject({ kind: ProjectKind });
@@ -396,6 +433,11 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
     c.json(await takeOverTask(rt.ctx, c.req.param("id"), await body(c))),
   );
   app.post("/api/claims/release-expired", async (c) => c.json(await releaseExpiredClaims(rt.ctx)));
+  // Only a person uses the board, and markWaiting lets a person clear another's wait.
+  app.post("/api/tasks/:id/answered", async (c) => {
+    const [task] = await markWaiting(rt.ctx, { taskId: c.req.param("id"), waiting: null });
+    return c.json(task);
+  });
 
   app.post("/api/notes", async (c) => c.json(await createNote(rt.ctx, await body(c))));
   // A comment is a note; it is deleted and restored through the notes routes.
@@ -447,21 +489,55 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
     c.json({ error: { code: "NOT_FOUND", message: "No such API path.", hint: null } }, 404),
   );
 
-  app.get("/events", () => {
+  app.get("/events", (c) => {
     let last = version();
     let timer: ReturnType<typeof setInterval> | undefined;
+    // EventSource sends back the last `id:` it saw when it reconnects. Nothing written since
+    // means the browser's copy is current, so it is not told to refetch the whole board.
+    const resume = ActivityCursor.safeParse(c.req.header("last-event-id"));
+    let closed = false;
     const stream = new ReadableStream({
-      start(controller) {
-        const send = (chunk: string) => controller.enqueue(new TextEncoder().encode(chunk));
-        send(`data: ${JSON.stringify({ version: last })}\n\n`);
+      async start(controller) {
+        const send = (cursor: string | undefined) => {
+          // A git read can finish after the browser left; the stream is closed by then.
+          if (closed) return;
+          const id = cursor ? `id: ${cursor}\n` : "";
+          controller.enqueue(
+            new TextEncoder().encode(`${id}data: ${JSON.stringify({ version: last })}\n\n`),
+          );
+        };
+        let cursor: string | undefined;
+        let missed = true;
+        if (resume.success) {
+          try {
+            cursor = await tailCursor(rt, resume.data);
+            missed = cursor !== resume.data;
+          } catch {
+            // An unknown cursor (compacted, or another database): start over.
+            cursor = undefined;
+          }
+        }
+        cursor ??= await tailCursor(rt);
+        if (missed) send(cursor);
+        let busy = false;
         timer = setInterval(() => {
           const now = version();
-          if (now === last) return;
+          if (now === last || busy) return;
+          busy = true;
           last = now;
-          send(`data: ${JSON.stringify({ version: now })}\n\n`);
+          void tailCursor(rt, cursor)
+            .then((next) => {
+              cursor = next;
+              send(cursor);
+            })
+            .catch(() => send(cursor))
+            .finally(() => {
+              busy = false;
+            });
         }, 250);
       },
       cancel() {
+        closed = true;
         if (timer) clearInterval(timer);
       },
     });

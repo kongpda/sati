@@ -1,4 +1,12 @@
-import { CLI_NAME, checkChanges, listRecords, SatiError } from "@sati/core";
+import {
+  CLI_NAME,
+  checkChanges,
+  listRecords,
+  listTasks,
+  reviewDrift,
+  SatiError,
+  shortHandle,
+} from "@sati/core";
 import { defineCommand } from "citty";
 import micromatch from "micromatch";
 import { json } from "../args.js";
@@ -45,12 +53,18 @@ export default defineCommand({
           paths.some((path) => micromatch.isMatch(path, f.paths, { dot: true })),
         );
         const decisions = await listRecords(rt.ctx, "decision", { limit: 20 });
+        const inReview = await listTasks(rt.ctx, { status: ["review"], limit: 500 });
+        const drift = await reviewDrift(rt.ctx, inReview);
         return {
           range: span,
           paths,
           features: touched.map((f) => ({ id: f.id, title: f.title })),
           guard,
           decisions: decisions.map((d) => ({ id: d.id, title: d.title })),
+          // Work sent for approval whose branch has commits the reviewer has not been shown.
+          moved: inReview
+            .filter((t) => drift.get(t.id)?.moved)
+            .map((t) => ({ id: t.id, title: t.title, ...drift.get(t.id) })),
         };
       },
       (report) =>
@@ -63,6 +77,16 @@ export default defineCommand({
           report.decisions.length
             ? `decisions:\n${report.decisions.map((d) => `- ${d.title}`).join("\n")}`
             : "decisions: none",
+          ...(report.moved.length
+            ? [
+                `changed after it was sent for approval:\n${report.moved
+                  .map(
+                    (t) =>
+                      `- ${shortHandle(t.id)} ${t.title}: ${t.branch} ${t.commit?.slice(0, 12)} -> ${t.head?.slice(0, 12)}`,
+                  )
+                  .join("\n")}`,
+              ]
+            : []),
         ].join("\n"),
     ),
 });

@@ -1,7 +1,9 @@
 import { SatiError } from "../domain/errors.js";
-import type { StoredEntity } from "../domain/schemas.js";
+import type { StoredEntity, Task } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
 import { isCompacted, nowIso, type ServiceContext, updateWithLog } from "./context.js";
+
+const COORDINATION = new Set(["claim", "release", "complete"]);
 
 const ENTITIES = new Set<StoredEntity>([
   "project",
@@ -41,8 +43,24 @@ export async function undoActivity(ctx: ServiceContext, activityId: string) {
     if (!isEntity(act.entity)) {
       throw new SatiError("VALIDATION", `Activity ${activityId} is not a record change.`);
     }
+    // Claims, releases, completions and locks are coordination state: replaying an old value
+    // would steal a claim or bring back a lock without the overlap and fencing checks.
+    if (act.entity === "lock" || COORDINATION.has(act.verb)) {
+      throw new SatiError("VALIDATION", `A ${act.verb} of a ${act.entity} cannot be undone.`, {
+        hint: `Use the ${act.entity} commands instead, such as \`${CLI_NAME} task update\`.`,
+      });
+    }
     const current = await w.get(act.entity, act.entityId);
     if (!current) throw new SatiError("NOT_FOUND", `The ${act.entity} from that activity is gone.`);
+    if (act.entity === "task") {
+      const holder = (current as Task).claim?.actorId;
+      if (holder !== undefined && holder !== ctx.actorId) {
+        throw new SatiError("CONFLICT", `Task ${act.entityId} is claimed by ${holder}.`, {
+          hint: "Undo it after the claim is released.",
+          details: { holder },
+        });
+      }
+    }
     if (act.verb === "create") {
       if (current.version !== 1 || current.deletedAt !== null) {
         throw new SatiError(

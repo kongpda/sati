@@ -138,6 +138,24 @@ describe("daily workspace", () => {
     expect(edited.title).toBe("Renamed");
   });
 
+  it("refuses an undo that would bypass claims", async () => {
+    const { ctx, store } = await setup();
+    const task = await createTask(ctx, { title: "Long" });
+    const other = await ensureActor(ctx, { name: "other@test", kind: "agent" });
+    const otherCtx = { ...ctx, actorId: other.id };
+    await updateTask(ctx, task.id, { title: "Mine" });
+    const rename = store.activity.findLast((row) => row.entityId === task.id);
+    const claimed = await claimTask(otherCtx, task.id);
+    const claimRow = store.activity.findLast((row) => row.verb === "claim");
+    // Undoing the claim would hand the task back while its holder keeps working.
+    await expect(undoActivity(ctx, claimRow?.id ?? "")).rejects.toMatchObject({
+      code: "VALIDATION",
+    });
+    // Another actor may not edit a claimed task through undo, which carries no fencing token.
+    await expect(undoActivity(ctx, rename?.id ?? "")).rejects.toMatchObject({ code: "CONFLICT" });
+    expect((await claimTask(otherCtx, task.id)).claim?.actorId).toBe(claimed.claim?.actorId);
+  });
+
   it("clears needsReview and reports it from doctor", async () => {
     const { ctx, store } = await setup();
     const task = await createTask(ctx, { title: "Merged" });

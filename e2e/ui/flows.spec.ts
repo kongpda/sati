@@ -30,7 +30,7 @@ test("creates, edits, filters and bulk-moves tasks", async ({ page }) => {
   // `c` asks for a title and creates the task.
   page.once("dialog", (d) => void d.accept("Write the release notes"));
   await page.keyboard.press("c");
-  const card = page.getByRole("button", { name: "Write the release notes" });
+  const card = page.getByRole("button", { name: "Write the release notes", exact: true });
   await expect(card).toBeVisible();
 
   // The sheet saves an edit to title, body and status.
@@ -41,7 +41,10 @@ test("creates, edits, filters and bulk-moves tasks", async ({ page }) => {
   await sheet.getByLabel("Status").selectOption("in_progress");
   await sheet.getByRole("button", { name: "Save" }).click();
   await expect(
-    column(page, "In progress").getByRole("button", { name: "Write release notes for 1.0" }),
+    column(page, "In progress").getByRole("button", {
+      name: "Write release notes for 1.0",
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(page.getByRole("dialog").getByRole("code")).toHaveText("sati ui");
   await page.keyboard.press("Escape");
@@ -53,15 +56,21 @@ test("creates, edits, filters and bulk-moves tasks", async ({ page }) => {
 
   // The filter narrows the board by title.
   await page.getByLabel("Filter tasks").fill("flaky");
-  await expect(page.getByRole("button", { name: "Fix the flaky import test" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Audit dependencies" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Fix the flaky import test", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Audit dependencies", exact: true })).toHaveCount(
+    0,
+  );
   // A filter that hides every task says so, instead of showing a blank board.
   await page.getByLabel("Filter tasks").fill("no task has this title");
   await expect(page.getByText("No tasks match the filter.")).toBeVisible();
   await page.getByLabel("Filter tasks").fill("");
 
   const pick = async (title: string) => {
-    const box = page.locator(".card", { has: page.getByRole("button", { name: title }) });
+    const box = page.locator(".card", {
+      has: page.getByRole("button", { name: title, exact: true }),
+    });
     await box.getByRole("button", { name: "select" }).click();
   };
   const titles = ["Fix the flaky import test", "Audit dependencies"];
@@ -75,20 +84,20 @@ test("creates, edits, filters and bulk-moves tasks", async ({ page }) => {
   for (const title of titles) await pick(title);
   await expect(page.getByText("2 selected")).toBeVisible();
   await page.getByLabel("Move selected").selectOption("review");
-  await expect(page.locator(".toast[role=status]")).toContainText(
-    "cannot move from todo to review",
-  );
+  await expect(page.locator(".toast[role=status]")).toContainText("2 of 2 tasks did not move.");
   const todo = column(page, "Todo");
-  for (const title of titles) await expect(todo.getByRole("button", { name: title })).toBeVisible();
+  for (const title of titles)
+    await expect(todo.getByRole("button", { name: title, exact: true })).toBeVisible();
   await expect(column(page, "Review").locator(".card")).toHaveCount(0);
   expect(await statuses()).toEqual(["todo", "todo"]);
 
   // An allowed bulk move lands on the server too.
-  for (const title of titles) await pick(title);
+  // Refused tasks stay selected, so the next move applies to them without picking again.
+  await expect(page.getByText("2 selected")).toBeVisible();
   await page.getByLabel("Move selected").selectOption("in_progress");
   const doing = column(page, "In progress");
   for (const title of titles)
-    await expect(doing.getByRole("button", { name: title })).toBeVisible();
+    await expect(doing.getByRole("button", { name: title, exact: true })).toBeVisible();
   await expect.poll(statuses).toEqual(["in_progress", "in_progress"]);
 
   // Bulk move never offers Done: completion must go through `sati task complete`.

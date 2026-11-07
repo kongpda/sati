@@ -8,7 +8,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
+import { devNull, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -42,6 +42,9 @@ export async function startUi(): Promise<Ui> {
   const env = {
     ...process.env,
     PATH: `${fakeBin}${delimiter}${process.env.PATH ?? ""}`,
+    // `sati init` chains into `core.hooksPath`; keep the developer's global git config out of it.
+    GIT_CONFIG_GLOBAL: devNull,
+    GIT_CONFIG_NOSYSTEM: "1",
     SATI_ACTOR: "playwright",
     CLAUDECODE: "",
     AI_AGENT: "",

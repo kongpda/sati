@@ -239,13 +239,25 @@ export async function openRuntime(cwd: string = process.cwd()): Promise<Runtime>
   return { ctx, project, actor, location };
 }
 
-/** Splits a comma-separated flag. citty keeps only the last value of a repeated flag. */
+/**
+ * Splits a comma-separated flag. citty keeps only the last value of a repeated flag. A comma
+ * inside `{}` belongs to a glob such as `src/{a,b}/**`, so it does not split.
+ */
 export function list(value: string | undefined): string[] | undefined {
   if (value === undefined) return undefined;
-  return value
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const ch of value) {
+    if (ch === "{") depth++;
+    else if (ch === "}") depth = Math.max(0, depth - 1);
+    if (ch === "," && depth === 0) {
+      parts.push(current);
+      current = "";
+    } else current += ch;
+  }
+  parts.push(current);
+  return parts.map((s) => s.trim()).filter(Boolean);
 }
 
 export function int(value: string | undefined, flag: string): number | undefined {

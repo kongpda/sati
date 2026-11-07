@@ -131,7 +131,10 @@ export async function main(root: CommandDef): Promise<void> {
     // Command handlers catch their own errors, so anything here is a parsing error from citty.
     const message = stripVTControlCharacters(err instanceof Error ? err.message : String(err));
     // An unknown subcommand is not worth repeating in the hint.
-    const known = words(argv).slice(0, message.startsWith("Unknown command") ? 1 : 2);
+    const typed = words(argv);
+    const unknown = /^Unknown command (\S+)/u.exec(message)?.[1];
+    const at = unknown === undefined ? -1 : typed.indexOf(unknown);
+    const known = typed.slice(0, at === -1 ? 2 : at);
     // Loaded only here: the core and SQLite stay out of `--version` and `--help`.
     const [{ SatiError }, { printError }] = await Promise.all([
       import("@sati/core"),

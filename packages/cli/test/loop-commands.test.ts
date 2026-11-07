@@ -40,6 +40,18 @@ describe("loop commands", () => {
       "--auto-continue",
     );
     expect(settings.data).toMatchObject({ review: "none", autoContinue: true });
+    // citty turns `--no-auto-continue` into `auto-continue: false`; it must switch the setting off.
+    const off = satiJson<{ autoContinue: boolean }>(dir, "settings", "--no-auto-continue");
+    expect(off.data.autoContinue).toBe(false);
+  });
+
+  it("keeps commas inside a brace glob and names the right command in usage hints", async () => {
+    const dir = await tempRepo({ init: true });
+    const args = ["feature", "create", "Docs", "--paths", "src/{a,b}/**,docs/**"];
+    const feature = satiJson<{ paths: string[] }>(dir, ...args);
+    expect(feature.data.paths).toEqual(["src/{a,b}/**", "docs/**"]);
+    expect(sati(dir, "bogus").stderr).toContain("Run `sati --help`");
+    expect(sati(dir, "task", "bogus").stderr).toContain("Run `sati task --help`");
   });
 
   it("creates a personal workspace outside a repository when SATI_YES=1", () => {

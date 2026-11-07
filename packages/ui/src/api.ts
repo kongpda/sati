@@ -104,6 +104,9 @@ export interface Snapshot {
   locks: Lock[];
 }
 
+/** Records a person can delete from the board and bring back with Undo. */
+export type Deletable = "task" | "note" | "decision";
+
 export class ApiError extends Error {
   hint: string | null;
   constructor(message: string, hint: string | null) {
@@ -155,6 +158,10 @@ export const api = {
     request<Milestone>("/api/milestones", { method: "POST", body: JSON.stringify(body) }),
   patchMilestone: (id: string, body: Record<string, unknown>) =>
     request<Milestone>(`/api/milestones/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (entity: Deletable, id: string) =>
+    request<unknown>(`/api/${entity}s/${id}`, { method: "DELETE" }),
+  restore: (entity: Deletable, id: string) =>
+    request<unknown>(`/api/${entity}s/${id}/restore`, { method: "POST", body: "{}" }),
   patchFeature: (id: string, body: Record<string, unknown>) =>
     request<Feature>(`/api/features/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
 };

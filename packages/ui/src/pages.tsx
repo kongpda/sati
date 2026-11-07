@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { ago, clockTime, type Decision, leaseLeft, type Milestone, type Snapshot } from "./api.js";
-import { DecisionForm, MilestoneForm } from "./forms.js";
+import {
+  ago,
+  clockTime,
+  type Decision,
+  leaseLeft,
+  type Milestone,
+  type Note,
+  type Snapshot,
+} from "./api.js";
+import { DecisionForm, MilestoneForm, NoteForm } from "./forms.js";
 import { Markdown } from "./markdown.js";
 
 export function Agents({
@@ -188,12 +196,23 @@ export function Roadmap({ data, onSaved }: { data: Snapshot; onSaved: (message: 
 export function Notes({
   data,
   onCreate,
-  onReviewed,
+  onPatch,
+  onSaved,
+  onDelete,
 }: {
   data: Snapshot;
   onCreate: (title: string, body: string) => Promise<void>;
-  onReviewed: (id: string, version: number) => void;
+  onPatch: (id: string, patch: Record<string, unknown>) => void;
+  onSaved: (message: string) => void;
+  onDelete: (id: string, title: string) => void;
 }) {
+  const [editing, setEditing] = useState<Note | null>(null);
+  const [tag, setTag] = useState("");
+  const tags = [...new Set(data.notes.flatMap((n) => n.tags))].sort();
+  // Pinned notes first; the rest keep the newest-first order the server sends.
+  const shown = data.notes
+    .filter((n) => !tag || n.tags.includes(tag))
+    .sort((a, b) => Number(b.pinned) - Number(a.pinned));
   return (
     <div className="page">
       <h1>Notes</h1>
@@ -226,20 +245,58 @@ export function Notes({
         />
         <button type="submit">Save note</button>
       </form>
+      {tags.length > 0 ? (
+        <fieldset className="tag-filter">
+          <legend className="sr-only">Show notes tagged</legend>
+          {["", ...tags].map((t) => (
+            <button
+              key={t || "all"}
+              type="button"
+              aria-pressed={tag === t}
+              onClick={() => setTag(t)}
+            >
+              {t || "All"}
+            </button>
+          ))}
+        </fieldset>
+      ) : null}
       <div className="list" style={{ marginTop: 16 }}>
-        {data.notes.map((n) => (
+        {shown.map((n) => (
           <article key={n.id} className="row">
-            <h2 className="row-title">{n.title}</h2>
+            <h2 className="row-title">
+              {n.pinned ? <span className="badge">Pinned</span> : null}
+              {n.title}
+            </h2>
             <div className="meta">
               <time dateTime={n.updatedAt} title={n.updatedAt}>
                 {ago(n.updatedAt)}
               </time>
               {n.tags.length ? ` · ${n.tags.join(", ")}` : ""}
               {n.needsReview ? (
-                <button type="button" onClick={() => onReviewed(n.id, n.version)}>
+                <button
+                  type="button"
+                  onClick={() => onPatch(n.id, { reviewed: true, expectedVersion: n.version })}
+                >
                   mark reviewed
                 </button>
               ) : null}
+              <button type="button" aria-label={`Edit ${n.title}`} onClick={() => setEditing(n)}>
+                Edit
+              </button>
+              <button
+                type="button"
+                aria-label={`${n.pinned ? "Unpin" : "Pin"} ${n.title}`}
+                onClick={() => onPatch(n.id, { pinned: !n.pinned, expectedVersion: n.version })}
+              >
+                {n.pinned ? "Unpin" : "Pin"}
+              </button>
+              <button
+                type="button"
+                aria-label={`Delete ${n.title}`}
+                onClick={() => onDelete(n.id, n.title)}
+              >
+                Delete
+              </button>
             </div>
             <Markdown source={n.body} />
             <Backlinks notes={data.notes} id={n.id} />
@@ -249,6 +306,16 @@ export function Notes({
           <p className="empty">No notes yet. Write one above, or an agent records one.</p>
         ) : null}
       </div>
+      {editing ? (
+        <NoteForm
+          note={editing}
+          onClose={() => setEditing(null)}
+          onSaved={(n) => {
+            setEditing(null);
+            onSaved(`Saved ${n.title}.`);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -262,9 +329,11 @@ function Backlinks({ notes, id }: { notes: Snapshot["notes"]; id: string }) {
 export function Decisions({
   data,
   onSaved,
+  onDelete,
 }: {
   data: Snapshot;
   onSaved: (message: string) => void;
+  onDelete: (id: string, title: string) => void;
 }) {
   // "new" opens an empty form; a decision opens it to record one that replaces it.
   const [recording, setRecording] = useState<Decision | "new" | null>(null);
@@ -300,6 +369,13 @@ export function Decisions({
                 onClick={() => setRecording(d)}
               >
                 Replace
+              </button>
+              <button
+                type="button"
+                aria-label={`Delete ${d.title}`}
+                onClick={() => onDelete(d.id, d.title)}
+              >
+                Delete
               </button>
             </div>
             <Markdown source={d.decision} />
@@ -391,6 +467,7 @@ export function TaskSheet({
   onSave,
   onRelease,
   onTakeOver,
+  onDelete,
 }: {
   data: Snapshot;
   id: string;
@@ -398,6 +475,7 @@ export function TaskSheet({
   onSave: (id: string, patch: Record<string, unknown>) => void;
   onRelease: (id: string, force: boolean) => void;
   onTakeOver: (id: string) => void;
+  onDelete: (id: string, title: string) => void;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const task = data.tasks.find((t) => t.id === id);
@@ -412,6 +490,11 @@ export function TaskSheet({
   }, [found]);
   if (!task) return null;
   const feature = data.features.find((f) => f.id === task.featureId);
+  // Someone else's live claim is ended with Take over or Release first, not deleted under them.
+  const held =
+    task.claim !== null &&
+    task.claim.actorId !== data.you &&
+    Date.parse(task.claim.leaseUntil) > Date.now();
   return (
     <aside className="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
       <button type="button" onClick={onClose}>
@@ -460,6 +543,11 @@ export function TaskSheet({
         </select>
         <button type="submit">Save</button>
       </form>
+      {held ? null : (
+        <button type="button" className="danger" onClick={() => onDelete(task.id, task.title)}>
+          Delete task
+        </button>
+      )}
       {feature && feature.acceptance.length > 0 ? (
         <>
           <h3>Acceptance</h3>

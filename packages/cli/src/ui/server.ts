@@ -8,10 +8,12 @@ import {
   createMilestone,
   createNote,
   createTask,
+  deleteRecord,
   isSatiError,
   recordDecision,
   releaseExpiredClaims,
   releaseTask,
+  restoreRecord,
   SatiError,
   type ServiceContext,
   type StorageAdapter,
@@ -94,13 +96,17 @@ function openApi() {
         get: { summary: "Full-text search", parameters: [{ name: "q", in: "query" }] },
       },
       "/api/tasks": { post: { summary: "Create a task" } },
-      "/api/tasks/{id}": { patch: { summary: "Update a task" } },
+      "/api/tasks/{id}": { patch: { summary: "Update a task" }, delete: { summary: "Delete" } },
+      "/api/tasks/{id}/restore": { post: { summary: "Restore a deleted task" } },
       "/api/tasks/{id}/release": { post: { summary: "Release a claim (force: people only)" } },
       "/api/tasks/{id}/take-over": { post: { summary: "Take a task over (people only)" } },
       "/api/claims/release-expired": { post: { summary: "Release expired claims" } },
       "/api/notes": { post: { summary: "Create a note" } },
-      "/api/notes/{id}": { patch: { summary: "Update a note" } },
+      "/api/notes/{id}": { patch: { summary: "Update a note" }, delete: { summary: "Delete" } },
+      "/api/notes/{id}/restore": { post: { summary: "Restore a deleted note" } },
       "/api/decisions": { post: { summary: "Record a decision" } },
+      "/api/decisions/{id}": { delete: { summary: "Delete a decision" } },
+      "/api/decisions/{id}/restore": { post: { summary: "Restore a deleted decision" } },
       "/api/features/{id}": { patch: { summary: "Update a feature" } },
       "/api/milestones": { post: { summary: "Create a milestone" } },
       "/api/milestones/{id}": { patch: { summary: "Update a milestone" } },
@@ -292,6 +298,20 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   app.patch("/api/milestones/:id", async (c) =>
     c.json(await updateMilestone(rt.ctx, c.req.param("id"), await body(c))),
   );
+
+  // Deletes are soft, so the board's Undo is a restore of the same record.
+  for (const [plural, entity] of [
+    ["tasks", "task"],
+    ["notes", "note"],
+    ["decisions", "decision"],
+  ] as const) {
+    app.delete(`/api/${plural}/:id`, async (c) =>
+      c.json(await deleteRecord(rt.ctx, entity, c.req.param("id"))),
+    );
+    app.post(`/api/${plural}/:id/restore`, async (c) =>
+      c.json(await restoreRecord(rt.ctx, entity, c.req.param("id"))),
+    );
+  }
 
   // An unknown API path is a 404, not the SPA page with a 200 that a client would try to parse.
   app.all("/api/*", (c) =>

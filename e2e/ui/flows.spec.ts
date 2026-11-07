@@ -268,3 +268,58 @@ test("creates and edits a milestone, records and replaces a decision", async ({ 
   expect(second?.supersedes).toBe(first?.id);
   expect(await problems()).toEqual([]);
 });
+
+// PLAN Phase 7a: notes are edited, tagged, pinned and deleted in the UI; deletes have Undo.
+test("edits, pins, tags and deletes notes, and undoes deletes", async ({ page }) => {
+  const problems = await watch(page);
+  await page.goto(ui.signIn);
+  await page.getByRole("link", { name: "Notes", exact: true }).click();
+  for (const title of ["Venue options", "Catering"]) {
+    await page.getByLabel("Note title").fill(title);
+    await page.getByRole("button", { name: "Save note" }).click();
+    await expect(page.getByRole("heading", { level: 2, name: title })).toBeVisible();
+  }
+
+  await page.getByRole("button", { name: "Edit Venue options" }).click();
+  const edit = page.getByRole("dialog", { name: "Edit note" });
+  await expect(edit.getByLabel("Title")).toHaveValue("Venue options");
+  await edit.getByLabel("Body").fill("Riverside hall, rooftop.");
+  await edit.getByLabel("Tags").fill("venue, launch, venue");
+  await edit.getByLabel("Pin to the top of Notes").check();
+  await edit.getByRole("button", { name: "Save note" }).click();
+  await expect(edit).toHaveCount(0);
+  // Pinned notes come first, although Catering is newer.
+  await expect(page.locator("article h2").first()).toHaveText("PinnedVenue options");
+  const notes = ui.sati<{ title: string; tags: string[]; pinned: boolean; body: string }[]>(
+    "note",
+    "list",
+  );
+  expect(notes.find((n) => n.title === "Venue options")).toMatchObject({
+    tags: ["venue", "launch"],
+    pinned: true,
+    body: "Riverside hall, rooftop.",
+  });
+
+  // The tag filter narrows the list; All shows everything again.
+  await page.getByRole("button", { name: "venue", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Catering" })).toHaveCount(0);
+  await page.getByRole("button", { name: "All", exact: true }).click();
+  await page.getByRole("button", { name: "Unpin Venue options" }).click();
+  await expect(page.getByRole("button", { name: "Pin Venue options" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Delete Catering" }).click();
+  await expect(page.getByRole("status")).toContainText("Deleted Catering.");
+  await expect(page.getByRole("heading", { level: 2, name: "Catering" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Catering" })).toBeVisible();
+
+  // A task is deleted from its panel and comes back with Undo.
+  const task = await ui.api<{ id: string }>("POST", "/api/tasks", { title: "Order banners" });
+  await page.goto(`${ui.origin}/?task=${task.id}`);
+  await page.getByRole("button", { name: "Delete task" }).click();
+  await expect(page.getByRole("dialog", { name: "Order banners" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Order banners", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByRole("button", { name: "Order banners", exact: true })).toBeVisible();
+  expect(await problems()).toEqual([]);
+});

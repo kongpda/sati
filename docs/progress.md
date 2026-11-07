@@ -838,3 +838,16 @@ fixed the same bug (undo of shortened text, subtask cycles, 400 for bad JSON, th
 - Shortcuts now stand down for any open dialog, not only the New task one.
 - Checked in Chrome at 1280 and 375 px. Tall dialogs cut off their buttons at 70vh; the dialog
   now grows to 84vh and pins the action row at its bottom while the fields scroll.
+
+### Phase 7a: note edit, pin, tags, and delete with Undo (2026-11-07)
+
+- Notes: Edit opens a dialog for title, body, tags and pinned, sent with the version it opened
+  with. Pin and Unpin per note, pinned notes first, and tag chips filter the list.
+- Delete for tasks (task panel), notes and decisions. Deletes were already soft in core, so the
+  UI server gained `DELETE /api/{tasks,notes,decisions}/:id` and `POST …/:id/restore`, and the
+  toast's Undo restores the record. No "are you sure" prompt: Undo is the safety net, and it
+  stays 10 s instead of 6.
+- The panel hides Delete while another actor holds a live claim; a person takes the task over
+  or releases it first, so an agent's work is not deleted under it.
+- Checked in Chrome at 1280 and 375 px: edit dialog, pinned badge and tag chips, the Undo toast,
+  and the panel's Delete button.

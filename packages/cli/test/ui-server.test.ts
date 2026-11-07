@@ -153,4 +153,29 @@ describe("ui server", () => {
     const released = await post(`/api/tasks/${task.id}/release`, { force: false });
     expect(((await released.json()) as { status: string }).status).toBe("todo");
   });
+
+  it("deletes a note softly, hides it from the board, and restores it", async () => {
+    const cookie = cookieOf(await app.request(`http://127.0.0.1/session?token=${token}`));
+    const call = (path: string, method: string, payload?: unknown) =>
+      app.request(`http://127.0.0.1${path}`, {
+        method,
+        headers: { cookie, "content-type": "application/json" },
+        ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+      });
+    const titles = async () =>
+      (
+        (await (await call("/api/snapshot", "GET")).json()) as { notes: { title: string }[] }
+      ).notes.map((n) => n.title);
+    const note = (await (await call("/api/notes", "POST", { title: "Venue list" })).json()) as {
+      id: string;
+    };
+    expect((await call(`/api/notes/${note.id}`, "DELETE")).status).toBe(200);
+    expect(await titles()).not.toContain("Venue list");
+    // Deleting twice is a 404, so a double click cannot log two deletes.
+    expect((await call(`/api/notes/${note.id}`, "DELETE")).status).toBe(404);
+    expect((await call(`/api/notes/${note.id}/restore`, "POST", {})).status).toBe(200);
+    expect(await titles()).toContain("Venue list");
+    // Milestones are not deletable here.
+    expect((await call("/api/milestones/mil_x", "DELETE")).status).toBe(404);
+  });
 });

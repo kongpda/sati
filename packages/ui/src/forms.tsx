@@ -1,5 +1,13 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
-import { ApiError, api, type Decision, type Milestone, type Snapshot, type Task } from "./api.js";
+import {
+  ApiError,
+  api,
+  type Decision,
+  type Milestone,
+  type Note,
+  type Snapshot,
+  type Task,
+} from "./api.js";
 
 const PRIORITIES = ["low", "medium", "high", "urgent"] as const;
 
@@ -396,6 +404,75 @@ export function DecisionForm({
       <p className="dialog-note">
         Decisions are kept as written. To change one later, record a new decision that replaces it.
       </p>
+    </FormDialog>
+  );
+}
+
+/**
+ * Edit a note: title, Markdown body, tags and pinned. Like the milestone edit, it sends the
+ * version the dialog opened with, so an agent's newer edit is refused instead of overwritten.
+ */
+export function NoteForm({
+  note,
+  onClose,
+  onSaved,
+}: {
+  note: Note;
+  onClose: () => void;
+  onSaved: (note: Note) => void;
+}) {
+  const [opened] = useState(note);
+  return (
+    <FormDialog
+      title="Edit note"
+      submit="Save note"
+      busy="Saving…"
+      onClose={onClose}
+      onSubmit={(form) =>
+        api
+          .patchNote(opened.id, {
+            title: text(form, "title").trim(),
+            body: text(form, "body"),
+            tags: parseLabels(text(form, "tags")),
+            pinned: form.get("pinned") === "on",
+            expectedVersion: opened.version,
+          })
+          .then(onSaved)
+      }
+    >
+      <label>
+        Title
+        <input
+          className="field"
+          name="title"
+          required
+          maxLength={300}
+          defaultValue={opened.title}
+        />
+      </label>
+      <label>
+        Body
+        <textarea
+          className="field"
+          name="body"
+          rows={10}
+          defaultValue={opened.body}
+          placeholder="Markdown is fine"
+        />
+      </label>
+      <label>
+        Tags
+        <input
+          className="field"
+          name="tags"
+          defaultValue={opened.tags.join(", ")}
+          placeholder="launch, venue"
+        />
+      </label>
+      <label className="dialog-check">
+        <input type="checkbox" name="pinned" defaultChecked={opened.pinned} />
+        Pin to the top of Notes
+      </label>
     </FormDialog>
   );
 }

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, api, COLUMNS, type Snapshot } from "./api.js";
+import { ApiError, api, COLUMNS, type Deletable, type Snapshot } from "./api.js";
 import { Board } from "./board.js";
 import { NewTask } from "./forms.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
@@ -29,7 +29,12 @@ export function App() {
   );
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [fresh, setFresh] = useState<Set<string>>(new Set());
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToastState] = useState<{ message: string; undo?: () => void } | null>(null);
+  const setToast = useCallback(
+    (message: string | null, undo?: () => void) =>
+      setToastState(message === null ? null : { message, ...(undo ? { undo } : {}) }),
+    [],
+  );
   const [palette, setPalette] = useState(false);
   const [creating, setCreating] = useState(false);
   const [queryText, setQueryText] = useState("");
@@ -78,18 +83,41 @@ export function App() {
     setTask(taskId);
   }, []);
 
-  const fail = useCallback((err: unknown) => {
-    const message = err instanceof ApiError ? err.message : "That change did not save.";
-    const hint = err instanceof ApiError ? err.hint : null;
-    setToast((hint ? `${message} ${hint}` : message).replaceAll("`", ""));
-  }, []);
+  const fail = useCallback(
+    (err: unknown) => {
+      const message = err instanceof ApiError ? err.message : "That change did not save.";
+      const hint = err instanceof ApiError ? err.hint : null;
+      setToast((hint ? `${message} ${hint}` : message).replaceAll("`", ""));
+    },
+    [setToast],
+  );
 
   const saved = useCallback(
     (message: string) => {
       setToast(message);
       void client.invalidateQueries({ queryKey: ["snapshot"] });
     },
-    [client],
+    [client, setToast],
+  );
+
+  // Deletes are soft and need no "are you sure": the toast offers Undo, which restores it.
+  const remove = useCallback(
+    (entity: Deletable, id: string, title: string) =>
+      void api
+        .remove(entity, id)
+        .then(() => {
+          setToast(
+            `Deleted ${title}.`,
+            () =>
+              void api
+                .restore(entity, id)
+                .then(() => saved(`Restored ${title}.`))
+                .catch(fail),
+          );
+          return client.invalidateQueries({ queryKey: ["snapshot"] });
+        })
+        .catch(fail),
+    [client, fail, saved, setToast],
   );
 
   const closePalette = useCallback(() => {
@@ -217,9 +245,10 @@ export function App() {
 
   useEffect(() => {
     if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 6000);
+    // An Undo stays a little longer, so there is time to reach it.
+    const id = window.setTimeout(() => setToast(null), toast.undo ? 10000 : 6000);
     return () => window.clearTimeout(id);
-  }, [toast]);
+  }, [toast, setToast]);
 
   const data = query.data;
   const tasks = (data?.tasks ?? []).filter((t) => {
@@ -456,15 +485,23 @@ export function App() {
                   throw err;
                 })
             }
-            onReviewed={(id, version) =>
+            onPatch={(id, patch) =>
               void api
-                .patchNote(id, { reviewed: true, expectedVersion: version })
+                .patchNote(id, patch)
                 .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
                 .catch(fail)
             }
+            onSaved={saved}
+            onDelete={(id, title) => remove("note", id, title)}
           />
         ) : null}
-        {data && path === "/decisions" ? <Decisions data={data} onSaved={saved} /> : null}
+        {data && path === "/decisions" ? (
+          <Decisions
+            data={data}
+            onSaved={saved}
+            onDelete={(id, title) => remove("decision", id, title)}
+          />
+        ) : null}
         {data && path === "/activity" ? <Activity data={data} /> : null}
       </main>
       {data && task ? (
@@ -491,6 +528,10 @@ export function App() {
               .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
               .catch(fail)
           }
+          onDelete={(id, title) => {
+            go(path);
+            remove("task", id, title);
+          }}
         />
       ) : null}
       {creating && data ? (
@@ -564,9 +605,19 @@ export function App() {
       ) : null}
       {toast ? (
         <div className="toast" role="status">
-          {toast}
+          {toast.message}
+          {toast.undo ? (
+            <button
+              type="button"
+              onClick={() => {
+                toast.undo?.();
+                setToast(null);
+              }}
+            >
+              Undo
+            </button>
+          ) : null}
           <button type="button" onClick={() => setToast(null)}>
-            {" "}
             Dismiss
           </button>
         </div>

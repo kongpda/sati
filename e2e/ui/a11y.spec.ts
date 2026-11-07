@@ -86,7 +86,7 @@ for (const [device, viewport] of [
       expect(summary(form.violations)).toEqual([]);
     });
 
-    test("axe: milestone and decision forms", async ({ page }) => {
+    test("axe: milestone, decision and note forms", async ({ page }) => {
       await page.goto(ui.signIn);
       await page.getByRole("link", { name: "Roadmap", exact: true }).click();
       await page.getByRole("button", { name: "Edit 1.0" }).click();
@@ -99,6 +99,12 @@ for (const [device, viewport] of [
       await expect(page.getByRole("dialog", { name: "Record decision" })).toBeVisible();
       const decision = await new AxeBuilder({ page }).withTags(TAGS).analyze();
       expect(summary(decision.violations)).toEqual([]);
+      await page.keyboard.press("Escape");
+      await page.getByRole("link", { name: "Notes", exact: true }).click();
+      await page.getByRole("button", { name: "Edit Search design" }).click();
+      await expect(page.getByRole("dialog", { name: "Edit note" })).toBeVisible();
+      const note = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+      expect(summary(note.violations)).toEqual([]);
     });
   });
 }

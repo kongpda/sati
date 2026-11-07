@@ -1,0 +1,24 @@
+{
+  "consequences": "PLAN Phase 8 and docs/knowledge-brain.md; token savings come from card reuse, compact answers and the brief, measured by a token ledger.",
+  "context": "The owner wants sati to be the brain for folders of Office, PDF, image and marketing files that AI agents can access.",
+  "createdAt": "2026-11-07T05:17:46.953Z",
+  "createdBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
+  "decision": "sati never opens, parses or watches user files. Agents read files with their own tools, track changes and handle language; sati stores what they learned (cards with facts and the file version seen), decided, did, need and plan, and returns it compactly via recall. Rejected: a local document index with built-in Office/PDF extractors and a trigram index, which duplicates what agents already do and adds a file-parsing attack surface.",
+  "deletedAt": null,
+  "featureIds": [],
+  "id": "dec_01M6T72029BNB6P9KFNSGEY8JM",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "consequences": "2026-11-07T05:17:46.965Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "context": "2026-11-07T05:17:46.965Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "decision": "2026-11-07T05:17:46.965Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "deletedAt": "2026-11-07T05:17:46.965Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "featureIds": "2026-11-07T05:17:46.965Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "supersedes": "2026-11-07T05:17:46.965Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "title": "2026-11-07T05:17:46.965Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+  },
+  "supersedes": null,
+  "title": "sati remembers; agents read the files",
+  "updatedAt": "2026-11-07T05:17:46.953Z",
+  "version": 1
+}

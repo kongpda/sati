@@ -56,7 +56,7 @@ Grounded in the 2026-11-07 review of the code:
    14:32" in local time. CLI and MCP keep `claim`, `review` and UTC, because agents and scripts rely
    on them and the MCP schemas are a public API.
 4. **The brain is notes + decisions + search, served to any assistant.** Add `note_upsert`,
-   `note_get` and an `ask` tool that returns ranked records with IDs. Do not bundle a model: the
+   `note_get` and a `recall` tool (Phase 8, `docs/knowledge-brain.md`) that returns ranked records with IDs. Do not bundle a model: the
    user's own assistant (Claude Code, Claude Desktop, ChatGPT through remote MCP) writes the
    answer. That keeps sati small, local-first and model-neutral.
 5. **Templates beat features.** An event, a campaign and a release are each a milestone plus a
@@ -99,7 +99,8 @@ section requires. Old binaries already refuse writes to a newer schema.
 | --- | --- | --- |
 | Phase 5b open items | the open list in PLAN.md | 1 week |
 | 7a People first | kind, people, due/assignee/checklist, comments, UI create/edit, My work, plain words, Khmer | 3 weeks |
-| 7b Brain for agents | note tools, `ask`, templates, digest, calendar export | 1.5 weeks |
+| 7b Brain for agents | note tools, templates, digest, calendar export | 1 week |
+| Phase 8 Knowledge brain | cards with facts, recall, compact answers, private memory, token ledger, Memory page | 2.5 weeks |
 | Phase 6 Hosted | as planned (Postgres, auth, sync, remote MCP) | 5–6 weeks |
 | 7c Without a terminal | team server UI, email sign-in, inbox and notifications, launcher, link attachments | 2–3 weeks |
 

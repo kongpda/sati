@@ -622,7 +622,6 @@ Added 2026-11-07 at the owner's request: sati should be the shared brain of the 
 **Phase 7b — The brain for every agent**
 
 - [ ] MCP `note_upsert` and `note_get`, so agents can write and read the memory, not only search it (17 tools; update the Agent integration table)
-- [ ] `sati ask "<question>"` and MCP `ask`: return the most relevant notes, decisions and tasks with their IDs, ranked by FTS, for any assistant to answer from. No model is bundled; the caller's agent writes the answer
 - [ ] Templates: `sati template apply event|campaign|release` creates a milestone with a task chain from a Markdown file in `.sati/templates/`; ship three starters (event, marketing campaign, product release)
 - [ ] Weekly digest: `sati digest --since 7d` in Markdown — done, decided, due next and blocked — to paste into email or chat
 - [ ] Calendar export: `sati calendar export` writes an `.ics` of due dates and milestone targets (read-only; no two-way sync)
@@ -636,6 +635,25 @@ Added 2026-11-07 at the owner's request: sati should be the shared brain of the 
 - [ ] Attachments as links (Drive, Figma, Canva) with a preview title; no file storage in v1 of the team server
 
 **Gate:** a non-developer, given only a URL and a sign-in email, plans a 20-task event from the `event` template, assigns tasks to three people and one agent, approves the agent's work and finds last month's decision about the venue by asking in Khmer or English, without opening a terminal. The developer flows (claims, locks, guard, brief size, all performance budgets) still pass unchanged.
+
+### Phase 8 — Knowledge brain: agents read, sati remembers
+
+Added 2026-11-07 at the owner's request. sati is the memory, not a file reader: AI agents open the Word, Excel, PowerPoint, PDF and image files with their own tools, notice changes and understand the language; sati keeps what they and the people learned, decided, did, need and plan, and hands back the right part in as few tokens as possible. The full plan is in [`docs/knowledge-brain.md`](docs/knowledge-brain.md). It follows Phase 7a and uses `note_upsert` / `note_get` from 7b.
+
+**Rule:** sati never opens, parses or watches the user's files.
+
+- [ ] Cards: context entries gain optional `facts[]`, `tags[]`, `sourceSeen` (the file version the agent saw) and `sourceTokens` (its estimate of reading the file); migration and snapshot `schemaVersion` bump; git-mode staleness unchanged
+- [ ] Secret scan on write for cards and notes, not only on export
+- [ ] Search covers cards (summary, facts, tags, path)
+- [ ] Compact answers: `search` and `task_list` return short rows by default, `detail: "full"` on request
+- [ ] `recall` in core, CLI (`sati recall`) and MCP: the best cards, notes, decisions and open tasks for a question, with ids and sources, capped at 1,000 tokens; no model inside sati (19 tools; update the Agent integration table)
+- [ ] `private: true` on notes and cards: kept in the local database, never exported to `.sati/` or synced
+- [ ] Pinned notes (up to 3, clipped) in the brief's Knowledge section, inside the 1,500-token cap, with the cards linked to the claimed task
+- [ ] Rules block and `sati://workflow`: check a file's card before opening it; save a card after reading one
+- [ ] Token ledger and `sati stats tokens`: served, avoided by card reuse, hit rate, brief size (estimates, stated as such)
+- [ ] UI: Memory page (cards by folder, facts, search, edit, private badge), Ask box, pinned notes on the board; Playwright and axe
+
+**Gate:** an agent answers 20 questions about a folder of real Office and PDF files, saving cards; in a fresh session it answers them again from memory, re-reading only changed files, with at least 70% fewer tokens by the agent tool's own usage report. No private item appears in `.sati/` or git. All existing budgets pass.
 
 ## Testing, CI and release
 

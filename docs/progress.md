@@ -1168,3 +1168,16 @@ notes only when the caller holds a task; handoffs stay out of it, as before.
   `GET /api/changes` and `GET /api/feature-list`, which run the same core functions, and groups
   the timeline by the reader's local day. Copy uses the Clipboard API (127.0.0.1 is a secure
   context); a refusal shows in the toast.
+
+## 2026-11-07 — Phase 7a: parity test
+
+- `e2e/ui/parity.spec.ts` runs each capability twice against one `sati ui`: by clicking in the
+  board and through `sati mcp` over stdio (the real binary, as an agent runs it). Task with plan
+  fields, checklist, milestone, note (tags, pin, edit), decision (replace) and comment. Both
+  records are read back through the CLI and compared with ids, times, versions, stamps and lease
+  details removed and each side's own ids mapped to names. Each test also checks the expected
+  values on the UI record, so two empty records cannot pass by matching.
+- It found that the toast covered a dialog's pinned action bar for about five seconds after a
+  save: the Replace decision button did not respond to a quick click. While a dialog is open the
+  toast now shows at the top of the screen. The decision flows went from 7.7 s to 1.9 s.
+

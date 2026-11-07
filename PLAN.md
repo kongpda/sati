@@ -663,7 +663,7 @@ A capability is not done until both ways have it, with tests on both. sati itsel
 - [x] A deleted dependency stops blocking: the ready list ignores deleted `dependsOn` tasks in both stores
 - [x] "My work" page: waiting for my approval (review tasks assigned to me or to nobody, with Approve and Send back with a reason), then tasks assigned to me, then due by Sunday including late ones; each task appears once, in the first list it fits
 - [x] Plain words in the UI: "working on it" for a claim and `in_progress`, "waiting for approval" for review, "until 2:32 PM" in local time and clock style, activity as sentences, refused saves explained without versions or commands; one glossary (`docs/guide/glossary.md`, words in `packages/ui/src/words.ts`), with no change to CLI or MCP terms
-- [ ] Parity test: one scripted scenario per capability runs through MCP and through the UI (Playwright) and checks both produce the same records
+- [x] Parity test: one scripted scenario per capability runs through MCP and through the UI (Playwright) and checks both produce the same records
 
 **Phase 7b — Review what changed, write changelogs and feature lists**
 

@@ -347,6 +347,11 @@ textarea {
   gap: 6px 12px;
   z-index: 30;
 }
+/* A dialog keeps its actions on its bottom edge; the toast moves up so it never covers them. */
+body:has(.palette) .toast {
+  bottom: auto;
+  top: 16px;
+}
 .toast-text {
   flex: 1 1 200px;
   overflow-wrap: anywhere;

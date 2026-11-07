@@ -12,7 +12,8 @@ import { devNull, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const bin = fileURLToPath(new URL("../../packages/cli/dist/index.mjs", import.meta.url));
+/** The built CLI. */
+export const bin = fileURLToPath(new URL("../../packages/cli/dist/index.mjs", import.meta.url));
 
 export interface Ui {
   /** http://127.0.0.1:<port> */
@@ -20,6 +21,8 @@ export interface Ui {
   /** The one-time sign-in URL `sati ui` prints. */
   signIn: string;
   repo: string;
+  /** The environment `sati ui` and `sati` run with: git config kept out, a person as the actor. */
+  env: Record<string, string>;
   /** Runs the CLI in the repo and returns parsed `--json` output. */
   sati: <T>(...args: string[]) => T;
   /** Calls the REST API with the session cookie, as the page would. */
@@ -106,5 +109,6 @@ export async function startUi(): Promise<Ui> {
     rmSync(repo, { recursive: true, force: true });
     if (opened) throw new Error("`sati ui --no-open` launched a browser.");
   };
-  return { origin, signIn, repo, sati, api, stop };
+  const set = Object.entries(env).filter((e): e is [string, string] => e[1] !== undefined);
+  return { origin, signIn, repo, env: Object.fromEntries(set), sati, api, stop };
 }

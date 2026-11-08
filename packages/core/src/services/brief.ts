@@ -109,7 +109,11 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
     // still hears "use the blue logo"; with no claimed task there is nothing to read them for.
     const notes = short && mine.length === 0 ? [] : await listAll(r, ctx, "note");
     // Unread handoffs only: an acknowledged one has been delivered and drops out of the brief.
-    const unread = notes.filter(unreadHandoff);
+    // With no notes read (a short brief and no claimed task), the index finds handoffs for me.
+    const unread =
+      short && mine.length === 0
+        ? await listAll(r, ctx, "note", { handoff: "unread" })
+        : notes.filter(unreadHandoff);
     const handoffs = new Map<string, string>();
     // The newest comment by someone else on each record: a person's "use the blue logo" reaches
     // the agent. The caller's own replies are left out; they already know what they said.

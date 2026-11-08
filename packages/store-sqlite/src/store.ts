@@ -4,7 +4,9 @@ import {
   type Activity,
   type ActivityQuery,
   type EntityMap,
+  HANDOFF_TAG,
   type ListQuery,
+  type Note,
   PRIORITY_RANK,
   type Project,
   SatiError,
@@ -41,6 +43,18 @@ const MAX_LIMIT = 500;
 
 type Row = typeof s.projects.$inferInsert;
 
+/**
+ * Notes have no status. Their `status` column marks handoffs instead, so a claim finds a task's
+ * handoff by index rather than by reading every note (migration 0005 backfills it).
+ */
+const HANDOFF_UNREAD = "handoff";
+const HANDOFF_READ = "handoff_read";
+
+function noteStatus(note: Note): string | null {
+  if (!note.tags.includes(HANDOFF_TAG)) return null;
+  return note.acknowledged === undefined ? HANDOFF_UNREAD : HANDOFF_READ;
+}
+
 /** Copies the fields we query on out of the record into indexed columns. */
 function toRow(entity: StoredEntity, rec: EntityMap[StoredEntity]): Row {
   const r = rec as unknown as Record<string, unknown>;
@@ -52,7 +66,7 @@ function toRow(entity: StoredEntity, rec: EntityMap[StoredEntity]): Row {
     id: rec.id,
     projectId: entity === "project" ? rec.id : (r.projectId as string),
     key: entity === "actor" ? str("name") : entity === "project" ? str("slug") : null,
-    status: str("status"),
+    status: entity === "note" ? noteStatus(rec as Note) : str("status"),
     featureId: str("featureId"),
     milestoneId: str("milestoneId"),
     parentId: str("parentId"),
@@ -213,6 +227,8 @@ export class SqliteStore implements StorageAdapter {
       const where: SQL[] = [eq(t.projectId, projectId)];
       if (!q.includeDeleted) where.push(isNull(t.deletedAt));
       if (q.status?.length) where.push(inArray(t.status, [...q.status]));
+      if (q.handoff === "unread") where.push(eq(t.status, HANDOFF_UNREAD));
+      if (q.handoff === "any") where.push(inArray(t.status, [HANDOFF_UNREAD, HANDOFF_READ]));
       if (q.featureId) where.push(eq(t.featureId, q.featureId));
       if (q.inMilestone) {
         const { milestoneId, featureIds } = q.inMilestone;

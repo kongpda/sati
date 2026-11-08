@@ -1339,3 +1339,18 @@ notes only when the caller holds a task; handoffs stay out of it, as before.
   published yet, so no one has one.
 - Measured, 200 new tasks: 343,917 bytes to 107,917 on disk; 43 KiB to 30 KiB packed in git.
 
+### Fix: claims read every note (2026-11-08)
+
+- Found while running `pnpm bench` for ADR 0003: the claim step failed with "database is locked"
+  on both drivers. Phase 5c made `task_claim` look for the task's handoff by reading every note
+  inside the write transaction (about 1 s at 25,000 notes), so ten agents claiming at once waited
+  past the 5 s busy timeout. `sati brief` and `sati handoff` read every note the same way.
+- Notes have no status, so the notes' `status` column now marks handoffs: `handoff` while
+  unread, `handoff_read` once acknowledged. `ListQuery.handoff` (`unread` or `any`) reads them
+  through the existing `(project_id, status, rank, id)` index. Migration 0004 backfills existing
+  notes; a store test fails without the backfill.
+- Seen but not changed: in git mode every CLI write exports the whole `.sati/` snapshot. At
+  50,000 records that is about 4.6 s per `sati task claim` (secret scan, encode, file
+  compares). The MCP server runs the same export, debounced, after its writes. The export reads
+  in a snapshot, so it delays the caller but does not block other writers. Worth an incremental
+  export later.

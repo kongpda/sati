@@ -5,7 +5,7 @@ import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { LATEST_SCHEMA_VERSION, SqliteStore } from "../src/index.js";
 import { MIGRATIONS } from "../src/migrations.gen.js";
-import { NOW, note, PROJECT_ID, project, task, tmpDb } from "./fixtures.js";
+import { ACTOR, NOW, note, PROJECT_ID, project, task, tmpDb } from "./fixtures.js";
 
 let path: string;
 let store: SqliteStore;
@@ -369,6 +369,42 @@ describe("search", () => {
       );
       expect(await find("60")).toEqual(["context venue/old.pdf"]);
       expect(await find("40")).toEqual([]);
+    } finally {
+      await upgraded.close();
+    }
+  });
+
+  // A claim finds its task's handoff through the notes' status column. Handoffs written before
+  // schema v6 must be marked by the migration, or the next claim would never deliver them.
+  it("finds handoff notes by index, including ones written before schema v6", async () => {
+    const v4 = tmpDb();
+    const raw = new Database(v4);
+    for (const m of MIGRATIONS.slice(0, 5)) raw.exec(m.sql);
+    raw.pragma("user_version = 5");
+    const acknowledged = { by: ACTOR, at: NOW };
+    const unread = note({ tags: ["handoff"] });
+    const read = note({ tags: ["handoff"], acknowledged });
+    const other = note({ tags: ["idea", "handoffs"] });
+    const insert = raw.prepare(
+      "INSERT INTO notes (id, project_id, rank, created_at, updated_at, version, data) VALUES (?, ?, 0, ?, ?, 1, ?)",
+    );
+    for (const n of [unread, read, other])
+      insert.run(n.id, PROJECT_ID, NOW, NOW, JSON.stringify(n));
+    raw.close();
+    const upgraded = await SqliteStore.open(v4);
+    const handoffs = async (handoff: "unread" | "any") =>
+      (await upgraded.read((r) => r.list("note", PROJECT_ID, { handoff }))).map((n) => n.id).sort();
+    try {
+      expect(await handoffs("unread")).toEqual([unread.id]);
+      expect(await handoffs("any")).toEqual([unread.id, read.id].sort());
+      await upgraded.write((w) => w.update("note", { ...unread, acknowledged, version: 2 }, 1));
+      expect(await handoffs("unread")).toEqual([]);
+      // Rewriting a handoff clears `acknowledged`, which makes it unread again.
+      await upgraded.write((w) => w.update("note", { ...read, version: 2 }, 1));
+      expect(await handoffs("unread")).toEqual([]);
+      const { acknowledged: _, ...rewritten } = read;
+      await upgraded.write((w) => w.update("note", { ...rewritten, version: 3 }, 2));
+      expect(await handoffs("unread")).toEqual([read.id]);
     } finally {
       await upgraded.close();
     }

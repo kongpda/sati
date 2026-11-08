@@ -36,6 +36,13 @@
       "when": 1794060000000,
       "tag": "0004_fts_cards",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1794200000000,
+      "tag": "0005_note_handoff_status",
+      "breakpoints": true
     }
   ]
 }

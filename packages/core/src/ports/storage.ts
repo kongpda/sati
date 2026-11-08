@@ -14,6 +14,8 @@ export interface ListQuery {
   assigneeId?: string | undefined;
   /** Records changed at or after this UTC time (`updatedAt`, which every write moves). */
   updatedSince?: string | undefined;
+  /** Notes tagged as handoffs: only those not yet acknowledged, or all of them. */
+  handoff?: "unread" | "any" | undefined;
   includeDeleted?: boolean | undefined;
   /** Reverse the usual order (rank, then id); with equal ranks this means newest first. */
   newestFirst?: boolean | undefined;

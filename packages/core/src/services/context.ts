@@ -13,7 +13,7 @@ import { CLI_NAME } from "../name.js";
 import type { Clock } from "../ports/clock.js";
 import type { ProcessProbe } from "../ports/process.js";
 import type { RepoIndex } from "../ports/repo.js";
-import type { StorageAdapter, StorageReader, StorageWriter } from "../ports/storage.js";
+import type { ListQuery, StorageAdapter, StorageReader, StorageWriter } from "../ports/storage.js";
 
 /** Everything a service call needs. One per command or MCP request. */
 export interface ServiceContext {
@@ -82,7 +82,7 @@ export async function listAll<E extends StoredEntity>(
   r: StorageReader,
   ctx: ServiceContext,
   entity: E,
-  opts: { includeDeleted?: boolean } = {},
+  opts: Pick<ListQuery, "includeDeleted" | "handoff"> = {},
 ): Promise<EntityMap[E][]> {
   const out: EntityMap[E][] = [];
   for (let offset = 0; ; offset += PAGE) {

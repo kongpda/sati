@@ -29,7 +29,7 @@ import {
   type ServiceContext,
   updateWithLog,
 } from "./context.js";
-import { HANDOFF_TAG } from "./handoff.js";
+import { unreadHandoff } from "./handoff.js";
 import { releaseTaskLocks } from "./lock.js";
 import { DEFAULT_LEASE_MINUTES, readSettings } from "./project.js";
 import { listInput } from "./query.js";
@@ -441,12 +441,12 @@ async function deliverHandoff(
   ctx: ServiceContext,
   taskId: string,
 ): Promise<DeliveredHandoff | undefined> {
-  const notes = await listAll(w, ctx, "note");
+  // Only unread handoffs: every claim runs this inside the write lock, so it must not read all notes.
+  const notes = await listAll(w, ctx, "note", { handoff: "unread" });
   const note = notes.find(
     (n: Note) =>
-      n.tags.includes(HANDOFF_TAG) &&
+      unreadHandoff(n) &&
       n.links.includes(taskId) &&
-      n.acknowledged === undefined &&
       (n.handoffTo === undefined || n.handoffTo === ctx.actorId),
   );
   if (!note) return undefined;

@@ -1,6 +1,7 @@
 import {
   type Activity,
   type EntityMap,
+  HANDOFF_TAG,
   isReady,
   type Project,
   SatiError,
@@ -95,6 +96,13 @@ export class MemoryStore implements StorageAdapter {
           );
         if (q.updatedSince)
           rows = rows.filter((r) => String(r.updatedAt) >= (q.updatedSince ?? ""));
+        if (q.handoff) {
+          rows = rows.filter(
+            (r) =>
+              (r.tags as string[] | undefined)?.includes(HANDOFF_TAG) &&
+              (q.handoff === "any" || r.acknowledged === undefined),
+          );
+        }
         if (q.newestFirst) rows = rows.reverse();
         const start = q.offset ?? 0;
         return rows.slice(start, start + (q.limit ?? 50)).map(clone) as never;

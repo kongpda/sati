@@ -137,7 +137,8 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
     }
     const forMe = [];
     for (const note of unread.filter((n) => n.handoffTo !== undefined && handoffFor(n, me))) {
-      forMe.push({ note, from: await actorName(r, note.createdBy) });
+      const author = await r.get("actor", note.createdBy);
+      forMe.push({ note, from: author?.name ?? note.handoffFromName ?? note.createdBy });
     }
     // Knowledge: pinned notes (brand voice, policies, contacts), newest first, and the cards
     // tied to my tasks, through their feature's paths or a label shared with the card's tags.

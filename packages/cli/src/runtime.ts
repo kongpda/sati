@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir, hostname, uptime, userInfo } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
   type Actor,
   actorIdentity,
@@ -274,10 +274,46 @@ function changedFiles(root: string, worktree: string): string[] | null {
  * Files where HEAD would conflict with the base branch, from `git merge-tree --write-tree`
  * (git 2.38+), which merges in memory and touches neither the index nor the worktree.
  * Null when there is no base, git is older, or it fails for another reason.
+ *
+ * merge-tree writes the merged tree's objects into `.git/objects`, and this runs on every brief
+ * and Stop hook, so the answer is kept in `.git/sati/` per pair of commits: git runs again only
+ * after the base or HEAD moves.
  */
 function baseConflicts(root: string): BaseConflicts | null {
   const base = defaultBase(root);
   if (!base) return null;
+  let key: string;
+  let cacheFile: string;
+  try {
+    const shas = gitIn(root, [
+      "rev-parse",
+      "--end-of-options",
+      `${base}^{commit}`,
+      "HEAD^{commit}",
+    ]);
+    // rev-parse echoes `--end-of-options` back; the key is the two commit ids.
+    key = shas
+      .split("\n")
+      .filter((l) => /^[0-9a-f]{40,64}$/.test(l))
+      .join("..");
+    cacheFile = resolve(
+      root,
+      gitIn(root, ["rev-parse", "--git-path", "sati/merge-check.json"]).trim(),
+    );
+  } catch {
+    return null;
+  }
+  try {
+    const cached = JSON.parse(readFileSync(cacheFile, "utf8")) as {
+      key?: unknown;
+      files?: unknown;
+    };
+    if (cached.key === key && Array.isArray(cached.files)) {
+      return { base, files: cached.files.filter((f): f is string => typeof f === "string") };
+    }
+  } catch {
+    // no answer kept yet, or an unreadable one: ask git
+  }
   const args = ["merge-tree", "--write-tree", "--name-only", "--no-messages", "-z", base, "HEAD"];
   let out: string;
   try {
@@ -290,15 +326,16 @@ function baseConflicts(root: string): BaseConflicts | null {
   }
   // Tree id, then each conflicted path once per stage it appears in.
   const [, ...paths] = out.split("\0").filter(Boolean);
-  return { base, files: [...new Set(paths)] };
+  const files = [...new Set(paths)];
+  try {
+    mkdirSync(dirname(cacheFile), { recursive: true });
+    writeFileSync(cacheFile, `${JSON.stringify({ key, files })}\n`);
+  } catch {
+    // read-only .git: the answer is still right, it is just computed again next time
+  }
+  return { base, files };
 }
 
-/**
- * Process checks for claim holders. A process on this host is alive while `kill(pid, 0)`
- * succeeds or is refused for permission; `ESRCH` is the one answer that proves it has exited.
- * Another host, or any other error, is unknown. `self` names this process for long-lived
- * servers only (see ProcessProbe).
- */
 /**
  * Names the place a process id means something: this boot of this machine, in this PID namespace.
  * A hostname alone is shared by every cloud sandbox and by containers on host networking, and a
@@ -323,6 +360,12 @@ function machineKey(): string {
   return `h:${createHash("sha256").update(parts.join("\0")).digest("hex").slice(0, 16)}`;
 }
 
+/**
+ * Process checks for claim holders. A process on this host is alive while `kill(pid, 0)`
+ * succeeds or is refused for permission; `ESRCH` is the one answer that proves it has exited.
+ * Another host, or any other error, is unknown. `self` names this process for long-lived
+ * servers only (see ProcessProbe).
+ */
 export function processProbe(long: boolean): ProcessProbe {
   const host = machineKey();
   const probe: ProcessProbe = {

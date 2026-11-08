@@ -1,0 +1,40 @@
+{
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "33b3db9a3e08c0d84a6e1044c155535a3538c0d8",
+    "completedAt": "2026-11-08T13:41:56.048Z",
+    "completedBy": "actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "filesTouched": [
+      "packages/core/src/services/handoff.ts",
+      "packages/core/src/services/brief.ts",
+      "packages/core/src/domain/schemas.ts",
+      "packages/cli/src/runtime.ts",
+      "packages/cli/src/ui/server.ts",
+      "packages/ui/src/app.tsx",
+      "packages/ui/src/pages.tsx",
+      "packages/ui/src/forms.tsx",
+      "packages/ui/src/board.tsx",
+      "packages/ui/src/styles.css"
+    ],
+    "releaseNote": "The board keeps what you type when an agent edits the same task, and errors stay until dismissed.",
+    "summary": "Final polish pass: handoff author and unknown authors across clones; merge-tree answer cached per commit pair; snapshot lists git files once and names cut kinds; task panel keeps typing during agent writes; no double saves; dialogs inert background; persistent error toasts; long text wraps; stale Copy/answers blocked; search race; dnd announcements; focus back to card; WaitingKind removed."
+  },
+  "createdAt": "2026-11-08T12:50:54.086Z",
+  "createdBy": "actr_01M6WY12CQKVQGM84WENFXR3YC",
+  "id": "tsk_01M6XKCD06ERNXC5WCGE962ZCR",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-08T12:50:54.089Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "claim": "2026-11-08T13:41:56.050Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "completion": "2026-11-08T13:41:56.050Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "status": "2026-11-08T13:41:56.050Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "worktree": "2026-11-08T12:50:54.396Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC"
+  },
+  "status": "review",
+  "title": "Final polish pass: dead code, review fixes, page design",
+  "updatedAt": "2026-11-08T13:41:56.054Z",
+  "version": 3,
+  "worktree": "/home/user/workspace/repo"
+}

@@ -57,6 +57,10 @@ describe("worktree coordination through git", () => {
     expect(run(a, ["brief"], agent("codex-a")).stdout).toContain(
       "Your branch conflicts with origin/main in shared.ts",
     );
+    // The answer is kept per pair of commits; resolving the conflict moves HEAD, so it is redone.
+    writeFileSync(join(a, "shared.ts"), "export const a = 9;\n");
+    git(a, "commit", "-qam", "take main's value");
+    expect(run(a, ["brief"], agent("codex-a")).stdout).not.toContain("Your branch conflicts");
   });
 
   it("pins a review to the branch commit and lists finished worktrees in doctor", async () => {

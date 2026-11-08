@@ -298,6 +298,9 @@ describe("handoffs", () => {
     const kim = await as(theirs.ctx, "kim@app", "agent");
     const lee = await as(theirs.ctx, "lee@app", "agent");
     expect(kim.actorId).not.toBe(kimHere.actorId);
+    // The author is unknown here too; the brief names them from the note.
+    expect(note.handoffFromName).toBeTruthy();
+    expect((await buildBrief(kim)).markdown).toContain(`from ${note.handoffFromName}`);
     expect((await buildBrief(lee)).markdown).not.toContain("## Handoffs for you");
     expect((await buildBrief(kim)).markdown).toContain("## Handoffs for you");
     expect((await claimTask(lee, t.id)).handoff).toBeUndefined();

@@ -76,6 +76,7 @@ export async function writeHandoff(ctx: ServiceContext, input: unknown) {
         { clear: ["acknowledged", ...(addressee ? [] : ["handoffTo", "handoffToName"])] },
       );
     }
+    const author = await w.get("actor", ctx.actorId);
     return insertWithLog(w, ctx, "note", {
       ...baseFields(ctx, "note"),
       title: `Handoff ${task.title}`.slice(0, LIMITS.title),
@@ -84,6 +85,8 @@ export async function writeHandoff(ctx: ServiceContext, input: unknown) {
       links: [task.id],
       pinned: false,
       ...to,
+      // The note's author (`createdBy`), by name for a teammate's clone; a rewrite keeps it.
+      ...(author ? { handoffFromName: author.name } : {}),
     });
   });
 }

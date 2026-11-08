@@ -176,7 +176,6 @@ export type Feature = z.infer<typeof Feature>;
 
 /** Why a claim's holder waits on a person: it asked a question, or its tool needs a permission. */
 export const WAITING_KINDS = ["question", "permission"] as const;
-export type WaitingKind = (typeof WAITING_KINDS)[number];
 
 /** A full git commit id (SHA-1 or SHA-256). */
 export const CommitSha = z
@@ -328,6 +327,8 @@ export const Note = z.strictObject({
    * above names no one; the name (\`kim@app\`, or \`$SATI_ACTOR\`) still finds the same person.
    */
   handoffToName: z.string().min(1).max(200).optional(),
+  /** The author's actor name on a handoff, so a teammate's clone can say who left it. */
+  handoffFromName: z.string().min(1).max(200).optional(),
   /** Who read and acknowledged the handoff, and when. Cleared when the handoff is rewritten. */
   acknowledged: z.strictObject({ by: ActorId, at: ts }).optional(),
 });

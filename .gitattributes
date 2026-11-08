@@ -1,2 +1,3 @@
 # Biome and the shell hooks expect LF, also on Windows checkouts.
 * text=auto eol=lf
+.sati/**/*.json merge=sati linguist-generated

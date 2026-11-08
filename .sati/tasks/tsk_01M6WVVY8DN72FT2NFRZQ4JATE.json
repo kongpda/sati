@@ -1,11 +1,5 @@
 {
-  "branch": "main",
-  "claim": {
-    "actorId": "actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
-    "heartbeatAt": "2026-11-08T05:59:57.677Z",
-    "leaseUntil": "2026-11-08T06:29:57.677Z",
-    "token": 2
-  },
+  "branch": "integrate",
   "createdAt": "2026-11-08T05:59:57.453Z",
   "createdBy": "actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
   "id": "tsk_01M6WVVY8DN72FT2NFRZQ4JATE",
@@ -13,14 +7,14 @@
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
     "*": "2026-11-08T05:59:57.458Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
-    "branch": "2026-11-08T05:59:57.680Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
-    "claim": "2026-11-08T05:59:57.680Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
-    "status": "2026-11-08T05:59:57.680Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "branch": "2026-11-08T06:48:01.730Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "claim": "2026-11-08T06:50:52.472Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "status": "2026-11-08T06:50:52.472Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
     "worktree": "2026-11-08T05:59:57.680Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX"
   },
-  "status": "in_progress",
+  "status": "todo",
   "title": "Phase 4 gate: 2,000-card board scrolls at 60 fps",
-  "updatedAt": "2026-11-08T05:59:57.684Z",
-  "version": 2,
+  "updatedAt": "2026-11-08T06:50:52.477Z",
+  "version": 4,
   "worktree": "/home/user/workspace/repo"
 }

@@ -1,0 +1,42 @@
+{
+  "body": "Claims across machines (machine key + adopt on MCP restart), export repair and flush retry, wait --hook export, listAll cursor guard, putContext path re-check, doctor on old git, review drift ignores .sati-only commits, byte caps only on new text.",
+  "branch": "integrate",
+  "completion": {
+    "branch": "integrate",
+    "commit": "baf62d25ab5f97a20db8158f29a512a374490754",
+    "completedAt": "2026-11-08T06:50:52.296Z",
+    "completedBy": "actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "filesTouched": [
+      "packages/cli/src/runtime.ts",
+      "packages/cli/src/commands/mcp.ts",
+      "packages/cli/src/commands/wait.ts",
+      "packages/cli/src/commands/doctor.ts",
+      "packages/core/src/services/task.ts",
+      "packages/core/src/services/context.ts",
+      "packages/core/src/services/context-cache.ts",
+      "packages/core/src/domain/schemas.ts",
+      "packages/core/src/ports/repo.ts",
+      "packages/sync/src/debounce.ts"
+    ],
+    "releaseNote": "Claims from other machines are kept, failed exports are retried, and .sati-only commits no longer flag a review as moved.",
+    "summary": "Fixed the review findings: machine key and claim adoption, export repair and flush retry, wait --hook export, listAll cursor guard, context_put path re-check, doctor on old git, review drift ignores .sati-only commits, byte caps on new text only. Each has a regression test."
+  },
+  "createdAt": "2026-11-08T06:47:58.316Z",
+  "createdBy": "actr_01M6WY12CQKVQGM84WENFXR3YC",
+  "id": "tsk_01M6WYKVKC64SSJH0SSX04NMGH",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-08T06:47:58.322Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "branch": "2026-11-08T06:48:01.500Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "claim": "2026-11-08T06:50:52.298Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "completion": "2026-11-08T06:50:52.298Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "status": "2026-11-08T06:50:52.298Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "worktree": "2026-11-08T06:48:01.500Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC"
+  },
+  "status": "review",
+  "title": "Fix review findings on the integrated branch",
+  "updatedAt": "2026-11-08T06:50:52.303Z",
+  "version": 3,
+  "worktree": "/home/user/workspace/repo"
+}

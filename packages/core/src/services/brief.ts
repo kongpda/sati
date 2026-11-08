@@ -9,7 +9,7 @@ import { type ChangeItem, lastSession, readChanges } from "./changes.js";
 import { COMMENT_TAG, isThreadNote } from "./comment.js";
 import { actorName, listAll, nowIso, parseInput, type ServiceContext } from "./context.js";
 import { getContext } from "./context-cache.js";
-import { handoffNext, unreadHandoff } from "./handoff.js";
+import { handoffFor, handoffNext, unreadHandoff } from "./handoff.js";
 import { warningLines, worktreeWarnings } from "./overlap.js";
 import { readSettings } from "./project.js";
 import { releaseExpiredClaims, reviewDrift } from "./task.js";
@@ -115,6 +115,7 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
         ? await listAll(r, ctx, "note", { handoff: "unread" })
         : notes.filter(unreadHandoff);
     const handoffs = new Map<string, string>();
+    const me = await r.get("actor", ctx.actorId);
     // The newest comment by someone else on each record: a person's "use the blue logo" reaches
     // the agent. The caller's own replies are left out; they already know what they said.
     const comments = new Map<string, Note>();
@@ -130,12 +131,12 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       }
     }
     for (const note of unread) {
-      if (short || (note.handoffTo !== undefined && note.handoffTo !== ctx.actorId)) continue;
+      if (short || !handoffFor(note, me)) continue;
       const next = handoffNext(note.body);
       for (const link of note.links) if (next) handoffs.set(link, next);
     }
     const forMe = [];
-    for (const note of unread.filter((n) => n.handoffTo === ctx.actorId)) {
+    for (const note of unread.filter((n) => n.handoffTo !== undefined && handoffFor(n, me))) {
       forMe.push({ note, from: await actorName(r, note.createdBy) });
     }
     // Knowledge: pinned notes (brand voice, policies, contacts), newest first, and the cards

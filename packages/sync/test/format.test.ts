@@ -4,9 +4,11 @@ import { join } from "node:path";
 import {
   createIdFactory,
   createTask,
+  ENTITY_SCHEMAS,
   fixedClock,
   initProject,
   type ServiceContext,
+  SNAPSHOT_ENTITIES,
   updateTask,
 } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
@@ -14,6 +16,7 @@ import fc from "fast-check";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   decodeRecord,
+  EMPTY_FIELDS,
   encodeRecord,
   exportSnapshot,
   importSnapshot,
@@ -45,6 +48,23 @@ async function clone(projectId?: string): Promise<ServiceContext> {
 }
 
 type Rec = Record<string, unknown> & { stamps: Record<string, string> };
+
+// The values a compact file leaves out are frozen; a schema change must not make one invalid,
+// or every file in git that left it out would fail to import.
+describe("compact empty fields", () => {
+  it("are values each entity's schema still accepts", () => {
+    for (const entity of SNAPSHOT_ENTITIES) {
+      const shape = (
+        ENTITY_SCHEMAS[entity] as unknown as {
+          shape: Record<string, { safeParse(v: unknown): { success: boolean } }>;
+        }
+      ).shape;
+      for (const [key, value] of Object.entries(EMPTY_FIELDS[entity])) {
+        expect(shape[key]?.safeParse(value).success, `${entity}.${key}`).toBe(true);
+      }
+    }
+  });
+});
 
 describe("compact snapshot records", () => {
   it("leaves out empty fields and writes a shared stamp once, at under half the size", async () => {

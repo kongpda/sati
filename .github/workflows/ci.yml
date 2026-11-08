@@ -75,6 +75,21 @@ jobs:
           npx sati task create "Installed from the packed tarball"
           npx sati search tarball --json | grep -q "Installed from the packed tarball"
           npx sati doctor
+          # The MCP server and the board load the bundled MCP SDK and hono: start both.
+          printf '%s\n' \
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
+            '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sati_brief","arguments":{}}}' \
+            | npx sati mcp > mcp.out
+          grep -q "Installed from the packed tarball" mcp.out
+          # Node itself, not npx, so the kill below stops the server rather than a wrapper.
+          node node_modules/@kongpda/sati/dist/index.mjs ui --no-open > ui.out &
+          ui=$!
+          for _ in $(seq 1 30); do grep -q "http://" ui.out && break; sleep 1; done
+          url="$(grep -o 'http://[^ ]*' ui.out)"
+          curl -fsS -c jar "$url" -o /dev/null
+          curl -fsS -b jar "${url%%/session*}/" | grep -qi "<html"
+          kill "$ui"
 
   # PLAN Phase 3 gate: the four-worktree scenario passes 100 seeded 1,000-step runs. Each shard
   # takes about 15 minutes, so pushes and PRs run one seed per shard (10 runs); the nightly and

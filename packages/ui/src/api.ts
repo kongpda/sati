@@ -66,6 +66,8 @@ export interface Note {
   version: number;
   /** A handoff for one actor; without it, for whoever takes the task next. */
   handoffTo?: string;
+  /** The addressee's actor name, for a clone where the id names no one. */
+  handoffToName?: string;
   acknowledged?: { by: string; at: string };
 }
 

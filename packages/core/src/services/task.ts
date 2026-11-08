@@ -30,7 +30,7 @@ import {
   type ServiceContext,
   updateWithLog,
 } from "./context.js";
-import { unreadHandoff } from "./handoff.js";
+import { handoffFor, unreadHandoff } from "./handoff.js";
 import { releaseTaskLocks } from "./lock.js";
 import { DEFAULT_LEASE_MINUTES, readSettings } from "./project.js";
 import { listInput } from "./query.js";
@@ -449,11 +449,9 @@ async function deliverHandoff(
 ): Promise<DeliveredHandoff | undefined> {
   // Only unread handoffs: every claim runs this inside the write lock, so it must not read all notes.
   const notes = await listAll(w, ctx, "note", { handoff: "unread" });
+  const me = await w.get("actor", ctx.actorId);
   const note = notes.find(
-    (n: Note) =>
-      unreadHandoff(n) &&
-      n.links.includes(taskId) &&
-      (n.handoffTo === undefined || n.handoffTo === ctx.actorId),
+    (n: Note) => unreadHandoff(n) && n.links.includes(taskId) && handoffFor(n, me),
   );
   if (!note) return undefined;
   if (note.createdBy === ctx.actorId && note.handoffTo === undefined) {

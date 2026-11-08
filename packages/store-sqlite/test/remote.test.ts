@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { SatiError } from "@sati/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { LATEST_SCHEMA_VERSION, SqliteStore } from "../src/index.js";
-import { connectStore, listenStore, socketPath } from "../src/remote.js";
+import { connectStore, listenStore, PROTOCOL, socketPath } from "../src/remote.js";
 import { project, task } from "./fixtures.js";
 
 const frame = (value: unknown) => {
@@ -66,7 +66,7 @@ describe("daemon server", () => {
   // A client killed mid-write must not hold the write lock, or every other agent hangs forever.
   it("rolls back and frees the lock when a client dies inside a write", async () => {
     const client = await connect();
-    client.write(frame({ id: 1, op: "begin", mode: "write", txn: 1 }));
+    client.write(frame({ id: 1, op: "begin", mode: "write", txn: 1, protocol: PROTOCOL }));
     expect((await nextFrame(client)).ok).toBe(true);
     client.write(frame({ id: 2, op: "call", txn: 1, method: "insert", args: ["task", task()] }));
     await nextFrame(client);
@@ -98,10 +98,22 @@ describe("daemon server", () => {
   });
 
   // If the transaction cannot start, the client must be told instead of waiting forever.
+  // A client from another build may read call arguments differently; it must be refused.
+  it("refuses a begin without this protocol version", async () => {
+    const client = await connect();
+    client.write(frame({ id: 3, op: "begin", mode: "read", txn: 3 }));
+    expect(await within(nextFrame(client))).toMatchObject({
+      id: 3,
+      ok: false,
+      error: { code: "CONFLICT" },
+    });
+    client.destroy();
+  });
+
   it("answers a begin that fails before it starts", async () => {
     owner.db.exec(`PRAGMA user_version = ${LATEST_SCHEMA_VERSION + 1}`);
     const client = await connect();
-    client.write(frame({ id: 7, op: "begin", mode: "write", txn: 7 }));
+    client.write(frame({ id: 7, op: "begin", mode: "write", txn: 7, protocol: PROTOCOL }));
     const reply = await within(nextFrame(client));
     expect(reply).toMatchObject({ id: 7, ok: false, error: { code: "SCHEMA_TOO_NEW" } });
     client.destroy();
@@ -120,6 +132,34 @@ describe("daemon client", () => {
     expect(err).toBeInstanceOf(SatiError);
     expect(err.message).toMatch(/daemon/);
     silent.close();
+  });
+
+  // An older daemon opens the transaction but does not echo a protocol: refuse, and abort it.
+  it("refuses a daemon from another build and closes the transaction it opened", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "sati-remote-"));
+    const old = join(dir, "old.sock");
+    const ops: string[] = [];
+    const legacy = createServer((s) => {
+      let buf = Buffer.alloc(0);
+      s.on("data", (chunk: Buffer) => {
+        buf = Buffer.concat([buf, chunk]);
+        while (buf.length >= 4 && buf.length >= 4 + buf.readUInt32BE(0)) {
+          const msg = JSON.parse(buf.subarray(4, 4 + buf.readUInt32BE(0)).toString());
+          buf = buf.subarray(4 + buf.readUInt32BE(0));
+          ops.push(msg.op);
+          s.write(frame({ id: msg.id, ok: true }));
+        }
+      });
+    });
+    await new Promise<void>((resolve) => legacy.listen(old, resolve));
+    const remote = connectStore(old);
+    const ran: string[] = [];
+    const err = await within(remote.read(async () => ran.push("fn"))).catch((e) => e);
+    expect(err).toMatchObject({ code: "CONFLICT" });
+    expect(ran).toEqual([]);
+    expect(ops).toEqual(["begin", "abort"]);
+    await remote.close();
+    legacy.close();
   });
 
   it("fails fast when no daemon is listening", async () => {

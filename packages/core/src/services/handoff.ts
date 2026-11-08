@@ -60,11 +60,11 @@ export async function writeHandoff(ctx: ServiceContext, input: unknown) {
   // One transaction: two concurrent handoffs must not both see "no note" and each create one.
   return ctx.store.write(async (w) => {
     const task = await mustGet(w, ctx, "task", data.taskId);
-    if (data.to) await mustGet(w, ctx, "actor", data.to);
+    const addressee = data.to ? await mustGet(w, ctx, "actor", data.to) : undefined;
     const existing = (await listAll(w, ctx, "note", { handoff: "any" })).find(
       (n) => n.tags.includes(HANDOFF_TAG) && n.links.includes(task.id),
     );
-    const to = data.to ? { handoffTo: data.to } : {};
+    const to = addressee ? { handoffTo: addressee.id, handoffToName: addressee.name } : {};
     if (existing) {
       // A rewritten handoff is new news: it is unread again, for the new addressee if any.
       return updateWithLog(
@@ -73,7 +73,7 @@ export async function writeHandoff(ctx: ServiceContext, input: unknown) {
         "note",
         existing,
         { body, ...to },
-        { clear: ["acknowledged", ...(data.to ? [] : ["handoffTo"])] },
+        { clear: ["acknowledged", ...(addressee ? [] : ["handoffTo", "handoffToName"])] },
       );
     }
     return insertWithLog(w, ctx, "note", {
@@ -86,6 +86,18 @@ export async function writeHandoff(ctx: ServiceContext, input: unknown) {
       ...to,
     });
   });
+}
+
+/**
+ * True when a handoff is addressed to this actor: by id in the clone it was written in, by name in
+ * a teammate's clone, where the id is unknown. A handoff for no one is for whoever claims next.
+ */
+export function handoffFor(n: Note, actor: { id: string; name?: string } | undefined): boolean {
+  if (n.handoffTo === undefined) return true;
+  if (!actor) return false;
+  return (
+    n.handoffTo === actor.id || (n.handoffToName !== undefined && n.handoffToName === actor.name)
+  );
 }
 
 /** True for a handoff that is still unread by the actor it is for. */
@@ -106,7 +118,7 @@ export async function acknowledgeHandoff(ctx: ServiceContext, noteId: string): P
     const caller = await w.get("actor", ctx.actorId);
     const person = caller?.kind === "human";
     const allowed = note.handoffTo
-      ? note.handoffTo === ctx.actorId || person
+      ? handoffFor(note, caller) || person
       : note.createdBy !== ctx.actorId || person;
     if (!allowed) {
       throw new SatiError("CONFLICT", `Handoff ${noteId} is for someone else to acknowledge.`);

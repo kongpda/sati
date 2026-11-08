@@ -323,6 +323,11 @@ export const Note = z.strictObject({
   private: z.literal(true).optional(),
   /** A handoff addressed to one actor; without it the handoff is for whoever claims the task. */
   handoffTo: ActorId.optional(),
+  /**
+   * The addressee's actor name. Actors are not in the snapshot, so in a teammate's clone the id
+   * above names no one; the name (\`kim@app\`, or \`$SATI_ACTOR\`) still finds the same person.
+   */
+  handoffToName: z.string().min(1).max(200).optional(),
   /** Who read and acknowledged the handoff, and when. Cleared when the handoff is rewritten. */
   acknowledged: z.strictObject({ by: ActorId, at: ts }).optional(),
 });

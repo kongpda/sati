@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { createConnection, createServer, type Server, type Socket } from "node:net";
 import { dirname, join } from "node:path";
 import {
+  CLI_NAME,
   ERROR_EXIT_CODES,
   type ErrorCode,
   SatiError,
@@ -10,8 +11,16 @@ import {
   type StorageWriter,
 } from "@sati/core";
 
+/**
+ * The wire protocol's version. A client and a `sati serve` from different builds may disagree on
+ * what a call's arguments mean (a daemon that ignores a paging cursor answers the same page
+ * forever), so each `begin` carries it and the daemon echoes it; a mismatch on either side fails.
+ */
+export const PROTOCOL = 2;
+
 interface Message {
   id: number;
+  protocol?: number;
   op: "begin" | "call" | "end" | "abort";
   mode?: "read" | "write";
   txn?: number;
@@ -103,6 +112,18 @@ export function listenStore(store: StorageAdapter, socketPath: string): Server {
     socket.on("close", onGone);
     decode(socket, (msg) => {
       if (msg.op === "begin" && msg.txn !== undefined) {
+        if (msg.protocol !== PROTOCOL) {
+          send({
+            id: msg.id,
+            ok: false,
+            error: {
+              code: "CONFLICT",
+              message: `This ${CLI_NAME} is a different version from the running \`${CLI_NAME} serve\`.`,
+              hint: `Stop \`${CLI_NAME} serve\` and start it again with this version.`,
+            },
+          });
+          return;
+        }
         const run = msg.mode === "write" ? store.write.bind(store) : store.read.bind(store);
         let started = false;
         void run(async (access) => {
@@ -110,7 +131,7 @@ export function listenStore(store: StorageAdapter, socketPath: string): Server {
           if (closed) throw new Error("client disconnected");
           started = true;
           sessions.set(msg.txn ?? 0, access);
-          send({ id: msg.id, ok: true });
+          send({ id: msg.id, ok: true, result: { protocol: PROTOCOL } });
           await new Promise<void>((resolve, reject) => {
             gates.set(msg.txn ?? 0, { resolve, reject, endId: 0 });
           });
@@ -222,7 +243,19 @@ export function connectStore(socketPath: string): StorageAdapter {
     fn: (access: StorageWriter) => Promise<T>,
   ): Promise<T> => {
     const txn = ++seq;
-    await request({ op: "begin", mode, txn });
+    const ack = await request<{ protocol?: number } | undefined>({
+      op: "begin",
+      mode,
+      txn,
+      protocol: PROTOCOL,
+    });
+    if (ack?.protocol !== PROTOCOL) {
+      // A daemon from an older build: it opened the transaction, so close it before refusing.
+      await request({ op: "abort", txn }).catch(() => undefined);
+      throw new SatiError("CONFLICT", `The running \`${CLI_NAME} serve\` is a different version.`, {
+        hint: `Stop \`${CLI_NAME} serve\` and start it again with this version.`,
+      });
+    }
     try {
       const result = await fn(proxy(txn));
       await request({ op: "end", txn });

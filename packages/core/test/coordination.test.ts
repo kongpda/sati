@@ -11,6 +11,7 @@ import {
   doctorChecks,
   ensureActor,
   getRecord,
+  importRecords,
   markWaiting,
   type ProcessProbe,
   type RepoIndex,
@@ -273,6 +274,35 @@ describe("handoffs", () => {
     const rewritten = await writeHandoff(ctx, { taskId: t.id, next: "Changed plan" });
     expect(rewritten.acknowledged).toBeUndefined();
     expect(rewritten.handoffTo).toBeUndefined();
+    expect(rewritten.handoffToName).toBeUndefined();
+  });
+
+  // Actors are machine-local, so in a teammate's clone the addressee has another id.
+  it("addressed to one actor reach that actor in a teammate's clone, by name", async () => {
+    const mine = await setup();
+    const kimHere = await as(mine.ctx, "kim@app", "agent");
+    const t = await createTask(mine.ctx, { title: "Migrate" });
+    const note = await writeHandoff(mine.ctx, {
+      taskId: t.id,
+      next: "For Kim",
+      to: kimHere.actorId,
+    });
+    expect(note.handoffToName).toBe("kim@app");
+
+    const theirs = await setup();
+    const at = { projectId: theirs.ctx.projectId };
+    await importRecords(theirs.ctx, [
+      { entity: "task", source: `tasks/${t.id}.json`, record: { ...t, ...at } },
+      { entity: "note", source: `notes/${note.id}.json`, record: { ...note, ...at } },
+    ]);
+    const kim = await as(theirs.ctx, "kim@app", "agent");
+    const lee = await as(theirs.ctx, "lee@app", "agent");
+    expect(kim.actorId).not.toBe(kimHere.actorId);
+    expect((await buildBrief(lee)).markdown).not.toContain("## Handoffs for you");
+    expect((await buildBrief(kim)).markdown).toContain("## Handoffs for you");
+    expect((await claimTask(lee, t.id)).handoff).toBeUndefined();
+    await releaseTask(lee, t.id);
+    expect((await claimTask(kim, t.id)).handoff?.id).toBe(note.id);
   });
 
   it("are acknowledged on their own, never by their author unless addressed", async () => {

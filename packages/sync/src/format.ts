@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-import { ENTITY_SCHEMAS, ID_PREFIXES, SNAPSHOT_ENTITIES, type SnapshotEntity } from "@sati/core";
+import { ID_PREFIXES, SNAPSHOT_ENTITIES, type SnapshotEntity } from "@sati/core";
 
 /*
  * The compact form of a record in `.sati/`. Two rules shrink a file to about half:
@@ -10,7 +10,7 @@ import { ENTITY_SCHEMAS, ID_PREFIXES, SNAPSHOT_ENTITIES, type SnapshotEntity } f
  *    only the stamps that differ. On read, `*` applies to every field of the record outside
  *    UNSTAMPED that has no stamp of its own.
  *
- * Both are part of the file format: changing EMPTY_CANDIDATES or UNSTAMPED changes how files
+ * Both are part of the file format: changing EMPTY_FIELDS or UNSTAMPED changes how files
  * already in git read back. Files in the full form (written before this) read unchanged.
  */
 
@@ -18,9 +18,6 @@ type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 type Obj = { [key: string]: Json };
 
 const isObj = (v: unknown): v is Obj => v !== null && typeof v === "object" && !Array.isArray(v);
-
-/** Tried in this order; the first value a field's schema accepts is its empty value. */
-const EMPTY_CANDIDATES: readonly Json[] = [null, [], "", false];
 
 /** Fields that never carry a stamp, so `*` does not apply to them. */
 const UNSTAMPED = new Set([
@@ -37,25 +34,49 @@ const UNSTAMPED = new Set([
 
 const SHARED = "*";
 
-interface FieldSchema {
-  safeParse(value: unknown): { success: boolean };
-}
+/**
+ * The fields each entity leaves out when they hold these values, and gets back on read. Frozen,
+ * not read from the Zod schemas: files already in git read back with these values, whatever a
+ * later schema says. A new field may be added; an entry must never be changed or removed.
+ */
+export const EMPTY_FIELDS: Readonly<Record<SnapshotEntity, Readonly<Record<string, Json>>>> = {
+  milestone: { deletedAt: null, goal: "", targetDate: null },
+  feature: {
+    deletedAt: null,
+    description: "",
+    protected: false,
+    paths: [],
+    tests: [],
+    acceptance: [],
+    milestoneId: null,
+  },
+  task: {
+    deletedAt: null,
+    body: "",
+    featureId: null,
+    parentId: null,
+    dependsOn: [],
+    labels: [],
+    branch: null,
+    worktree: null,
+    claim: null,
+    completion: null,
+  },
+  decision: {
+    deletedAt: null,
+    context: "",
+    decision: "",
+    consequences: "",
+    supersedes: null,
+    featureIds: [],
+  },
+  note: { deletedAt: null, body: "", tags: [], links: [], pinned: false },
+  context: { deletedAt: null, summary: "", keyFiles: [], contentHash: "", gitCommit: null },
+};
 
-/** Each entity's required fields and their empty values, read from the Zod schemas once. */
-const EMPTY: Record<SnapshotEntity, Map<string, Json>> = Object.fromEntries(
-  SNAPSHOT_ENTITIES.map((entity) => {
-    const shape = (ENTITY_SCHEMAS[entity] as unknown as { shape?: Record<string, FieldSchema> })
-      .shape;
-    const empty = new Map<string, Json>();
-    for (const [key, field] of Object.entries(shape ?? {})) {
-      // An optional field's absence already means something of its own; leave it alone.
-      if (field.safeParse(undefined).success) continue;
-      const value = EMPTY_CANDIDATES.find((v) => field.safeParse(v).success);
-      if (value !== undefined) empty.set(key, value);
-    }
-    return [entity, empty];
-  }),
-) as Record<SnapshotEntity, Map<string, Json>>;
+const EMPTY = {} as Record<SnapshotEntity, ReadonlyMap<string, Json>>;
+for (const entity of SNAPSHOT_ENTITIES)
+  EMPTY[entity] = new Map(Object.entries(EMPTY_FIELDS[entity]));
 
 const BY_PREFIX = new Map<string, SnapshotEntity>(
   SNAPSHOT_ENTITIES.map((entity) => [ID_PREFIXES[entity], entity]),

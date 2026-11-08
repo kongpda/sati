@@ -762,7 +762,9 @@ function TaskSignals({ data, task }: { data: Snapshot; task: Task }) {
         <p className="handoff">
           <strong>
             Handoff from {nameOf(data, handoff.createdBy)}
-            {handoff.handoffTo ? ` for ${nameOf(data, handoff.handoffTo)}` : ""}
+            {handoff.handoffTo
+              ? ` for ${data.actors.some((a) => a.id === handoff.handoffTo) ? nameOf(data, handoff.handoffTo) : (handoff.handoffToName ?? "someone")}`
+              : ""}
           </strong>
           <span className="meta">
             {handoff.acknowledged

@@ -1486,3 +1486,27 @@ Measured on the 50,000-record bench project in this orb (25,000 tasks, 25,000 no
 - 2,000-card scroll with vsync uncapped: 67–103 fps before, 122–211 fps after; script time per
   240-frame scroll fell from about 2.3 s to 0.6 s. The vsync-capped test still reads about 47 fps
   in this orb's headless Chromium (floor 55), so the Phase 4 gate stays open for CI to judge.
+
+### Remaining review items (2026-11-08)
+
+- Handoffs addressed with `--to` store the addressee's actor name beside its id. Actors are not
+  in the snapshot, so in a teammate's clone the id names no one; the name (`kim@app`, or
+  `$SATI_ACTOR`) still matches. Agent names carry a session number, so across clones an agent
+  is reached by name only with `SATI_ACTOR` set.
+- The fields a compact `.sati/` file leaves out are now a frozen table instead of being read
+  from the Zod schemas, so a later schema change cannot change how files already in git read
+  back. A test checks every value is still one its schema accepts. Older builds still cannot
+  read compact files; nothing has been released in the full form, so no marker was added.
+- `sati serve` and its clients exchange a protocol version on every `begin`; a daemon or client
+  from another build is refused with a hint to restart `sati serve`, and the transaction the
+  old daemon opened is aborted.
+- The CLI bundle ships `THIRD_PARTY_LICENSES.md` (25 packages) and the board `ui/licenses.md`
+  (Vite's `build.license`). drizzle-orm (Apache-2.0) publishes without a license file, so its
+  text is kept in `packages/cli/licenses/`; the build fails if another bundled package lacks one.
+- CI's packed-install job also starts `sati mcp` (initialize and `sati_brief`) and `sati ui`
+  (session sign-in and the board page), which load the bundled MCP SDK and hono. Ran here as
+  written.
+- Left as they are, on purpose: the `idle_prompt` notification marks the caller's in-progress
+  tasks as waiting, because an agent that ended its turn on a claimed task is waiting on a
+  person (completed tasks hold no claim). The 0005 migration marks handoffs from builds without
+  acknowledgements as unread; they are delivered once, as before.

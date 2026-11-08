@@ -145,6 +145,23 @@ describe("mergeRecord", () => {
     }
   });
 
+  // WHY: a finished task cannot be held; picking status from one side and claim from the other
+  // must not leave a done task with a live claim.
+  it("clears a claim that lands on a finished task and flags it for review", () => {
+    const early = "2026-11-03T12:00:00.000Z#000000#a";
+    const late = "2026-11-03T13:00:00.000Z#000000#b";
+    const base = { ...task, claim: null };
+    const claimant = {
+      ...base,
+      status: "in_progress",
+      claim: { actorId: "actr_2", token: 3 },
+      stamps: { status: early, claim: late },
+    };
+    const finisher = { ...base, status: "done", stamps: { status: late, claim: early } };
+    const r = mergeRecord(base, claimant, finisher);
+    expect(r.record).toMatchObject({ status: "done", claim: null, needsReview: true });
+  });
+
   it("still uses updatedAt when either side has no stamp for the field", () => {
     const r = mergeRecord(
       task,

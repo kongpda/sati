@@ -486,13 +486,13 @@ describe("releaseExpiredClaims", () => {
     await claimTask(ctx, live.id, { leaseMinutes: 60 });
     const waiting = await createTask(ctx, { title: "waiting" });
     const { claim } = await claimTask(ctx, waiting.id, { leaseMinutes: 10 });
-    await updateTask(ctx, waiting.id, { status: "review", token: claim?.token });
+    await updateTask(ctx, waiting.id, { status: "blocked", token: claim?.token });
     clock.advance(31 * 60_000);
 
     const released = await releaseExpiredClaims(ctx);
     expect(released.map((t) => [t.title, t.status, t.claim])).toEqual([
       ["abandoned", "todo", null],
-      ["waiting", "review", null],
+      ["waiting", "blocked", null],
     ]);
     expect(store.activity.at(-1)).toMatchObject({ verb: "release", entityId: waiting.id });
     expect((await listTasks(ctx, { ready: true })).map((t) => t.id)).toEqual([abandoned.id]);

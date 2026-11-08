@@ -2,7 +2,7 @@ import { shortHandle } from "../domain/ids.js";
 import { normalizeLockPath, pathsOverlap } from "../domain/locks.js";
 import { CONFIG_DIR } from "../domain/schemas.js";
 import type { BaseConflicts } from "../ports/repo.js";
-import { actorName, nowIso, type ServiceContext } from "./context.js";
+import { actorName, listAll, nowIso, type ServiceContext } from "./context.js";
 import { listLocks } from "./lock.js";
 
 /** One file the caller changed that another agent's worktree also changed, with no lock on it. */
@@ -48,10 +48,7 @@ export async function worktreeWarnings(
   const now = nowIso(ctx);
   const { me, others } = await ctx.store.read(async (r) => {
     const me = await r.get("actor", ctx.actorId);
-    const tasks = await r.list("task", ctx.projectId, {
-      status: ["in_progress", "review", "blocked"],
-      limit: 500,
-    });
+    const tasks = await listAll(r, ctx, "task", { status: ["in_progress", "review", "blocked"] });
     const others = new Map<string, { actorId: string; actorName: string; taskId: string }>();
     for (const t of tasks) {
       const c = t.claim;

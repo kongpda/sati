@@ -155,7 +155,10 @@ export function Memory({
     queryKey: ["recall", question, data.version],
     queryFn: () => api.recall(question),
     enabled: question !== "",
-    placeholderData: (previous) => previous,
+    // A write elsewhere bumps the version: keep showing this question's answer while it
+    // refreshes. Another question's answer is never shown for this one.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[1] === question ? previous : undefined,
   });
 
   const needle = filter.trim().toLowerCase();
@@ -214,12 +217,12 @@ export function Memory({
           {plainError(answer.error)}
         </p>
       ) : null}
-      {question && answer.isPlaceholderData ? (
+      {question && answer.isPending && !answer.error ? (
         <p className="meta" role="status">
           Looking for “{question}”…
         </p>
       ) : null}
-      {question && answer.data && !answer.isPlaceholderData ? (
+      {question && answer.data ? (
         <section className="answer" aria-label="Answer" aria-live="polite">
           <div className="answer-head">
             <h2>

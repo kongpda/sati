@@ -50,6 +50,15 @@ export async function undoActivity(ctx: ServiceContext, activityId: string) {
         hint: `Use the ${act.entity} commands instead, such as \`${CLI_NAME} task update\`.`,
       });
     }
+    if (Object.hasOwn(act.diff, "claim")) {
+      throw new SatiError(
+        "VALIDATION",
+        `A change to the claim of a ${act.entity} cannot be undone.`,
+        {
+          hint: `Use \`${CLI_NAME} task claim\` or \`${CLI_NAME} task release\` instead.`,
+        },
+      );
+    }
     const current = await w.get(act.entity, act.entityId);
     if (!current) throw new SatiError("NOT_FOUND", `The ${act.entity} from that activity is gone.`);
     if (act.entity === "task") {

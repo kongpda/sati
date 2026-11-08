@@ -69,11 +69,8 @@ export async function linkProblems(
 export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> {
   const now = nowIso(ctx);
   const data = await ctx.store.read(async (r) => ({
-    tasks: await r.list("task", ctx.projectId, {
-      status: ["in_progress", "review", "blocked"],
-      limit: 500,
-    }),
-    locks: await r.list("lock", ctx.projectId, { limit: 500 }),
+    tasks: await listAll(r, ctx, "task", { status: ["in_progress", "review", "blocked"] }),
+    locks: await listAll(r, ctx, "lock"),
     review: (await listAll(r, ctx, "task")).filter((t) => t.needsReview === true),
     links: await linkProblems(r, ctx),
     private: [
@@ -174,9 +171,8 @@ export async function removableWorktrees(
 ): Promise<RemovableWorktree[]> {
   const now = nowIso(ctx);
   const { tasks, actors } = await ctx.store.read(async (r) => ({
-    tasks: await r.list("task", ctx.projectId, {
+    tasks: await listAll(r, ctx, "task", {
       status: ["backlog", "todo", "in_progress", "review", "blocked"],
-      limit: 500,
     }),
     actors: await listAll(r, ctx, "actor"),
   }));

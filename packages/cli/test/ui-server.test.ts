@@ -12,7 +12,7 @@ import {
 } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
 import { afterAll, describe, expect, it } from "vitest";
-import { createUiApp, sessionToken } from "../src/ui/server.js";
+import { createUiApp, listenUi, sessionToken } from "../src/ui/server.js";
 
 const dir = mkdtempSync(join(tmpdir(), "sati-ui-"));
 const store = await SqliteStore.open(join(dir, "sati.db"));
@@ -192,6 +192,39 @@ describe("ui server", () => {
     const second = await next();
     await reader.cancel();
     expect(second).not.toBe(first);
+  });
+
+  // Why: the snapshot version left out this server's own writes while the event stream counted
+  // them, so UI queries keyed on data.version never refetched after a same-server write.
+  it("bumps the snapshot version on a write made through this server", async () => {
+    const cookie = cookieOf(await app.request(`http://127.0.0.1/session?token=${token}`));
+    const version = async () =>
+      (
+        (await (
+          await app.request("http://127.0.0.1/api/snapshot", { headers: { cookie } })
+        ).json()) as { version: number }
+      ).version;
+    const before = await version();
+    await app.request("http://127.0.0.1/api/tasks", {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({ title: "Bumps version" }),
+    });
+    expect(await version()).toBeGreaterThan(before);
+  });
+
+  // Why: a busy port surfaced as "This is a bug in sati".
+  it("reports a busy port as a USAGE error with a hint", async () => {
+    const first = await listenUi(app, 0);
+    try {
+      await expect(listenUi(app, first.port)).rejects.toMatchObject({
+        code: "USAGE",
+        message: `Port ${first.port} is already in use.`,
+        hint: "Pick another with --port, or omit it for a free one.",
+      });
+    } finally {
+      await first.close();
+    }
   });
 
   // PLAN Phase 5c: a browser that reconnects with nothing missed is not told to refetch the board,

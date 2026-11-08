@@ -1,11 +1,11 @@
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   renameSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
 import { join, posix } from "node:path";
@@ -29,6 +29,16 @@ import { decodeRecord, encodeRecord, snapshotEntityOf } from "./format.js";
 
 /** A record file larger than this cannot be valid (bodies are capped at 100 KB). */
 const MAX_FILE_BYTES = 1024 * 1024;
+
+/**
+ * Most files `readSnapshot` accepts, matching the record cap `importRecords` enforces; counted
+ * while reading so a huge folder fails before it is all in memory.
+ */
+const MAX_FILES = 100_000;
+
+/** Most bytes of record files read in total: 256 MB, far above any real project (a record is
+ * typically a few KB) yet small enough to hold in memory. */
+const MAX_TOTAL_BYTES = 256 * 1024 * 1024;
 
 /** JSON with object keys sorted at every level, 2-space indent and a trailing newline. */
 export function stableJson(value: unknown): string {
@@ -155,6 +165,8 @@ function refuseSecrets(found: SecretFinding[]): void {
 /** Reads every record file under `dir`. Unparseable files fail the whole read. */
 export function readSnapshot(dir: string): ImportRecordsInput {
   const out: ImportRecordsInput = [];
+  let count = 0;
+  let total = 0;
   for (const entity of SNAPSHOT_ENTITIES) {
     const folder = join(dir, SNAPSHOT_DIRS[entity]);
     if (!existsSync(folder)) continue;
@@ -167,12 +179,20 @@ export function readSnapshot(dir: string): ImportRecordsInput {
           hint: "Nothing was imported. Fix or restore the file from git.",
         });
       };
-      if (statSync(file).size > MAX_FILE_BYTES) fail("larger than 1 MB");
+      // lstat, not stat: a symlink pushed into .sati/ must not make us read files outside the repo.
+      const info = lstatSync(file);
+      if (!info.isFile()) fail("not a regular file (symlinks and folders are refused)");
+      if (info.size > MAX_FILE_BYTES) fail("larger than 1 MB");
+      count += 1;
+      total += info.size;
+      if (count > MAX_FILES) fail(`more than ${MAX_FILES} record files`);
+      if (total > MAX_TOTAL_BYTES) fail("the snapshot is larger than 256 MB in total");
       let record: unknown;
       try {
         record = JSON.parse(readFileSync(file, "utf8"));
-      } catch (err) {
-        fail(err instanceof Error ? err.message : String(err));
+      } catch {
+        // The parser's message can quote the file's content; keep it out of the error.
+        fail("not valid JSON");
       }
       const id = (record as { id?: unknown } | null)?.id;
       if (`${String(id)}.json` !== name) fail("the file name does not match the record id");

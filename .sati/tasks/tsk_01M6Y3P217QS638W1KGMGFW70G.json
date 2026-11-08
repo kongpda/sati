@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "8449990de6236d764fdafe9482f23db0e5c0c0c0",
     "branch": "main",
     "commit": "82673944409139917578943fc88f9d97b9cb6d66",
     "completedAt": "2026-11-08T17:59:32.535Z",
@@ -17,17 +19,20 @@
   "id": "tsk_01M6Y3P217QS638W1KGMGFW70G",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-08T17:35:47.752Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "blockedReason": "2026-11-08T18:10:46.399Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "branch": "2026-11-08T17:35:51.785Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
     "claim": "2026-11-08T17:59:32.537Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "completion": "2026-11-08T17:59:32.537Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "status": "2026-11-08T17:59:32.537Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-08T18:10:46.399Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "reviewNote": "2026-11-08T18:10:46.399Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-08T18:10:46.399Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "worktree": "2026-11-08T17:35:51.785Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
   },
-  "status": "review",
+  "status": "done",
   "title": "Phase 5d: task panel non-modal on wide screens, asks before dropping unsaved edits",
-  "updatedAt": "2026-11-08T17:59:32.539Z",
-  "version": 3,
+  "updatedAt": "2026-11-08T18:10:46.405Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

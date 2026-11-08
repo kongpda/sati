@@ -1614,3 +1614,13 @@ of every command found more. The owner asked to fix all of them.
   `todo` although their work shipped (`80c35b2`, `467c0bc`, `376e16a`, `4e014bd`, `513632e`);
   they were completed as stale and wait for review. Under load averages of 100–190, three CLI
   tests hit the 5 s timeout in the full run and passed alone with a longer timeout.
+
+## 2026-11-09 — Phase 5e: pre-cloud review
+
+Status: **gate passed** (2026-11-09).
+
+- Four reviewers read core and store, the CLI and its server, sync and MCP, and the UI; about 40 findings, none high severity. 34 are fixed with tests (PLAN Phase 5e); 7 went to `docs/ideas.md` with reasons (lock lease renewal, locks tagged with another's task, a longer minimum short handle, the token in the `open` argv, conflict-marker order, drag overscan, Tailwind and type tokens).
+- Choices on ambiguous items: an over-cap brace pattern already stored counts as overlapping (the safe side) instead of failing; a person may delete a task an agent holds, as with take-over; a merged done task that is still claimed loses the claim and is flagged `needsReview`; Markdown headings start at h3 under the row's h2, counted from the body's own top level, so a body that uses only `##` does not skip a level (axe `heading-order` caught the first version).
+- The axe spec now also runs in dark mode at both sizes: 79/79 UI tests pass, zero axe issues of any level. A visual sweep of every page at 1280 and 390 px found no overflow.
+- PR #1 (changesets "Version Packages") is left open: merging it starts the release workflow, which is the owner's call. No other branches, worktrees or stashes.
+- Verified locally (CI is blocked by billing): lint (the 12 old CSS warnings), typecheck, core 291, store-sqlite 52, sync 41, mcp 26, ui 20, cli 142, `pnpm test:ui` 79. Core branch coverage fell to 89.6% with the new code and is back to 90.2% with tests for the brace counter.

@@ -108,9 +108,12 @@ async function runHook(): Promise<void> {
     const cwd = input.cwd ?? process.cwd();
     const command = input.tool_input?.command;
     const target = input.tool_input?.file_path ?? input.tool_input?.notebook_path;
+    const bypass = typeof command === "string" ? hookBypass(command) : undefined;
+    const shellChanges = typeof command === "string" ? parseShellChanges(command) : [];
+    // Most Bash calls touch nothing we guard: skip opening the database for them.
+    if (!bypass && shellChanges.length === 0 && typeof target !== "string") return;
     rt = await openRuntime(cwd);
     if (guardOff(rt)) return;
-    const bypass = typeof command === "string" ? hookBypass(command) : undefined;
     if (bypass && !overridden()) {
       process.stderr.write(
         `blocked: ${bypass} Commit without it so the guard runs, or override once with SATI_GUARD=off (logged).\n`,
@@ -121,7 +124,7 @@ async function runHook(): Promise<void> {
     const root = rt.location.root;
     const changes: Change[] =
       typeof command === "string"
-        ? parseShellChanges(command).flatMap((change): Change[] => {
+        ? shellChanges.flatMap((change): Change[] => {
             const path = inRepo(root, cwd, change.path);
             const from = change.from === undefined ? undefined : inRepo(root, cwd, change.from);
             // Moving a file out of the repo removes it from the repo.

@@ -1,4 +1,13 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -155,6 +164,28 @@ describe("exportSnapshot / importSnapshot", () => {
 
     writeFileSync(join(dir, "tasks/tsk_bad.json"), '{ "id": "tsk_other" }\n');
     expect(() => readSnapshot(dir)).toThrow(/does not match the record id/);
+  });
+
+  // WHY: .sati/ is committed by teammates; a symlink there must not pull in files outside the repo
+  // or echo their content in an error.
+  it("refuses symlinked record files and does not quote file content in parse errors", () => {
+    const dir = tempDir();
+    const outside = tempDir();
+    mkdirSync(join(dir, "tasks"));
+    writeFileSync(join(outside, "secret.json"), '{ "id": "tsk_x" }\n');
+    symlinkSync(join(outside, "secret.json"), join(dir, "tasks/tsk_x.json"));
+    expect(() => readSnapshot(dir)).toThrow(/not a regular file/);
+
+    rmSync(join(dir, "tasks/tsk_x.json"));
+    writeFileSync(join(dir, "tasks/tsk_y.json"), "{ hunter2-password");
+    let message = "";
+    try {
+      readSnapshot(dir);
+    } catch (err) {
+      message = (err as Error).message;
+    }
+    expect(message).toContain("not valid JSON");
+    expect(message).not.toContain("hunter2");
   });
 
   it("reads an empty snapshot folder as no records", () => {

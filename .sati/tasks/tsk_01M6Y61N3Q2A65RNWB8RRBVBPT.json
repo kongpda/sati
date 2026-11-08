@@ -1,0 +1,43 @@
+{
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "8449990de6236d764fdafe9482f23db0e5c0c0c0",
+    "completedAt": "2026-11-08T18:35:39.573Z",
+    "completedBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "filesTouched": [
+      "PLAN.md",
+      "docs/progress.md",
+      "docs/ideas.md",
+      ".changeset/pre-cloud-review.md",
+      "packages/core/src/domain/locks.ts",
+      "packages/core/src/services/records.ts",
+      "packages/cli/src/atomic.ts",
+      "packages/cli/src/ui/server.ts",
+      "packages/sync/src/snapshot.ts",
+      "packages/mcp/src/server.ts",
+      "packages/ui/src/app.tsx",
+      "packages/ui/src/markdown.tsx",
+      "e2e/ui/a11y.spec.ts"
+    ],
+    "summary": "Phase 5e: 4-way deep review (~40 findings). Fixed 34 with tests across core, store, cli, sync, mcp, ui; 7 deferred to docs/ideas.md with reasons. Axe now runs in dark mode too: test:ui 79/79, zero issues. PR #1 left open (merging it releases)."
+  },
+  "createdAt": "2026-11-08T18:17:04.886Z",
+  "createdBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+  "id": "tsk_01M6Y61N3Q2A65RNWB8RRBVBPT",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-08T18:17:04.893Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "branch": "2026-11-08T18:17:05.176Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "claim": "2026-11-08T18:35:39.575Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-08T18:35:39.575Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "status": "2026-11-08T18:35:39.575Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "worktree": "2026-11-08T18:17:05.176Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
+  },
+  "status": "review",
+  "title": "Final pre-cloud pass: deep review, bug fixes, security, UI polish, axe audit",
+  "updatedAt": "2026-11-08T18:35:39.577Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

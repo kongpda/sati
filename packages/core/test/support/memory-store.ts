@@ -2,7 +2,6 @@ import {
   type Activity,
   type EntityMap,
   HANDOFF_TAG,
-  isReady,
   type Project,
   SatiError,
   SEARCHABLE,
@@ -12,6 +11,13 @@ import {
   type StoredEntity,
   type Task,
 } from "../../src/index.js";
+
+/** The SQL store's readiness rule: todo, no live claim, every dependency done or cancelled. */
+function ready(t: Task, depStatus: (id: string) => Task["status"] | undefined, now: string) {
+  if (t.deletedAt !== null || t.status !== "todo") return false;
+  if (t.claim !== null && t.claim.leaseUntil > now) return false;
+  return t.dependsOn.every((id) => ["done", "cancelled"].includes(depStatus(id) ?? ""));
+}
 
 interface State {
   records: Map<StoredEntity, Map<string, EntityMap[StoredEntity]>>;
@@ -122,7 +128,7 @@ export class MemoryStore implements StorageAdapter {
           return dep?.deletedAt ? "done" : dep?.status;
         };
         return tasks
-          .filter((t) => isReady(t, status, new Date(now)))
+          .filter((t) => ready(t, status, now))
           .slice(0, limit)
           .map(clone);
       },

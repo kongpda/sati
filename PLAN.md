@@ -551,7 +551,7 @@ Verify: an e2e test for the loop and a concurrency test for `sati next`.
 - [x] Roadmap timeline, Notes editor with backlinks, Decisions, Activity
 - [x] Mermaid diagrams in Markdown (notes, decisions, task bodies) rendered with `pele`: lazy-loaded so it stays out of the first-load bundle, `--pele-*` variables mapped to the UI design tokens, render errors shown inline instead of breaking the note
 - [x] Optimistic updates with rollback; live highlight on agent changes
-- [ ] Accessibility audit (axe + manual keyboard and screen-reader pass)
+- [ ] Accessibility audit (axe + manual keyboard and screen-reader pass). Axe part done in Phase 5e (every page, both sizes, both themes, zero issues); the manual screen-reader pass needs a person
 - [x] Playwright tests for the main flows
 
 **Gate:** a 2,000-card board scrolls at 60 fps; axe reports zero serious issues; UI loads in under 1 s.
@@ -640,6 +640,66 @@ Added 2026-11-09 at the owner's request, after upgrading a real project (khevent
 - [x] Command audit bugs: `sati handoff <id>` with no flags reads the handoff instead of wiping it; `restore` finds deleted records by short handle; `plan import` reports a missing file as not found; `--body -` and `plan import -` read stdin; `complete` on an unstarted task says to claim it; `scan --apply` with nothing new reports `created: false`; errors from `serve` keep their code and hint; usage hints name only real commands
 
 **Gate:** each item has a regression test that fails without it; `pnpm lint && pnpm typecheck && pnpm test` and `pnpm test:ui` pass.
+
+### Phase 5e — Pre-cloud review: bugs, security, UI polish (2026-11-09)
+
+Added 2026-11-09 at the owner's request, before work moves to the cloud: a deep review of every package (core, store, CLI, sync, MCP, UI) by four parallel reviewers, then fixes, an accessibility audit and a UI polish pass. The only open PR (#1, the changesets "Version Packages" bot PR) is left open: merging it starts a release, which needs the owner. Details are in `docs/progress.md`; items not fixed are in `docs/ideas.md` with a reason.
+
+**Core and store**
+
+- [x] Brace globs in lock, feature and card paths are capped at 256 variants (counted, not expanded); `src/{1..5000}` or `{a,b}` ×200 no longer hangs the write lock or crashes `guard`; an over-cap stored pattern counts as overlapping
+- [x] Deleting a task another agent holds with a live lease is refused (holder, a person, or after expiry may delete); deleting a claimed task releases the holder's locks
+- [x] `plan import` refuses more than 500 tasks or 100 milestones (the dry run says so too), names the line of an over-long title, and computes milestone order once
+- [x] `task update --status review` is refused with a hint to use `task complete`, so review work always has a completion record to approve
+- [x] The expired-claim sweep also releases the holder's task locks
+- [x] `handoff` scans its text for secrets, like notes and comments
+- [x] `undo` refuses any activity row whose change touches a claim
+- [x] Sweeps, adoption, `markWaiting`, doctor and overlap read every active task, not the first 500
+- [x] The store daemon accepts only its own method names and rolls back a transaction left idle for 30 s
+- [x] Dead code: `isClaimActive`, `isReady` (a second copy of the SQL ready rule), `SNAPSHOT_SCHEMA_VERSION`
+
+**CLI and local server**
+
+- [x] `sati serve` refuses to start while another daemon answers on the socket, instead of deleting its socket
+- [x] The `/events` stream no longer leaks a poller when the browser leaves during start-up
+- [x] `sati ui --port N` on a busy or privileged port says so with a hint, not "a bug in sati"
+- [x] The snapshot version counts the server's own writes, like the event stream, so pages keyed on it refresh
+- [x] The `PreToolUse` hook opens the database only when the command changes files
+- [x] `projects.json`, config, agent files and updated hook runners are written atomically (temp file and rename, mode kept)
+- [x] A second Ctrl+C in `sati ui` no longer throws
+- [x] A hook with a sati start marker but no end marker is reported, instead of a new block stacking on every upgrade
+- [x] Dead code: `sync export --all`, which changed nothing; an unused destructured value in `git.ts`
+
+**Sync and MCP**
+
+- [x] Snapshot import refuses symlinks and non-files in `.sati/`, and parse errors no longer quote file content
+- [x] Snapshot import stops early past 100,000 files or 256 MB
+- [x] The MCP roadmap resource fences milestone and feature text as data
+- [x] MCP prompt arguments (`taskId`, `title`) and `feature_check` paths are bounded and single-line
+- [x] A merge that leaves a done or cancelled task still claimed clears the claim and flags `needsReview`
+- [x] Dead code: the unreachable `lastHlc` merge branch
+
+**Web UI**
+
+- [x] Search, New task and form dialogs make the open task panel inert, and Escape with a dialog open no longer closes the panel behind it
+- [x] Memory keeps the shown answer while it refreshes after a write, instead of flashing "Looking for…"
+- [x] A comment draft or a new checklist step counts as unsaved work; the Features paths field keeps typing when an agent changes the paths
+- [x] The board is memoised and the search palette owns its own state, so typing does not re-render the 2,000-card board
+- [x] Notes backlinks are built once per render, not per row
+- [x] Bulk moves refresh once after the last move, so cards no longer jump back
+- [x] Checklist ticks no longer flicker on quick clicks
+- [x] Error toasts are announced as alerts and their border is readable in light mode
+- [x] The Mermaid SVG scrubber also removes animation and `style` elements and `url()` values
+- [x] Markdown headings nest under the row and panel headings
+- [x] `kind-done` and `kind-feature` change rows have styles; the toast region takes no grid track
+
+**Audit and polish**
+
+- [x] Accessibility audit: axe on every page and on the panel, palette and forms, at 1280 and 375 px, in light and dark, with zero issues of any level (the manual screen-reader pass stays with a person)
+- [x] UI polish pass: every page at 1280 and 390 px, light and dark; fix layout, spacing and copy issues found
+- [x] `docs/ideas.md`: review findings not fixed, each with a reason
+
+**Gate:** each fixed item has a regression test where it can be tested; `pnpm lint && pnpm typecheck && pnpm test` and `pnpm test:ui` pass; axe reports zero serious issues.
 
 ### Phase 6 — Hosted mode (deferred to v2)
 

@@ -49,4 +49,18 @@ describe("scrub", () => {
     expect(local.attributes).toEqual([{ name: "href", value: "#node" }]);
     expect(rect.attributes).toEqual([{ name: "fill", value: "red" }]);
   });
+
+  // An animation can set href or a url() later, and url() can fetch from anywhere; markers and
+  // gradients refer to the diagram's own ids and must keep working.
+  it("removes animation and style elements and outbound url() values", () => {
+    const gone = ["animate", "set", "animateTransform", "animateMotion", "style"].map((n) =>
+      fake(n, {}),
+    );
+    const marker = fake("path", { "marker-end": "url(#arrow)" });
+    const remote = fake("rect", { fill: "url(https://evil.test/x)", filter: "URL( 'a.svg#f')" });
+    scrub(fake("svg", {}, [...gone, marker, remote]));
+    expect(gone.every((el) => el.removed)).toBe(true);
+    expect(marker.attributes).toEqual([{ name: "marker-end", value: "url(#arrow)" }]);
+    expect(remote.attributes).toEqual([]);
+  });
 });

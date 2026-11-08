@@ -130,10 +130,7 @@ export function mergeRecord(base: Obj | undefined, ours: Obj, theirs: Obj): Reco
     const tv = theirs[key];
     let value: Json | undefined;
     let stamp: string | undefined;
-    if (key === "lastHlc" && typeof ov === "string" && typeof tv === "string") {
-      value = compareHlc(ov, tv) >= 0 ? ov : tv;
-      stamp = value;
-    } else if (isDeepStrictEqual(ov, tv)) {
+    if (isDeepStrictEqual(ov, tv)) {
       value = ov;
       stamp = fieldStamp(ours, key) ?? fieldStamp(theirs, key);
     } else if (
@@ -175,6 +172,12 @@ export function mergeRecord(base: Obj | undefined, ours: Obj, theirs: Obj): Reco
     if (value !== undefined) record[key] = value;
     remember(stamps, key, stamp);
   }
+  // Field-by-field picking can pair one side's finished status with the other side's claim. A
+  // finished task cannot be held, so drop the stale claim (it carries nothing worth keeping once
+  // the work is over) and flag the record so a person looks at the combination.
+  const finished = record.status === "done" || record.status === "cancelled";
+  const staleClaim = finished && record.claim !== null && record.claim !== undefined;
+  if (staleClaim) record.claim = null;
   const revived = resolveDelete(b, ours, theirs, record, stamps);
   const versions = [ours.version, theirs.version].map((v) => (typeof v === "number" ? v : 0));
   record.version = Math.max(...versions) + 1;
@@ -183,7 +186,7 @@ export function mergeRecord(base: Obj | undefined, ours: Obj, theirs: Obj): Reco
   // The flag merges three-way too: a side that cleared it after a review beats one that left it.
   const flag = (side: Obj) => side.needsReview === true;
   const flagged = flag(ours) === flag(theirs) || flag(ours) !== flag(b) ? flag(ours) : flag(theirs);
-  if (conflict || revived.review || flagged) record.needsReview = true;
+  if (conflict || revived.review || flagged || staleClaim) record.needsReview = true;
   return { record, conflict: conflict || revived.review };
 }
 

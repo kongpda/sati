@@ -1,8 +1,9 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { CLI_NAME, SatiError } from "@sati/core";
 import type { DbLocation } from "@sati/store-sqlite";
+import { writeFileAtomic } from "./atomic.js";
 import { parseJson } from "./runtime.js";
 
 interface KnownProject {
@@ -39,7 +40,7 @@ export function rememberProject(project: KnownProject, home = homedir()): void {
   all.push(project);
   const path = file(home);
   mkdirSync(join(path, ".."), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(all, null, 2)}\n`);
+  writeFileAtomic(path, `${JSON.stringify(all, null, 2)}\n`);
 }
 
 export function projectLocation(slug: string, home = homedir()): DbLocation {

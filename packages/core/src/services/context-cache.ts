@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import micromatch from "micromatch";
 import { z } from "zod";
-import { normalizeLockPath, pathsOverlap } from "../domain/locks.js";
+import { globBraceError, normalizeLockPath, pathsOverlap } from "../domain/locks.js";
 import { ContextEntry, LIMITS } from "../domain/schemas.js";
 import { refuseSecrets } from "../domain/secrets.js";
 import type { RepoFile } from "../ports/repo.js";
@@ -20,6 +20,11 @@ const ModulePath = z
   .min(1)
   .max(LIMITS.path)
   .transform((raw, c) => {
+    const tooMany = globBraceError(raw);
+    if (tooMany) {
+      c.addIssue({ code: "custom", message: tooMany });
+      return z.NEVER;
+    }
     const p = normalizeLockPath(raw);
     if (p === undefined) {
       c.addIssue({ code: "custom", message: `"${raw}" is not a repo-relative path or glob` });

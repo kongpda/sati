@@ -14,8 +14,6 @@ export const LIMITS = {
   waitingText: 500,
 } as const;
 
-export const SNAPSHOT_SCHEMA_VERSION = 1;
-
 /**
  * A UTC timestamp, stored with exactly millisecond precision. Leases and claims are compared as
  * strings (in SQL too), which is only correct when every value has the same shape, so an

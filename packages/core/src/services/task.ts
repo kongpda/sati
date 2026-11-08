@@ -282,6 +282,11 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
         if (approved) completion = { ...completion, approvedCommit: approved };
       }
       assertTransition(TASK_TRANSITIONS, "task", before.status, patch.status);
+      if (patch.status === "review") {
+        throw new SatiError("INVALID_TRANSITION", "Use complete to send a task to review.", {
+          hint: `Run \`${CLI_NAME} task complete ${id} --summary … --files …\`.`,
+        });
+      }
       if (before.status === "done") completion = null;
       if (patch.status === "todo" && before.status === "review") {
         if (!reason) {
@@ -635,10 +640,7 @@ export async function adoptClaims(ctx: ServiceContext): Promise<Task[]> {
   if (!probe || !self) return [];
   const now = nowIso(ctx);
   return ctx.store.write(async (w) => {
-    const tasks = await w.list("task", ctx.projectId, {
-      status: ["in_progress", "review", "blocked"],
-      limit: 500,
-    });
+    const tasks = await listAll(w, ctx, "task", { status: ["in_progress", "review", "blocked"] });
     const adopted: Task[] = [];
     for (const t of tasks) {
       const c = t.claim;
@@ -661,10 +663,7 @@ export async function releaseExpiredClaims(ctx: ServiceContext): Promise<Task[]>
   const now = nowIso(ctx);
   const expired = (t: Task) => t.claim !== null && t.claim.leaseUntil <= now;
   const active = await ctx.store.read(async (r) =>
-    r.list("task", ctx.projectId, {
-      status: ["in_progress", "review", "blocked"],
-      limit: 500,
-    }),
+    listAll(r, ctx, "task", { status: ["in_progress", "review", "blocked"] }),
   );
   const goneIds = new Set(claimHealth(ctx, active).gone.map((t) => t.id));
   const candidates = active.filter((t) => expired(t) || goneIds.has(t.id));
@@ -681,6 +680,7 @@ export async function releaseExpiredClaims(ctx: ServiceContext): Promise<Task[]>
           new Date(ctx.clock.now().getTime() - HOLDER_QUIET_MS).toISOString();
       if (!before || !(expired(before) || stillGone)) continue;
       const status = before.status === "in_progress" ? "todo" : before.status;
+      if (before.claim) await releaseTaskLocks(w, ctx, id, before.claim.actorId);
       released.push(
         await updateWithLog(w, ctx, "task", before, { status, claim: null }, { verb: "release" }),
       );
@@ -754,12 +754,9 @@ export async function markWaiting(ctx: ServiceContext, input: unknown): Promise<
     const person = caller?.kind === "human";
     const tasks = taskId
       ? [await mustGet(w, ctx, "task", taskId)]
-      : (
-          await w.list("task", ctx.projectId, {
-            status: ["in_progress", "review", "blocked"],
-            limit: 500,
-          })
-        ).filter((t) => t.claim?.actorId === ctx.actorId && t.claim.leaseUntil > now);
+      : (await listAll(w, ctx, "task", { status: ["in_progress", "review", "blocked"] })).filter(
+          (t) => t.claim?.actorId === ctx.actorId && t.claim.leaseUntil > now,
+        );
     const out: Task[] = [];
     for (const t of tasks) {
       const claim = t.claim;

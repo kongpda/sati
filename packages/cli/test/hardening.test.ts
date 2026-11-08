@@ -304,6 +304,30 @@ describe("commands", () => {
   });
 });
 
+describe("serve command", () => {
+  // Why: a second `sati serve` unlinked the live daemon's socket, orphaning its clients.
+  it("refuses to start while another serve is live", async () => {
+    const dir = await tempRepo({ init: true });
+    const first = spawn(process.execPath, [bin, "serve"], {
+      cwd: dir,
+      env: { ...process.env, SATI_ACTOR: "tester" },
+      stdio: ["ignore", "pipe", "inherit"],
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        first.once("error", reject);
+        first.once("exit", () => reject(new Error("serve exited early")));
+        first.stdout.on("data", (d: Buffer) => d.toString().includes("serve") && resolve());
+      });
+      const second = sati(dir, "serve");
+      expect(second.code).toBe(4);
+      expect(second.stderr).toContain("already running");
+    } finally {
+      first.kill("SIGTERM");
+    }
+  }, 30_000);
+});
+
 describe("ui command", () => {
   // Why: an out-of-range port was only rejected after the DB opened and a server tried to bind.
   it("rejects a port outside 1-65535 as USAGE", async () => {

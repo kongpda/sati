@@ -225,7 +225,7 @@ function once<T>(load: () => Promise<T>): () => Promise<T> {
 }
 
 /** One payload for the board. The browser refetches it when the database version changes. */
-async function snapshot(rt: UiRuntime) {
+async function snapshot(rt: UiRuntime, version: () => number) {
   const { ctx } = rt;
   const now = new Date().toISOString();
   const page = { limit: 500 } as const;
@@ -297,7 +297,7 @@ async function snapshot(rt: UiRuntime) {
         }
       : null,
     you: ctx.actorId,
-    version: dataVersion(rt),
+    version: version(),
     truncated,
     tasks,
     features: featuresWithMatches,
@@ -402,7 +402,7 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   );
 
   app.get("/api/openapi.json", (c) => c.json(openApi()));
-  app.get("/api/snapshot", async (c) => c.json(await snapshot(rt)));
+  app.get("/api/snapshot", async (c) => c.json(await snapshot(rt, version)));
 
   app.use("/api/*", async (c, next) => {
     await next();
@@ -543,12 +543,16 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
           try {
             cursor = await tailCursor(rt, resume.data);
             missed = cursor !== resume.data;
+            if (closed) return;
           } catch {
             // An unknown cursor (compacted, or another database): start over.
             cursor = undefined;
           }
         }
+        if (closed) return;
         cursor ??= await tailCursor(rt);
+        // The browser can leave while a read is pending; cancel() has run, so no timer may start.
+        if (closed) return;
         if (missed) send(cursor);
         let busy = false;
         timer = setInterval(() => {
@@ -593,7 +597,19 @@ export function listenUi(
 ): Promise<{ port: number; close: () => Promise<void> }> {
   const server = serve({ fetch: app.fetch, hostname: "127.0.0.1", port });
   return new Promise((resolve, reject) => {
-    const onError = (err: Error) => reject(err);
+    const onError = (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE" || err.code === "EACCES") {
+        const why =
+          err.code === "EADDRINUSE" ? "is already in use" : "cannot be used: permission denied";
+        reject(
+          new SatiError("USAGE", `Port ${port} ${why}.`, {
+            hint: "Pick another with --port, or omit it for a free one.",
+          }),
+        );
+        return;
+      }
+      reject(err);
+    };
     server.once("error", onError);
     server.once("listening", () => {
       server.off("error", onError);

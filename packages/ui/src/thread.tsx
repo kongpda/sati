@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { ago, type Note, type Snapshot } from "./api.js";
 import { Markdown } from "./markdown.js";
 import { Avatar, personName } from "./people.js";
@@ -47,12 +47,15 @@ export function Thread({
   onAdd,
   onDelete,
   folded = false,
+  onDraft,
 }: {
   data: Snapshot;
   on: string;
   onAdd: (on: string, body: string) => Promise<unknown>;
   onDelete: (id: string, title: string) => void;
   folded?: boolean;
+  /** Tells the caller whether a comment is typed but not sent, so leaving can ask first. */
+  onDraft?: (typed: boolean) => void;
 }) {
   const id = useId();
   const [draft, setDraft] = useState("");
@@ -60,6 +63,11 @@ export function Thread({
   // The fold's own state, so a snapshot refresh never closes it on a half-typed comment.
   const [open, setOpen] = useState(false);
   const items = threadsOf(data.notes).get(on) ?? NONE;
+  const typed = draft.trim() !== "";
+  useEffect(() => {
+    onDraft?.(typed);
+    return () => onDraft?.(false);
+  }, [typed, onDraft]);
   const send = () => {
     const body = draft.trim();
     if (!body || busy) return;

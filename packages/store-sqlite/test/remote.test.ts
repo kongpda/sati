@@ -120,6 +120,43 @@ describe("daemon server", () => {
   });
 });
 
+describe("daemon hardening", () => {
+  // `access?.[method]` would resolve `constructor` or `toString` from the prototype chain.
+  it("refuses methods that are not on the storage allowlist", async () => {
+    const client = await connect();
+    client.write(frame({ id: 1, op: "begin", mode: "write", txn: 1, protocol: PROTOCOL }));
+    await nextFrame(client);
+    for (const [id, method] of [
+      [2, "constructor"],
+      [3, "toString"],
+      [4, "__proto__"],
+    ] as const) {
+      client.write(frame({ id, op: "call", txn: 1, method, args: [] }));
+      expect(await within(nextFrame(client))).toMatchObject({ id, ok: false });
+    }
+    client.destroy();
+  });
+
+  // A client that begins and idles would hold the write lock for every other agent.
+  it("rolls back and drops a client that idles inside a transaction", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "sati-remote-"));
+    const quick = socketPath(join(dir, "sati.db"));
+    const fast = listenStore(owner, quick, { txnIdleMs: 100 });
+    await new Promise((resolve) => fast.once("listening", resolve));
+    const client = createConnection(quick);
+    await new Promise((resolve) => client.once("connect", resolve));
+    const gone = closed(client);
+    client.write(frame({ id: 1, op: "begin", mode: "write", txn: 1, protocol: PROTOCOL }));
+    await nextFrame(client);
+    client.write(frame({ id: 2, op: "call", txn: 1, method: "insert", args: ["task", task()] }));
+    await nextFrame(client);
+    await within(gone);
+    await within(owner.write(async () => undefined));
+    expect(await owner.read((r) => r.list("task", project().id))).toHaveLength(0);
+    fast.close();
+  });
+});
+
 describe("daemon client", () => {
   // If the daemon dies, callers need an error they can act on, not a promise that never settles.
   it("rejects pending requests with a SatiError when the daemon drops the connection", async () => {

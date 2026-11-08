@@ -50,9 +50,17 @@ describe("Markdown", () => {
     ]);
   });
 
+  it("starts the body's headings at h3 so they never skip a level under the row's h2", () => {
+    // axe heading-order: a note that uses only `##` must not jump from the h2 title to h4.
+    expect(html("## Only second level\ntext")).toContain("<h3>Only second level</h3>");
+    const both = html("# Top\n\n## Sub");
+    expect(both).toContain("<h3>Top</h3>");
+    expect(both).toContain("<h4>Sub</h4>");
+  });
+
   it("keeps a heading to its line, numbers lists, and marks bold and italic", () => {
     expect(html("# Launch\nThe body")).toBe(
-      '<div class="prose"><h2>Launch</h2><p>The body</p></div>',
+      '<div class="prose"><h3>Launch</h3><p>The body</p></div>',
     );
     expect(html("1. Book the hall\n2. Print flyers")).toContain(
       "<ol><li>Book the hall</li><li>Print flyers</li></ol>",

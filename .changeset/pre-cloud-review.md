@@ -1,0 +1,5 @@
+---
+"@kongpda/sati": patch
+---
+
+Pre-cloud review fixes. Brace globs in lock and feature paths are capped, so a hostile pattern can no longer hang a write or crash `guard`. Deleting a task another agent holds is refused, and an expired claim releases its locks. `plan import` has size limits and names the line of a bad title. `task update --status review` points to `task complete`. Handoffs are scanned for secrets, and `undo` never restores a claim. `sati serve` will not replace a running daemon, `sati ui` explains a busy port, and config and agent files are written atomically. Snapshot import refuses symlinks and stops early on huge folders. MCP roadmap text is fenced as data. In the web UI, dialogs block the task panel, unsaved comments and checklist steps count as unsaved work, Memory no longer flashes while it refreshes, the board stays fast while you type in Search, bulk moves no longer jump, error toasts are announced, and Markdown headings nest correctly. Axe passes on every page in light and dark mode. `sync export --all`, which did nothing, is removed.

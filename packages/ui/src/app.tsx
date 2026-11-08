@@ -92,10 +92,6 @@ export function App() {
   );
   const [palette, setPalette] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [queryText, setQueryText] = useState("");
-  const [hits, setHits] = useState<{ entity: string; id: string; title: string }[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [searched, setSearched] = useState(false);
   const [offline, setOffline] = useState(false);
   /** The session cookie was refused (the board server restarted): updates will not come back. */
   const [expired, setExpired] = useState(false);
@@ -105,8 +101,6 @@ export function App() {
   const cursor = useRef<string | null>(null);
   /** The cards as the board shows them, set on each render for the key handler. */
   const visible = useRef<Task[]>([]);
-  const searchRef = useRef<HTMLInputElement>(null);
-  const searchRun = useRef(0);
   /** On a wide screen the task panel sits beside the board, which stays usable. */
   const [wide, setWide] = useState(() => window.matchMedia(WIDE).matches);
   /** The open task, for `go`, which must not change on every render. */
@@ -263,13 +257,7 @@ export function App() {
     onDelete: (id: string, title: string) => remove("note", id, title),
   };
 
-  const closePalette = useCallback(() => {
-    setPalette(false);
-    setQueryText("");
-    setHits([]);
-    setSearching(false);
-    setSearched(false);
-  }, []);
+  const closePalette = useCallback(() => setPalette(false), []);
 
   /** Resolves true when the task moved. Pass `onFail` to report the reason yourself. */
   async function move(
@@ -301,7 +289,9 @@ export function App() {
         ...(status === "done" && current ? approvedCommit(current, id) : {}),
       });
       moving.current--;
-      await client.invalidateQueries({ queryKey: ["snapshot"] });
+      // Refetch once the last move lands: an earlier refetch would bring back the old status of
+      // the cards still in flight, and they would jump back.
+      if (moving.current === 0) await client.invalidateQueries({ queryKey: ["snapshot"] });
       return true;
     } catch (err) {
       moving.current--;
@@ -317,7 +307,7 @@ export function App() {
       );
       if (onFail) onFail(plainError(err));
       else fail(err);
-      await client.invalidateQueries({ queryKey: ["snapshot"] });
+      if (moving.current === 0) await client.invalidateQueries({ queryKey: ["snapshot"] });
       return false;
     }
   }
@@ -357,6 +347,8 @@ export function App() {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.key === "Escape") {
         if (palette) closePalette();
+        else if (document.querySelector(".palette"))
+          return; // a form dialog closes itself
         else if (typing)
           target?.blur(); // The sheet stays open, so typed edits are kept.
         else if (task) go(path);
@@ -405,15 +397,6 @@ export function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [closePalette, go, palette, path, task]);
-
-  useEffect(() => {
-    if (!palette) return;
-    const previous = document.activeElement;
-    searchRef.current?.focus();
-    return () => {
-      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
-    };
-  }, [palette]);
 
   useEffect(() => {
     if (!toast || toast.error) return;
@@ -494,7 +477,8 @@ export function App() {
   // A wide screen shows the panel beside the board, which stays usable: click another card to
   // switch tasks.
   const sheetOpen = task !== null && !!data?.tasks.some((t) => t.id === task);
-  const modal = creating || palette || (sheetOpen && !wide);
+  const dialog = creating || palette;
+  const modal = dialog || (sheetOpen && !wide);
 
   return (
     <div className="app">
@@ -745,7 +729,7 @@ export function App() {
           <Features
             data={data}
             onSavePaths={(id, paths, version) =>
-              void api
+              api
                 .patchFeature(id, {
                   paths: paths
                     .split(/\r?\n/u)
@@ -754,7 +738,10 @@ export function App() {
                   expectedVersion: version,
                 })
                 .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
-                .catch(fail)
+                .catch((err: unknown) => {
+                  fail(err);
+                  throw err;
+                })
             }
             onReviewed={(id, version) =>
               void api
@@ -824,6 +811,7 @@ export function App() {
           data={data}
           id={task}
           modal={!wide}
+          inert={dialog}
           onDirty={setSheetDirty}
           onClose={() => go(path)}
           onSave={(id, patch) =>
@@ -869,119 +857,170 @@ export function App() {
         />
       ) : null}
       {palette ? (
-        <div className="palette" role="dialog" aria-modal="true" aria-label="Search">
+        <Palette
+          data={data}
+          onClose={() => setPalette(false)}
+          onGo={go}
+          onToast={setToast}
+          onError={fail}
+        />
+      ) : null}
+      {/* Always mounted: a live region added together with its message is often not read. Errors
+          use an assertive alert region; everything else is a polite status. */}
+      <div role="status" aria-live="polite" className="toast-region">
+        {toast && !toast.error ? toastBox(toast, setToast) : null}
+      </div>
+      <div role="alert" className="toast-region">
+        {toast?.error ? toastBox(toast, setToast) : null}
+      </div>
+    </div>
+  );
+}
+
+/** The toast itself, for either live region. */
+function toastBox(
+  toast: { message: string; undo?: () => void; error?: boolean },
+  setToast: (message: string | null) => void,
+) {
+  return (
+    <div className={toast.error ? "toast error" : "toast"}>
+      <span className="toast-text">{toast.message}</span>
+      <span className="toast-actions">
+        {toast.undo ? (
           <button
             type="button"
-            className="palette-dismiss"
-            aria-label="Close search"
-            tabIndex={-1}
-            onClick={closePalette}
-          />
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const text = queryText.trim();
-              if (!text) return;
-              setSearching(true);
-              setSearched(false);
-              // Only the latest search may show: an earlier, slower answer is dropped.
-              const run = ++searchRun.current;
-              void api
-                .search(text)
-                .then((res) => {
-                  if (run !== searchRun.current) return;
-                  setHits(res.hits);
-                  setSearched(true);
-                })
-                .catch((err: unknown) => {
-                  if (run === searchRun.current) fail(err);
-                })
-                .finally(() => {
-                  if (run === searchRun.current) setSearching(false);
-                });
+            className="undo"
+            onClick={() => {
+              toast.undo?.();
+              setToast(null);
             }}
           >
-            <input
-              ref={searchRef}
-              value={queryText}
-              onChange={(e) => setQueryText(e.target.value)}
-              placeholder="Search tasks, notes, decisions, features"
-              aria-label="Search"
-            />
-            <div role="status" className="meta">
-              {searching
-                ? "Searching…"
-                : !searched
-                  ? "Press Enter to search."
-                  : hits.length === 0
-                    ? "No results"
-                    : `${hits.length} result${hits.length === 1 ? "" : "s"}`}
-            </div>
-            {hits.map((hit) => {
-              const titleOf = (id: string) =>
-                (id.startsWith("tsk_")
-                  ? data?.tasks
-                  : id.startsWith("dec_")
-                    ? data?.decisions
-                    : data?.notes
-                )?.find((r) => r.id === id)?.title;
-              const note = data?.notes.find((n) => n.id === hit.id);
-              const on = note ? threadOf(note) : undefined;
-              const about = on ? titleOf(on) : undefined;
-              return (
-                <button
-                  type="button"
-                  key={`${hit.entity}-${hit.id}`}
-                  onClick={() => {
-                    closePalette();
-                    // A comment opens what it is on; one whose record was deleted says so.
-                    if (on && about === undefined)
-                      setToast("That comment is on something deleted.");
-                    else if (hit.entity === "task") go("/", hit.id);
-                    else if (on?.startsWith("tsk_")) go("/", on);
-                    else
-                      go(
-                        HIT_PAGES[
-                          on ? (on.startsWith("dec_") ? "decision" : "note") : hit.entity
-                        ] ?? "/",
-                      );
-                  }}
-                >
-                  <span className="badge">
-                    {on ? "Comment" : (HIT_KINDS[hit.entity] ?? hit.entity)}
-                  </span>{" "}
-                  {about ? `on ${about}` : hit.title}
-                </button>
-              );
-            })}
-          </form>
-        </div>
-      ) : null}
-      {/* Always mounted: a live region added together with its message is often not read. */}
-      <div role="status" aria-live="polite" className="toast-region">
-        {toast ? (
-          <div className={toast.error ? "toast error" : "toast"}>
-            <span className="toast-text">{toast.message}</span>
-            <span className="toast-actions">
-              {toast.undo ? (
-                <button
-                  type="button"
-                  className="undo"
-                  onClick={() => {
-                    toast.undo?.();
-                    setToast(null);
-                  }}
-                >
-                  Undo
-                </button>
-              ) : null}
-              <button type="button" onClick={() => setToast(null)}>
-                Dismiss
-              </button>
-            </span>
-          </div>
+            Undo
+          </button>
         ) : null}
-      </div>
+        <button type="button" onClick={() => setToast(null)}>
+          Dismiss
+        </button>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Search. Its text and results live here, so typing does not re-render the board behind it.
+ * Closing unmounts it, which clears them and puts focus back where it was.
+ */
+function Palette({
+  data,
+  onClose,
+  onGo,
+  onToast,
+  onError,
+}: {
+  data: Snapshot | undefined;
+  onClose: () => void;
+  onGo: (path: string, taskId?: string | null) => void;
+  onToast: (message: string) => void;
+  onError: (err: unknown) => void;
+}) {
+  const [queryText, setQueryText] = useState("");
+  const [hits, setHits] = useState<{ entity: string; id: string; title: string }[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const searchRun = useRef(0);
+  useEffect(() => {
+    const previous = document.activeElement;
+    searchRef.current?.focus();
+    return () => {
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+    };
+  }, []);
+  return (
+    <div className="palette" role="dialog" aria-modal="true" aria-label="Search">
+      <button
+        type="button"
+        className="palette-dismiss"
+        aria-label="Close search"
+        tabIndex={-1}
+        onClick={onClose}
+      />
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const text = queryText.trim();
+          if (!text) return;
+          setSearching(true);
+          setSearched(false);
+          // Only the latest search may show: an earlier, slower answer is dropped.
+          const run = ++searchRun.current;
+          void api
+            .search(text)
+            .then((res) => {
+              if (run !== searchRun.current) return;
+              setHits(res.hits);
+              setSearched(true);
+            })
+            .catch((err: unknown) => {
+              if (run === searchRun.current) onError(err);
+            })
+            .finally(() => {
+              if (run === searchRun.current) setSearching(false);
+            });
+        }}
+      >
+        <input
+          ref={searchRef}
+          value={queryText}
+          onChange={(e) => setQueryText(e.target.value)}
+          placeholder="Search tasks, notes, decisions, features"
+          aria-label="Search"
+        />
+        <div role="status" className="meta">
+          {searching
+            ? "Searching…"
+            : !searched
+              ? "Press Enter to search."
+              : hits.length === 0
+                ? "No results"
+                : `${hits.length} result${hits.length === 1 ? "" : "s"}`}
+        </div>
+        {hits.map((hit) => {
+          const titleOf = (id: string) =>
+            (id.startsWith("tsk_")
+              ? data?.tasks
+              : id.startsWith("dec_")
+                ? data?.decisions
+                : data?.notes
+            )?.find((r) => r.id === id)?.title;
+          const note = data?.notes.find((n) => n.id === hit.id);
+          const on = note ? threadOf(note) : undefined;
+          const about = on ? titleOf(on) : undefined;
+          return (
+            <button
+              type="button"
+              key={`${hit.entity}-${hit.id}`}
+              onClick={() => {
+                onClose();
+                // A comment opens what it is on; one whose record was deleted says so.
+                if (on && about === undefined) onToast("That comment is on something deleted.");
+                else if (hit.entity === "task") onGo("/", hit.id);
+                else if (on?.startsWith("tsk_")) onGo("/", on);
+                else
+                  onGo(
+                    HIT_PAGES[on ? (on.startsWith("dec_") ? "decision" : "note") : hit.entity] ??
+                      "/",
+                  );
+              }}
+            >
+              <span className="badge">
+                {on ? "Comment" : (HIT_KINDS[hit.entity] ?? hit.entity)}
+              </span>{" "}
+              {about ? `on ${about}` : hit.title}
+            </button>
+          );
+        })}
+      </form>
     </div>
   );
 }

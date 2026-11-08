@@ -51,6 +51,7 @@ import {
   socketPath as socketPathFor,
   standaloneDbPath,
 } from "@sati/store-sqlite";
+import { writeFileAtomic } from "./atomic.js";
 import { defaultBase } from "./git.js";
 import { runHint } from "./install.js";
 
@@ -716,7 +717,7 @@ export function readProjectConfig(root: string): SatiConfig | undefined {
 export function writeConfigKind(root: string, kind: ProjectKind): void {
   const config = readProjectConfig(root);
   if (!config || config.kind === kind) return;
-  writeFileSync(
+  writeFileAtomic(
     join(root, CONFIG_DIR, CONFIG_FILE),
     `${JSON.stringify({ ...config, kind }, null, 2)}\n`,
   );

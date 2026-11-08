@@ -10,6 +10,8 @@
   --line-strong: #738a7d;
   --moss: #1b6a44;
   --clay: #8a3b2c;
+  /* Clay for the toast, which is drawn in the inverse scheme (ink background). */
+  --clay-on-ink: #e7a598;
   --live: #9a4a14;
   --focus: #1b6a44;
   accent-color: var(--moss);
@@ -30,6 +32,7 @@
     --line-strong: #617a6c;
     --moss: #8dcead;
     --clay: #e7a598;
+    --clay-on-ink: #8a3b2c;
     --live: #e39a62;
     --focus: #8dcead;
     color-scheme: dark;
@@ -436,12 +439,12 @@ body:has(.palette) .toast {
   overflow-wrap: anywhere;
   line-height: 1.5;
 }
-.prose h2 {
+.prose h3 {
   font-size: 1.25rem;
   font-weight: 600;
   margin: 1rem 0 0.5rem;
 }
-.prose h3 {
+.prose h4 {
   font-size: 1.05rem;
   font-weight: 600;
   margin: 0.75rem 0 0.5rem;
@@ -1333,7 +1336,9 @@ button.danger {
   margin-left: 6px;
 }
 .badge.kind-card,
-.badge.kind-task {
+.badge.kind-task,
+.badge.kind-done,
+.badge.kind-feature {
   border-color: var(--moss);
 }
 .note-actions {
@@ -1421,7 +1426,11 @@ button.danger {
 }
 /* A refused save stays until dismissed; the edge marks it as an error, not only the colour. */
 .toast.error {
-  border-left: 4px solid var(--clay);
+  border-left: 4px solid var(--clay-on-ink);
+}
+/* Holds the live region only; the toast is fixed, so this must not take a grid track. */
+.toast-region {
+  position: fixed;
 }
 button.link {
   border: 0;
@@ -1431,4 +1440,30 @@ button.link {
   font: inherit;
   text-decoration: underline;
   cursor: pointer;
+}
+/* Markdown headings render one level down (# is h3, ## is h4) so they nest under the h2 of a
+   row or panel. These keep the look each had when they were h2 and h3. */
+.sheet .prose h3 {
+  margin: 4px 0 12px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.sheet .prose h4 {
+  margin: 16px 0 6px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.done-summary .prose h4 {
+  margin-top: 0;
+}
+.thread .prose h3 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.thread .prose h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
 }

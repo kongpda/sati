@@ -1,4 +1,4 @@
-import { lazy, type ReactNode, Suspense } from "react";
+import { lazy, memo, type ReactNode, Suspense, useMemo } from "react";
 
 // pele and the diagram code load only when a note has a Mermaid block.
 const Mermaid = lazy(() => import("./mermaid.js").then((m) => ({ default: m.Mermaid })));
@@ -33,24 +33,31 @@ export function chunks(source: string): Chunk[] {
 }
 
 /** Renders a small markdown subset as React nodes, so raw HTML is never parsed. */
-export function Markdown({ source }: { source: string }) {
+export const Markdown = memo(function Markdown({ source }: { source: string }) {
+  const parts = useMemo(() => chunks(source), [source]);
+  // The body's top heading level renders as h3, under the h2 of the row or panel it sits in,
+  // so a body that starts at `##` does not skip a level.
+  const deep = useMemo(
+    () => !parts.some((c) => c.kind === "text" && /^# /mu.test(c.text)),
+    [parts],
+  );
   return (
     <div className="prose">
-      {chunks(source).map((chunk, i) => (
+      {parts.map((chunk, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: chunks have no id and keep their order
-        <Chunk key={i} chunk={chunk} />
+        <Chunk key={i} chunk={chunk} deep={deep} />
       ))}
     </div>
   );
-}
+});
 
-function Chunk({ chunk }: { chunk: ReturnType<typeof chunks>[number] }) {
+function Chunk({ chunk, deep }: { chunk: ReturnType<typeof chunks>[number]; deep: boolean }) {
   const code = (
     <pre>
       <code>{chunk.text}</code>
     </pre>
   );
-  if (chunk.kind === "text") return <Block text={chunk.text} />;
+  if (chunk.kind === "text") return <Block text={chunk.text} deep={deep} />;
   if (chunk.lang !== "mermaid") return code;
   return (
     <Suspense fallback={code}>
@@ -59,16 +66,16 @@ function Chunk({ chunk }: { chunk: ReturnType<typeof chunks>[number] }) {
   );
 }
 
-function Block({ text }: { text: string }) {
+function Block({ text, deep }: { text: string; deep: boolean }) {
   const lines = text.split("\n");
   const first = lines[0] ?? "";
-  const heading = first.startsWith("## ") ? 3 : first.startsWith("# ") ? 2 : 0;
+  const heading = first.startsWith("## ") ? (deep ? 3 : 4) : first.startsWith("# ") ? 3 : 0;
   if (heading > 0 && lines.length > 1) {
     // The heading line ends at its newline; the lines after it are their own block.
     return (
       <>
-        <Block text={first} />
-        <Block text={lines.slice(1).join("\n")} />
+        <Block text={first} deep={deep} />
+        <Block text={lines.slice(1).join("\n")} deep={deep} />
       </>
     );
   }
@@ -80,13 +87,15 @@ function Block({ text }: { text: string }) {
       <>
         {runs.map((run, i) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: runs have no id and keep their order
-          <Block key={i} text={run.join("\n")} />
+          <Block key={i} text={run.join("\n")} deep={deep} />
         ))}
       </>
     );
   }
-  if (heading === 2) return <h2>{inline(first.slice(2))}</h2>;
-  if (heading === 3) return <h3>{inline(first.slice(3))}</h3>;
+  if (heading > 0) {
+    const text = inline(first.slice(first.indexOf(" ") + 1));
+    return heading === 3 ? <h3>{text}</h3> : <h4>{text}</h4>;
+  }
   if (lines.every((line) => line.startsWith("- "))) {
     return (
       <ul>
@@ -100,7 +109,7 @@ function Block({ text }: { text: string }) {
   if (lines.every((line) => line.startsWith(">"))) {
     return (
       <blockquote>
-        <Block text={lines.map((line) => line.replace(/^> ?/u, "")).join("\n")} />
+        <Block text={lines.map((line) => line.replace(/^> ?/u, "")).join("\n")} deep={deep} />
       </blockquote>
     );
   }

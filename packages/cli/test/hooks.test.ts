@@ -107,6 +107,18 @@ describe("git hooks", () => {
     );
   });
 
+  // Why: a begin marker with no end marker made every upgrade stack another block.
+  it("refuses a hook with an unterminated sati block and names the file", async () => {
+    const dir = await tempRepo();
+    mkdirSync(join(dir, ".git/hooks"), { recursive: true });
+    const broken = "#!/bin/sh\n# >>> sati\necho half\n";
+    writeFileSync(join(dir, ".git/hooks/pre-commit"), broken);
+    const r = sati(dir, "init", "--yes", "--tools", "");
+    expect(r.code).not.toBe(0);
+    expect(r.stderr).toContain("pre-commit");
+    expect(read(dir, ".git/hooks/pre-commit")).toBe(broken);
+  });
+
   // A whole hook file written by an older sati is ours, so it becomes the new short block.
   it("replaces a hook file an older sati init wrote", async () => {
     const dir = await tempRepo();

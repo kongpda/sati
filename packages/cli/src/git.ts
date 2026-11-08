@@ -103,7 +103,7 @@ function diffChanges(
   for (let i = 0; i < stat.length; i++) {
     const entry = stat[i];
     if (!entry) continue;
-    const [added, del, path] = entry.split("\t");
+    const [, del, path] = entry.split("\t");
     if (del === undefined || del === "-") continue;
     if (path === "" && stat[i + 1] && stat[i + 2] !== undefined) {
       removed.set(stat[i + 2] as string, Number(del));
@@ -111,7 +111,6 @@ function diffChanges(
       continue;
     }
     if (path) removed.set(path, Number(del));
-    void added;
   }
   const modified = kinds
     .filter((c) => c.kind === "modified" && removed.has(c.path))

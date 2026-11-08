@@ -86,7 +86,11 @@ export default defineCommand({
       const url = `http://127.0.0.1:${server.port}/session?token=${token}`;
       process.stdout.write(`${CLI_NAME} ui on ${url}\n`);
       if (args.open !== false) openBrowser(url);
+      let stopping = false;
       const stop = () => {
+        // A second Ctrl-C would close an already closed server and reject.
+        if (stopping) return;
+        stopping = true;
         void server
           .close()
           .then(flush)

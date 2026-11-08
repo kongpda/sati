@@ -84,7 +84,9 @@ export function FormDialog({
     if (form) setReady(filled(form));
     // The page behind takes no focus, clicks or screen-reader reading while the dialog is open;
     // aria-modal alone does not stop Tab. The dialog is portalled out of <main> for this.
-    const behind = [...document.querySelectorAll<HTMLElement>(".app > nav, .app > main")];
+    const behind = [
+      ...document.querySelectorAll<HTMLElement>(".app > nav, .app > main, .app > .sheet"),
+    ];
     for (const el of behind) el.inert = true;
     return () => {
       // Back to what the app wants now (`data-modal`, set with its own inert), not to what it

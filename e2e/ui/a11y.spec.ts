@@ -60,12 +60,15 @@ const PAGES = [
 ];
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
-for (const [device, viewport] of [
-  ["desktop", { width: 1280, height: 800 }],
-  ["phone", { width: 375, height: 812 }],
+// Each size runs in both themes: contrast is checked against the dark tokens too.
+for (const [device, viewport, colorScheme] of [
+  ["desktop", { width: 1280, height: 800 }, "light"],
+  ["phone", { width: 375, height: 812 }, "light"],
+  ["desktop dark", { width: 1280, height: 800 }, "dark"],
+  ["phone dark", { width: 375, height: 812 }, "dark"],
 ] as const) {
   test.describe(device, () => {
-    test.use({ viewport });
+    test.use({ viewport, colorScheme });
 
     // PLAN Phase 4: axe finds no WCAG 2.2 AA issue on any page. The plan bar is no serious or
     // critical issue; this also holds the moderate ones at zero.

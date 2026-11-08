@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ago,
   type Decision,
@@ -100,7 +100,8 @@ export function Features({
   onReviewed,
 }: {
   data: Snapshot;
-  onSavePaths: (id: string, paths: string, version: number) => void;
+  /** Rejects when the save is refused (the reason is already shown). */
+  onSavePaths: (id: string, paths: string, version: number) => Promise<unknown>;
   onReviewed: (id: string, version: number) => void;
 }) {
   return (
@@ -137,31 +138,7 @@ export function Features({
                 ))}
               </ul>
             ) : null}
-            <form
-              className="paths"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const input = new FormData(e.currentTarget).get("paths");
-                onSavePaths(f.id, String(input ?? ""), f.version);
-              }}
-            >
-              <label className="meta" htmlFor={`paths-${f.id}`}>
-                Files this feature owns, one pattern per line
-              </label>
-              {/* Keyed by the paths, so the field reloads only when they change (saved here or
-                  elsewhere) and keeps what is typed across every other refresh. Without the key,
-                  a refresh never showed a change made elsewhere, and Save sent the stale text. */}
-              <textarea
-                key={f.paths.join("\n")}
-                id={`paths-${f.id}`}
-                className="field"
-                name="paths"
-                rows={Math.max(2, f.paths.length)}
-                defaultValue={f.paths.join("\n")}
-                aria-label={`Paths for ${f.title}, one per line`}
-              />
-              <button type="submit">Save paths</button>
-            </form>
+            <PathsForm feature={f} onSave={onSavePaths} />
           </article>
         ))}
         {data.features.length === 0 ? (
@@ -169,6 +146,63 @@ export function Features({
         ) : null}
       </div>
     </div>
+  );
+}
+
+/**
+ * A feature's path patterns. The field reloads when they change elsewhere, but never while the
+ * person has typed in it: it then says so, and Save sends what they typed.
+ */
+function PathsForm({
+  feature: f,
+  onSave,
+}: {
+  feature: Snapshot["features"][number];
+  onSave: (id: string, paths: string, version: number) => Promise<unknown>;
+}) {
+  const [dirty, setDirty] = useState(false);
+  const current = f.paths.join("\n");
+  const loaded = useRef({ paths: current, n: 0 });
+  if (loaded.current.paths !== current && !dirty) {
+    loaded.current = { paths: current, n: loaded.current.n + 1 };
+  }
+  const changedElsewhere = dirty && loaded.current.paths !== current;
+  return (
+    <form
+      className="paths"
+      onInput={() => setDirty(true)}
+      onSubmit={(e) => {
+        e.preventDefault();
+        const input = new FormData(e.currentTarget).get("paths");
+        onSave(f.id, String(input ?? ""), f.version).then(
+          () => setDirty(false),
+          () => undefined,
+        );
+      }}
+    >
+      <label className="meta" htmlFor={`paths-${f.id}`}>
+        Files this feature owns, one pattern per line
+      </label>
+      {changedElsewhere ? (
+        <p className="banner" role="status">
+          These paths changed while you were editing. Save replaces them with yours;{" "}
+          <button type="button" className="link" onClick={() => setDirty(false)}>
+            discard yours and reload
+          </button>
+          .
+        </p>
+      ) : null}
+      <textarea
+        key={loaded.current.n}
+        id={`paths-${f.id}`}
+        className="field"
+        name="paths"
+        rows={Math.max(2, f.paths.length)}
+        defaultValue={loaded.current.paths}
+        aria-label={`Paths for ${f.title}, one per line`}
+      />
+      <button type="submit">Save paths</button>
+    </form>
   );
 }
 
@@ -272,8 +306,18 @@ export function Notes({
   const [editing, setEditing] = useState<Note | null>(null);
   const [tag, setTag] = useState("");
   // Comments and handoffs show under what they are on, not as notes of their own.
-  const notes = data.notes.filter((n) => !isThreadNote(n));
-  const tags = [...new Set(notes.flatMap((n) => n.tags))].sort();
+  const notes = useMemo(() => data.notes.filter((n) => !isThreadNote(n)), [data.notes]);
+  const tags = useMemo(() => [...new Set(notes.flatMap((n) => n.tags))].sort(), [notes]);
+  // Who links to each note, built once: asking per row would scan every note for every note.
+  const linkedFrom = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const note of notes) {
+      for (const link of new Set(note.links)) {
+        if (link !== note.id) map.set(link, [...(map.get(link) ?? []), note.title]);
+      }
+    }
+    return map;
+  }, [notes]);
   // Pinned notes first; the rest keep the newest-first order the server sends.
   const shown = notes
     .filter((n) => !tag || n.tags.includes(tag))
@@ -379,7 +423,7 @@ export function Notes({
               </button>
             </div>
             <Markdown source={n.body} />
-            <Backlinks notes={notes} id={n.id} />
+            <Backlinks titles={linkedFrom.get(n.id)} />
             {threadOf(n) ? null : <Thread data={data} on={n.id} folded {...thread} />}
           </article>
         ))}
@@ -401,10 +445,9 @@ export function Notes({
   );
 }
 
-function Backlinks({ notes, id }: { notes: Snapshot["notes"]; id: string }) {
-  const linked = notes.filter((note) => note.id !== id && note.links.includes(id));
-  if (linked.length === 0) return null;
-  return <div className="meta">Linked from {linked.map((note) => note.title).join(", ")}</div>;
+function Backlinks({ titles }: { titles: string[] | undefined }) {
+  if (!titles || titles.length === 0) return null;
+  return <div className="meta">Linked from {titles.join(", ")}</div>;
 }
 
 export function Decisions({
@@ -563,6 +606,7 @@ export function TaskSheet({
   data,
   id,
   modal,
+  inert,
   onDirty,
   onClose,
   onSave,
@@ -575,6 +619,8 @@ export function TaskSheet({
   id: string;
   /** False on a wide screen, where the panel sits beside a board that stays usable. */
   modal: boolean;
+  /** True while a dialog (search, a form) is open over the panel: it then takes no focus. */
+  inert: boolean;
   /** Tells the app whether there are unsaved edits, so leaving can ask first. */
   onDirty: (dirty: boolean) => void;
   onClose: () => void;
@@ -625,7 +671,11 @@ export function TaskSheet({
     formKey.current = { fields, n: formKey.current.n + 1, base: task };
   }
   const changedElsewhere = dirty && formKey.current.fields !== fields;
-  useEffect(() => onDirty(dirty), [dirty, onDirty]);
+  // Typing in the comment box or the new-step box is unsaved work too.
+  const [commentDraft, setCommentDraft] = useState(false);
+  const [stepDraft, setStepDraft] = useState(false);
+  const anyDirty = dirty || commentDraft || stepDraft;
+  useEffect(() => onDirty(anyDirty), [anyDirty, onDirty]);
   useEffect(() => () => onDirty(false), [onDirty]);
   if (!task) return null;
   const base = formKey.current.base ?? task;
@@ -641,6 +691,8 @@ export function TaskSheet({
       role="dialog"
       aria-modal={modal ? "true" : "false"}
       aria-labelledby="sheet-title"
+      inert={inert}
+      data-modal={inert ? "" : undefined}
     >
       <button type="button" onClick={onClose}>
         Close
@@ -776,6 +828,7 @@ export function TaskSheet({
         version={task.version}
         items={task.checklist ?? []}
         onChange={(checklist, expectedVersion) => onSave(task.id, { checklist, expectedVersion })}
+        onDraft={setStepDraft}
       />
       {feature && feature.acceptance.length > 0 ? (
         <>
@@ -795,7 +848,7 @@ export function TaskSheet({
           <Markdown source={task.body} />
         </>
       ) : null}
-      <Thread data={data} on={task.id} {...thread} />
+      <Thread data={data} on={task.id} {...thread} onDraft={setCommentDraft} />
       {held ? null : (
         <button
           type="button"
@@ -873,6 +926,7 @@ function Checklist({
   version,
   items,
   onChange,
+  onDraft,
 }: {
   version: number;
   items: { text: string; done: boolean }[];
@@ -880,12 +934,20 @@ function Checklist({
     items: { text: string; done: boolean }[],
     expectedVersion: number,
   ) => Promise<{ version: number }>;
+  /** Whether a step is typed but not added, so leaving can ask first. */
+  onDraft: (typed: boolean) => void;
 }) {
   // Shown at once; a refused save puts back what the server has. A new version (a save from
   // here or anywhere) resets it to the server's list without remounting, so focus stays put.
   const [shown, setShown] = useState(items);
+  // Saves waiting or running: the list on screen is ahead of the server's, so a version that
+  // arrives meanwhile must not reset it (the ticks would flicker back, then forward).
+  const pending = useRef(0);
+  const [settled, setSettled] = useState(0);
   // biome-ignore lint/correctness/useExhaustiveDependencies: items is new on every snapshot; the version says when it changed
-  useEffect(() => setShown(items), [version]);
+  useEffect(() => {
+    if (pending.current === 0) setShown(items);
+  }, [version, settled]);
   // Quick ticks run one after another, each with the version the last save returned; sent
   // together, the second would carry a stale version and be refused.
   const latest = useRef(version);
@@ -900,14 +962,21 @@ function Checklist({
   }, [version]);
   const change = (next: typeof items) => {
     setShown(next);
+    pending.current++;
     queue.current = queue.current.then(() =>
-      onChange(next, latest.current).then(
-        (result) => {
-          latest.current = result.version;
-          saved.current = next;
-        },
-        () => setShown(saved.current),
-      ),
+      onChange(next, latest.current)
+        .then(
+          (result) => {
+            latest.current = result.version;
+            saved.current = next;
+          },
+          () => setShown(saved.current),
+        )
+        .finally(() => {
+          pending.current--;
+          // Take the server's list once the last save is in, for what arrived meanwhile.
+          if (pending.current === 0) setSettled((n) => n + 1);
+        }),
     );
   };
   const done = shown.filter((c) => c.done).length;
@@ -941,12 +1010,17 @@ function Checklist({
       </ul>
       <form
         className="checklist-add"
+        onInput={(e) => {
+          const step = e.currentTarget.elements.namedItem("step");
+          onDraft(step instanceof HTMLInputElement && step.value.trim() !== "");
+        }}
         onSubmit={(e) => {
           e.preventDefault();
           const input = e.currentTarget.elements.namedItem("step");
           if (!(input instanceof HTMLInputElement) || input.value.trim() === "") return;
           change([...shown, { text: input.value.trim(), done: false }]);
           input.value = "";
+          onDraft(false);
         }}
       >
         <input

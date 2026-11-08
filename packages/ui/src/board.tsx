@@ -17,7 +17,7 @@ import { type Actor, ago, COLUMNS, dueLabel, type Feature, type Task, waitingOn 
 import { Avatar } from "./people.js";
 import { capital, fullTime, statusWord } from "./words.js";
 
-export function Board({
+export const Board = memo(function Board({
   tasks,
   allTasks,
   features,
@@ -46,13 +46,20 @@ export function Board({
   onReviewed: (id: string) => void;
   onMove: (id: string, status: string) => void;
 }) {
-  const { featureName, columns } = boardColumns(tasks, features);
+  const { featureName, columns } = useMemo(() => boardColumns(tasks, features), [tasks, features]);
   const people = useMemo(() => new Map(actors.map((a) => [a.id, a])), [actors]);
   // From every task, not only the filtered ones: a hidden task can still hold another one up.
-  const unfinished = new Set(
-    allTasks.filter((t) => t.status !== "done" && t.status !== "cancelled").map((t) => t.id),
+  const unfinished = useMemo(
+    () =>
+      new Set(
+        allTasks.filter((t) => t.status !== "done" && t.status !== "cancelled").map((t) => t.id),
+      ),
+    [allTasks],
   );
-  const waiting = (t: Task) => (t.dependsOn ?? []).filter((id) => unfinished.has(id)).length;
+  const waiting = useCallback(
+    (t: Task) => (t.dependsOn ?? []).filter((id) => unfinished.has(id)).length,
+    [unfinished],
+  );
   // A drag starts only after the pointer moves, so a plain click still opens the card.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -127,7 +134,7 @@ export function Board({
       </DragOverlay>
     </DndContext>
   );
-}
+});
 
 function Column({
   status,

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { normalizeLockPath, overlappingPaths, pathsOverlap } from "../src/index.js";
+import {
+  BRACE_VARIANT_CAP,
+  braceVariantCount,
+  globBraceError,
+  normalizeLockPath,
+  overlappingPaths,
+  pathsOverlap,
+} from "../src/index.js";
 
 // A missed overlap lets two agents edit the same file; a false one only costs a warning or a
 // refused lock. So the cases below pin both directions: what must overlap and what must not.
@@ -50,5 +57,32 @@ describe("normalizeLockPath", () => {
   // These could never match a repo-relative file, so a lock on them would protect nothing.
   it.each(["", ".", "/etc/passwd", "C:/x", "../other/repo", "src/../../x"])("rejects %j", (p) => {
     expect(normalizeLockPath(p)).toBeUndefined();
+  });
+});
+
+describe("braceVariantCount", () => {
+  // The count guards every lock and feature path against brace bombs, so it must agree with
+  // real expansion on ordinary globs and never under-count a hostile one.
+  it("counts lists, nested lists, numeric and letter ranges, and steps", () => {
+    expect(braceVariantCount("src/**/*.ts")).toBe(1);
+    expect(braceVariantCount("src/{a,b}/{c,d,e}")).toBe(6);
+    expect(braceVariantCount("{a,{b,c}}")).toBe(3);
+    expect(braceVariantCount("f{1..10}")).toBe(10);
+    expect(braceVariantCount("f{0..10..5}")).toBe(3);
+    expect(braceVariantCount("{a..e}")).toBe(5);
+    expect(braceVariantCount("{a..e..2}")).toBe(3);
+  });
+
+  it("ignores escaped and unclosed braces", () => {
+    expect(braceVariantCount("a\\{b,c\\}")).toBe(1);
+    expect(braceVariantCount("{a\\,b,c}")).toBe(2);
+    expect(braceVariantCount("src/{a,b")).toBe(1);
+  });
+
+  it("saturates just above the cap instead of overflowing", () => {
+    expect(braceVariantCount("{a,b}".repeat(200))).toBe(BRACE_VARIANT_CAP + 1);
+    expect(braceVariantCount("{1..5000}")).toBe(BRACE_VARIANT_CAP + 1);
+    expect(globBraceError("src/{a,b}")).toBeUndefined();
+    expect(globBraceError(`${"x".repeat(70)}{1..5000}`)).toContain("...");
   });
 });

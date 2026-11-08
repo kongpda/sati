@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
-import { normalizeLockPath, overlappingPaths } from "../domain/locks.js";
+import { globBraceError, normalizeLockPath, overlappingPaths } from "../domain/locks.js";
 import { LIMITS, LOCK_MODES, type Lock, TaskId } from "../domain/schemas.js";
 import type { StorageReader, StorageWriter } from "../ports/storage.js";
 import {
@@ -21,6 +21,11 @@ const LockPath = z
   .min(1)
   .max(LIMITS.path)
   .transform((raw, c) => {
+    const tooMany = globBraceError(raw);
+    if (tooMany) {
+      c.addIssue({ code: "custom", message: tooMany });
+      return z.NEVER;
+    }
     const p = normalizeLockPath(raw);
     if (p === undefined) {
       c.addIssue({ code: "custom", message: `"${raw}" is not a repo-relative path or glob` });

@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { locateDb, SqliteStore } from "@sati/store-sqlite";
@@ -138,6 +138,19 @@ describe("sati guard --paths and --hook", () => {
   });
 
   // Claude Code reads exit 2 as "block the tool call" and shows stderr to the agent.
+  // Why: every Bash call paid for opening the database; a command that changes nothing guarded
+  // must not even need a project, so it passes in a repo with no sati.
+  it("--hook lets a harmless Bash command through without opening a project", async () => {
+    const dir = await tempRepo();
+    const r = spawnSync(process.execPath, [bin, "guard", "--hook"], {
+      cwd: dir,
+      encoding: "utf8",
+      input: JSON.stringify({ cwd: dir, tool_input: { command: "ls -la" } }),
+    });
+    expect(r.status).toBe(0);
+    expect(r.stderr).toBe("");
+  });
+
   it("--hook blocks an Edit inside a lock with exit 2, and passes warnings as context", async () => {
     const { dir } = await billingRepo(false);
     run(dir, ["lock", "acquire", "src/auth"], { SATI_ACTOR: "other" });

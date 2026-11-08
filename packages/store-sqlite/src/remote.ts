@@ -90,8 +90,35 @@ export function socketPath(dbPath: string, platform: NodeJS.Platform = process.p
   return `\\\\.\\pipe\\sati-${key}`;
 }
 
+/**
+ * The only methods a client may call on its transaction. A plain lookup like `access?.[method]`
+ * would also resolve `constructor`, `toString` and the rest of the prototype chain.
+ */
+const METHODS: ReadonlySet<string> = new Set([
+  "getProject",
+  "get",
+  "findBySuffix",
+  "list",
+  "readyTasks",
+  "getByKey",
+  "search",
+  "listActivity",
+  "getActivity",
+  "insert",
+  "update",
+  "appendActivity",
+]);
+
+/** How long a transaction may sit idle before the daemon rolls it back and drops the client. */
+export const TXN_IDLE_MS = 30_000;
+
 /** One process owns the SQLite file. Others send storage calls over this socket. */
-export function listenStore(store: StorageAdapter, socketPath: string): Server {
+export function listenStore(
+  store: StorageAdapter,
+  socketPath: string,
+  opts: { txnIdleMs?: number } = {},
+): Server {
+  const idleMs = opts.txnIdleMs ?? TXN_IDLE_MS;
   const server = createServer((socket) => {
     const sessions = new Map<number, StorageReader>();
     const gates = new Map<
@@ -102,10 +129,27 @@ export function listenStore(store: StorageAdapter, socketPath: string): Server {
       if (!socket.destroyed) socket.write(encode(msg));
     };
     let closed = false;
+    // A client that begins and then goes quiet would hold the write lock for everyone. Each
+    // message on a transaction restarts its timer; when it fires the socket is destroyed, which
+    // rejects the gate and rolls the transaction back.
+    const timers = new Map<number, NodeJS.Timeout>();
+    const touch = (txn: number) => {
+      clearTimeout(timers.get(txn));
+      timers.set(
+        txn,
+        setTimeout(() => socket.destroy(), idleMs),
+      );
+    };
+    const stopTimer = (txn: number) => {
+      clearTimeout(timers.get(txn));
+      timers.delete(txn);
+    };
     // A client that dies mid-transaction must not keep the write lock: rejecting the gate makes
     // `store.write` ROLLBACK and frees the queue for everyone else.
     const onGone = () => {
       closed = true;
+      for (const t of timers.values()) clearTimeout(t);
+      timers.clear();
       for (const gate of gates.values()) gate.reject(new Error("client disconnected"));
     };
     socket.on("error", onGone);
@@ -134,11 +178,13 @@ export function listenStore(store: StorageAdapter, socketPath: string): Server {
           send({ id: msg.id, ok: true, result: { protocol: PROTOCOL } });
           await new Promise<void>((resolve, reject) => {
             gates.set(msg.txn ?? 0, { resolve, reject, endId: 0 });
+            touch(msg.txn ?? 0);
           });
         }).then(
           () => {
             const gate = gates.get(msg.txn ?? 0);
             if (gate) send({ id: gate.endId, ok: true });
+            stopTimer(msg.txn ?? 0);
             gates.delete(msg.txn ?? 0);
             sessions.delete(msg.txn ?? 0);
           },
@@ -151,15 +197,19 @@ export function listenStore(store: StorageAdapter, socketPath: string): Server {
             // Failed before `fn` ran (schema too new, busy): the client is still waiting on `begin`.
             if (!started) send({ id: msg.id, ok: false, error });
             else if (gate) send({ id: gate.endId || msg.id, ok: false, error });
+            stopTimer(msg.txn ?? 0);
             gates.delete(msg.txn ?? 0);
             sessions.delete(msg.txn ?? 0);
           },
         );
         return;
       }
+      if (msg.txn !== undefined && sessions.has(msg.txn)) touch(msg.txn);
       if (msg.op === "call" && msg.txn !== undefined && msg.method) {
         const access = sessions.get(msg.txn) as StorageWriter | undefined;
-        const fn = access?.[msg.method as keyof StorageWriter];
+        const fn = METHODS.has(msg.method)
+          ? access?.[msg.method as keyof StorageWriter]
+          : undefined;
         if (!access || typeof fn !== "function") {
           send({
             id: msg.id,

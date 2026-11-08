@@ -3,6 +3,7 @@ import type { EntityMap, StoredEntity } from "../domain/schemas.js";
 import { featureRemovalNeedsDecision } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
 import { nowIso, type ServiceContext, updateWithLog } from "./context.js";
+import { releaseTaskLocks } from "./lock.js";
 
 const SOFT = ["task", "note", "decision", "feature"] as const;
 type Soft = (typeof SOFT)[number];
@@ -40,6 +41,27 @@ export async function deleteRecord(
               `\`${CLI_NAME} feature update ${id} --status removed --decision <id>\`.`,
           },
         );
+      }
+    }
+    if (entity === "task") {
+      const claim = (rec as EntityMap["task"]).claim;
+      if (claim) {
+        // A live claim is someone's work in progress: only its holder or a person may delete it.
+        if (claim.actorId !== ctx.actorId && claim.leaseUntil > nowIso(ctx)) {
+          const caller = await w.get("actor", ctx.actorId);
+          if (caller?.kind !== "human") {
+            const holder = await w.get("actor", claim.actorId);
+            throw new SatiError(
+              "CONFLICT",
+              `Task ${id} is claimed by ${holder?.name ?? claim.actorId}.`,
+              {
+                hint: "Only the holder or a person can delete a claimed task; wait for the claim to expire or ask the holder to release it.",
+                details: { holder: claim.actorId, leaseUntil: claim.leaseUntil },
+              },
+            );
+          }
+        }
+        await releaseTaskLocks(w, ctx, id, claim.actorId);
       }
     }
     return updateWithLog(w, ctx, entity, rec, { deletedAt: nowIso(ctx) }, { verb: "delete" });

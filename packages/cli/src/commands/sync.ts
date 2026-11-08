@@ -4,14 +4,10 @@ import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { execute, openRuntime, output, readProjectConfig, snapshotDir } from "../runtime.js";
 
-/** Also the top-level `sati export`; `--all` is kept for scripts and changes nothing. */
+/** Also the top-level `sati export`. */
 export const exportCmd = defineCommand({
   meta: { name: "export", description: "Write changed records to .sati/ (run by pre-commit)" },
   args: {
-    all: {
-      type: "boolean",
-      description: "Accepted for older scripts; the export is always complete",
-    },
     ...json,
   },
   run: ({ args }) =>

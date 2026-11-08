@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "8449990de6236d764fdafe9482f23db0e5c0c0c0",
     "branch": "main",
     "commit": "302dd673de3aa2ea4a97764a053e008e7641d77b",
     "completedAt": "2026-11-08T16:55:49.102Z",
@@ -16,17 +18,20 @@
   "id": "tsk_01M6WVVY8DN72FT2NFRZQ4JATE",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-08T05:59:57.458Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "blockedReason": "2026-11-08T18:10:46.995Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "branch": "2026-11-08T16:46:56.345Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
     "claim": "2026-11-08T16:55:49.104Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "completion": "2026-11-08T16:55:49.104Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "status": "2026-11-08T16:55:49.104Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-08T18:10:46.995Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "reviewNote": "2026-11-08T18:10:46.995Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-08T18:10:46.995Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "worktree": "2026-11-08T16:46:56.345Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
   },
-  "status": "review",
+  "status": "done",
   "title": "Phase 4 gate: 2,000-card board scrolls at 60 fps",
-  "updatedAt": "2026-11-08T16:55:49.106Z",
-  "version": 6,
+  "updatedAt": "2026-11-08T18:10:47.006Z",
+  "version": 7,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

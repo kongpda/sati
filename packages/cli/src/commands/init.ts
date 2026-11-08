@@ -25,6 +25,7 @@ import { type DbLocation, locateDb, SqliteStore, standaloneDbPath } from "@sati/
 import { importSnapshot } from "@sati/sync";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
+import { writeFileAtomic } from "../atomic.js";
 import { selectTools } from "../detect.js";
 import {
   applyMergeDriver,
@@ -284,8 +285,13 @@ function writeManaged(p: InitPlan): void {
   for (const h of p.hooks) {
     if (h.action !== "create" && h.action !== "update") continue;
     mkdirSync(join(h.abs, ".."), { recursive: true });
-    writeFileSync(h.abs, h.content, { flag: h.action === "create" ? "wx" : "w" });
-    chmodSync(h.abs, 0o755);
+    if (h.action === "create") {
+      writeFileSync(h.abs, h.content, { flag: "wx" });
+      chmodSync(h.abs, 0o755);
+    } else {
+      writeFileAtomic(h.abs, h.content, 0o755);
+      chmodSync(h.abs, 0o755);
+    }
   }
   if (p.mergeDriver) applyMergeDriver(p.root, p.mergeDriver);
   writePlanned(p.root, p.agentFiles, p.mode === "stealth" ? excludeFileFor(p.db) : undefined);

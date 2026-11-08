@@ -24,7 +24,19 @@ function svgNode(svg: string): Element | null {
   return node;
 }
 
-const BANNED = new Set(["script", "foreignobject"]);
+// Elements that run script, load styles, or animate an attribute into something else.
+const BANNED = new Set([
+  "script",
+  "foreignobject",
+  "animate",
+  "set",
+  "animatetransform",
+  "animatemotion",
+  "style",
+]);
+
+/** A `url(...)` that points anywhere but a `#fragment` of this document (markers, gradients). */
+const EXTERNAL_URL = /url\(\s*(?!["']?#)/iu;
 
 /** The parts of an Element that `scrub` uses, so it can be tested without a DOM. */
 export interface Scrubbable {
@@ -45,7 +57,11 @@ export function scrub(root: Scrubbable): void {
     for (const attr of Array.from(el.attributes)) {
       const name = attr.name.toLowerCase();
       const link = name === "href" || name === "xlink:href";
-      if (name.startsWith("on") || (link && !attr.value.trim().startsWith("#"))) {
+      if (
+        name.startsWith("on") ||
+        (link && !attr.value.trim().startsWith("#")) ||
+        EXTERNAL_URL.test(attr.value)
+      ) {
         el.removeAttribute(attr.name);
       }
     }

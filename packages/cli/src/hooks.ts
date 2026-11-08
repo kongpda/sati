@@ -193,12 +193,18 @@ function foreignInterpreter(existing: string | undefined): string | undefined {
 }
 
 /** Puts our block into a hook file: replaces an old block, else goes right after the shebang. */
-function chainInto(existing: string | undefined, name: string): string {
+function chainInto(existing: string | undefined, name: string, path: string): string {
   const block = chainBlock(name);
   if (existing === undefined) return `#!/bin/sh\n${block}`;
   const start = existing.indexOf(BEGIN);
   const stop = existing.indexOf(END, start);
-  if (start >= 0 && stop >= 0) {
+  if (start >= 0 && stop < 0) {
+    // Inserting another block would stack one more on every run.
+    throw new SatiError("VALIDATION", `A ${CLI_NAME} block in ${path} has no end marker.`, {
+      hint: `Fix ${path}: add the line "${END}" after the block, or delete the block, then run again.`,
+    });
+  }
+  if (start >= 0) {
     const after = existing.indexOf("\n", stop);
     return existing.slice(0, start) + block + (after < 0 ? "" : existing.slice(after + 1));
   }
@@ -336,7 +342,7 @@ export function planHooks(
         note: `this hook runs with ${program}, not sh, so ${CLI_NAME} left it unchanged. Have it run ${shownPath(root, resolve(common, CLI_NAME, "hooks", name))} with the same arguments${stop}`,
       };
     } else {
-      hook = planFile(root, abs, chainInto(existing, name));
+      hook = planFile(root, abs, chainInto(existing, name, abs));
     }
     hook.path = global ? slashed(abs) : shownPath(root, abs);
     if (global) hook.global = true;

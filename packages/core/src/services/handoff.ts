@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { BodyText, LIMITS, type Note } from "../domain/schemas.js";
+import { refuseSecrets } from "../domain/secrets.js";
 import {
   baseFields,
   insertWithLog,
@@ -56,6 +57,7 @@ export function handoffNext(body: string): string {
 /** Writes or replaces the handoff note linked to a task. One note per task. */
 export async function writeHandoff(ctx: ServiceContext, input: unknown) {
   const data = parseInput(HandoffInput, input);
+  refuseSecrets("handoff", data);
   const body = handoffBody(data);
   // One transaction: two concurrent handoffs must not both see "no note" and each create one.
   return ctx.store.write(async (w) => {

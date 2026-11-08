@@ -1,4 +1,4 @@
-import type { Feature, Priority, Task } from "./schemas.js";
+import type { Feature, Priority } from "./schemas.js";
 
 /** Sort order for priorities: lower ranks first. */
 export const PRIORITY_RANK: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
@@ -42,25 +42,4 @@ export function findDependencyCycle(
     if (cycle) return cycle;
   }
   return undefined;
-}
-
-export function isClaimActive(task: Pick<Task, "claim">, now: Date): boolean {
-  return task.claim !== null && Date.parse(task.claim.leaseUntil) > now.getTime();
-}
-
-/**
- * Ready = `todo`, not actively claimed, and every dependency is `done` or `cancelled` (work that
- * will never happen must not block for good). `depStatus` reports a deleted dependency as `done`.
- */
-export function isReady(
-  task: Pick<Task, "status" | "claim" | "dependsOn" | "deletedAt">,
-  depStatus: (id: string) => Task["status"] | undefined,
-  now: Date,
-): boolean {
-  if (task.deletedAt !== null || task.status !== "todo") return false;
-  if (isClaimActive(task, now)) return false;
-  return task.dependsOn.every((id) => {
-    const status = depStatus(id);
-    return status === "done" || status === "cancelled";
-  });
 }

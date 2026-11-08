@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { SatiError } from "../domain/errors.js";
+import { LIMITS } from "../domain/schemas.js";
+import { CLI_NAME } from "../name.js";
 import type { StorageReader, StorageWriter } from "../ports/storage.js";
 import { listAll, parseInput, type ServiceContext } from "./context.js";
 import { createMilestoneIn } from "./milestone.js";
@@ -21,8 +24,13 @@ export interface PlanImport {
   skipped: PlanChange[];
 }
 
+/** Most tasks and milestones one import may add, so a pasted file cannot flood the project. */
+export const PLAN_MAX_TASKS = 500;
+export const PLAN_MAX_MILESTONES = 100;
+
 interface Item {
   heading: string;
+  line: number;
   title: string;
   key: string;
 }
@@ -31,7 +39,7 @@ interface Item {
 export function parsePlan(markdown: string): Item[] {
   const items: Item[] = [];
   let heading = "Imported";
-  for (const line of markdown.split(/\r?\n/)) {
+  for (const [index, line] of markdown.split(/\r?\n/).entries()) {
     const head = /^(#{1,6})\s+(.+)$/.exec(line.trim());
     if (head?.[2]) {
       heading = head[2].trim();
@@ -41,7 +49,7 @@ export function parsePlan(markdown: string): Item[] {
     if (!box?.[1]) continue;
     const title = box[1].trim();
     const key = createHash("sha256").update(`${heading}\n${title}`).digest("hex").slice(0, 16);
-    items.push({ heading, title, key });
+    items.push({ heading, line: index + 1, title, key });
   }
   return items;
 }
@@ -53,6 +61,23 @@ export function parsePlan(markdown: string): Item[] {
 export async function importPlan(ctx: ServiceContext, input: unknown): Promise<PlanImport> {
   const { markdown, dryRun } = parseInput(ImportPlanInput, input);
   const items = parsePlan(markdown);
+  // Checked before any read or write, so a dry run reports the same refusal as a real import.
+  const long = items.find((i) => i.title.length > LIMITS.title);
+  if (long) {
+    throw new SatiError(
+      "VALIDATION",
+      `Line ${long.line}: the task title is ${long.title.length} characters; the limit is ${LIMITS.title}.`,
+      { hint: "Shorten that checkbox line and import again." },
+    );
+  }
+  const headingCount = new Set(items.map((i) => i.heading)).size;
+  if (items.length > PLAN_MAX_TASKS || headingCount > PLAN_MAX_MILESTONES) {
+    throw new SatiError(
+      "VALIDATION",
+      `This plan has ${items.length} tasks under ${headingCount} headings; one import takes at most ${PLAN_MAX_TASKS} tasks and ${PLAN_MAX_MILESTONES} milestones.`,
+      { hint: `Split the file and run \`${CLI_NAME} plan import\` on each part.` },
+    );
+  }
   // Everything is parsed above, before the first write. The whole import is one transaction, so a
   // failure part-way leaves nothing behind. Deleted records count as existing, so a task someone
   // deleted is not silently re-created.
@@ -70,6 +95,10 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
     const taskKeys = new Set(
       existing.tasks.flatMap((t) => t.labels.filter((l) => l.startsWith("plan:"))),
     );
+    // Computed once; each created milestone takes the next order (see createMilestoneIn).
+    let nextOrder =
+      Math.max(-1, ...existing.milestones.filter((m) => m.deletedAt === null).map((m) => m.order)) +
+      1;
     const headings = [...new Set(items.map((i) => i.heading))];
     for (const title of headings) {
       const key = `plan:${createHash("sha256").update(title).digest("hex").slice(0, 16)}`;
@@ -79,7 +108,10 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
       }
       result.added.push({ kind: "milestone", title, key });
       if (write)
-        milestoneIds.set(title, (await createMilestoneIn(write, ctx, { title, goal: "" })).id);
+        milestoneIds.set(
+          title,
+          (await createMilestoneIn(write, ctx, { title, goal: "", order: nextOrder++ })).id,
+        );
     }
     for (const item of items) {
       const label = `plan:${item.key}`;

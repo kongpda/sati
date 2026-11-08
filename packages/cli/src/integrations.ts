@@ -1,12 +1,4 @@
-import {
-  accessSync,
-  appendFileSync,
-  constants,
-  mkdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { accessSync, appendFileSync, constants, mkdirSync, readFileSync, statSync } from "node:fs";
 import { delimiter, dirname, join } from "node:path";
 import {
   CLI_NAME,
@@ -18,6 +10,7 @@ import {
   WORKFLOW,
 } from "@sati/core";
 import { z } from "zod";
+import { writeFileAtomic } from "./atomic.js";
 import { isLocalInstall, LOCAL_BIN } from "./install.js";
 
 /** What init or `rules sync` does to one file. `skip`: stealth mode leaves existing files alone. */
@@ -487,7 +480,7 @@ export function writePlanned(root: string, files: readonly PlannedFile[], exclud
     if (f.action !== "create" && f.action !== "update") continue;
     const abs = join(root, f.path);
     mkdirSync(dirname(abs), { recursive: true });
-    writeFileSync(abs, f.content);
+    writeFileAtomic(abs, f.content);
     if (exclude && !excluded.has(f.path)) add.push(`/${f.path}`);
   }
   if (exclude && add.length) {

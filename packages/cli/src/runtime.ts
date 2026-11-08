@@ -184,7 +184,7 @@ const FOLDER_FILES_CAP = 20_000;
  * folders (`.sati`, `.git`) and `node_modules` are skipped; the walk is sorted, so the same
  * folder always gives the same list.
  */
-export function folderIndex(root: string): RepoIndex {
+function folderIndex(root: string): RepoIndex {
   return {
     files: async () => {
       const out: RepoFile[] = [];
@@ -500,6 +500,28 @@ export async function openRuntime(cwd: string = process.cwd()): Promise<Runtime>
   return { ctx, project, actor, location };
 }
 
+/** Text from a file, or from stdin for `-`. A bad path is a usage error, not a crash. */
+export function readText(path: string): string {
+  try {
+    return readFileSync(path === "-" ? 0 : path, "utf8");
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") {
+      throw new SatiError("NOT_FOUND", `There is no file ${path}.`, {
+        hint: "Check the path. It is relative to the folder you run the command in.",
+      });
+    }
+    if (code === "EISDIR") {
+      throw new SatiError("USAGE", `${path} is a folder, not a file.`);
+    }
+    throw new SatiError("USAGE", `Cannot read ${path}: ${(err as Error).message}`);
+  }
+}
+
+/** A Markdown body flag: `-` reads it from stdin, so long or multi-line text needs no quoting. */
+export const bodyText = (value: string | undefined): string | undefined =>
+  value === "-" ? readText("-") : value;
+
 /**
  * Splits a comma-separated flag. citty keeps only the last value of a repeated flag. A comma
  * inside `{}` belongs to a glob such as `src/{a,b}/**`, so it does not split.
@@ -536,6 +558,7 @@ export function parseJson(
   text: string,
   what: string,
   code: "USAGE" | "VALIDATION" = "VALIDATION",
+  opts: { hint?: string } = {},
 ): unknown {
   try {
     return JSON.parse(text);
@@ -545,9 +568,10 @@ export function parseJson(
       `${what} is not valid JSON: ${err instanceof Error ? err.message : String(err)}`,
       {
         hint:
-          code === "USAGE"
+          opts.hint ??
+          (code === "USAGE"
             ? "Check the quoting of the value."
-            : "Fix the file, or restore it from git.",
+            : "Fix the file, or restore it from git."),
       },
     );
   }

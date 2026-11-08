@@ -39,6 +39,8 @@ const CODE_ONLY = new Set<string>(["/agents", "/features"]);
 
 /** The phone layout in styles.css: one column at a time. */
 const PHONE = "(max-width: 700px)";
+/** Matches the stylesheet, which shows the board beside the task panel from this width. */
+const WIDE = "(min-width: 900px)";
 
 /** Where a search hit of each kind opens, and the tag it shows. */
 const HIT_PAGES: Record<string, string> = {
@@ -105,6 +107,25 @@ export function App() {
   const visible = useRef<Task[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
   const searchRun = useRef(0);
+  /** On a wide screen the task panel sits beside the board, which stays usable. */
+  const [wide, setWide] = useState(() => window.matchMedia(WIDE).matches);
+  /** The open task, for `go`, which must not change on every render. */
+  const shownTask = useRef(task);
+  /** The task panel has edits that are not saved yet. */
+  const sheetDirty = useRef(false);
+  // The URL on screen, to put back when a Back or Forward is declined.
+  const here = useRef(window.location.pathname + window.location.search);
+
+  const setSheetDirty = useCallback((dirty: boolean) => {
+    sheetDirty.current = dirty;
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia(WIDE);
+    const onChange = () => setWide(media.matches);
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
 
   // A phone shows one column, a wider screen all of them; turning or resizing past the
   // breakpoint switches, or the board keeps a layout made for the other width.
@@ -116,16 +137,38 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    shownTask.current = task;
     if (task) cursor.current = task;
   }, [task]);
 
   useEffect(() => {
     const onPop = () => {
+      const next = new URLSearchParams(window.location.search).get("task");
+      // Back and Forward ask too. Declining puts the panel's URL back.
+      if (
+        sheetDirty.current &&
+        next !== shownTask.current &&
+        !window.confirm("Discard your unsaved changes to this task?")
+      ) {
+        window.history.pushState(null, "", here.current);
+        return;
+      }
+      if (next !== shownTask.current) sheetDirty.current = false;
+      shownTask.current = next;
+      here.current = window.location.pathname + window.location.search;
       setPath(window.location.pathname);
-      setTask(new URLSearchParams(window.location.search).get("task"));
+      setTask(next);
+    };
+    // Reloading or closing the tab with unsaved edits gets the browser's own prompt.
+    const onUnload = (e: BeforeUnloadEvent) => {
+      if (sheetDirty.current) e.preventDefault();
     };
     window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
+    window.addEventListener("beforeunload", onUnload);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      window.removeEventListener("beforeunload", onUnload);
+    };
   }, []);
 
   useEffect(() => {
@@ -157,8 +200,22 @@ export function App() {
   }, [client]);
 
   const go = useCallback((next: string, taskId: string | null = null) => {
+    // Leaving a panel with unsaved edits asks first. On a wide screen the board stays clickable
+    // beside the panel, so one stray click would otherwise throw the edits away.
+    if (
+      sheetDirty.current &&
+      taskId !== shownTask.current &&
+      !window.confirm("Discard your unsaved changes to this task?")
+    ) {
+      return;
+    }
+    // Clicking the open task again keeps its edits, so it stays dirty.
+    if (taskId !== shownTask.current) sheetDirty.current = false;
+    shownTask.current = taskId;
     const url = taskId ? `${next}?task=${taskId}` : next;
-    window.history.pushState(null, "", url);
+    // The same URL again (the open card clicked) adds no history entry for Back to step through.
+    if (url !== here.current) window.history.pushState(null, "", url);
+    here.current = url;
     setPath(next);
     setTask(taskId);
   }, []);
@@ -432,9 +489,12 @@ export function App() {
     void latest.current.move(id, status);
   }, []);
 
-  // While the task panel, New task or Search is open, the page behind it takes no focus or
-  // clicks, so Tab stays inside the dialog (aria-modal alone does not stop it).
-  const modal = creating || palette || (task !== null && !!data?.tasks.some((t) => t.id === task));
+  // While New task, Search or (on a narrow screen) the task panel is open, the page behind it
+  // takes no focus or clicks, so Tab stays inside the dialog (aria-modal alone does not stop it).
+  // A wide screen shows the panel beside the board, which stays usable: click another card to
+  // switch tasks.
+  const sheetOpen = task !== null && !!data?.tasks.some((t) => t.id === task);
+  const modal = creating || palette || (sheetOpen && !wide);
 
   return (
     <div className="app">
@@ -763,6 +823,8 @@ export function App() {
           key={task}
           data={data}
           id={task}
+          modal={!wide}
+          onDirty={setSheetDirty}
           onClose={() => go(path)}
           onSave={(id, patch) =>
             api

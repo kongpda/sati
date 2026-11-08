@@ -8,7 +8,7 @@ const MOVED = "data-pele-style";
  * set through CSSOM, which the CSP allows. pele has already escaped text and filtered links and
  * styles; `<` never appears in its text, so `<...>` spans are tags.
  */
-export function svgNode(svg: string): Element | null {
+function svgNode(svg: string): Element | null {
   const renamed = svg.replace(/<[^<>]+>/gu, (tag) => tag.replace(/\sstyle="/gu, ` ${MOVED}="`));
   const doc = new DOMParser().parseFromString(renamed, "image/svg+xml");
   const root = doc.documentElement;

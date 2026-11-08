@@ -197,7 +197,7 @@ export type ChangeItem =
   | (ChangeBase & { kind: "decision" })
   | (ChangeBase & { kind: "note"; edited: boolean });
 
-export interface Changes {
+interface Changes {
   since: string;
   basis: string;
   items: ChangeItem[];

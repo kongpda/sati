@@ -84,6 +84,22 @@ async function unknownFlag(root: CommandDef, argv: readonly string[]): Promise<s
   return undefined;
 }
 
+/** The leading words of `typed` that name commands, e.g. `merge-driver` of `merge-driver a`. */
+async function commandWords(root: CommandDef, typed: readonly string[]): Promise<string[]> {
+  const path: string[] = [];
+  let cmd = root;
+  for (const word of typed) {
+    const subs = (await resolveValue(cmd.subCommands)) as
+      | Record<string, Resolvable<CommandDef>>
+      | undefined;
+    const next = subs?.[word];
+    if (next === undefined) break;
+    path.push(word);
+    cmd = await resolveValue(next);
+  }
+  return path;
+}
+
 /** `--project slug` or `--project=slug`; removes it from argv. Returns false on a missing slug. */
 function takeProject(argv: string[]): boolean {
   const at = argv.findIndex((a) => a === "--project" || a.startsWith("--project="));
@@ -128,18 +144,23 @@ export async function main(root: CommandDef): Promise<void> {
     if (bad) throw new Error(bad);
     await runCommand(root, { rawArgs: argv });
   } catch (err) {
-    // Command handlers catch their own errors, so anything here is a parsing error from citty.
+    // Loaded only here: the core and SQLite stay out of `--version` and `--help`.
+    const [{ SatiError, isSatiError }, { printError }] = await Promise.all([
+      import("@sati/core"),
+      import("./runtime.js"),
+    ]);
+    // A command that does not wrap its own errors (e.g. `serve`) keeps their code and hint.
+    if (isSatiError(err)) {
+      process.exitCode = printError(err, argv.includes("--json"));
+      return;
+    }
+    // Anything else is a parsing error from citty.
     const message = stripVTControlCharacters(err instanceof Error ? err.message : String(err));
     // An unknown subcommand is not worth repeating in the hint.
     const typed = words(argv);
     const unknown = /^Unknown command (\S+)/u.exec(message)?.[1];
     const at = unknown === undefined ? -1 : typed.indexOf(unknown);
-    const known = typed.slice(0, at === -1 ? 2 : at);
-    // Loaded only here: the core and SQLite stay out of `--version` and `--help`.
-    const [{ SatiError }, { printError }] = await Promise.all([
-      import("@sati/core"),
-      import("./runtime.js"),
-    ]);
+    const known = at === -1 ? await commandWords(root, typed) : typed.slice(0, at);
     const usage = new SatiError("USAGE", message, {
       hint: `Run \`${[CLI_NAME, ...known, "--help"].join(" ")}\` for usage.`,
     });

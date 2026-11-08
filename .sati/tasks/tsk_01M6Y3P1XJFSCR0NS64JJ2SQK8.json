@@ -1,0 +1,37 @@
+{
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "82673944409139917578943fc88f9d97b9cb6d66",
+    "completedAt": "2026-11-08T17:59:32.389Z",
+    "completedBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "filesTouched": [
+      "packages/cli/src/commands/init.ts",
+      "packages/cli/src/commands/doctor.ts",
+      "packages/cli/src/commands/rules.ts",
+      "packages/cli/src/hooks.ts",
+      "packages/cli/src/integrations.ts",
+      "packages/cli/test/init.test.ts",
+      "packages/cli/test/hardening.test.ts"
+    ],
+    "summary": "init --upgrade writes agent files and .gitattributes; doctor setup check (plans with the installed hooks' binary, ignores missing agent files, survives plan errors); init --dry-run; pre-push guards each pushed ref, chain block keeps stdin for user hooks"
+  },
+  "createdAt": "2026-11-08T17:35:47.634Z",
+  "createdBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+  "id": "tsk_01M6Y3P1XJFSCR0NS64JJ2SQK8",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-08T17:35:47.636Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "branch": "2026-11-08T17:35:51.668Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "claim": "2026-11-08T17:59:32.391Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-08T17:59:32.391Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "status": "2026-11-08T17:59:32.391Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "worktree": "2026-11-08T17:35:51.668Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
+  },
+  "status": "review",
+  "title": "Phase 5d: upgrade covers agent files, doctor flags stale setup, init --dry-run, pre-push checks pushed refs",
+  "updatedAt": "2026-11-08T17:59:32.393Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -36,6 +36,25 @@ export function selfCommand(root: string): string[] {
   }
 }
 
+/**
+ * The command the installed hooks start, read back from the pre-commit runner's
+ * `sati() { ... "$@"; }` line. `doctor` plans with it, so running doctor through another
+ * binary (npx, a global install) does not read as an out-of-date setup.
+ */
+export function installedSelf(root: string): string[] | undefined {
+  const common = absFrom(root, git(root, "rev-parse", "--git-common-dir"));
+  const file = resolve(common, CLI_NAME, "hooks", "pre-commit");
+  if (!existsSync(file)) return undefined;
+  const line = readFileSync(file, "utf8").match(
+    new RegExp(`^${CLI_NAME}\\(\\) \\{ (.+) "\\$@"; \\}$`, "m"),
+  )?.[1];
+  if (line === undefined) return undefined;
+  const words = [...line.matchAll(/'((?:[^']|'\\'')*)'/g)].map((m) =>
+    (m[1] ?? "").replaceAll("'\\''", "'"),
+  );
+  return words.length > 0 ? words : undefined;
+}
+
 const UPGRADE = `Run \`${CLI_NAME} init --upgrade\` from the new install.`;
 
 /** A hook runner in `<git-common-dir>/sati/hooks/`. Only this file holds the binary's path. */
@@ -56,14 +75,39 @@ ${body}
 const GUARD = `# Override the guard once with SATI_GUARD=off (logged).
 ${CLI_NAME} guard --staged || exit $?`;
 const IMPORT = `${CLI_NAME} sync import --quiet`;
-// origin/HEAD names the remote's default branch; origin/main is the fallback. With neither, say
-// so instead of letting every push go unguarded without a word.
+// git names each pushed ref on stdin: `<local ref> <local sha> <remote ref> <remote sha>`. Each
+// ref is checked from what the remote already has, or from the default branch (origin/HEAD, else
+// origin/main) for a new branch, so `git push origin other` checks `other`, not HEAD. A deleted
+// ref has nothing to check. With no refs on stdin (a hook runner that does not pass them), HEAD
+// is checked. With no base, say so instead of letting the push go unguarded without a word.
+const UNGUARDED = sh(
+  `${CLI_NAME}: no origin/HEAD or origin/main to compare with, so this push was not guarded.`,
+);
 const PUSH = `base=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)
 [ -n "$base" ] || base=origin/main
-if git rev-parse --verify --quiet "$base" >/dev/null 2>&1; then
-  ${CLI_NAME} guard --range "$base...HEAD" || exit $?
-else
-  echo ${sh(`${CLI_NAME}: no origin/HEAD or origin/main to compare with, so this push was not guarded.`)} >&2
+has_base() { git rev-parse --verify --quiet "$base" >/dev/null 2>&1; }
+nonzero() { case "$1" in *[!0]*) return 0 ;; *) return 1 ;; esac; }
+seen=
+if [ ! -t 0 ]; then
+  while read -r _ local_sha _ remote_sha; do
+    [ -n "$local_sha" ] || continue
+    seen=1
+    nonzero "$local_sha" || continue
+    if nonzero "$remote_sha" && git cat-file -e "$remote_sha^{commit}" 2>/dev/null; then
+      ${CLI_NAME} guard --range "$remote_sha..$local_sha" </dev/null || exit $?
+    elif has_base; then
+      ${CLI_NAME} guard --range "$base...$local_sha" </dev/null || exit $?
+    else
+      echo ${UNGUARDED} >&2
+    fi
+  done
+fi
+if [ -z "$seen" ]; then
+  if has_base; then
+    ${CLI_NAME} guard --range "$base...HEAD" || exit $?
+  else
+    echo ${UNGUARDED} >&2
+  fi
 fi`;
 
 /** The runners for each mode. Stealth commits nothing, so it only guards. */
@@ -98,10 +142,28 @@ const runnerPath = (name: string) =>
  * hook, and it does nothing on a machine without sati. Only pre-commit may stop git.
  */
 function chainBlock(name: string): string {
-  const stop = name === "pre-commit" || name === "pre-push" ? " || exit $?" : "";
-  return `${BEGIN}: runs the ${CLI_NAME} hook. Managed by \`${CLI_NAME} init\`.
+  const v = `$${CLI_NAME}`;
+  const head = `${BEGIN}: runs the ${CLI_NAME} hook. Managed by \`${CLI_NAME} init\`.
 ${CLI_NAME}_hook=${runnerPath(name)}
-if [ -x "$${CLI_NAME}_hook" ]; then "$${CLI_NAME}_hook" "$@"${stop}; fi
+`;
+  if (name === "pre-push") {
+    // The runner reads the pushed refs from stdin; the rest of this hook (git lfs, say) needs
+    // them too, so the runner gets a copy and stdin is restored from it afterwards. No trap
+    // cleans up after Ctrl-C: this block sits in someone else's hook and must not replace theirs.
+    return `${head}if [ -x "${v}_hook" ] && [ -t 0 ]; then
+  "${v}_hook" "$@" || exit $?
+elif [ -x "${v}_hook" ]; then
+  ${CLI_NAME}_in=$(mktemp) || exit 1
+  cat >"${v}_in" || { rm -f "${v}_in"; exit 1; }
+  "${v}_hook" "$@" <"${v}_in" || { ${CLI_NAME}_rc=$?; rm -f "${v}_in"; exit "${v}_rc"; }
+  exec <"${v}_in"
+  rm -f "${v}_in"
+fi
+${END}
+`;
+  }
+  const stop = name === "pre-commit" ? " || exit $?" : "";
+  return `${head}if [ -x "${v}_hook" ]; then "${v}_hook" "$@"${stop}; fi
 ${END}
 `;
 }

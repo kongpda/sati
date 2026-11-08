@@ -28,6 +28,7 @@ import { json } from "../args.js";
 import { selectTools } from "../detect.js";
 import {
   applyMergeDriver,
+  installedSelf,
   type PlannedGitConfig,
   type PlannedHook,
   planGitAttributes,
@@ -43,8 +44,7 @@ import {
   type FileChange,
   fileReader,
   type PlannedFile,
-  planIntegrations,
-  readExcluded,
+  planAgentFiles,
   warnIfNotOnPath,
   writePlanned,
 } from "../integrations.js";
@@ -66,7 +66,7 @@ interface InitPlan {
   /** The merge driver in local git config; git mode only. */
   mergeDriver: PlannedGitConfig | undefined;
   config: SatiConfig;
-  /** `--upgrade`: the project exists; only hooks, the merge driver and .gitattributes change. */
+  /** `--upgrade`: the project exists; hooks, the merge driver and agent files are rewritten. */
   upgrade: Project | undefined;
 }
 
@@ -130,6 +130,8 @@ async function plan(
     upgrade?: boolean | undefined;
     /** Also chain into a global `core.hooksPath`, which every repo on the machine uses. */
     globalHooks?: boolean | undefined;
+    /** The command hooks start, when not this binary (see `pendingUpgrade`). */
+    self?: string[] | undefined;
   },
 ): Promise<InitPlan> {
   const loc = where(cwd);
@@ -169,7 +171,7 @@ async function plan(
   const found = await alreadyInitialized(db);
   if (found && !args.upgrade) {
     throw new SatiError("CONFLICT", `This project is already initialized as "${found.slug}".`, {
-      hint: `Run \`${CLI_NAME} init --upgrade\` to update its git hooks, merge driver and .gitattributes.`,
+      hint: `Run \`${CLI_NAME} init --upgrade\` to update its git hooks, merge driver and agent files.`,
     });
   }
   if (!found && args.upgrade) {
@@ -177,7 +179,7 @@ async function plan(
       hint: `Run \`${CLI_NAME} init\`.`,
     });
   }
-  if (found) return upgradePlan(root, db, found, args.globalHooks);
+  if (found) return upgradePlan(root, db, found, args.tools, args.globalHooks, args.self);
 
   const name = args.name ?? basename(root);
   const files: FileChange[] =
@@ -185,19 +187,11 @@ async function plan(
       ? []
       : [{ path: shownPath(root, configPath), action: existing ? "keep" : "create" }];
   const tools = selectTools(root, args.tools);
-  const excluded = mode === "stealth" ? readExcluded(excludeFileFor(db)) : new Set<string>();
-  const agentFiles = planIntegrations(
-    tools,
-    mode,
-    fileReader(root),
-    (path) => path === "CLAUDE.local.md" || excluded.has(path),
-    isLocalInstall(root),
-    kind,
-  );
+  const agentFiles = planAgentFiles(root, mode, db, kind, tools).files;
   // The snapshot only exists in git mode, so only git mode routes it to the merge driver.
   if (mode === "git") agentFiles.push(planGitAttributes(fileReader(root)));
   files.push(...agentFiles.map(({ path, action }) => ({ path, action })));
-  const { hooks, mergeDriver } = planGit(root, mode, files, args.globalHooks);
+  const { hooks, mergeDriver } = planGit(root, mode, files, args.globalHooks, args.self);
   return {
     mode,
     kind,
@@ -217,8 +211,13 @@ async function plan(
 }
 
 /** The hooks and merge driver, appended to `files` in display order. */
-function planGit(root: string, mode: Mode, files: FileChange[], globalHooks = false) {
-  const self = selfCommand(root);
+function planGit(
+  root: string,
+  mode: Mode,
+  files: FileChange[],
+  globalHooks = false,
+  self = selfCommand(root),
+) {
   const hooks = planHooks(root, mode, self, globalHooks);
   files.push(...hooks.map(({ path, action }) => ({ path, action })));
   const mergeDriver = mode === "git" ? planMergeDriver(root, self) : undefined;
@@ -226,26 +225,31 @@ function planGit(root: string, mode: Mode, files: FileChange[], globalHooks = fa
   return { hooks, mergeDriver };
 }
 
-/** `--upgrade` on an initialized project: only the git integration that init manages. */
+/** `--upgrade` on an initialized project: everything init and `rules sync` manage, from this version. */
 function upgradePlan(
   root: string,
   db: string,
   project: Project,
+  askedTools: string | undefined,
   globalHooks: boolean | undefined,
+  self: string[] | undefined,
 ): InitPlan {
   const mode = project.mode;
-  const agentFiles = mode === "git" ? [planGitAttributes(fileReader(root))] : [];
+  const kind = readSettings(project.settings).kind;
+  const tools = selectTools(root, askedTools);
+  const agentFiles = planAgentFiles(root, mode, db, kind, tools).files;
+  if (mode === "git") agentFiles.push(planGitAttributes(fileReader(root)));
   const files: FileChange[] = agentFiles.map(({ path, action }) => ({ path, action }));
-  const { hooks, mergeDriver } = planGit(root, mode, files, globalHooks);
+  const { hooks, mergeDriver } = planGit(root, mode, files, globalHooks, self);
   return {
     mode,
-    kind: readSettings(project.settings).kind,
+    kind,
     slug: project.slug,
     name: project.name,
     root,
     db,
     projectId: project.id,
-    tools: [],
+    tools,
     files,
     agentFiles,
     hooks,
@@ -268,7 +272,7 @@ function preview(p: InitPlan): string {
   }
   lines.push(...notes(p.hooks));
   if (p.files.length === 0) lines.push("files     none");
-  if (!p.upgrade) lines.push(`tools     ${p.tools.length ? p.tools.join(", ") : "none detected"}`);
+  lines.push(`tools     ${p.tools.length ? p.tools.join(", ") : "none detected"}`);
   return lines.join("\n");
 }
 
@@ -295,6 +299,7 @@ export interface UpgradeResult {
 
 function applyUpgrade(p: InitPlan & { upgrade: Project }): UpgradeResult {
   writeManaged(p);
+  warnIfNotOnPath(p.tools, isLocalInstall(p.root));
   return { upgraded: p.upgrade, files: p.files, notes: notes(p.hooks) };
 }
 
@@ -455,8 +460,46 @@ async function confirmUpgrade(
   return clack.isCancel(ok) || !ok ? null : p;
 }
 
-function render(r: InitResult | UpgradeResult | null): string {
+/**
+ * The files `init --upgrade` would create or change here, for `doctor`. It plans with the
+ * binary the hooks already start, so the binary running doctor does not count. An agent file
+ * counts only when it exists and is out of date: a missing one belongs to a tool this project
+ * does not use, or one the user removed.
+ */
+export async function pendingUpgrade(root: string): Promise<FileChange[]> {
+  const p = await plan(root, { upgrade: true, self: installedSelf(root) });
+  const agent = new Set(p.agentFiles.filter((f) => f.path !== ".gitattributes").map((f) => f.path));
+  return p.files.filter(
+    (f) => f.action === "update" || (f.action === "create" && !agent.has(f.path)),
+  );
+}
+
+/** The plan without file contents, for `--dry-run` and error details. */
+function summary(p: InitPlan) {
+  return {
+    ...p,
+    config: undefined,
+    agentFiles: undefined,
+    hooks: undefined,
+    mergeDriver: undefined,
+  };
+}
+
+interface DryRun {
+  dryRun: ReturnType<typeof summary>;
+}
+
+function render(r: InitResult | UpgradeResult | DryRun | null): string {
   if (!r) return "Cancelled. Nothing was written.";
+  if ("dryRun" in r) {
+    const p = r.dryRun;
+    const head = p.upgrade ? `Upgrade "${p.upgrade.slug}" would write:` : "Init would write:";
+    const lines = [head, `  mode      ${p.mode}`];
+    for (const f of p.files) lines.push(`  ${f.action.padEnd(9)} ${f.path}`);
+    lines.push(`  tools     ${p.tools.length ? p.tools.join(", ") : "none detected"}`);
+    lines.push("Dry run: nothing was written.");
+    return lines.join("\n");
+  }
   if ("upgraded" in r) {
     const lines = [`Upgraded "${r.upgraded.slug}" (${r.upgraded.mode} mode).`];
     for (const f of r.files) lines.push(`  ${LABEL[f.action].padEnd(9)} ${f.path}`);
@@ -496,8 +539,9 @@ export default defineCommand({
     upgrade: {
       type: "boolean",
       description:
-        "Update the git hooks, merge driver and .gitattributes of an initialized project",
+        "Update the git hooks, merge driver and agent files (as `rules sync` does) of an initialized project",
     },
+    "dry-run": { type: "boolean", description: "Show what init would write, and write nothing" },
     "global-hooks": {
       type: "boolean",
       description:
@@ -519,24 +563,17 @@ export default defineCommand({
           upgrade: args.upgrade,
           globalHooks: args["global-hooks"],
         };
+        if (args["dry-run"]) return { dryRun: summary(await plan(cwd, opts)) };
         if (args.yes) return apply(await plan(cwd, opts));
         if (!args.json && process.stdin.isTTY && process.stdout.isTTY) {
           const chosen = args.upgrade ? await confirmUpgrade(cwd, opts) : await wizard(cwd, opts);
           return chosen && apply(chosen);
         }
         const p = await plan(cwd, opts);
-        const yes = args.upgrade ? "--upgrade --yes" : "--yes";
+        const flags = args.upgrade ? "--upgrade " : "";
         throw new SatiError("USAGE", `${CLI_NAME} init needs --yes when it cannot ask questions.`, {
-          hint: `Run \`sati init ${yes}\`, or add \`--json\` to see what it would write.`,
-          details: {
-            preview: {
-              ...p,
-              config: undefined,
-              agentFiles: undefined,
-              hooks: undefined,
-              mergeDriver: undefined,
-            },
-          },
+          hint: `Run \`${CLI_NAME} init ${flags}--yes\`, or \`${CLI_NAME} init ${flags}--dry-run\` to see what it would write.`,
+          details: { preview: summary(p) },
         });
       },
       render,

@@ -5,7 +5,7 @@ import { CLI_NAME, SatiError } from "@sati/core";
 import type { DbLocation } from "@sati/store-sqlite";
 import { parseJson } from "./runtime.js";
 
-export interface KnownProject {
+interface KnownProject {
   slug: string;
   name: string;
   projectId: string;

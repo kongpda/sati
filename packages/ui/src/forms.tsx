@@ -28,7 +28,7 @@ const MILESTONE_LABELS: Record<string, string> = {
 };
 
 /** Comma-separated labels as typed, trimmed and without blanks or repeats. */
-export function parseLabels(text: string): string[] {
+function parseLabels(text: string): string[] {
   return [
     ...new Set(
       text
@@ -580,7 +580,7 @@ export function PlanSelect({
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** "8 weeks before", "on the day", "3 days after": when a stage is due, from the plan's day. */
-export function offsetWords(days: number | null): string {
+function offsetWords(days: number | null): string {
   if (days === null) return "no due date";
   if (days === 0) return "on the day";
   const n = Math.abs(days);

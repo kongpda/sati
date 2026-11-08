@@ -1,0 +1,20 @@
+{
+  "body": "## Done so far\nCode, tests, PLAN Phase 5d, progress entry and changeset written; lint, typecheck and pnpm test:ui (53/53) pass; CLI tests pass alone.\n\n## Next step\nRerun pnpm test once machine load drops (load avg was 200 from khevents test runs, causing 5 s timeouts), then commit and task_complete.\n\n## Open questions\nNone.\n\n## Files in flight\n- none",
+  "createdAt": "2026-11-08T17:44:12.373Z",
+  "createdBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+  "handoffFromName": "claude-code@sati#35c9be9f",
+  "id": "note_01M6Y45ETQRMT1WHYDCVACF9Q3",
+  "links": [
+    "tsk_01M6Y3P1XJFSCR0NS64JJ2SQK8"
+  ],
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-08T17:44:12.388Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
+  },
+  "tags": [
+    "handoff"
+  ],
+  "title": "Handoff Phase 5d: upgrade covers agent files, doctor flags stale setup, init --dry-run, pre-push checks pushed refs",
+  "updatedAt": "2026-11-08T17:44:12.373Z",
+  "version": 1
+}

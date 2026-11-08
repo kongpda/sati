@@ -6,7 +6,7 @@ import { ApiError, COLUMNS, SHORT_DAY } from "./api.js";
  */
 
 /** Task statuses as people say them. The values sent to the server stay the same. */
-export const STATUS_WORDS: Record<string, string> = Object.fromEntries(COLUMNS);
+const STATUS_WORDS: Record<string, string> = Object.fromEntries(COLUMNS);
 
 export const statusWord = (status: string): string => STATUS_WORDS[status] ?? status;
 

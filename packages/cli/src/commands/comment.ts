@@ -9,7 +9,7 @@ import {
 } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { execute } from "../runtime.js";
+import { bodyText, execute } from "../runtime.js";
 
 /** One comment: UTC time, author's name, and the body indented under it. */
 const line = (n: Note, names: Map<string, string>) =>
@@ -19,14 +19,18 @@ const add = defineCommand({
   meta: { name: "add", description: "Comment on a task, note or decision" },
   args: {
     on: { type: "positional", required: true, description: "Task, note or decision id or handle" },
-    body: { type: "positional", required: true, description: "The comment, in Markdown" },
+    body: {
+      type: "positional",
+      required: true,
+      description: "The comment, in Markdown (- reads stdin)",
+    },
     ...json,
   },
   run: ({ args }) =>
     execute(
       args.json,
       async ({ ctx }) =>
-        addComment(ctx, { on: await commentTarget(ctx, args.on), body: args.body }),
+        addComment(ctx, { on: await commentTarget(ctx, args.on), body: bodyText(args.body) ?? "" }),
       (n: Note) => `Commented on ${shortHandle(n.links[0] ?? "")} (${shortHandle(n.id)})`,
     ),
 });

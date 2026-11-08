@@ -102,7 +102,9 @@ interface HookInput {
 async function runHook(): Promise<void> {
   let rt: Runtime | undefined;
   try {
-    const input = parseJson(readFileSync(0, "utf8"), "The hook input") as HookInput;
+    const input = parseJson(readFileSync(0, "utf8"), "The hook input", "USAGE", {
+      hint: "Claude Code pipes the edit as JSON on stdin; run --hook only from its PreToolUse hook.",
+    }) as HookInput;
     const cwd = input.cwd ?? process.cwd();
     const command = input.tool_input?.command;
     const target = input.tool_input?.file_path ?? input.tool_input?.notebook_path;
@@ -172,9 +174,13 @@ export default defineCommand({
     try {
       const chosen = [args.staged, args.paths, args.range].filter(Boolean).length;
       if (chosen !== 1) {
-        throw new SatiError("USAGE", "Say what to check.", {
-          hint: `Use \`${CLI_NAME} guard --staged\`, \`${CLI_NAME} guard --paths src/a.ts\`, or \`${CLI_NAME} guard --range origin/main...HEAD\`.`,
-        });
+        throw new SatiError(
+          "USAGE",
+          chosen === 0 ? "Say what to check." : "Pick one thing to check.",
+          {
+            hint: `Use \`${CLI_NAME} guard --staged\`, \`${CLI_NAME} guard --paths src/a.ts\`, or \`${CLI_NAME} guard --range origin/main...HEAD\`.`,
+          },
+        );
       }
       const rt = await openRuntime();
       if ((args.staged || args.range) && rt.location.mode !== "git") {

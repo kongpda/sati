@@ -170,6 +170,48 @@ describe("sati init", () => {
     expect(hooks()?.ok).toBe(true);
   });
 
+  // After `npm update`, hooks and rules blocks lag behind until someone upgrades. doctor is the
+  // one place that says so, and it names the files and the fix.
+  it("doctor flags an out-of-date setup and passes after init --upgrade", async () => {
+    const dir = await tempRepo();
+    expect(sati(dir, "init", "--yes", "--tools", "").code).toBe(0);
+    type Doctor = { ok: boolean; checks: { name: string; ok: boolean; detail: string }[] };
+    const setup = () => satiJson<Doctor>(dir, "doctor").data.checks.find((c) => c.name === "setup");
+    expect(setup()?.ok).toBe(true);
+    // What an older version left: a rules block with old text.
+    const agents = join(dir, "AGENTS.md");
+    writeFileSync(agents, readFileSync(agents, "utf8").replace("sati_brief", "sati_old"));
+    expect(setup()).toMatchObject({ ok: false, detail: expect.stringContaining("AGENTS.md") });
+    expect(setup()?.detail).toContain("init --upgrade");
+    expect(sati(dir, "doctor").code).not.toBe(0);
+    expect(sati(dir, "init", "--upgrade", "--yes").code).toBe(0);
+    expect(setup()?.ok).toBe(true);
+  }, 20_000);
+
+  it("doctor's setup check does not depend on which agent or binary runs it", async () => {
+    const dir = await tempRepo();
+    expect(sati(dir, "init", "--yes", "--tools", "").code).toBe(0);
+    // Run from inside Claude Code, a project set up with no agent tools is still current: the
+    // Claude files it would add belong to a tool this project does not use.
+    const r = run(dir, ["doctor", "--json"], { CLAUDECODE: "1" });
+    type Doctor = { checks: { name: string; ok: boolean; detail: string }[] };
+    const setup = (JSON.parse(r.stdout) as Doctor).checks.find((c) => c.name === "setup");
+    expect(setup).toMatchObject({ ok: true });
+    // Run through another path to the binary (npx, a second install), the hooks still start
+    // the one init recorded, so they are not out of date.
+    const elsewhere = join(
+      realpathSync.native(mkdtempSync(join(tmpdir(), "sati-bin-"))),
+      "sati.mjs",
+    );
+    symlinkSync(bin, elsewhere);
+    const other = execFileSync(process.execPath, [elsewhere, "doctor", "--json"], {
+      cwd: dir,
+      encoding: "utf8",
+      env: { ...process.env, SATI_ACTOR: "tester", CLAUDECODE: "" },
+    });
+    expect((JSON.parse(other) as Doctor).checks.find((c) => c.name === "setup")?.ok).toBe(true);
+  }, 20_000);
+
   it("stealth mode with no agent tools writes nothing into the working tree", async () => {
     const dir = await tempRepo();
     const r = satiJson<Init>(dir, "init", "--yes", "--mode", "stealth");
@@ -320,8 +362,9 @@ describe("sati init", () => {
     expect(r.data.error.hint).toContain("sati init --upgrade");
   });
 
-  // PLAN: an initialized project gets newer hooks, driver and .gitattributes without a re-init.
-  it("--upgrade rewrites only the managed git files of an initialized project", async () => {
+  // PLAN: an initialized project gets newer hooks, driver, .gitattributes and agent files
+  // without a re-init. One command, so an upgrade cannot leave the rules block behind.
+  it("--upgrade rewrites the managed git and agent files of an initialized project", async () => {
     const dir = await tempRepo();
     expect(satiJson<Err>(dir, "init", "--upgrade", "--yes").code).toBe(6);
     expect(sati(dir, "init", "--yes", "--tools", "").code).toBe(0);
@@ -344,10 +387,30 @@ describe("sati init", () => {
     expect(readFileSync(join(dir, ".gitattributes"), "utf8")).toBe(
       "*.png binary\n.sati/**/*.json merge=sati linguist-generated\n",
     );
-    // Agent files are `sati rules sync`'s job, not upgrade's.
-    expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).toBe("mine\n");
+    // The user's own text stays; the managed rules block is added after it.
+    expect(r.data.files).toContainEqual({ path: "AGENTS.md", action: "update" });
+    const agents = readFileSync(join(dir, "AGENTS.md"), "utf8");
+    expect(agents.startsWith("mine\n")).toBe(true);
+    expect(agents).toContain("sati_brief");
     const again = satiJson<{ files: Init["files"] }>(dir, "init", "--upgrade", "--yes");
     expect(again.data.files.every((f) => f.action === "keep")).toBe(true);
+  });
+
+  // A dry run is how a script or a careful user sees an upgrade before it touches anything.
+  it("--dry-run shows the plan and writes nothing", async () => {
+    const dir = await tempRepo();
+    expect(sati(dir, "init", "--yes", "--tools", "").code).toBe(0);
+    writeFileSync(join(dir, "AGENTS.md"), "mine\n");
+    const r = satiJson<{ dryRun: { files: Init["files"] } }>(dir, "init", "--upgrade", "--dry-run");
+    expect(r.code).toBe(0);
+    expect(r.data.dryRun.files).toContainEqual({ path: "AGENTS.md", action: "update" });
+    expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).toBe("mine\n");
+    const text = sati(dir, "init", "--upgrade", "--dry-run");
+    expect(text.stdout).toContain("update    AGENTS.md");
+    expect(text.stdout).toContain("nothing was written");
+    // Without --yes or a terminal, the hint points at --dry-run, not at a circular --json.
+    const err = satiJson<Err>(dir, "init", "--upgrade");
+    expect(err.data.error.hint).toContain("init --upgrade --dry-run");
   });
 
   it("rejects modes that do not fit the folder", async () => {

@@ -1,0 +1,15 @@
+{
+  "consequences": "One command brings a project up to date; doctor's setup check uses the same plan. The init test that pinned AGENTS.md as untouched by upgrade was changed.",
+  "context": "Upgrading khevents-inertia showed that init --upgrade left an old rules block and old Claude Code settings (no guard hook, no --no-verify deny) until rules sync was run too, and nothing said so. The earlier split between the two commands was deliberate but made upgrades easy to get half done.",
+  "createdAt": "2026-11-08T17:39:23.691Z",
+  "createdBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+  "decision": "sati init --upgrade plans and writes the agent files (rules block, .mcp.json, Claude Code settings and skill, Cursor and Codex configs) with the same planner as rules sync, besides hooks, merge driver and .gitattributes. rules sync stays for changing --tools.",
+  "id": "dec_01M6Y3WMY2KWQ3QBPQ81FNAM21",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-08T17:39:23.734Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
+  },
+  "title": "init --upgrade also writes agent files",
+  "updatedAt": "2026-11-08T17:39:23.691Z",
+  "version": 1
+}

@@ -12,10 +12,10 @@ import {
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
-import { execute, int, list } from "../runtime.js";
+import { bodyText, execute, int, list } from "../runtime.js";
 
 const fields = {
-  body: { type: "string", description: "Note text in Markdown" },
+  body: { type: "string", description: "Note text in Markdown (- reads stdin)" },
   tags: { type: "string", description: "Comma-separated tags" },
   links: { type: "string", description: "Comma-separated links (URLs, paths or ids)" },
   pinned: { type: "boolean", description: "Pin the note (pinned notes reach every brief)" },
@@ -38,7 +38,7 @@ const create = defineCommand({
       async ({ ctx }) =>
         createNote(ctx, {
           title: args.title,
-          body: args.body,
+          body: bodyText(args.body),
           tags: list(args.tags),
           links: list(args.links),
           pinned: args.pinned,
@@ -91,7 +91,7 @@ const update = defineCommand({
       async ({ ctx }) =>
         updateNote(ctx, await resolveId(ctx, "note", args.id), {
           title: args.title,
-          body: args.body,
+          body: bodyText(args.body),
           tags: list(args.tags),
           links: list(args.links),
           pinned: args.pinned,
@@ -122,7 +122,11 @@ const restore = defineCommand({
     execute(
       args.json,
       async ({ ctx }) =>
-        restoreRecord(ctx, "note", await resolveId(ctx, "note", args.id)) as Promise<Note>,
+        restoreRecord(
+          ctx,
+          "note",
+          await resolveId(ctx, "note", args.id, { deleted: true }),
+        ) as Promise<Note>,
       (n: Note) => `Restored ${row(n)}`,
     ),
 });

@@ -352,11 +352,16 @@ export async function completeTask(ctx: ServiceContext, id: string, input: unkno
       });
     }
     const status = gated ? "review" : "done";
+    if (before.claim === null && (before.status === "todo" || before.status === "backlog")) {
+      throw new SatiError("INVALID_TRANSITION", `Task ${id} was never started.`, {
+        hint: `Claim it first (task_claim, or \`${CLI_NAME} task claim\`), do the work, then complete it.`,
+      });
+    }
     assertTransition(TASK_TRANSITIONS, "task", before.status, status);
     const filesTouched = data.filesTouched ?? [];
     if (settings.kind === "code" && filesTouched.length === 0) {
       throw new SatiError("VALIDATION", "List every file you touched.", {
-        hint: "Pass filesTouched; it is how reviewers and the guard trace a change.",
+        hint: "Pass filesTouched (`--files a.ts,b.ts` on the command line); it is how reviewers and the guard trace a change.",
       });
     }
     const completion = {

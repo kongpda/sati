@@ -16,6 +16,7 @@ import { json } from "../args.js";
 import { defaultBase } from "../git.js";
 import { runHint } from "../install.js";
 import { closeRuntime, openRuntime, output, worktreePaths } from "../runtime.js";
+import { pendingUpgrade } from "./init.js";
 
 /**
  * The git hooks of this clone: the pre-commit runner init writes under the git common dir, and
@@ -46,6 +47,31 @@ function hooksCheck(root: string): DoctorCheck {
     };
   }
   return { name: "hooks", ok: true, detail: `The git hooks start ${bin ?? CLI_NAME}.` };
+}
+
+/**
+ * Whether the hooks, merge driver and agent files match this version. After an
+ * update they lag behind until `init --upgrade` runs, and nothing else would say so.
+ */
+async function upgradeCheck(root: string): Promise<DoctorCheck> {
+  let files: Awaited<ReturnType<typeof pendingUpgrade>>;
+  try {
+    files = await pendingUpgrade(root);
+  } catch (err) {
+    // A failed plan is one failed check, not a lost report.
+    return { name: "setup", ok: false, detail: `Cannot check: ${(err as Error).message}` };
+  }
+  if (files.length === 0) {
+    return { name: "setup", ok: true, detail: "Hooks, merge driver and agent files are current." };
+  }
+  return {
+    name: "setup",
+    ok: false,
+    detail: [
+      `${files.length} managed file(s) are out of date. Run \`${runHint(root, "init --upgrade")}\`.`,
+      ...files.map((f) => `  ${f.action === "create" ? "missing" : "stale  "} ${f.path}`),
+    ].join("\n"),
+  };
 }
 
 const quiet = (cwd: string, args: string[]) =>
@@ -115,7 +141,9 @@ export default defineCommand({
             if (args.vacuum) await store.vacuum();
           }
           if (rt.location.mode !== "standalone") {
-            checks.push(hooksCheck(rt.location.root));
+            const hooks = hooksCheck(rt.location.root);
+            checks.push(hooks);
+            if (hooks.ok) checks.push(await upgradeCheck(rt.location.root));
             const worktrees = await worktreesCheck(rt.ctx, rt.location.root);
             if (worktrees) checks.push(worktrees);
           }

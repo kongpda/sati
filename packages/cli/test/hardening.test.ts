@@ -200,6 +200,43 @@ describe("range checks", () => {
     expect(r.status).toBe(10);
   });
 
+  /** A bare origin that already has `main`, so the push checks have a base. */
+  function withOrigin(dir: string): void {
+    const remote = mkdtempSync(join(tmpdir(), "sati-origin-"));
+    git(remote, "init", "-q", "--bare");
+    git(dir, "remote", "add", "origin", remote);
+    git(dir, "push", "-q", "origin", "main");
+    git(dir, "fetch", "-q", "origin");
+  }
+  const push = (dir: string, ...args: string[]) =>
+    spawnSync("git", ["push", "-q", "origin", ...args], { cwd: dir, encoding: "utf8" });
+
+  // Why: the runner checked origin/main...HEAD, so `git push origin feat` from main pushed a
+  // gutted feature unchecked.
+  it("the pre-push hook checks the branch being pushed, not HEAD", async () => {
+    const dir = await branchRepo(60, true);
+    withOrigin(dir);
+    git(dir, "checkout", "-q", "main");
+    const r = push(dir, "feat");
+    expect(r.status).not.toBe(0);
+    expect(git(dir, "ls-remote", "origin", "feat")).toBe("");
+  });
+
+  // Why: the runner reads the pushed refs from stdin, which a hook line after ours (such as
+  // `git lfs pre-push`) needs as well.
+  it("a user's own pre-push lines still get the pushed refs", async () => {
+    const dir = await branchRepo(0, true);
+    withOrigin(dir);
+    const hookFile = join(dir, ".git", "hooks", "pre-push");
+    const seen = join(dir, ".git", "seen-refs");
+    writeFileSync(hookFile, `${readFileSync(hookFile, "utf8")}cat > '${seen}'\n`);
+    const r = push(dir, "feat");
+    expect(r.status).toBe(0);
+    expect(readFileSync(seen, "utf8")).toMatch(
+      /^refs\/heads\/feat [0-9a-f]+ refs\/heads\/feat 0+$/mu,
+    );
+  });
+
   it("the pre-push runner says so when there is nothing to compare with", async () => {
     const dir = await tempRepo();
     git(dir, "commit", "-q", "--allow-empty", "-m", "root");

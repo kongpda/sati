@@ -5,7 +5,7 @@ import { Avatar, personName } from "./people.js";
 import { fullTime } from "./words.js";
 
 /** Kept in step with COMMENT_TAG and COMMENT_MAX in core, which validate them. */
-export const COMMENT_TAG = "comment";
+const COMMENT_TAG = "comment";
 const COMMENT_MAX = 10_000;
 
 /** Comments and handoffs are notes linked to the record they are on. */

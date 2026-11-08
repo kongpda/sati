@@ -705,6 +705,74 @@ test("j and k step through the cards in board order and keep ?task= in step", as
   expect(await problems()).toEqual([]);
 });
 
+// PLAN Phase 5d: on a wide screen the board beside the task panel stays usable, so a click on
+// another card switches tasks. Unsaved edits are never dropped without asking. A phone keeps the
+// panel modal, because it covers the board.
+test("on a wide screen the task panel sits beside a usable board and guards unsaved edits", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  const make = (title: string) => ui.api<{ id: string }>("POST", "/api/tasks", { title });
+  const first = await make("Heron first");
+  const second = await make("Heron second");
+  await page.goto(`${ui.signIn}`);
+  await page.getByLabel("Filter tasks").fill("Heron");
+  await expect(page.locator(".card")).toHaveCount(2);
+  const card = (title: string) => page.getByRole("button", { name: title, exact: true });
+
+  await card("Heron first").click();
+  const panel = page.getByRole("dialog", { name: "Heron first" });
+  await expect(panel).toHaveAttribute("aria-modal", "false");
+  // Clean panel: another card switches at once.
+  await card("Heron second").click();
+  await expect(page).toHaveURL(`${ui.origin}/?task=${second.id}`);
+  const other = page.getByRole("dialog", { name: "Heron second" });
+
+  // Unsaved edits: cancelling the prompt keeps the panel and the typing.
+  await other.getByLabel("Body").fill("Half-written thought");
+  const asked: string[] = [];
+  page.once("dialog", (d) => {
+    asked.push(d.message());
+    void d.dismiss();
+  });
+  await card("Heron first").click();
+  await expect.poll(() => asked).toEqual(["Discard your unsaved changes to this task?"]);
+  await expect(page).toHaveURL(`${ui.origin}/?task=${second.id}`);
+  await expect(other.getByLabel("Body")).toHaveValue("Half-written thought");
+  // Accepting it switches, and nothing was saved.
+  page.once("dialog", (d) => void d.accept());
+  await card("Heron first").click();
+  await expect(page).toHaveURL(`${ui.origin}/?task=${first.id}`);
+  expect(ui.sati<{ body: string }>("task", "show", second.id).body).toBe("");
+
+  // Clicking the open card again keeps it dirty, and Back asks too: declining keeps the panel.
+  const firstPanel = page.getByRole("dialog", { name: "Heron first" });
+  await firstPanel.getByLabel("Body").fill("Second thought");
+  await card("Heron first").click();
+  const back: string[] = [];
+  page.once("dialog", (d) => {
+    back.push(d.message());
+    void d.dismiss();
+  });
+  await page.goBack();
+  await expect.poll(() => back).toEqual(["Discard your unsaved changes to this task?"]);
+  await expect(page).toHaveURL(`${ui.origin}/?task=${first.id}`);
+  await expect(firstPanel.getByLabel("Body")).toHaveValue("Second thought");
+
+  // A phone: the panel covers the board, so it is modal and the board takes no clicks.
+  await page.setViewportSize({ width: 390, height: 760 });
+  await expect(page.getByRole("dialog", { name: "Heron first" })).toHaveAttribute(
+    "aria-modal",
+    "true",
+  );
+  await expect(page.locator("main.main")).toHaveAttribute("inert", "");
+  await page.setViewportSize({ width: 1280, height: 720 });
+  page.once("dialog", (d) => void d.accept());
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(await problems()).toEqual([]);
+});
+
 // PLAN Phase 5b: a feature's paths field must keep unsaved typing through refreshes caused by
 // other records, and still show a change made elsewhere once nothing is typed in it.
 test("the Features paths field keeps typed text across a refresh and shows changes made elsewhere", async ({

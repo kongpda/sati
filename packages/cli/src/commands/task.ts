@@ -22,7 +22,7 @@ import {
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
-import { execute, int, list, parseJson, ref, refs } from "../runtime.js";
+import { bodyText, execute, int, list, parseJson, ref, refs } from "../runtime.js";
 
 const token = {
   token: {
@@ -98,7 +98,7 @@ async function oneAssignee(ctx: ServiceContext, value: string | undefined) {
 }
 
 const fields = {
-  body: { type: "string", description: "Details in Markdown" },
+  body: { type: "string", description: "Details in Markdown (- reads stdin)" },
   priority: { type: "string", description: "low | medium | high | urgent" },
   feature: { type: "string", description: "Feature id or handle" },
   parent: { type: "string", description: "Parent task id or handle" },
@@ -132,7 +132,7 @@ const create = defineCommand({
       async ({ ctx }) =>
         createTask(ctx, {
           title: args.title,
-          body: args.body,
+          body: bodyText(args.body),
           status: args.status,
           priority: args.priority,
           featureId: await ref(ctx, "feature", args.feature),
@@ -237,7 +237,7 @@ const update = defineCommand({
           needsInput: args["needs-input"],
           approvedCommit: args["approved-commit"],
           title: args.title,
-          body: args.body,
+          body: bodyText(args.body),
           status: args.status,
           priority: args.priority,
           featureId: await ref(ctx, "feature", args.feature),
@@ -375,7 +375,11 @@ const restore = defineCommand({
     execute(
       args.json,
       async ({ ctx }) =>
-        restoreRecord(ctx, "task", await resolveId(ctx, "task", args.id)) as Promise<Task>,
+        restoreRecord(
+          ctx,
+          "task",
+          await resolveId(ctx, "task", args.id, { deleted: true }),
+        ) as Promise<Task>,
       (t: Task) => `Restored ${row(t)}`,
     ),
 });

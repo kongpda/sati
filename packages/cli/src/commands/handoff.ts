@@ -1,5 +1,6 @@
 import {
   acknowledgeHandoff,
+  CLI_NAME,
   HANDOFF_TAG,
   listAll,
   type Note,
@@ -13,7 +14,10 @@ import { row } from "../render.js";
 import { execute, list } from "../runtime.js";
 
 export default defineCommand({
-  meta: { name: "handoff", description: "Leave a where-I-stopped note on a task, or read one" },
+  meta: {
+    name: "handoff",
+    description: "Leave a where-I-stopped note on a task, or read it (no flags)",
+  },
   args: {
     ...id("Task"),
     done: { type: "string", description: "What is already done" },
@@ -27,16 +31,24 @@ export default defineCommand({
     ack: { type: "boolean", description: "Mark the task's handoff read instead of writing one" },
     ...json,
   },
-  run: ({ args }) =>
-    execute(
+  run: ({ args }) => {
+    const writing = [args.done, args.next, args.questions, args.files, args.to].some(
+      (v) => v !== undefined,
+    );
+    return execute(
       args.json,
       async ({ ctx }) => {
         const taskId = await resolveId(ctx, "task", args.id);
-        if (args.ack) {
+        // With nothing to write, read the handoff: an empty write would wipe the last one.
+        if (args.ack || !writing) {
           const notes = await ctx.store.read((r) => listAll(r, ctx, "note"));
           const note = notes.find((n) => n.tags.includes(HANDOFF_TAG) && n.links.includes(taskId));
-          if (!note) throw new SatiError("NOT_FOUND", `Task ${args.id} has no handoff.`);
-          return acknowledgeHandoff(ctx, note.id);
+          if (!note) {
+            throw new SatiError("NOT_FOUND", `Task ${args.id} has no handoff.`, {
+              hint: `Write one with \`${CLI_NAME} handoff ${args.id} --done "..." --next "..."\`.`,
+            });
+          }
+          return args.ack ? acknowledgeHandoff(ctx, note.id) : note;
         }
         let to: string | undefined;
         if (args.to) {
@@ -54,6 +66,10 @@ export default defineCommand({
           to,
         });
       },
-      (n: Note) => (args.ack ? `Read ${row(n)}` : `Handoff ${row(n)}`),
-    ),
+      (n: Note) => {
+        if (args.ack) return `Read ${row(n)}`;
+        return writing ? `Handoff ${row(n)}` : `${row(n)}\n\n${n.body}`;
+      },
+    );
+  },
 });

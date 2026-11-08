@@ -628,6 +628,19 @@ Added 2026-11-07 at the owner's request, after reviewing [agent-orchestrator](ht
 
 **Gate:** each item has a regression test that fails without it; `pnpm lint && pnpm typecheck && pnpm test` pass; the UI states are checked in a browser.
 
+### Phase 5d — Upgrade and DX fixes (2026-11-09)
+
+Added 2026-11-09 at the owner's request, after upgrading a real project (khevents-inertia) and auditing every command. Details are in `docs/progress.md`.
+
+- [x] `sati init --upgrade` also rewrites the agent files (`AGENTS.md` rules block, `.mcp.json`, Claude Code settings and skill, Cursor and Codex configs), as `sati rules sync` does, so one command brings a project up to date
+- [x] `sati doctor` fails with the list of out-of-date hooks, merge driver and agent files, and the command that fixes them
+- [x] `sati init --dry-run` prints (or with `--json` returns) what init or an upgrade would write, and writes nothing
+- [x] The pre-push hook checks the commits of each ref being pushed (from git's stdin), not `HEAD`; a user's own pre-push lines still get the refs
+- [x] Task panel: on screens 900 px and wider it sits beside a usable board (`aria-modal="false"`); a click on another card switches tasks, and leaving with unsaved edits (including Back) asks first; narrower screens keep it modal
+- [x] Command audit bugs: `sati handoff <id>` with no flags reads the handoff instead of wiping it; `restore` finds deleted records by short handle; `plan import` reports a missing file as not found; `--body -` and `plan import -` read stdin; `complete` on an unstarted task says to claim it; `scan --apply` with nothing new reports `created: false`; errors from `serve` keep their code and hint; usage hints name only real commands
+
+**Gate:** each item has a regression test that fails without it; `pnpm lint && pnpm typecheck && pnpm test` and `pnpm test:ui` pass.
+
 ### Phase 6 — Hosted mode (deferred to v2)
 
 Deferred by the owner on 2026-11-07: v1 stays local-first. See `docs/progress.md`.

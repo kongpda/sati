@@ -3,15 +3,7 @@ import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { selectTools } from "../detect.js";
 import { isLocalInstall } from "../install.js";
-import {
-  excludeFileFor,
-  type FileChange,
-  fileReader,
-  planIntegrations,
-  readExcluded,
-  warnIfNotOnPath,
-  writePlanned,
-} from "../integrations.js";
+import { type FileChange, planAgentFiles, warnIfNotOnPath, writePlanned } from "../integrations.js";
 import { execute } from "../runtime.js";
 
 const sync = defineCommand({
@@ -30,21 +22,16 @@ const sync = defineCommand({
     execute(
       args.json,
       async ({ project, location }) => {
-        const stealth = project.mode === "stealth";
-        const exclude = stealth ? excludeFileFor(location.path) : undefined;
-        const excluded = exclude ? readExcluded(exclude) : new Set<string>();
         const tools = selectTools(location.root, args.tools);
-        const local = isLocalInstall(location.root);
-        const files = planIntegrations(
-          tools,
+        const { files, exclude } = planAgentFiles(
+          location.root,
           project.mode,
-          fileReader(location.root),
-          (path) => path === "CLAUDE.local.md" || excluded.has(path),
-          local,
+          location.path,
           readSettings(project.settings).kind,
+          tools,
         );
         writePlanned(location.root, files, exclude);
-        warnIfNotOnPath(tools, local);
+        warnIfNotOnPath(tools, isLocalInstall(location.root));
         return files.map(({ path, action }): FileChange => ({ path, action }));
       },
       (files) => {

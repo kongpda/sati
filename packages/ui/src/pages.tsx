@@ -14,7 +14,7 @@ import { Avatar, nameOf, personName } from "./people.js";
 import { isThreadNote, Thread, threadOf } from "./thread.js";
 
 /** Adds and deletes comments; the board passes one to every page with a thread. */
-export interface ThreadActions {
+interface ThreadActions {
   onAdd: (on: string, body: string) => Promise<unknown>;
   onDelete: (id: string, title: string) => void;
 }
@@ -30,6 +30,12 @@ export function Agents({
   onRelease: () => void;
   onReleaseTask: (id: string) => void;
 }) {
+  // Who is working comes first; the idle stay in their usual order below.
+  const busy = new Set([
+    ...data.tasks.flatMap((t) => (t.claim ? [t.claim.actorId] : [])),
+    ...data.locks.map((l) => l.actorId),
+  ]);
+  const actors = [...data.actors].sort((a, b) => Number(busy.has(b.id)) - Number(busy.has(a.id)));
   return (
     <div className="page">
       <h1>Agents</h1>
@@ -37,7 +43,7 @@ export function Agents({
         Free up tasks whose time ran out
       </button>
       <div className="list" style={{ marginTop: 12 }}>
-        {data.actors.map((actor) => {
+        {actors.map((actor) => {
           const tasks = data.tasks.filter((t) => t.claim?.actorId === actor.id);
           const locks = data.locks.filter((l) => l.actorId === actor.id);
           return (
@@ -556,6 +562,8 @@ function statusOptions(status: string): string[] {
 export function TaskSheet({
   data,
   id,
+  modal,
+  onDirty,
   onClose,
   onSave,
   onRelease,
@@ -565,6 +573,10 @@ export function TaskSheet({
 }: {
   data: Snapshot;
   id: string;
+  /** False on a wide screen, where the panel sits beside a board that stays usable. */
+  modal: boolean;
+  /** Tells the app whether there are unsaved edits, so leaving can ask first. */
+  onDirty: (dirty: boolean) => void;
   onClose: () => void;
   /** Rejects when the save is refused (the reason is already shown). */
   onSave: (id: string, patch: Record<string, unknown>) => Promise<{ version: number }>;
@@ -613,6 +625,8 @@ export function TaskSheet({
     formKey.current = { fields, n: formKey.current.n + 1, base: task };
   }
   const changedElsewhere = dirty && formKey.current.fields !== fields;
+  useEffect(() => onDirty(dirty), [dirty, onDirty]);
+  useEffect(() => () => onDirty(false), [onDirty]);
   if (!task) return null;
   const base = formKey.current.base ?? task;
   const feature = data.features.find((f) => f.id === task.featureId);
@@ -622,7 +636,12 @@ export function TaskSheet({
     task.claim.actorId !== data.you &&
     Date.parse(task.claim.leaseUntil) > Date.now();
   return (
-    <aside className="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <aside
+      className="sheet"
+      role="dialog"
+      aria-modal={modal ? "true" : "false"}
+      aria-labelledby="sheet-title"
+    >
       <button type="button" onClick={onClose}>
         Close
       </button>

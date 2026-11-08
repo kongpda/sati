@@ -80,7 +80,7 @@ const remove = defineCommand({
         deleteRecord(
           ctx,
           "decision",
-          await resolveId(ctx, "decision", args.id),
+          await resolveId(ctx, "decision", args.id, { deleted: true }),
         ) as Promise<Decision>,
       (d: Decision) => `Deleted ${row(d)}`,
     ),
@@ -96,7 +96,7 @@ const restore = defineCommand({
         restoreRecord(
           ctx,
           "decision",
-          await resolveId(ctx, "decision", args.id),
+          await resolveId(ctx, "decision", args.id, { deleted: true }),
         ) as Promise<Decision>,
       (d: Decision) => `Restored ${row(d)}`,
     ),

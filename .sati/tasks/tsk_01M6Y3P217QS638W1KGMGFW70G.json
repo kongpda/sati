@@ -1,0 +1,33 @@
+{
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "82673944409139917578943fc88f9d97b9cb6d66",
+    "completedAt": "2026-11-08T17:59:32.535Z",
+    "completedBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "filesTouched": [
+      "packages/ui/src/app.tsx",
+      "packages/ui/src/pages.tsx",
+      "e2e/ui/flows.spec.ts"
+    ],
+    "summary": "Task panel non-modal from 900px; unsaved edits guarded on card switch, close, page change, Back/Forward and reload; clicking the open card adds no history entry; Agents page lists busy agents first"
+  },
+  "createdAt": "2026-11-08T17:35:47.750Z",
+  "createdBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+  "id": "tsk_01M6Y3P217QS638W1KGMGFW70G",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-08T17:35:47.752Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "branch": "2026-11-08T17:35:51.785Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "claim": "2026-11-08T17:59:32.537Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-08T17:59:32.537Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "status": "2026-11-08T17:59:32.537Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "worktree": "2026-11-08T17:35:51.785Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
+  },
+  "status": "review",
+  "title": "Phase 5d: task panel non-modal on wide screens, asks before dropping unsaved edits",
+  "updatedAt": "2026-11-08T17:59:32.539Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

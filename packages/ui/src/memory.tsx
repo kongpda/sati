@@ -13,7 +13,7 @@ const KIND_WORDS: Record<RecallItem["kind"], string> = {
 };
 
 /** The folder a card is filed under: everything before its last `/`, or the top level. */
-export function folderOf(path: string): string {
+function folderOf(path: string): string {
   const cut = path.lastIndexOf("/");
   return cut > 0 ? path.slice(0, cut) : "Top level";
 }

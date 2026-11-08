@@ -1560,3 +1560,52 @@ Measured on the 50,000-record bench project in this orb (25,000 tasks, 25,000 no
 - `j and k step through the cards` failed 4 of 5 runs here: it pressed `j` before the board's
   data had loaded, and `j` does nothing on an empty board. The test now waits for the four
   filtered cards first; 15 of 15 runs pass. The app was not changed.
+
+### Phase 5d: upgrade and DX fixes (2026-11-09)
+
+Upgrading khevents-inertia (a project set up with an older sati) showed four gaps, and an audit
+of every command found more. The owner asked to fix all of them.
+
+- `init --upgrade` now also writes the agent files, the same plan as `rules sync`. Before, it
+  updated hooks and `.gitattributes` only, so an upgraded project kept an old rules block and old
+  Claude Code settings until someone knew to run `rules sync` too. This reverses the earlier split
+  between the two commands (recorded as a decision). `rules sync` still exists for changing
+  `--tools` without touching hooks.
+- `doctor` has a `setup` check: it plans an upgrade and fails, listing the files, when any would
+  change. It runs only when the hooks exist, so a fresh clone still gets the "no hooks" message.
+  It plans with the binary the installed hooks already start (read back from the pre-commit
+  runner), so running doctor through npx or a second install does not read as out of date. Agent
+  files count only when they exist and differ: a missing one belongs to a tool the project does
+  not use (doctor run inside Claude Code no longer asks for `CLAUDE.md` in a codex-only project).
+  A plan that throws is one failed check, not a lost report.
+- `init --dry-run` shows the plan without writing; without `--yes` or a terminal, the hint now
+  points at `--dry-run` instead of `--json` (which gave the same error).
+- pre-push reads `<local ref> <local sha> <remote ref> <remote sha>` lines from stdin and checks
+  `remote..local` for each, or `base...local` for a new branch; deletions are skipped. The chain
+  block copies stdin to a temp file so the user's own hook lines (for example git lfs) still
+  read it. With no stdin it falls back to `base...HEAD` as before.
+- Task panel (decided with the owner): non-modal from 900 px, where the stylesheet already
+  leaves room for the board beside it. It stays a `dialog` with `aria-modal="false"`. Going to
+  another task, closing or changing page with unsaved edits asks "Discard your unsaved changes
+  to this task?" (the browser's confirm, like the existing release prompt). Back and Forward
+  ask too (declining puts the panel's URL back), and reload or tab close gets the browser's own
+  prompt. Clicking the open card again keeps it dirty and adds no history entry. Narrow screens
+  keep the modal panel and the inert page.
+- Audit bugs fixed, each with a test in `packages/cli/test/audit.test.ts`: handoff read mode;
+  restore by short handle (`resolveId` can match deleted records); `plan import` missing file
+  (exit 3) or folder (exit 2) instead of "bug in sati"; `-` for stdin in `--body`, the comment
+  body and `plan import`; "was never started, claim it first" on complete; `scan --apply`
+  `created`; uncaught `SatiError`s keep their own exit code and hint (`serve` outside a project
+  now exits 6); the `--help` hint no longer includes positional values; `guard` with two modes
+  says "Pick one thing to check."; the guard `--hook` JSON error says where the input comes from.
+- Polish pass (review of the diff, a knip dead-code scan, and every page at 1280 and 390 px,
+  light and dark): the pre-push chain block cleans up its temp file when `cat` fails (no trap:
+  it sits in someone else's hook and must not replace theirs), and the runner's guard calls read
+  `/dev/null`, so they cannot eat the ref lines. 11 exports used only in their own file are no
+  longer exported. Knip also flags `ulid` and `drizzle-orm` as unused cli devDependencies; they
+  stay, since every bundled runtime package is listed there on purpose (`tsdown.config.ts`). The
+  Agents page lists who is working first. No layout overflow was found on any page.
+- Not fixed, brought to the owner as recommendations: mapping Zod errors to flag names, help
+  examples, readable `activity`/`undo` output, `projects` pruning, reporting no-op writes,
+  lookup by name for features and milestones, comments in `note list`, and whether
+  `task update --status in_progress` should require a claim.

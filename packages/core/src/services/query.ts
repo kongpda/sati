@@ -57,6 +57,8 @@ export async function resolveId(
   ctx: ServiceContext,
   entity: StoredEntity,
   ref: string,
+  /** Match only deleted records, for restore. */
+  opts: { deleted?: boolean } = {},
 ): Promise<string> {
   const input = ref.trim();
   const prefix = ID_PREFIXES[entity];
@@ -74,14 +76,21 @@ export async function resolveId(
   const matches = await ctx.store.read(async (r) =>
     (await r.findBySuffix(entity, handle.suffix)).filter(
       (rec) =>
-        rec.deletedAt === null && ("projectId" in rec ? rec.projectId : rec.id) === ctx.projectId,
+        (opts.deleted ? rec.deletedAt !== null : rec.deletedAt === null) &&
+        ("projectId" in rec ? rec.projectId : rec.id) === ctx.projectId,
     ),
   );
   const [only, ...rest] = matches;
   if (!only) {
-    throw new SatiError("NOT_FOUND", `No ${entity} matches ${input}.`, {
-      hint: `List them with \`${CLI_NAME} ${entity} list\`.`,
-    });
+    throw new SatiError(
+      "NOT_FOUND",
+      `No ${opts.deleted ? "deleted " : ""}${entity} matches ${input}.`,
+      {
+        hint: opts.deleted
+          ? `Find its id in \`${CLI_NAME} activity\`.`
+          : `List them with \`${CLI_NAME} ${entity} list\`.`,
+      },
+    );
   }
   if (rest.length > 0) {
     throw new SatiError("AMBIGUOUS", `${input} matches ${matches.length} ${entity} records.`, {

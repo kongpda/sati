@@ -1,0 +1,38 @@
+{
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "82673944409139917578943fc88f9d97b9cb6d66",
+    "completedAt": "2026-11-08T17:59:32.676Z",
+    "completedBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "filesTouched": [
+      "packages/cli/src/commands/handoff.ts",
+      "packages/core/src/services/query.ts",
+      "packages/core/src/services/task.ts",
+      "packages/cli/src/runtime.ts",
+      "packages/cli/src/main.ts",
+      "packages/cli/src/commands/guard.ts",
+      "packages/cli/src/commands/scan.ts",
+      "packages/cli/test/audit.test.ts"
+    ],
+    "summary": "Audit bugs: handoff read mode, restore by short handle, plan import file errors, - reads stdin, complete-unclaimed hint, scan created flag, SatiError exit codes in main, real command words in usage hint, guard mode errors; dead exports removed"
+  },
+  "createdAt": "2026-11-08T17:35:47.857Z",
+  "createdBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+  "id": "tsk_01M6Y3P24JK1G8QMBFNNQPJQWK",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-08T17:35:47.859Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "branch": "2026-11-08T17:35:51.908Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "claim": "2026-11-08T17:59:32.677Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-08T17:59:32.677Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "status": "2026-11-08T17:59:32.677Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "worktree": "2026-11-08T17:35:51.908Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
+  },
+  "status": "review",
+  "title": "Phase 5d: fix CLI bugs from the 2026-11-09 command audit",
+  "updatedAt": "2026-11-08T17:59:32.679Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

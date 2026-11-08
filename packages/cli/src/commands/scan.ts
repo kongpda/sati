@@ -85,7 +85,7 @@ export default defineCommand({
         if (args.apply) {
           for (const proposal of fresh) await createFeature(rt.ctx, proposal);
         }
-        return { proposals: fresh, created: Boolean(args.apply) };
+        return { proposals: fresh, created: Boolean(args.apply) && fresh.length > 0 };
       },
       (result) =>
         result.proposals.length

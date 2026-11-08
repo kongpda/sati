@@ -18,7 +18,7 @@ import {
   WORKFLOW,
 } from "@sati/core";
 import { z } from "zod";
-import { LOCAL_BIN } from "./install.js";
+import { isLocalInstall, LOCAL_BIN } from "./install.js";
 
 /** What init or `rules sync` does to one file. `skip`: stealth mode leaves existing files alone. */
 export type FileAction = "create" | "update" | "keep" | "skip";
@@ -395,6 +395,30 @@ export function planIntegrations(
   });
 }
 
+/**
+ * The agent files of an initialized project, as `rules sync` and `init --upgrade` write them.
+ * `exclude` is the git exclude file new files go into (stealth mode only).
+ */
+export function planAgentFiles(
+  root: string,
+  mode: Mode,
+  db: string,
+  kind: ProjectKind,
+  tools: readonly string[],
+): { files: PlannedFile[]; exclude: string | undefined } {
+  const exclude = mode === "stealth" ? excludeFileFor(db) : undefined;
+  const excluded = exclude ? readExcluded(exclude) : new Set<string>();
+  const files = planIntegrations(
+    tools,
+    mode,
+    fileReader(root),
+    (path) => path === "CLAUDE.local.md" || excluded.has(path),
+    isLocalInstall(root),
+    kind,
+  );
+  return { files, exclude };
+}
+
 /** True when an executable named `name` is on PATH. */
 function onPath(name: string, env: NodeJS.ProcessEnv = process.env): boolean {
   const exts = process.platform === "win32" ? ["", ".cmd", ".exe"] : [""];
@@ -442,7 +466,7 @@ export function fileReader(root: string): ReadFile {
 export const excludeFileFor = (db: string) => join(dirname(dirname(db)), "info", "exclude");
 
 /** Root-anchored paths (`/CLAUDE.local.md`) listed in a git exclude file. */
-export function readExcluded(file: string): Set<string> {
+function readExcluded(file: string): Set<string> {
   const text = fileReader(dirname(file))("exclude") ?? "";
   return new Set(
     text

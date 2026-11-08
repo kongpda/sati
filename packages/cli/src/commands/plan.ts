@@ -1,8 +1,7 @@
-import { readFileSync } from "node:fs";
 import { importPlan, type PlanImport } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { execute } from "../runtime.js";
+import { execute, readText } from "../runtime.js";
 
 export default defineCommand({
   meta: { name: "plan", description: "Import tasks from a Markdown checklist" },
@@ -13,7 +12,7 @@ export default defineCommand({
         description: "One milestone per heading, one task per unchecked item",
       },
       args: {
-        file: { type: "positional", required: true, description: "Markdown file" },
+        file: { type: "positional", required: true, description: "Markdown file (- reads stdin)" },
         "dry-run": { type: "boolean", description: "Show what would be added" },
         ...json,
       },
@@ -22,7 +21,7 @@ export default defineCommand({
           args.json,
           ({ ctx }) =>
             importPlan(ctx, {
-              markdown: readFileSync(args.file, "utf8"),
+              markdown: readText(args.file),
               dryRun: args["dry-run"],
             }),
           (result: PlanImport) => {

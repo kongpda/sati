@@ -149,25 +149,27 @@ export function Assignees({ data, chosen = [] }: { data: Snapshot; chosen?: stri
   return (
     <fieldset className="dialog-choices">
       <legend>Assigned to</legend>
-      {actors.map((a) => (
-        <label key={a.id}>
-          <input
-            type="checkbox"
-            name="assigneeIds"
-            value={a.id}
-            defaultChecked={chosen.includes(a.id)}
-          />
-          <Avatar actor={a} />
-          {personName(a)}
-          {a.id === data.you ? " (you)" : ""}
-        </label>
-      ))}
-      {elsewhere.map((id) => (
-        <label key={id}>
-          <input type="checkbox" name="assigneeIds" value={id} defaultChecked />
-          Someone on another computer
-        </label>
-      ))}
+      <div className="choices">
+        {actors.map((a) => (
+          <label key={a.id}>
+            <input
+              type="checkbox"
+              name="assigneeIds"
+              value={a.id}
+              defaultChecked={chosen.includes(a.id)}
+            />
+            <Avatar actor={a} />
+            {personName(a)}
+            {a.id === data.you ? " (you)" : ""}
+          </label>
+        ))}
+        {elsewhere.map((id) => (
+          <label key={id}>
+            <input type="checkbox" name="assigneeIds" value={id} defaultChecked />
+            Someone on another computer
+          </label>
+        ))}
+      </div>
     </fieldset>
   );
 }
@@ -441,17 +443,19 @@ export function DecisionForm({
       {data.features.length > 0 ? (
         <fieldset className="dialog-choices">
           <legend>Features it affects</legend>
-          {data.features.map((f) => (
-            <label key={f.id}>
-              <input
-                type="checkbox"
-                name="featureIds"
-                value={f.id}
-                defaultChecked={replaces?.featureIds.includes(f.id)}
-              />
-              {f.title}
-            </label>
-          ))}
+          <div className="choices">
+            {data.features.map((f) => (
+              <label key={f.id}>
+                <input
+                  type="checkbox"
+                  name="featureIds"
+                  value={f.id}
+                  defaultChecked={replaces?.featureIds.includes(f.id)}
+                />
+                {f.title}
+              </label>
+            ))}
+          </div>
         </fieldset>
       ) : null}
       <p className="dialog-note">

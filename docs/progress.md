@@ -1414,3 +1414,18 @@ Measured on the 50,000-record bench project in this orb (25,000 tasks, 25,000 no
 - The in-memory test store deep-cloned its whole state on every write, so the brief's
   large-project test took 9 s and timed out at 20 s on a loaded machine. It now copies each table
   (records are already cloned in and out): 1.4 s, and the core suite went from 58 s to 22 s.
+
+### Task panel layout (2026-11-08)
+
+- At 1280 px the open task panel covered the right of the board, including the card being
+  edited, and the top bar's Search and New task buttons. On screens 900 px and wider the main
+  area now leaves room for the panel; the open card is outlined (`aria-current`), and its
+  column scrolls into view sideways and the virtual list down to it. Narrower screens keep the
+  overlay.
+- "Assigned to" and "Features it affects" scrolled the fieldset itself, so rows slid under the
+  legend. An inner list scrolls now. Checked in Chrome: open panel at 1280 px, the list
+  scrolled to the bottom, the board with the panel closed, and the panel at 800 px.
+- Lint is clean: the feature-paths rules moved above the task-panel rules they never overlap
+  (descending specificity), and a test string became a template literal.
+- `pnpm test:ui`: 35 of 36 pass. The 2,000-card scroll test measures 38 to 43 fps in this orb's
+  headless Chromium with or without this change (floor 55), so the orb cannot judge it; CI can.

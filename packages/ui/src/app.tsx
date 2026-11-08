@@ -541,6 +541,7 @@ export function App() {
                 actors={data?.actors ?? []}
                 fresh={fresh}
                 selected={selected}
+                open={task}
                 column={column}
                 onOpen={(id) => go("/", id)}
                 onToggle={(id) =>

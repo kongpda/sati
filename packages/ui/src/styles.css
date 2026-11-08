@@ -256,6 +256,10 @@ textarea {
 .card.selected {
   border-color: var(--moss);
 }
+.card.open {
+  outline: 2px solid var(--live);
+  outline-offset: -1px;
+}
 .card .title {
   display: block;
   background: none;
@@ -340,6 +344,13 @@ textarea {
   margin: 0;
   font-size: inherit;
   font-weight: 700;
+}
+/* On wide screens the board makes room for the panel, so the open card and the top bar stay
+   visible beside it instead of under it. */
+@media (min-width: 900px) {
+  .app:has(> .sheet) .main {
+    padding-right: min(440px, 100%);
+  }
 }
 .sheet {
   position: fixed;
@@ -650,16 +661,6 @@ body:has(.palette) .toast {
   font-weight: 700;
 }
 /* Title and body stack full width; the status select and Save share the last row. */
-.sheet form {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-}
-.sheet form .field {
-  grid-column: 1 / -1;
-  width: 100%;
-}
-
 /* A feature's acceptance criteria, then its path globs with Save under them. */
 .row .acceptance {
   list-style: disc;
@@ -676,6 +677,16 @@ body:has(.palette) .toast {
   width: 100%;
   font-family: ui-monospace, monospace;
   font-size: 0.8125rem;
+}
+
+.sheet form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.sheet form .field {
+  grid-column: 1 / -1;
+  width: 100%;
 }
 
 /* The record an activity row touched, after its verb. */
@@ -743,6 +754,9 @@ form.dialog-form select {
   border-radius: 6px;
   margin: 0;
   padding: 6px 10px 8px;
+}
+/* The list scrolls, not the fieldset, so rows never slide under the legend. */
+.dialog-choices .choices {
   max-height: 160px;
   overflow: auto;
 }

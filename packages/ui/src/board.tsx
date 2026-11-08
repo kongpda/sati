@@ -11,7 +11,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { type Actor, ago, COLUMNS, dueLabel, type Feature, type Task, waitingOn } from "./api.js";
 import { Avatar } from "./people.js";
 import { capital, fullTime } from "./words.js";
@@ -23,6 +23,7 @@ export function Board({
   actors,
   fresh,
   selected,
+  open,
   column,
   onOpen,
   onToggle,
@@ -36,6 +37,8 @@ export function Board({
   actors: Actor[];
   fresh: Set<string>;
   selected: Set<string>;
+  /** The task shown in the side panel, if any. */
+  open: string | null;
   column: string;
   onOpen: (id: string) => void;
   onToggle: (id: string) => void;
@@ -45,10 +48,10 @@ export function Board({
   const { featureName, columns } = boardColumns(tasks, features);
   const people = new Map(actors.map((a) => [a.id, a]));
   // From every task, not only the filtered ones: a hidden task can still hold another one up.
-  const open = new Set(
+  const unfinished = new Set(
     allTasks.filter((t) => t.status !== "done" && t.status !== "cancelled").map((t) => t.id),
   );
-  const waiting = (t: Task) => (t.dependsOn ?? []).filter((id) => open.has(id)).length;
+  const waiting = (t: Task) => (t.dependsOn ?? []).filter((id) => unfinished.has(id)).length;
   // A drag starts only after the pointer moves, so a plain click still opens the card.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -85,6 +88,7 @@ export function Board({
             waiting={waiting}
             fresh={fresh}
             selected={selected}
+            open={open}
             onOpen={onOpen}
             onToggle={onToggle}
             onReviewed={onReviewed}
@@ -120,6 +124,7 @@ function Column({
   waiting,
   fresh,
   selected,
+  open,
   onOpen,
   onToggle,
   onReviewed,
@@ -135,11 +140,22 @@ function Column({
   waiting: (task: Task) => number;
   fresh: Set<string>;
   selected: Set<string>;
+  open: string | null;
   onOpen: (id: string) => void;
   onToggle: (id: string) => void;
   onReviewed: (id: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
+  const section = useRef<HTMLElement | null>(null);
+  // A stable ref: the virtual list re-renders on every scroll frame, and a new callback each
+  // render would detach and re-register the drop target each time.
+  const sectionRef = useCallback(
+    (el: HTMLElement | null) => {
+      setNodeRef(el);
+      section.current = el;
+    },
+    [setNodeRef],
+  );
   const parent = useRef<HTMLDivElement>(null);
   const virtual = useVirtualizer({
     count: rows.length,
@@ -147,8 +163,17 @@ function Column({
     estimateSize: (index) => (rows[index]?.kind === "lane" ? 28 : 78),
     overscan: 8,
   });
+  const openIndex = rows.findIndex((r) => r.kind === "task" && r.task.id === open);
+  // Opening a card keeps it in view next to the panel: its column scrolls in sideways, and the
+  // virtual list down to it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only a newly opened card scrolls.
+  useEffect(() => {
+    if (openIndex < 0) return;
+    section.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    virtual.scrollToIndex(openIndex, { align: "auto" });
+  }, [open]);
   return (
-    <section className={show ? "column show" : "column"} ref={setNodeRef} aria-label={label}>
+    <section className={show ? "column show" : "column"} ref={sectionRef} aria-label={label}>
       <h2>
         {label} <span className="count">{count}</span>
         {isOver ? " · drop" : ""}
@@ -193,6 +218,7 @@ function Column({
                   waiting={waiting(item.task)}
                   fresh={fresh.has(item.task.id)}
                   selected={selected.has(item.task.id)}
+                  open={item.task.id === open}
                   onOpen={onOpen}
                   onToggle={onToggle}
                   onReviewed={onReviewed}
@@ -213,6 +239,7 @@ function Card({
   waiting,
   fresh,
   selected,
+  open,
   onOpen,
   onToggle,
   onReviewed,
@@ -223,6 +250,7 @@ function Card({
   waiting: number;
   fresh: boolean;
   selected: boolean;
+  open: boolean;
   onOpen: (id: string) => void;
   onToggle: (id: string) => void;
   onReviewed: (id: string) => void;
@@ -231,10 +259,15 @@ function Card({
   return (
     <div
       ref={setNodeRef}
-      className={`card${fresh ? " fresh" : ""}${selected ? " selected" : ""}${isDragging ? " ghost" : ""}`}
+      className={`card${fresh ? " fresh" : ""}${selected ? " selected" : ""}${open ? " open" : ""}${isDragging ? " ghost" : ""}`}
     >
       <div className="card-head">
-        <button type="button" className="title" onClick={() => onOpen(task.id)}>
+        <button
+          type="button"
+          className="title"
+          aria-current={open ? "true" : undefined}
+          onClick={() => onOpen(task.id)}
+        >
           {task.title}
         </button>
         <button

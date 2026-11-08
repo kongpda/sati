@@ -1,15 +1,39 @@
 {
   "body": "See PLAN.md Phase 7b.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "a2f53c26f74230752ab50dd551b712d146195dc4",
+    "completedAt": "2026-11-08T18:04:30.863Z",
+    "completedBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "filesTouched": [
+      ".changeset/phase-7c.md",
+      ".claude/skills/sati/SKILL.md",
+      "AGENTS.md",
+      "PLAN.md",
+      "docs/guide/agent-workflow-general.md",
+      "docs/guide/agent-workflow.md",
+      "docs/guide/glossary.md",
+      "docs/progress.md"
+    ],
+    "summary": "Already done: note tools, ask, templates and digest shipped in 376e16a (7b) and 4e014bd (7c); all ticked in PLAN.md. 7d waits on Phase 6. Closed as stale."
+  },
   "createdAt": "2026-11-07T04:05:50.982Z",
   "createdBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
   "id": "tsk_01M6T2Y9867FSYTEXGCPYT9WSH",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "*": "2026-11-07T04:05:50.985Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+    "*": "2026-11-07T04:05:50.985Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "branch": "2026-11-08T18:04:30.597Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "claim": "2026-11-08T18:04:30.866Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-08T18:04:30.866Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "status": "2026-11-08T18:04:30.866Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "worktree": "2026-11-08T18:04:30.597Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
   },
-  "status": "todo",
+  "status": "review",
   "title": "Phase 7b: the brain for every agent (note tools, ask, templates, digest)",
-  "updatedAt": "2026-11-07T04:05:50.982Z",
-  "version": 1
+  "updatedAt": "2026-11-08T18:04:30.868Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

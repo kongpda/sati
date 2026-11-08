@@ -1,15 +1,39 @@
 {
   "body": "See PLAN.md Phase 7 and docs/team-brain.md.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "a2f53c26f74230752ab50dd551b712d146195dc4",
+    "completedAt": "2026-11-08T18:04:30.281Z",
+    "completedBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "filesTouched": [
+      ".changeset/parity-toast.md",
+      "PLAN.md",
+      "docs/progress.md",
+      "e2e/package.json",
+      "e2e/ui/parity.spec.ts",
+      "e2e/ui/server.ts",
+      "packages/ui/src/styles.css",
+      "pnpm-lock.yaml"
+    ],
+    "summary": "Already done: Phase 7a shipped (467c0bc and earlier), all 7a items ticked in PLAN.md. Closed as stale."
+  },
   "createdAt": "2026-11-07T04:05:50.809Z",
   "createdBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
   "id": "tsk_01M6T2Y92SHK5ST8NFV94GXFXC",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "*": "2026-11-07T04:05:50.814Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+    "*": "2026-11-07T04:05:50.814Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "branch": "2026-11-08T18:04:30.066Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "claim": "2026-11-08T18:04:30.283Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-08T18:04:30.283Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "status": "2026-11-08T18:04:30.283Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "worktree": "2026-11-08T18:04:30.066Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
   },
-  "status": "todo",
+  "status": "review",
   "title": "Phase 7a: people first in the local app",
-  "updatedAt": "2026-11-07T04:05:50.809Z",
-  "version": 1
+  "updatedAt": "2026-11-08T18:04:30.290Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

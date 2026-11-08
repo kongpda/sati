@@ -1,0 +1,35 @@
+{
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "a2f53c26f74230752ab50dd551b712d146195dc4",
+    "completedAt": "2026-11-08T18:07:43.398Z",
+    "completedBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "filesTouched": [
+      "packages/core/src/services/text.ts",
+      "packages/core/src/services/brief.ts",
+      "packages/core/src/services/changes.ts",
+      "packages/core/src/services/recall.ts",
+      "docs/progress.md"
+    ],
+    "summary": "Moved the three identical clip copies and core's plural into services/text.ts; brief passes LINE_CHARS explicitly."
+  },
+  "createdAt": "2026-11-08T18:04:52.485Z",
+  "createdBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+  "id": "tsk_01M6Y5B9WA0K4CGDWGSD9XV8SJ",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-08T18:04:52.496Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "branch": "2026-11-08T18:04:52.738Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "claim": "2026-11-08T18:07:43.400Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-08T18:07:43.400Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "status": "2026-11-08T18:07:43.400Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "worktree": "2026-11-08T18:04:52.738Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
+  },
+  "status": "review",
+  "title": "Dedupe clip/plural text helpers in core",
+  "updatedAt": "2026-11-08T18:07:43.402Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

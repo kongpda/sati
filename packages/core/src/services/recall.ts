@@ -6,6 +6,7 @@ import { estimateTokens } from "./brief.js";
 import { COMMENT_TAG } from "./comment.js";
 import { parseInput, type ServiceContext } from "./context.js";
 import { staleness } from "./context-cache.js";
+import { clip } from "./text.js";
 
 /** PLAN Phase 8: a recall answer stays under 1,000 tokens, so asking is cheaper than reading. */
 export const RECALL_TOKEN_CAP = 1_000;
@@ -58,12 +59,6 @@ export interface Recall {
   /** Matching records left out to stay under the cap. */
   omitted: number;
 }
-
-const flat = (s: string) => s.replace(/\s+/gu, " ").trim();
-const clip = (s: string, max: number) => {
-  const t = flat(s);
-  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
-};
 
 /** The question's subject words, lowercased; all words when every one is a stop word. */
 export function subjectWords(question: string): string[] {

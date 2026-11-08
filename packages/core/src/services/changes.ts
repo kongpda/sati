@@ -9,6 +9,7 @@ import { COMMENT_TAG } from "./comment.js";
 import { listAll, nowIso, parseInput, type ServiceContext } from "./context.js";
 import { HANDOFF_TAG } from "./handoff.js";
 import { resolveId } from "./query.js";
+import { clip, plural } from "./text.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_DAYS = 7;
@@ -326,15 +327,9 @@ export async function listChanges(ctx: ServiceContext, input: unknown = {}): Pro
   });
 }
 
-const one = (s: string) => s.replace(/\s+/gu, " ").trim();
-const clip = (s: string, max: number) => {
-  const flat = one(s);
-  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
-};
 /** Ends the text with a full stop unless it already ends a sentence. */
 const sentence = (s: string) => (/[.!?…]$/u.test(s) ? s : `${s}.`);
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const FEATURE_WORDS: Record<FeatureStatus, string> = {
   planned: "planned",
   building: "being built",

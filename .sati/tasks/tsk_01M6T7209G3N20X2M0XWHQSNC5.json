@@ -1,15 +1,39 @@
 {
   "body": "See PLAN.md Phase 8 and docs/knowledge-brain.md.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "a2f53c26f74230752ab50dd551b712d146195dc4",
+    "completedAt": "2026-11-08T18:04:31.370Z",
+    "completedBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "filesTouched": [
+      ".changeset/phase-8.md",
+      ".claude/skills/sati/SKILL.md",
+      "AGENTS.md",
+      "PLAN.md",
+      "docs/guide/agent-workflow-general.md",
+      "docs/guide/agent-workflow.md",
+      "docs/guide/glossary.md",
+      "docs/progress.md"
+    ],
+    "summary": "Already done in 513632e: Phase 8 knowledge brain; no open items in PLAN.md. Closed as stale."
+  },
   "createdAt": "2026-11-07T05:17:47.184Z",
   "createdBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
   "id": "tsk_01M6T7209G3N20X2M0XWHQSNC5",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "*": "2026-11-07T05:17:47.187Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+    "*": "2026-11-07T05:17:47.187Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "branch": "2026-11-08T18:04:31.161Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "claim": "2026-11-08T18:04:31.371Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-08T18:04:31.371Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "status": "2026-11-08T18:04:31.371Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "worktree": "2026-11-08T18:04:31.161Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
   },
-  "status": "todo",
+  "status": "review",
   "title": "Phase 8: knowledge brain (cards, recall, compact answers, private memory)",
-  "updatedAt": "2026-11-07T05:17:47.184Z",
-  "version": 1
+  "updatedAt": "2026-11-08T18:04:31.373Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

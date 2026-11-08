@@ -13,6 +13,7 @@ import { handoffFor, handoffNext, unreadHandoff } from "./handoff.js";
 import { warningLines, worktreeWarnings } from "./overlap.js";
 import { readSettings } from "./project.js";
 import { releaseExpiredClaims, reviewDrift } from "./task.js";
+import { clip } from "./text.js";
 
 /** PLAN: the brief stays under 1,500 tokens so it is cheap to inject at every session start. */
 export const BRIEF_TOKEN_CAP = 1_500;
@@ -45,11 +46,6 @@ export interface Brief {
 }
 
 export const estimateTokens = (text: string): number => Math.ceil(text.length / 4);
-
-const clip = (s: string, max = LINE_CHARS): string => {
-  const flat = s.replace(/\s+/g, " ").trim();
-  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
-};
 
 interface Section {
   title: string;
@@ -263,7 +259,7 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       : "";
     const hand = data.handoffs.get(t.id);
     const stopped = hand ? `\n  \`\`\`data\n  handoff: ${clip(hand, 200)}\n  \`\`\`` : "";
-    return `- ${shortHandle(t.id)} [${t.status === "todo" ? "" : `${t.status}, `}${t.priority}] ${clip(t.title)}${extra}${note}${stopped}`;
+    return `- ${shortHandle(t.id)} [${t.status === "todo" ? "" : `${t.status}, `}${t.priority}] ${clip(t.title, LINE_CHARS)}${extra}${note}${stopped}`;
   };
 
   const mine: string[] = [];
@@ -278,7 +274,7 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
     const f = t.featureId ? data.features.get(t.featureId) : undefined;
     if (f && f.acceptance.length > 0) {
       mine.push(`  Acceptance (${shortHandle(f.id)} ${clip(f.title, 60)}):`);
-      for (const a of f.acceptance) mine.push(`  - ${clip(a)}`);
+      for (const a of f.acceptance) mine.push(`  - ${clip(a, LINE_CHARS)}`);
     }
   }
 
@@ -377,7 +373,7 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       title: "Decisions, last 7 days",
       empty: null,
       items: data.decisions.map(
-        (d) => `- ${shortHandle(d.id)} ${clip(d.title)} (${d.createdAt.slice(0, 10)})`,
+        (d) => `- ${shortHandle(d.id)} ${clip(d.title, LINE_CHARS)} (${d.createdAt.slice(0, 10)})`,
       ),
     },
     {

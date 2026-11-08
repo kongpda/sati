@@ -1609,3 +1609,8 @@ of every command found more. The owner asked to fix all of them.
   examples, readable `activity`/`undo` output, `projects` pruning, reporting no-op writes,
   lookup by name for features and milestones, comments in `note list`, and whether
   `task update --status in_progress` should require a claim.
+- Follow-up: the three copies of `clip` (brief, changes, recall) and core's `plural` now live in
+  `packages/core/src/services/text.ts`. The tasks for Phases 5b, 7a, 7b/7c and 8 were still
+  `todo` although their work shipped (`80c35b2`, `467c0bc`, `376e16a`, `4e014bd`, `513632e`);
+  they were completed as stale and wait for review. Under load averages of 100–190, three CLI
+  tests hit the 5 s timeout in the full run and passed alone with a longer timeout.

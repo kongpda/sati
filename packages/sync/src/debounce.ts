@@ -1,4 +1,10 @@
-import type { StorageAdapter } from "@sati/core";
+import type { StorageAdapter, StorageWriter, StoredEntity } from "@sati/core";
+
+/** A record a write inserted or updated. */
+export interface WrittenRecord {
+  entity: StoredEntity;
+  id: string;
+}
 
 export interface AfterWrites {
   /** The store to hand to services; its writes schedule `fn`. */
@@ -7,22 +13,42 @@ export interface AfterWrites {
   flush(): Promise<void>;
 }
 
+/** Passes `w` through, noting each record it inserts or updates. */
+function tracking(w: StorageWriter, written: WrittenRecord[]): StorageWriter {
+  // A prototype link rather than a spread: the remote adapter's writer is a Proxy with no own keys.
+  const tracked: StorageWriter = Object.create(w);
+  tracked.insert = (entity, record) => {
+    written.push({ entity, id: record.id });
+    return w.insert(entity, record);
+  };
+  tracked.update = (entity, record, expectedVersion) => {
+    written.push({ entity, id: record.id });
+    return w.update(entity, record, expectedVersion);
+  };
+  return tracked;
+}
+
 /**
- * Wraps a store so `fn` runs `ms` after the last successful write (debounced). Errors from `fn`
- * go to `onError`; they never fail the write that scheduled it.
+ * Wraps a store so `fn` runs `ms` after the last successful write (debounced), with every record
+ * the committed writes touched since the last run. Errors from `fn` go to `onError`; they never
+ * fail the write that scheduled it, and its records are passed again on the next run.
  */
 export function afterWrites(
   store: StorageAdapter,
   ms: number,
-  fn: () => Promise<void>,
+  fn: (written: WrittenRecord[]) => Promise<void>,
   onError: (err: unknown) => void,
 ): AfterWrites {
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let pending = new Map<string, WrittenRecord>();
   const run = async () => {
     timer = undefined;
+    const batch = pending;
+    pending = new Map();
     try {
-      await fn();
+      await fn([...batch.values()]);
     } catch (err) {
+      for (const [key, rec] of batch) if (!pending.has(key)) pending.set(key, rec);
       onError(err);
     }
   };
@@ -30,7 +56,10 @@ export function afterWrites(
     store: {
       read: (f) => store.read(f),
       write: async (f) => {
-        const result = await store.write(f);
+        const written: WrittenRecord[] = [];
+        const result = await store.write((w) => f(tracking(w, written)));
+        // Only now: a write that rolled back changed nothing.
+        for (const rec of written) pending.set(`${rec.entity}:${rec.id}`, rec);
         clearTimeout(timer);
         timer = setTimeout(run, ms);
         return result;

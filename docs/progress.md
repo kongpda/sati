@@ -1390,3 +1390,27 @@ notes only when the caller holds a task; handoffs stay out of it, as before.
     create, search and `doctor` work from the installed package.
   - Not run here: a clean install on macOS and Windows. The CI matrix covers both on Node 24
     and 26 once this is pushed.
+
+### Faster large projects (2026-11-08)
+
+Measured on the 50,000-record bench project in this orb (25,000 tasks, 25,000 notes).
+
+- `listAll` paged with OFFSET, so SQLite walked every skipped row again for each page: listing
+  all tasks took 1.5 s and all notes 1.1 s. `ListQuery.after` continues after a record id; the
+  store turns it into a `(rank, id)` row-value range, which seeks the `(project_id, rank, id)`
+  index (a query-plan test checks this). Now 0.53 s and 0.28 s, the same as one unpaged query.
+  A test pages through equal ranks in both directions; a cursor on `rank` alone fails it.
+- After-write exports (CLI commands, the MCP server, the UI server) now write only the records
+  that process wrote. `afterWrites` notes each `insert` and `update` of a committed write, and
+  a failed export keeps its records for the next run. A `sati task claim` on the bench project
+  went from 10.3 s to 0.36 s. The pre-commit hook and `sati sync export` still export
+  everything, so a commit always carries the whole snapshot, and files changed outside sati
+  are repaired there.
+- The full export scans only the files it is about to change for secrets; unchanged files were
+  scanned when they were written. A full export with nothing changed: 6.5 s to 3.7 s.
+- `sati guard` (every commit) reads shipped features by the status index and reads decisions
+  only when the change touches one. `context_put` finds its path in SQL instead of parsing every
+  context entry inside the write lock.
+- The in-memory test store deep-cloned its whole state on every write, so the brief's
+  large-project test took 9 s and timed out at 20 s on a loaded machine. It now copies each table
+  (records are already cloned in and out): 1.4 s, and the core suite went from 58 s to 22 s.

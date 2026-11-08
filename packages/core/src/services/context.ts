@@ -82,13 +82,14 @@ export async function listAll<E extends StoredEntity>(
   r: StorageReader,
   ctx: ServiceContext,
   entity: E,
-  opts: Pick<ListQuery, "includeDeleted" | "handoff"> = {},
+  opts: Pick<ListQuery, "includeDeleted" | "handoff" | "status" | "path"> = {},
 ): Promise<EntityMap[E][]> {
   const out: EntityMap[E][] = [];
-  for (let offset = 0; ; offset += PAGE) {
-    const page = await r.list(entity, ctx.projectId, { ...opts, limit: PAGE, offset });
+  for (let after: string | undefined; ; ) {
+    const page = await r.list(entity, ctx.projectId, { ...opts, limit: PAGE, after });
     out.push(...page);
-    if (page.length < PAGE) return out;
+    after = page.at(-1)?.id;
+    if (page.length < PAGE || !after) return out;
   }
 }
 

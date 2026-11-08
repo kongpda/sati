@@ -548,8 +548,8 @@ export async function withExport<T>(rt: Runtime, fn: (rt: Runtime) => Promise<T>
     rt.ctx.store,
     // Never fires: flush() below runs the export when the command ends.
     2 ** 31 - 1,
-    async () => {
-      await exportSnapshot(rt.ctx, dir);
+    async (written) => {
+      await exportSnapshot(rt.ctx, dir, { only: written });
     },
     (err) => {
       process.stderr.write("warning: the .sati/ snapshot was not updated.\n");

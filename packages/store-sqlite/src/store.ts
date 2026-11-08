@@ -316,11 +316,26 @@ export class SqliteStore implements StorageAdapter {
           sql`exists (select 1 from json_each(${t.data}, '$.labels') where value = ${q.label})`,
         );
       }
+      if (q.path !== undefined) where.push(sql`json_extract(${t.data}, '$.path') = ${q.path}`);
       if (q.dueBy) where.push(sql`json_extract(${t.data}, '$.dueDate') <= ${q.dueBy}`);
       if (q.updatedSince) where.push(sql`${t.updatedAt} >= ${q.updatedSince}`);
       if (q.assigneeId) {
         where.push(
           sql`exists (select 1 from json_each(${t.data}, '$.assigneeIds') where value = ${q.assigneeId})`,
+        );
+      }
+      if (q.after !== undefined) {
+        const cursor = await this.orm
+          .select({ rank: t.rank })
+          .from(t)
+          .where(and(eq(t.id, q.after), eq(t.projectId, projectId)))
+          .get();
+        if (!cursor) throw new SatiError("NOT_FOUND", `No ${entity} with id ${q.after}.`);
+        // A row value keeps the (rank, id) index range, so SQLite seeks instead of skipping rows.
+        where.push(
+          q.newestFirst
+            ? sql`(${t.rank}, ${t.id}) < (${cursor.rank}, ${q.after})`
+            : sql`(${t.rank}, ${t.id}) > (${cursor.rank}, ${q.after})`,
         );
       }
       const rows = await this.orm

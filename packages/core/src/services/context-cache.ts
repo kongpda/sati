@@ -91,7 +91,8 @@ export async function putContext(ctx: ServiceContext, input: unknown): Promise<C
     ...(data.sourceTokens !== undefined ? { sourceTokens: data.sourceTokens } : {}),
   };
   return ctx.store.write(async (w) => {
-    const existing = (await listAll(w, ctx, "context")).find((e) => e.path === data.path);
+    // Looked up by path in SQL, not by reading every card.
+    const [existing] = await listAll(w, ctx, "context", { path: data.path });
     if (existing) {
       if (hidden === true && !existing.private) throw alreadyShared("card");
       const keepPrivate = existing.private === true && hidden !== false;

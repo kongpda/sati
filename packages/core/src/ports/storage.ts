@@ -16,12 +16,19 @@ export interface ListQuery {
   updatedSince?: string | undefined;
   /** Notes tagged as handoffs: only those not yet acknowledged, or all of them. */
   handoff?: "unread" | "any" | undefined;
+  /** Context entries for exactly this path. */
+  path?: string | undefined;
   includeDeleted?: boolean | undefined;
   /** Reverse the usual order (rank, then id); with equal ranks this means newest first. */
   newestFirst?: boolean | undefined;
   /** Default 50, max 500. */
   limit?: number | undefined;
   offset?: number | undefined;
+  /**
+   * Continue after the record with this id, in the same order. Unlike `offset`, the store seeks
+   * to it, so reading every page costs the same as one long list.
+   */
+  after?: string | undefined;
 }
 
 /** `context` is a card: its path is the hit's title. */

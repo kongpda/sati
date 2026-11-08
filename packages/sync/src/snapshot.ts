@@ -13,14 +13,18 @@ import {
   type ImportRecordsInput,
   type ImportResult,
   importRecords,
+  isPrivate,
   SatiError,
   type SecretFinding,
   type ServiceContext,
   SNAPSHOT_DIRS,
   SNAPSHOT_ENTITIES,
+  type SnapshotEntity,
+  type SnapshotRecord,
   scanRecord,
   snapshotRecords,
 } from "@sati/core";
+import type { WrittenRecord } from "./debounce.js";
 import { decodeRecord, encodeRecord, snapshotEntityOf } from "./format.js";
 
 /** A record file larger than this cannot be valid (bodies are capped at 100 KB). */
@@ -60,25 +64,65 @@ export interface ExportResult {
   unchanged: number;
 }
 
+export interface ExportOptions {
+  /**
+   * Export only these records (the ones a process just wrote) instead of every record. A full
+   * export also repairs files changed outside sati, so pre-commit and `sati sync export` run one.
+   */
+  only?: readonly WrittenRecord[];
+}
+
+const isSnapshotEntity = (e: string): e is SnapshotEntity =>
+  (SNAPSHOT_ENTITIES as readonly string[]).includes(e);
+
+/** The current state of the given records, tombstones included, in one consistent read. */
+function readRecords(
+  ctx: ServiceContext,
+  refs: readonly WrittenRecord[],
+): Promise<SnapshotRecord[]> {
+  return ctx.store.read(async (r) => {
+    const out: SnapshotRecord[] = [];
+    const seen = new Set<string>();
+    for (const { entity, id } of refs) {
+      if (!isSnapshotEntity(entity) || seen.has(`${entity}:${id}`)) continue;
+      seen.add(`${entity}:${id}`);
+      const record = await r.get(entity, id);
+      // Private notes and cards stay in this machine's database, as in a full export.
+      if (record?.projectId === ctx.projectId && !isPrivate(record))
+        out.push({ entity, record } as SnapshotRecord);
+    }
+    return out;
+  });
+}
+
 /**
  * Writes one file per record to `dir` (the `.sati/` folder), tombstones included. Only files
  * whose content changed are rewritten. Files with no matching record are left alone: they may be
  * a teammate's records that are not imported yet.
  */
-export async function exportSnapshot(ctx: ServiceContext, dir: string): Promise<ExportResult> {
-  const records = await snapshotRecords(ctx);
-  refuseSecrets(records.flatMap(({ entity, record }) => scanRecord(entity, record)));
+export async function exportSnapshot(
+  ctx: ServiceContext,
+  dir: string,
+  opts: ExportOptions = {},
+): Promise<ExportResult> {
+  const records = opts.only ? await readRecords(ctx, opts.only) : await snapshotRecords(ctx);
   const result: ExportResult = { written: [], unchanged: 0 };
-  for (const { entity, record } of records) {
+  const changed: { rec: SnapshotRecord; rel: string; file: string; content: string }[] = [];
+  for (const rec of records) {
     // Reported paths use `/` on every OS, like git does.
-    const rel = posix.join(SNAPSHOT_DIRS[entity], `${record.id}.json`);
+    const rel = posix.join(SNAPSHOT_DIRS[rec.entity], `${rec.record.id}.json`);
     const file = join(dir, rel);
-    const content = stableJson(encodeRecord(record));
+    const content = stableJson(encodeRecord(rec.record));
     if (existsSync(file) && readFileSync(file, "utf8") === content) {
       result.unchanged++;
       continue;
     }
-    mkdirSync(join(dir, SNAPSHOT_DIRS[entity]), { recursive: true });
+    changed.push({ rec, rel, file, content });
+  }
+  // Only files about to change are scanned: an unchanged file was scanned when it was written.
+  refuseSecrets(changed.flatMap(({ rec }) => scanRecord(rec.entity, rec.record)));
+  for (const { rec, rel, file, content } of changed) {
+    mkdirSync(join(dir, SNAPSHOT_DIRS[rec.entity]), { recursive: true });
     writeAtomic(file, content);
     result.written.push(rel);
   }

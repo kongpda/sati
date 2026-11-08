@@ -68,8 +68,8 @@ export default defineCommand({
         const synced = afterWrites(
           rt.ctx.store,
           EXPORT_DEBOUNCE_MS,
-          async () => {
-            await exportSnapshot(rt.ctx, dir);
+          async (written) => {
+            await exportSnapshot(rt.ctx, dir, { only: written });
           },
           (err) => printError(err, false),
         );

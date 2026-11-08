@@ -111,6 +111,32 @@ describe("exportSnapshot / importSnapshot", () => {
     expect(readdirSync(join(dir, "tasks")).filter((f) => !f.endsWith(".json"))).toEqual([]);
   });
 
+  // After a write, only that write's records are exported; other changes wait for a full export.
+  it("exports only the given records when asked", async () => {
+    const a = await clone();
+    const dir = tempDir();
+    const t1 = await createTask(a, { title: "One" });
+    const t2 = await createTask(a, { title: "Two" });
+    const out = await exportSnapshot(a, dir, {
+      only: [
+        { entity: "task", id: t2.id },
+        { entity: "task", id: t2.id },
+        { entity: "actor", id: a.actorId },
+      ],
+    });
+    expect(out).toEqual({ written: [`tasks/${t2.id}.json`], unchanged: 0 });
+    expect(existsSync(join(dir, `tasks/${t1.id}.json`))).toBe(false);
+    expect((await exportSnapshot(a, dir)).written).toEqual([`tasks/${t1.id}.json`]);
+
+    // A private note never reaches .sati/, whether a full or an incremental export runs.
+    const secret = await createNote(a, { title: "Salary bands", body: "x", private: true });
+    expect(await exportSnapshot(a, dir, { only: [{ entity: "note", id: secret.id }] })).toEqual({
+      written: [],
+      unchanged: 0,
+    });
+    expect(existsSync(join(dir, `notes/${secret.id}.json`))).toBe(false);
+  });
+
   // A broken file must not half-import: nothing is written and the file is named.
   it("rejects the whole import when one file is broken", async () => {
     const a = await clone();
@@ -157,6 +183,39 @@ describe("afterWrites", () => {
     expect(fn).toHaveBeenCalledTimes(2);
     await synced.flush();
     expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  // After-write exports write only these records, so a rolled-back write must not appear, and
+  // a failed export must not lose the records it was given.
+  it("passes the records of committed writes, again after a failed run", async () => {
+    const a = await clone();
+    const runs: string[][] = [];
+    let fail = true;
+    const synced = afterWrites(
+      a.store,
+      2 ** 31 - 1,
+      async (written) => {
+        // Writes also touch the actor (last seen); actors are not in the snapshot.
+        const keys = written.filter((w) => w.entity !== "actor").map((w) => `${w.entity}:${w.id}`);
+        runs.push(keys.sort());
+        if (fail) throw new Error("disk full");
+      },
+      () => {},
+    );
+    const ctx = { ...a, store: synced.store };
+    const t1 = await createTask(ctx, { title: "one" });
+    await synced.store
+      .write(async (w) => {
+        await w.insert("task", { ...t1, id: "tsk_rolled_back" });
+        throw new Error("rollback");
+      })
+      .catch(() => undefined);
+    await synced.flush();
+    fail = false;
+    const t2 = await updateTask(ctx, t1.id, { title: "one, renamed", expectedVersion: 1 });
+    const n = await createNote(ctx, { title: "n" });
+    await synced.flush();
+    expect(runs).toEqual([[`task:${t1.id}`], [`note:${n.id}`, `task:${t2.id}`].sort()]);
   });
 
   it("reports export errors without failing the write", async () => {

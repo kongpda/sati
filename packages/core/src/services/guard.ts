@@ -187,16 +187,20 @@ export async function checkChanges(ctx: ServiceContext, input: unknown): Promise
         findings.push(lockFinding(lock, await actorName(r, lock.actorId), paths));
     }
 
-    const shipped = (await listAll(r, ctx, "feature")).filter(isGuardedFeature);
-    if (shipped.length > 0) {
+    // This runs on every commit: read shipped features by index, and decisions only when the
+    // change touches one of them.
+    const shipped = await listAll(r, ctx, "feature", { status: ["shipped"] });
+    const hit = shipped
+      .filter(isGuardedFeature)
+      .map((f) => ({ f, touched: changes.filter((c) => touches(f.paths, c)) }))
+      .filter(({ touched }) => touched.length > 0);
+    if (hit.length > 0) {
       // The newest Decision listing each feature wins.
       const decisions = new Map<string, string>();
       for (const d of await listAll(r, ctx, "decision")) {
         for (const id of d.featureIds) decisions.set(id, d.id);
       }
-      for (const f of shipped) {
-        const touched = changes.filter((c) => touches(f.paths, c));
-        if (touched.length === 0) continue;
+      for (const { f, touched } of hit) {
         findings.push(featureFinding(f, touched, maxRemovalRatio, decisions.get(f.id)));
       }
     }

@@ -502,4 +502,46 @@ describe("query plans", () => {
     ];
     for (const q of queries) expect(plan(q)).not.toContain("TEMP B-TREE");
   });
+
+  // listAll pages with `after`. Skipping rows with OFFSET made reading every page quadratic.
+  it("a cursor page seeks into the (rank, id) index", () => {
+    const after = "AND (rank, id) > (1, 'x') ORDER BY rank, id LIMIT 500";
+    const q = `SELECT data FROM tasks WHERE project_id = 'p' AND deleted_at IS NULL ${after}`;
+    expect(plan(q)).toContain("(rank,id)>(?,?)");
+    expect(plan(q)).not.toContain("TEMP B-TREE");
+  });
+});
+
+// Tasks of one priority share a rank, so a cursor on rank alone would skip or repeat them.
+describe("cursor paging", () => {
+  it("pages through equal ranks in both directions without gaps or repeats", async () => {
+    const priorities = ["high", "medium", "medium", "medium", "low", "medium", "high"] as const;
+    for (const priority of priorities)
+      await store.write((w) => w.insert("task", task({ priority })));
+    const pages = async (newestFirst: boolean) => {
+      const seen: string[] = [];
+      for (let after: string | undefined; ; ) {
+        const page = await store.read((r) =>
+          r.list("task", PROJECT_ID, { limit: 2, after, newestFirst }),
+        );
+        seen.push(...page.map((t) => t.id));
+        after = page.at(-1)?.id;
+        if (page.length < 2) return seen;
+      }
+    };
+    const all = (newestFirst: boolean) =>
+      store
+        .read((r) => r.list("task", PROJECT_ID, { newestFirst }))
+        .then((l) => l.map((t) => t.id));
+    expect(await pages(false)).toEqual(await all(false));
+    expect(await pages(true)).toEqual(await all(true));
+    expect(new Set(await pages(false)).size).toBe(priorities.length);
+  });
+
+  it("refuses a cursor that is not in the project", async () => {
+    const err = await store
+      .read((r) => r.list("task", PROJECT_ID, { after: "tsk_missing" }))
+      .catch((e) => e);
+    expect(err).toMatchObject({ code: "NOT_FOUND" });
+  });
 });

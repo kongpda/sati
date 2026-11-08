@@ -44,7 +44,12 @@ export class MemoryStore implements StorageAdapter {
 
   write<T>(fn: (w: StorageWriter) => Promise<T>): Promise<T> {
     return this.exclusive(async () => {
-      const draft = structuredClone(this.state);
+      // Records are cloned on the way in and out and never changed in place, so copying each
+      // table is enough to roll back. A deep clone per write made large tests quadratic.
+      const draft: State = {
+        records: new Map([...this.state.records].map(([e, t]) => [e, new Map(t)])),
+        activity: [...this.state.activity],
+      };
       const result = await fn(this.access(draft));
       this.state = draft;
       return result;
@@ -103,7 +108,9 @@ export class MemoryStore implements StorageAdapter {
               (q.handoff === "any" || r.acknowledged === undefined),
           );
         }
+        if (q.path !== undefined) rows = rows.filter((r) => r.path === q.path);
         if (q.newestFirst) rows = rows.reverse();
+        if (q.after !== undefined) rows = rows.slice(rows.findIndex((r) => r.id === q.after) + 1);
         const start = q.offset ?? 0;
         return rows.slice(start, start + (q.limit ?? 50)).map(clone) as never;
       },

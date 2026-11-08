@@ -1546,3 +1546,17 @@ Measured on the 50,000-record bench project in this orb (25,000 tasks, 25,000 no
   instead of showing the old one. Search shows only the latest answer and announces the count.
 - Checked in Chrome at 1280 and 390 px: every page, the task panel with a concurrent agent
   edit, a refused save, a dialog's focus trap and long unbroken text.
+
+### Phase 4 gate on a real GPU (2026-11-08)
+
+- Machine: Apple M1 Pro (14-core GPU), macOS, Playwright Chromium, `pnpm test:ui`.
+- Full suite headless: 52 of 52 pass. 2,000-card scroll 60.0 fps, worst frame 16.8 ms, no long
+  frames; load median 111 ms.
+- Perf spec alone, headless, 3 runs: 56.2 to 58.8 fps, each with one or two frames of 100 to
+  167 ms, still above the 55 floor. Load medians 171 to 325 ms.
+- Perf spec headed (real compositor, 120 Hz ProMotion display), 3 runs: 119.0 to 120.0 fps,
+  worst frame 9.3 to 25.2 ms, no long frames. Load medians 154 to 375 ms.
+- Gate met: the board scrolls at 60 fps (120 on a 120 Hz display) and loads in under 1 s.
+- `j and k step through the cards` failed 4 of 5 runs here: it pressed `j` before the board's
+  data had loaded, and `j` does nothing on an empty board. The test now waits for the four
+  filtered cards first; 15 of 15 runs pass. The app was not changed.

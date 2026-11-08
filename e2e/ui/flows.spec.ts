@@ -636,6 +636,8 @@ test("j and k step through the cards in board order and keep ?task= in step", as
   const backlogAlpha = await make("Kestrel backlog Alpha", "backlog", alpha.id);
   await page.goto(ui.signIn);
   await page.getByLabel("Filter tasks").fill("Kestrel");
+  // j does nothing until the board has loaded and the filter has applied.
+  await expect(page.locator(".card")).toHaveCount(4);
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   const at = async (key: string, task: { id: string; title: string } | null) => {
     await page.keyboard.press(key);

@@ -1,5 +1,16 @@
 {
-  "branch": "integrate",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "302dd673de3aa2ea4a97764a053e008e7641d77b",
+    "completedAt": "2026-11-08T16:55:49.102Z",
+    "completedBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "filesTouched": [
+      "docs/progress.md",
+      "e2e/ui/flows.spec.ts"
+    ],
+    "summary": "Phase 4 gate met on an M1 Pro: 2,000-card board scrolls at 60 fps headless (120 headed on a 120 Hz display), loads in ~110-375 ms; pnpm test:ui 52/52. Fixed a load race in the j/k Playwright test."
+  },
   "createdAt": "2026-11-08T05:59:57.453Z",
   "createdBy": "actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
   "id": "tsk_01M6WVVY8DN72FT2NFRZQ4JATE",
@@ -7,14 +18,15 @@
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
     "*": "2026-11-08T05:59:57.458Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
-    "branch": "2026-11-08T06:48:01.730Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
-    "claim": "2026-11-08T06:50:52.472Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
-    "status": "2026-11-08T06:50:52.472Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
-    "worktree": "2026-11-08T05:59:57.680Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX"
+    "branch": "2026-11-08T16:46:56.345Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "claim": "2026-11-08T16:55:49.104Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-08T16:55:49.104Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "status": "2026-11-08T16:55:49.104Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "worktree": "2026-11-08T16:46:56.345Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
   },
-  "status": "todo",
+  "status": "review",
   "title": "Phase 4 gate: 2,000-card board scrolls at 60 fps",
-  "updatedAt": "2026-11-08T06:50:52.477Z",
-  "version": 4,
-  "worktree": "/home/user/workspace/repo"
+  "updatedAt": "2026-11-08T16:55:49.106Z",
+  "version": 6,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

@@ -203,6 +203,7 @@ textarea {
   padding: 6px 2px 2px;
 }
 .card {
+  overflow-wrap: anywhere;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -247,6 +248,7 @@ textarea {
   touch-action: none;
 }
 .banner {
+  overflow-wrap: anywhere;
   margin: 0;
   padding: 8px 14px;
   background: var(--panel);
@@ -271,6 +273,7 @@ textarea {
   overflow-wrap: anywhere;
 }
 .meta {
+  overflow-wrap: anywhere;
   color: var(--muted);
   font-size: 12px;
   margin-top: 4px;
@@ -340,6 +343,7 @@ textarea {
 
 /* A heading for outline and screen-reader navigation, styled like the bold title it replaced. */
 .row-title {
+  overflow-wrap: anywhere;
   display: inline;
   margin: 0;
   font-size: inherit;
@@ -384,6 +388,13 @@ body:has(.palette) .toast {
   bottom: auto;
   top: 16px;
 }
+/* With the task panel beside the board, the toast centres over the board, never on the panel. */
+@media (min-width: 900px) {
+  .app:has(.sheet) .toast {
+    left: calc((100% - 440px) / 2);
+    max-width: min(480px, calc(100% - 440px - 24px));
+  }
+}
 .toast-text {
   flex: 1 1 200px;
   overflow-wrap: anywhere;
@@ -422,6 +433,7 @@ body:has(.palette) .toast {
   line-height: 1.45;
 }
 .prose {
+  overflow-wrap: anywhere;
   line-height: 1.5;
 }
 .prose h2 {
@@ -530,6 +542,7 @@ body:has(.palette) .toast {
   padding: 8px;
 }
 .palette form button {
+  overflow-wrap: anywhere;
   display: block;
   width: 100%;
   text-align: left;
@@ -1350,6 +1363,7 @@ button.danger {
   font-weight: 600;
 }
 .pinned a {
+  overflow-wrap: anywhere;
   color: var(--moss);
   font-size: 13px;
 }
@@ -1400,4 +1414,21 @@ button.danger {
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--panel);
+}
+
+.claim-row > span {
+  min-width: 0;
+}
+/* A refused save stays until dismissed; the edge marks it as an error, not only the colour. */
+.toast.error {
+  border-left: 4px solid var(--clay);
+}
+button.link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }

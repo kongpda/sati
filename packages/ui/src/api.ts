@@ -68,6 +68,8 @@ export interface Note {
   handoffTo?: string;
   /** The addressee's actor name, for a clone where the id names no one. */
   handoffToName?: string;
+  /** The author's actor name, for a clone where `createdBy` names no one. */
+  handoffFromName?: string;
   acknowledged?: { by: string; at: string };
 }
 
@@ -140,6 +142,8 @@ export interface Snapshot {
   cards: Card[];
   /** Tasks waiting for approval whose branch moved on since they were sent, by task id. */
   drift?: Record<string, Drift>;
+  /** Kinds with more records than the board loads (oldest tasks, oldest notes left out). */
+  truncated?: string[];
 }
 
 /** What an agent or person learned about a file or folder; sati never opens the file. */

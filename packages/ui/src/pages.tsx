@@ -124,8 +124,10 @@ export function Features({
             {f.description ? <Markdown source={f.description} /> : null}
             {f.acceptance.length > 0 ? (
               <ul className="acceptance">
-                {f.acceptance.map((item) => (
-                  <li key={item}>{item}</li>
+                {f.acceptance.map((item, i) => (
+                  // Two lines may read the same; the position tells them apart.
+                  // biome-ignore lint/suspicious/noArrayIndexKey: plain text lines have no ids
+                  <li key={`${i}:${item}`}>{item}</li>
                 ))}
               </ul>
             ) : null}
@@ -579,12 +581,24 @@ export function TaskSheet({
     const previous = document.activeElement;
     heading.current?.focus();
     return () => {
-      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+      // After the panel closes, so the board is no longer inert: back to what had focus, or,
+      // when that was the body (j/k stepped here) or is gone, to this task's card.
+      requestAnimationFrame(() => {
+        if (document.querySelector(".sheet")) return; // another task's panel opened instead
+        const card = document.querySelector<HTMLElement>(`button[data-task="${id}"]`);
+        const back =
+          previous instanceof HTMLElement && previous.isConnected && previous !== document.body
+            ? previous
+            : card;
+        back?.focus();
+      });
     };
-  }, [found]);
-  // The form reloads only when a field it edits changes. Keyed by version, a checklist tick
-  // (saved at once) remounted it and threw away what was typed but not yet saved. Changes to
-  // other fields cannot be overwritten: the form sends only its own fields.
+  }, [found, id]);
+  // The form reloads only when a field it edits changes, and never while the person is typing
+  // in it: an agent's write would otherwise throw their edit away. It then says the task
+  // changed, and Save sends only the fields the person changed since the form loaded.
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
   const fields = JSON.stringify([
     task?.id,
     task?.title,
@@ -594,9 +608,13 @@ export function TaskSheet({
     task?.milestoneId ?? null,
     task?.assigneeIds ?? [],
   ]);
-  const formKey = useRef({ fields, n: 0 });
-  if (formKey.current.fields !== fields) formKey.current = { fields, n: formKey.current.n + 1 };
+  const formKey = useRef({ fields, n: 0, base: task });
+  if (formKey.current.fields !== fields && !dirty) {
+    formKey.current = { fields, n: formKey.current.n + 1, base: task };
+  }
+  const changedElsewhere = dirty && formKey.current.fields !== fields;
   if (!task) return null;
+  const base = formKey.current.base ?? task;
   const feature = data.features.find((f) => f.id === task.featureId);
   // Someone else's live claim is ended with Take over or Release first, not deleted under them.
   const held =
@@ -634,30 +652,75 @@ export function TaskSheet({
         />
       ) : null}
       <TaskSignals data={data} task={task} />
+      {changedElsewhere ? (
+        <p className="banner" role="status">
+          This task changed while you were editing. Save keeps your changes to the fields you
+          edited;{" "}
+          <button type="button" className="link" onClick={() => setDirty(false)}>
+            discard yours and reload
+          </button>
+          .
+        </p>
+      ) : null}
       <form
         key={formKey.current.n}
+        onInput={() => setDirty(true)}
         onSubmit={(e) => {
           e.preventDefault();
+          if (saving) return;
           const form = new FormData(e.currentTarget);
-          const status = String(form.get("status") ?? task.status);
-          const dueDate = String(form.get("dueDate") ?? "") || null;
-          const milestoneId = form.has("milestoneId")
-            ? String(form.get("milestoneId")) || null
-            : (task.milestoneId ?? null);
-          const assigneeIds = form.getAll("assigneeIds").map(String);
-          const sameAssignees =
-            assigneeIds.length === (task.assigneeIds ?? []).length &&
-            assigneeIds.every((a) => task.assigneeIds?.includes(a));
-          // Unchanged planning fields stay out of the patch, so old tasks keep their shape.
-          void onSave(task.id, {
+          const sameList = (a: readonly string[], b: readonly string[]) =>
+            a.length === b.length && a.every((x) => b.includes(x));
+          const typed = {
             title: String(form.get("title") ?? ""),
             body: String(form.get("body") ?? ""),
-            ...(status === task.status ? {} : { status }),
-            ...(dueDate === (task.dueDate ?? null) ? {} : { dueDate }),
-            ...(milestoneId === (task.milestoneId ?? null) ? {} : { milestoneId }),
-            ...(sameAssignees ? {} : { assigneeIds }),
-            expectedVersion: task.version,
-          }).catch(() => undefined);
+            status: String(form.get("status") ?? base.status),
+            dueDate: String(form.get("dueDate") ?? "") || null,
+            milestoneId: form.has("milestoneId")
+              ? String(form.get("milestoneId")) || null
+              : (base.milestoneId ?? null),
+            assigneeIds: form.getAll("assigneeIds").map(String),
+          };
+          const was = {
+            title: base.title,
+            body: base.body,
+            status: base.status,
+            dueDate: base.dueDate ?? null,
+            milestoneId: base.milestoneId ?? null,
+            assigneeIds: base.assigneeIds ?? [],
+          };
+          const now = {
+            ...was,
+            title: task.title,
+            body: task.body,
+            status: task.status,
+            dueDate: task.dueDate ?? null,
+            milestoneId: task.milestoneId ?? null,
+            assigneeIds: task.assigneeIds ?? [],
+          };
+          // Only what the person changed since the form loaded: a field an agent changed
+          // meanwhile keeps the agent's value, and old tasks keep their shape.
+          const patch: Record<string, unknown> = {};
+          let clash = false;
+          for (const key of Object.keys(typed) as (keyof typeof typed)[]) {
+            const mine = typed[key];
+            const same = (a: unknown, b: unknown) =>
+              Array.isArray(a) && Array.isArray(b) ? sameList(a, b) : a === b;
+            if (same(mine, was[key])) continue;
+            patch[key] = mine;
+            if (!same(was[key], now[key])) clash = true;
+          }
+          if (Object.keys(patch).length === 0) {
+            setDirty(false);
+            return;
+          }
+          setSaving(true);
+          // Both changed the same field: the version the form loaded makes the server refuse
+          // it, so neither edit is lost without a word.
+          void onSave(task.id, { ...patch, expectedVersion: clash ? base.version : task.version })
+            .then(() => setDirty(false))
+            .catch(() => undefined)
+            .finally(() => setSaving(false));
         }}
       >
         <input className="field" name="title" defaultValue={task.title} aria-label="Title" />
@@ -686,8 +749,8 @@ export function TaskSheet({
             ))}
           </select>
         </label>
-        <button type="submit" className="primary">
-          Save
+        <button type="submit" className="primary" disabled={saving}>
+          {saving ? "Saving…" : "Save"}
         </button>
       </form>
       <Checklist
@@ -699,8 +762,10 @@ export function TaskSheet({
         <>
           <h3>Acceptance</h3>
           <ul>
-            {feature.acceptance.map((item) => (
-              <li key={item}>{item}</li>
+            {feature.acceptance.map((item, i) => (
+              // Two lines may read the same; the position tells them apart.
+              // biome-ignore lint/suspicious/noArrayIndexKey: plain text lines have no ids
+              <li key={`${i}:${item}`}>{item}</li>
             ))}
           </ul>
         </>
@@ -730,6 +795,10 @@ export function TaskSheet({
  * handoff left on it, and whether its branch moved after it was sent for approval. Agent text
  * is rendered as plain text, never as Markdown, because it is data.
  */
+/** An actor's name; actors are machine-local, so a record from a teammate's clone carries a fallback. */
+const nameOr = (data: Snapshot, id: string, fallback: string | undefined) =>
+  data.actors.some((a) => a.id === id) ? nameOf(data, id) : (fallback ?? "someone");
+
 function TaskSignals({ data, task }: { data: Snapshot; task: Task }) {
   const waiting = waitingOn(task);
   const who = nameOf(data, task.claim?.actorId);
@@ -761,9 +830,9 @@ function TaskSignals({ data, task }: { data: Snapshot; task: Task }) {
       {handoff ? (
         <p className="handoff">
           <strong>
-            Handoff from {nameOf(data, handoff.createdBy)}
+            Handoff from {nameOr(data, handoff.createdBy, handoff.handoffFromName)}
             {handoff.handoffTo
-              ? ` for ${data.actors.some((a) => a.id === handoff.handoffTo) ? nameOf(data, handoff.handoffTo) : (handoff.handoffToName ?? "someone")}`
+              ? ` for ${nameOr(data, handoff.handoffTo, handoff.handoffToName)}`
               : ""}
           </strong>
           <span className="meta">
@@ -801,18 +870,24 @@ function Checklist({
   // Quick ticks run one after another, each with the version the last save returned; sent
   // together, the second would carry a stale version and be refused.
   const latest = useRef(version);
+  // The list as last saved: a refused tick goes back to it, not to the list of the render it
+  // was clicked in, which misses ticks saved since.
+  const saved = useRef(items);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
+  // biome-ignore lint/correctness/useExhaustiveDependencies: items is new on every snapshot; the version says when it changed
   useEffect(() => {
     latest.current = Math.max(latest.current, version);
+    saved.current = items;
   }, [version]);
   const change = (next: typeof items) => {
     setShown(next);
     queue.current = queue.current.then(() =>
       onChange(next, latest.current).then(
-        (saved) => {
-          latest.current = saved.version;
+        (result) => {
+          latest.current = result.version;
+          saved.current = next;
         },
-        () => setShown(items),
+        () => setShown(saved.current),
       ),
     );
   };

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   api,
   type Decision,
@@ -81,12 +82,19 @@ export function FormDialog({
     const form = formRef.current;
     form?.querySelector<HTMLElement>("input, textarea, select")?.focus();
     if (form) setReady(filled(form));
+    // The page behind takes no focus, clicks or screen-reader reading while the dialog is open;
+    // aria-modal alone does not stop Tab. The dialog is portalled out of <main> for this.
+    const behind = [...document.querySelectorAll<HTMLElement>(".app > nav, .app > main")];
+    for (const el of behind) el.inert = true;
     return () => {
+      // Back to what the app wants now (`data-modal`, set with its own inert), not to what it
+      // was when this opened: New task closes this and clears the app's flag in one render.
+      for (const el of behind) el.inert = el.hasAttribute("data-modal");
       if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
     };
   }, []);
 
-  return (
+  return createPortal(
     <div className="palette" role="dialog" aria-modal="true" aria-labelledby={heading}>
       <button
         type="button"
@@ -131,7 +139,8 @@ export function FormDialog({
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.querySelector(".app") ?? document.body,
   );
 }
 

@@ -214,7 +214,12 @@ export function Memory({
           {plainError(answer.error)}
         </p>
       ) : null}
-      {question && answer.data ? (
+      {question && answer.isPlaceholderData ? (
+        <p className="meta" role="status">
+          Looking for “{question}”…
+        </p>
+      ) : null}
+      {question && answer.data && !answer.isPlaceholderData ? (
         <section className="answer" aria-label="Answer" aria-live="polite">
           <div className="answer-head">
             <h2>
@@ -253,8 +258,10 @@ export function Memory({
               </p>
               {item.facts.length ? (
                 <ul className="facts">
-                  {item.facts.slice(0, 5).map((f) => (
-                    <li key={f}>{f}</li>
+                  {item.facts.slice(0, 5).map((f, i) => (
+                    // Two lines may read the same; the position tells them apart.
+                    // biome-ignore lint/suspicious/noArrayIndexKey: plain text lines have no ids
+                    <li key={`${i}:${f}`}>{f}</li>
                   ))}
                 </ul>
               ) : null}
@@ -295,8 +302,10 @@ export function Memory({
                 <p className="summary">{c.summary}</p>
                 {c.facts?.length ? (
                   <ul className="facts">
-                    {c.facts.map((f) => (
-                      <li key={f}>{f}</li>
+                    {c.facts.map((f, i) => (
+                      // Two lines may read the same; the position tells them apart.
+                      // biome-ignore lint/suspicious/noArrayIndexKey: plain text lines have no ids
+                      <li key={`${i}:${f}`}>{f}</li>
                     ))}
                   </ul>
                 ) : null}

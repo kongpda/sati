@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type ChangeItem, type ChangesFilter, type Snapshot } from "./api.js";
-import { nameOf } from "./people.js";
+import { knownName, nameOf } from "./people.js";
 import { capital, dayWords, fullTime, plainError } from "./words.js";
 
 const RANGES = [
@@ -101,10 +101,11 @@ export function Changes({
         <div className="page-actions">
           <button
             type="button"
-            disabled={!query.data}
+            // While a new period loads the old one is still shown; copying it would be wrong.
+            disabled={!query.data || query.isPlaceholderData}
             onClick={() => void copy("changelog", async () => query.data?.changelog ?? "")}
           >
-            Copy changelog
+            {query.isPlaceholderData ? "Loading…" : "Copy changelog"}
           </button>
           {general ? null : (
             <button
@@ -215,8 +216,7 @@ export function Changes({
                   <p className="summary">{item.releaseNote ?? item.summary}</p>
                 ) : null}
                 <div className="meta">
-                  {item.by ? nameOf(data, item.by) : "someone"}
-                  {" · "}
+                  {item.by && knownName(data, item.by) ? `${knownName(data, item.by)} · ` : ""}
                   <time dateTime={item.at} title={fullTime(item.at)}>
                     {new Date(item.at).toLocaleTimeString([], { timeStyle: "short" })}
                   </time>

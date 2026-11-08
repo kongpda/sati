@@ -196,14 +196,32 @@ function openApi() {
   };
 }
 
-async function every<T>(load: (offset: number) => Promise<T[]>): Promise<T[]> {
+/** Most records of one kind the board loads; the rest are named in `truncated`. */
+const SNAPSHOT_CAP = 5000;
+
+/** Pages through a list up to SNAPSHOT_CAP, noting in `cut` when there was more. */
+async function every<T>(
+  name: string,
+  cut: string[],
+  load: (offset: number) => Promise<T[]>,
+): Promise<T[]> {
   const out: T[] = [];
-  for (let offset = 0; offset < 2000; offset += 500) {
+  for (let offset = 0; offset < SNAPSHOT_CAP; offset += 500) {
     const page = await load(offset);
     out.push(...page);
-    if (page.length < 500) break;
+    if (page.length < 500) return out;
   }
+  if ((await load(SNAPSHOT_CAP)).length > 0) cut.push(name);
   return out;
+}
+
+/** The first call's promise, reused by every later call. */
+function once<T>(load: () => Promise<T>): () => Promise<T> {
+  let kept: Promise<T> | undefined;
+  return () => {
+    kept ??= load();
+    return kept;
+  };
 }
 
 /** One payload for the board. The browser refetches it when the database version changes. */
@@ -211,21 +229,31 @@ async function snapshot(rt: UiRuntime) {
   const { ctx } = rt;
   const now = new Date().toISOString();
   const page = { limit: 500 } as const;
+  // Kinds that had more records than the board loads, so it can say so instead of hiding them.
+  const truncated: string[] = [];
   const loaded = await ctx.store.read(async (r) => {
-    const tasks = await every((offset) => r.list("task", ctx.projectId, { ...page, offset }));
-    const features = await every((offset) => r.list("feature", ctx.projectId, { ...page, offset }));
-    const notes = await every((offset) =>
+    const tasks = await every("tasks", truncated, (offset) =>
+      r.list("task", ctx.projectId, { ...page, offset }),
+    );
+    const features = await every("features", truncated, (offset) =>
+      r.list("feature", ctx.projectId, { ...page, offset }),
+    );
+    const notes = await every("notes", truncated, (offset) =>
       r.list("note", ctx.projectId, { ...page, offset, newestFirst: true }),
     );
-    const decisions = await every((offset) =>
+    const decisions = await every("decisions", truncated, (offset) =>
       r.list("decision", ctx.projectId, { ...page, offset, newestFirst: true }),
     );
-    const actors = await every((offset) => r.list("actor", ctx.projectId, { ...page, offset }));
-    const milestones = await every((offset) =>
+    const actors = await every("people", truncated, (offset) =>
+      r.list("actor", ctx.projectId, { ...page, offset }),
+    );
+    const milestones = await every("plans", truncated, (offset) =>
       r.list("milestone", ctx.projectId, { ...page, offset }),
     );
     const activity = await r.listActivity(ctx.projectId, { limit: 200 });
-    const locks = await every((offset) => r.list("lock", ctx.projectId, { ...page, offset }));
+    const locks = await every("locks", truncated, (offset) =>
+      r.list("lock", ctx.projectId, { ...page, offset }),
+    );
     return {
       tasks,
       features,
@@ -238,22 +266,24 @@ async function snapshot(rt: UiRuntime) {
     };
   });
   const { tasks, features, notes, decisions, actors, milestones, activity, locks } = loaded;
-  // Listing files walks the folder (or runs git); only feature paths need it.
-  const files = ctx.repo && features.length > 0 ? (await ctx.repo.files()).map((f) => f.path) : [];
+  // Listing files walks the folder (or runs git, blocking): once per snapshot, shared by the
+  // feature match counts and the cards' staleness.
+  const listed = ctx.repo ? once(ctx.repo.files) : undefined;
+  const local = listed && ctx.repo ? { ...ctx, repo: { ...ctx.repo, files: listed } } : ctx;
+  const files = listed && features.length > 0 ? (await listed()).map((f) => f.path) : [];
   const featuresWithMatches = features.map((f) => {
-    const matchCount =
-      files.length === 0
-        ? null
-        : files.filter((file) => micromatch.isMatch(file, f.paths, { dot: true })).length;
-    return { ...f, matchCount };
+    if (files.length === 0) return { ...f, matchCount: null };
+    // One compiled matcher per glob, not a parse per file; any glob matching counts, as in isMatch.
+    const matchers = f.paths.map((glob) => micromatch.matcher(glob, { dot: true }));
+    return { ...f, matchCount: files.filter((file) => matchers.some((m) => m(file))).length };
   });
   const project = await ctx.store.read((r) => r.getProject());
   // Cards with their git staleness; read after the snapshot, as the brief does.
-  const cards = await getContext(ctx);
+  const cards = await getContext(local);
   // Work waiting for approval whose branch moved on since it was sent, so a person looks again.
   const drift = Object.fromEntries(
     await reviewDrift(
-      ctx,
+      local,
       tasks.filter((t) => t.status === "review"),
     ),
   );
@@ -268,6 +298,7 @@ async function snapshot(rt: UiRuntime) {
       : null,
     you: ctx.actorId,
     version: dataVersion(rt),
+    truncated,
     tasks,
     features: featuresWithMatches,
     notes,

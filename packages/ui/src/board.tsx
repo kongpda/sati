@@ -1,4 +1,5 @@
 import {
+  type Announcements,
   DndContext,
   type DragEndEvent,
   DragOverlay,
@@ -11,10 +12,10 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Actor, ago, COLUMNS, dueLabel, type Feature, type Task, waitingOn } from "./api.js";
 import { Avatar } from "./people.js";
-import { capital, fullTime } from "./words.js";
+import { capital, fullTime, statusWord } from "./words.js";
 
 export function Board({
   tasks,
@@ -46,7 +47,7 @@ export function Board({
   onMove: (id: string, status: string) => void;
 }) {
   const { featureName, columns } = boardColumns(tasks, features);
-  const people = new Map(actors.map((a) => [a.id, a]));
+  const people = useMemo(() => new Map(actors.map((a) => [a.id, a])), [actors]);
   // From every task, not only the filtered ones: a hidden task can still hold another one up.
   const unfinished = new Set(
     allTasks.filter((t) => t.status !== "done" && t.status !== "cancelled").map((t) => t.id),
@@ -58,6 +59,20 @@ export function Board({
     useSensor(KeyboardSensor),
   );
   const [dragging, setDragging] = useState<string | null>(null);
+  // Screen readers hear titles and column names, not the ids dnd-kit announces by default.
+  const titleOf = (id: string | number) => allTasks.find((t) => t.id === id)?.title ?? "the task";
+  const columnOf = (id: string | number | undefined) =>
+    id === undefined ? "" : statusWord(String(id));
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => `Picked up ${titleOf(active.id)}.`,
+    onDragOver: ({ active, over }) =>
+      over ? `${titleOf(active.id)} is over ${columnOf(over.id)}.` : undefined,
+    onDragEnd: ({ active, over }) =>
+      over
+        ? `${titleOf(active.id)} moved to ${columnOf(over.id)}.`
+        : `${titleOf(active.id)} was dropped outside the columns and stays where it was.`,
+    onDragCancel: ({ active }) => `Moving ${titleOf(active.id)} was cancelled.`,
+  };
   const dragged = tasks.find((t) => t.id === dragging);
   function onDragStart(event: DragStartEvent) {
     setDragging(String(event.active.id));
@@ -70,6 +85,7 @@ export function Board({
   return (
     <DndContext
       sensors={sensors}
+      accessibility={{ announcements }}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onDragCancel={() => setDragging(null)}
@@ -266,6 +282,7 @@ const Card = memo(function Card({
         <button
           type="button"
           className="title"
+          data-task={task.id}
           aria-current={open ? "true" : undefined}
           onClick={() => onOpen(task.id)}
         >
@@ -389,7 +406,7 @@ function CardBody({
             aria-label={`Select ${task.title}`}
             onClick={() => onToggle(task.id)}
           >
-            {selected ? "selected" : "select"}
+            {selected ? "Selected" : "Select"}
           </button>
         ) : null}
       </div>

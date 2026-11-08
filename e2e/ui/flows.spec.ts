@@ -107,7 +107,9 @@ test("creates, edits, filters and bulk-moves tasks", async ({ page }) => {
   for (const title of titles) await pick(title);
   await expect(page.getByText("2 selected")).toBeVisible();
   await page.getByLabel("Move selected").selectOption("review");
-  await expect(page.locator(".toast[role=status]")).toContainText("2 of 2 tasks did not move.");
+  await expect(page.getByRole("status").locator(".toast")).toContainText(
+    "2 of 2 tasks did not move.",
+  );
   const todo = column(page, "To do");
   for (const title of titles)
     await expect(todo.getByRole("button", { name: title, exact: true })).toBeVisible();

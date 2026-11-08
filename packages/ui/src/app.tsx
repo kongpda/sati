@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   ApiError,
   api,
@@ -77,7 +77,12 @@ export function App() {
   const column = picked ?? phoneColumn(query.data?.tasks ?? []);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [fresh, setFresh] = useState<Set<string>>(new Set());
-  const [toast, setToastState] = useState<{ message: string; undo?: () => void } | null>(null);
+  const [toast, setToastState] = useState<{
+    message: string;
+    undo?: () => void;
+    /** Errors stay until dismissed: a refused save must not vanish before it is read. */
+    error?: boolean;
+  } | null>(null);
   const setToast = useCallback(
     (message: string | null, undo?: () => void) =>
       setToastState(message === null ? null : { message, ...(undo ? { undo } : {}) }),
@@ -90,11 +95,16 @@ export function App() {
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const [offline, setOffline] = useState(false);
+  /** The session cookie was refused (the board server restarted): updates will not come back. */
+  const [expired, setExpired] = useState(false);
+  /** Board moves waiting for the server; live refetches wait too, or a card would jump back. */
+  const moving = useRef(0);
   /** The task j/k steps from: the open one, or the last one opened. */
   const cursor = useRef<string | null>(null);
   /** The cards as the board shows them, set on each render for the key handler. */
   const visible = useRef<Task[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
+  const searchRun = useRef(0);
 
   // A phone shows one column, a wider screen all of them; turning or resizing past the
   // breakpoint switches, or the board keeps a layout made for the other width.
@@ -123,8 +133,15 @@ export function App() {
     // No refetch on (re)connect: the server sends a message at once when anything was written
     // since the last event this tab saw (Last-Event-ID), and stays quiet when nothing was.
     source.onopen = () => setOffline(false);
-    source.onerror = () => setOffline(true);
+    source.onerror = () => {
+      setOffline(true);
+      // EventSource retries a dropped connection itself, but gives up for good on a refused
+      // one (401): the link this tab signed in with is gone.
+      if (source.readyState === EventSource.CLOSED) setExpired(true);
+    };
     source.onmessage = () => {
+      // A move in flight invalidates the snapshot itself when it settles.
+      if (moving.current > 0) return;
       const previous = client.getQueryData<Snapshot>(["snapshot"]);
       void client.invalidateQueries({ queryKey: ["snapshot"] }).then(() => {
         const next = client.getQueryData<Snapshot>(["snapshot"]);
@@ -146,12 +163,9 @@ export function App() {
     setTask(taskId);
   }, []);
 
-  const fail = useCallback(
-    (err: unknown) => {
-      setToast(plainError(err));
-    },
-    [setToast],
-  );
+  const fail = useCallback((err: unknown) => {
+    setToastState({ message: plainError(err), error: true });
+  }, []);
 
   const saved = useCallback(
     (message: string) => {
@@ -218,6 +232,7 @@ export function App() {
       return false;
     }
     // A refetch already in flight would overwrite the optimistic status with the old one.
+    moving.current++;
     await client.cancelQueries({ queryKey: ["snapshot"] });
     client.setQueryData<Snapshot>(["snapshot"], (snap) =>
       snap ? { ...snap, tasks: snap.tasks.map((t) => (t.id === id ? { ...t, status } : t)) } : snap,
@@ -228,9 +243,11 @@ export function App() {
         expectedVersion: item.version,
         ...(status === "done" && current ? approvedCommit(current, id) : {}),
       });
+      moving.current--;
       await client.invalidateQueries({ queryKey: ["snapshot"] });
       return true;
     } catch (err) {
+      moving.current--;
       // Revert only this task: other moves may be in flight, and a whole-snapshot restore
       // would undo them or bring back their refused state.
       client.setQueryData<Snapshot>(["snapshot"], (snap) =>
@@ -294,8 +311,10 @@ export function App() {
       if (dialog || typing || event.metaKey || event.ctrlKey || event.altKey) return;
       const step = event.key === "j" || event.key === "k";
       // Buttons and links use these keys themselves, and the sheet is a dialog of its own; only
-      // j/k pass from the sheet's heading (where it puts focus), to step to the next card.
-      if (!(step && target?.id === "sheet-title") && target?.closest(".sheet, button, a")) return;
+      // j/k pass from the sheet's heading (where it puts focus) and from a card (where closing
+      // the sheet puts it back), to step to the next card.
+      const stepsFrom = target?.id === "sheet-title" || target?.matches("button[data-task]");
+      if (!(step && stepsFrom) && target?.closest(".sheet, button, a")) return;
       if (step && path === "/") {
         // The order the board shows, with its filters and the phone's column choice.
         const list = visible.current;
@@ -340,7 +359,7 @@ export function App() {
   }, [palette]);
 
   useEffect(() => {
-    if (!toast) return;
+    if (!toast || toast.error) return;
     // An Undo stays a little longer, so there is time to reach it.
     const id = window.setTimeout(() => setToast(null), toast.undo ? 10000 : 6000);
     return () => window.clearTimeout(id);
@@ -364,17 +383,54 @@ export function App() {
       .querySelector('.nav a[aria-current="page"]')
       ?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [pageLabel, projectName]);
-  const tasks = (data?.tasks ?? []).filter((t) => {
-    if (feature && t.featureId !== feature) return false;
-    if (filter && !`${t.title} ${t.body}`.toLowerCase().includes(filter.toLowerCase()))
-      return false;
-    return true;
-  });
-  visible.current = data ? boardOrder(tasks, data.features, column) : [];
+  // Filtering reads every title and body: deferred, so typing stays quick on a big board.
+  const lookFor = useDeferredValue(filter).toLowerCase();
+  const tasks = useMemo(
+    () =>
+      (data?.tasks ?? []).filter((t) => {
+        if (feature && t.featureId !== feature) return false;
+        if (lookFor && !`${t.title} ${t.body}`.toLowerCase().includes(lookFor)) return false;
+        return true;
+      }),
+    [data?.tasks, feature, lookFor],
+  );
+  visible.current = useMemo(
+    () => (data ? boardOrder(tasks, data.features, column) : []),
+    [data, tasks, column],
+  );
   // The brand kit or event brief one click from the board; the brief gives agents the same 3.
   const pinned = (data?.notes ?? [])
     .filter((n) => n.pinned && !threadOf(n) && !n.tags.includes("comment"))
     .slice(0, 3);
+
+  // Stable handlers, so a memoised card re-renders only when its own task changes.
+  const latest = useRef({ data, move });
+  latest.current = { data, move };
+  const openTask = useCallback((id: string) => go("/", id), [go]);
+  const toggle = useCallback(
+    (id: string) =>
+      setSelected((cur) => {
+        const next = new Set(cur);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      }),
+    [],
+  );
+  const reviewed = useCallback(
+    (id: string) => {
+      const item = latest.current.data?.tasks.find((t) => t.id === id);
+      if (!item) return;
+      void api
+        .patchTask(id, { reviewed: true, expectedVersion: item.version })
+        .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
+        .catch(fail);
+    },
+    [client, fail],
+  );
+  const moveCard = useCallback((id: string, status: string) => {
+    void latest.current.move(id, status);
+  }, []);
 
   // While the task panel, New task or Search is open, the page behind it takes no focus or
   // clicks, so Tab stays inside the dialog (aria-modal alone does not stop it).
@@ -382,7 +438,7 @@ export function App() {
 
   return (
     <div className="app">
-      <nav className="nav" inert={modal}>
+      <nav className="nav" inert={modal} data-modal={modal ? "" : undefined}>
         <p className="brand">{data?.project?.name ?? __PRODUCT_NAME__}</p>
         {pages.map(([href, label]) => (
           <a
@@ -398,7 +454,7 @@ export function App() {
           </a>
         ))}
       </nav>
-      <main className="main" inert={modal}>
+      <main className="main" inert={modal} data-modal={modal ? "" : undefined}>
         <div className="top">
           {/* The filters only narrow the board, so other pages do not show them. */}
           {path === "/" ? (
@@ -437,9 +493,20 @@ export function App() {
             New task
           </button>
         </div>
-        {offline ? (
+        {expired ? (
+          <p className="banner" role="alert">
+            This board link has expired, so changes are no longer shown or saved. Start the board
+            again from your terminal and open the new link.
+          </p>
+        ) : offline ? (
           <p className="banner" role="status">
             Live updates disconnected. Reconnecting…
+          </p>
+        ) : null}
+        {data?.truncated && data.truncated.length > 0 ? (
+          <p className="banner" role="status">
+            This project has more {data.truncated.join(", ")} than the board shows; the oldest are
+            left out. Search finds them.
           </p>
         ) : null}
         {query.isLoading ? <p className="empty page">Loading…</p> : null}
@@ -543,24 +610,10 @@ export function App() {
                 selected={selected}
                 open={task}
                 column={column}
-                onOpen={(id) => go("/", id)}
-                onToggle={(id) =>
-                  setSelected((cur) => {
-                    const next = new Set(cur);
-                    if (next.has(id)) next.delete(id);
-                    else next.add(id);
-                    return next;
-                  })
-                }
-                onReviewed={(id) => {
-                  const item = data?.tasks.find((t) => t.id === id);
-                  if (!item) return;
-                  void api
-                    .patchTask(id, { reviewed: true, expectedVersion: item.version })
-                    .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
-                    .catch(fail);
-                }}
-                onMove={(id, status) => void move(id, status)}
+                onOpen={openTask}
+                onToggle={toggle}
+                onReviewed={reviewed}
+                onMove={moveCard}
               />
             )}
           </>
@@ -570,7 +623,7 @@ export function App() {
             data={data}
             onOpen={(id) => go(path, id)}
             onApprove={(t) =>
-              void api
+              api
                 .patchTask(t.id, {
                   status: "done",
                   expectedVersion: t.version,
@@ -581,7 +634,7 @@ export function App() {
                 .catch(fail)
             }
             onAnswered={(t) =>
-              void api
+              api
                 .answered(t.id)
                 .then(() => saved(`${t.title} no longer waits on you.`))
                 .catch(fail)
@@ -769,14 +822,21 @@ export function App() {
               if (!text) return;
               setSearching(true);
               setSearched(false);
+              // Only the latest search may show: an earlier, slower answer is dropped.
+              const run = ++searchRun.current;
               void api
                 .search(text)
                 .then((res) => {
+                  if (run !== searchRun.current) return;
                   setHits(res.hits);
                   setSearched(true);
                 })
-                .catch(fail)
-                .finally(() => setSearching(false));
+                .catch((err: unknown) => {
+                  if (run === searchRun.current) fail(err);
+                })
+                .finally(() => {
+                  if (run === searchRun.current) setSearching(false);
+                });
             }}
           >
             <input
@@ -786,9 +846,15 @@ export function App() {
               placeholder="Search tasks, notes, decisions, features"
               aria-label="Search"
             />
-            {searching ? <p className="meta">Searching…</p> : null}
-            {!searching && !searched ? <p className="meta">Press Enter to search.</p> : null}
-            {searched && hits.length === 0 ? <p className="meta">No results</p> : null}
+            <div role="status" className="meta">
+              {searching
+                ? "Searching…"
+                : !searched
+                  ? "Press Enter to search."
+                  : hits.length === 0
+                    ? "No results"
+                    : `${hits.length} result${hits.length === 1 ? "" : "s"}`}
+            </div>
             {hits.map((hit) => {
               const titleOf = (id: string) =>
                 (id.startsWith("tsk_")
@@ -829,28 +895,31 @@ export function App() {
           </form>
         </div>
       ) : null}
-      {toast ? (
-        <div className="toast" role="status">
-          <span className="toast-text">{toast.message}</span>
-          <span className="toast-actions">
-            {toast.undo ? (
-              <button
-                type="button"
-                className="undo"
-                onClick={() => {
-                  toast.undo?.();
-                  setToast(null);
-                }}
-              >
-                Undo
+      {/* Always mounted: a live region added together with its message is often not read. */}
+      <div role="status" aria-live="polite" className="toast-region">
+        {toast ? (
+          <div className={toast.error ? "toast error" : "toast"}>
+            <span className="toast-text">{toast.message}</span>
+            <span className="toast-actions">
+              {toast.undo ? (
+                <button
+                  type="button"
+                  className="undo"
+                  onClick={() => {
+                    toast.undo?.();
+                    setToast(null);
+                  }}
+                >
+                  Undo
+                </button>
+              ) : null}
+              <button type="button" onClick={() => setToast(null)}>
+                Dismiss
               </button>
-            ) : null}
-            <button type="button" onClick={() => setToast(null)}>
-              Dismiss
-            </button>
-          </span>
-        </div>
-      ) : null}
+            </span>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

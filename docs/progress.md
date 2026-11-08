@@ -1516,3 +1516,33 @@ Measured on the 50,000-record bench project in this orb (25,000 tasks, 25,000 no
 - The project is MIT licensed (copyright Phallinda Kong): `LICENSE` at the root and in
   `packages/cli`, so npm ships it; `@kongpda/sati` declares `"license": "MIT"`. CI's packed-install
   job checks the tarball carries `LICENSE` and both third-party license files.
+
+### Final polish pass (2026-11-08)
+
+- Dead code: knip plus a hand check of every hit found one unused export (`WaitingKind`, removed),
+  no unused files or CSS selectors, and no commented-out code or TODOs. Test-only exports stay,
+  as decided earlier.
+- A handoff stores its author's actor name too (`handoffFromName`), so a teammate's clone shows
+  who left it instead of "someone". Records from another clone with an unknown author now leave
+  the name out on My work and Changes.
+- Overlap checks keep `git merge-tree`'s answer in `.git/sati/merge-check.json` per pair of
+  commits, so a brief or Stop hook on unchanged commits writes no objects into `.git`.
+- Board server: the snapshot lists files through git once (it ran twice and blocked the event
+  loop on each), compiles each feature's globs once, loads up to 5,000 records of a kind and
+  names the kinds it cut, which the board shows in a banner.
+- Task panel: what a person typed survives an agent's write to the same task; the panel says the
+  task changed, and Save sends only the fields the person changed (both changing one field is
+  refused, not overwritten). Save, Approve and "I answered" cannot be sent twice. A refused
+  checklist tick goes back to the last saved list.
+- Board: a live update no longer moves a dragged card back while its move is saving; an expired
+  board link says so instead of "Reconnecting…" forever; filtering is deferred and memoised and
+  cards get stable handlers, so typing does not re-render the whole board; drag-and-drop
+  announcements use titles and column names; closing the panel returns focus to the card.
+- Dialogs on Roadmap, Notes, Decisions, Memory and Settings make the page behind inert (Tab
+  stayed inside after 12 presses; Escape restores focus). The toast region is always mounted so
+  messages are read out; errors stay until dismissed and sit beside, not on, the task panel.
+- Long URLs and paths wrap in notes, task details, rows, search hits and banners (checked at 390
+  px: no sideways scroll). Copy changelog and Memory answers wait for the new period or question
+  instead of showing the old one. Search shows only the latest answer and announces the count.
+- Checked in Chrome at 1280 and 390 px: every page, the task panel with a concurrent agent
+  edit, a refused save, a dialog's focus trap and long unbroken text.

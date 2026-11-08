@@ -37,6 +37,15 @@ export function colorOf(actor: Pick<Actor, "name" | "kind" | "displayName" | "co
   return COLORS[hash % COLORS.length] ?? "moss";
 }
 
+/**
+ * The shown name of an actor this clone knows, or null. Actors are not in the `.sati/` snapshot,
+ * so work from a teammate's clone names someone unknown here; leave the name out, not "someone".
+ */
+export function knownName(data: Snapshot, actorId: string | null | undefined): string | null {
+  const actor = data.actors.find((a) => a.id === actorId);
+  return actor ? personName(actor) : null;
+}
+
 /** The shown name of an actor id; records from a teammate's clone may name one not here. */
 export function nameOf(data: Snapshot, actorId: string | null | undefined): string {
   const actor = data.actors.find((a) => a.id === actorId);

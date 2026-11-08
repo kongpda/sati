@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from "react";
 import { dueLabel, type Snapshot, type Task, today, waitingOn } from "./api.js";
-import { nameOf } from "./people.js";
+import { knownName, nameOf } from "./people.js";
 import { statusWord } from "./words.js";
 
 const CLOSED = new Set(["done", "cancelled"]);
@@ -56,9 +56,9 @@ export function MyWork({
 }: {
   data: Snapshot;
   onOpen: (id: string) => void;
-  onApprove: (task: Task) => void;
+  onApprove: (task: Task) => Promise<unknown>;
   /** The person answered the agent where it runs; the task stops asking. */
-  onAnswered: (task: Task) => void;
+  onAnswered: (task: Task) => Promise<unknown>;
   /** Rejects when refused, so the reason typed stays in the box. */
   onSendBack: (task: Task, reason: string) => Promise<unknown>;
 }) {
@@ -196,10 +196,12 @@ function Needs({
   data: Snapshot;
   task: Task;
   onOpen: (id: string) => void;
-  onAnswered: (task: Task) => void;
+  onAnswered: (task: Task) => Promise<unknown>;
 }) {
   const waiting = waitingOn(task);
   const who = nameOf(data, task.claim?.actorId);
+  // One click at a time: a second request would be refused and shown as an error.
+  const [busy, setBusy] = useState(false);
   return (
     <Row data={data} task={task} onOpen={onOpen}>
       {waiting ? (
@@ -216,7 +218,11 @@ function Needs({
             <button
               type="button"
               aria-label={`${task.title}: I answered`}
-              onClick={() => onAnswered(task)}
+              disabled={busy}
+              onClick={() => {
+                setBusy(true);
+                void onAnswered(task).finally(() => setBusy(false));
+              }}
             >
               I answered
             </button>
@@ -243,11 +249,12 @@ function Approval({
   data: Snapshot;
   task: Task;
   onOpen: (id: string) => void;
-  onApprove: (task: Task) => void;
+  onApprove: (task: Task) => Promise<unknown>;
   onSendBack: (task: Task, reason: string) => Promise<unknown>;
 }) {
   const [sending, setSending] = useState(false);
-  const by = task.completion ? nameOf(data, task.completion.completedBy) : null;
+  const [busy, setBusy] = useState(false);
+  const by = task.completion ? knownName(data, task.completion.completedBy) : null;
   const files = task.completion?.filesTouched.length ?? 0;
   const drift = data.drift?.[task.id];
   return (
@@ -297,7 +304,11 @@ function Approval({
             type="button"
             className="primary"
             aria-label={`Approve ${task.title}`}
-            onClick={() => onApprove(task)}
+            disabled={busy}
+            onClick={() => {
+              setBusy(true);
+              void onApprove(task).finally(() => setBusy(false));
+            }}
           >
             {drift?.moved ? "Approve latest" : "Approve"}
           </button>

@@ -4,6 +4,11 @@
   "description": "Local-first memory, task and feature manager for AI coding agents",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kongpda/sati.git",
+    "directory": "packages/cli"
+  },
   "bin": {
     "sati": "./dist/index.mjs"
   },

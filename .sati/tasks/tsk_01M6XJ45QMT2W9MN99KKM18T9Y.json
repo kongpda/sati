@@ -1,0 +1,30 @@
+{
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "b096a39fa95e310d6a578d46debc9d4ff89c9a5c",
+    "completedAt": "2026-11-08T12:28:56.338Z",
+    "completedBy": "actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "filesTouched": [
+      "packages/cli/package.json"
+    ],
+    "summary": "repository field (kongpda/sati, packages/cli) in @kongpda/sati's package.json, needed for npm provenance."
+  },
+  "createdAt": "2026-11-08T12:28:55.924Z",
+  "createdBy": "actr_01M6WY12CQKVQGM84WENFXR3YC",
+  "id": "tsk_01M6XJ45QMT2W9MN99KKM18T9Y",
+  "priority": "low",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-08T12:28:55.929Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "claim": "2026-11-08T12:28:56.340Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "completion": "2026-11-08T12:28:56.340Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "status": "2026-11-08T12:28:56.340Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "worktree": "2026-11-08T12:28:56.193Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC"
+  },
+  "status": "review",
+  "title": "Add the repository field to the CLI package",
+  "updatedAt": "2026-11-08T12:28:56.344Z",
+  "version": 3,
+  "worktree": "/home/user/workspace/repo"
+}

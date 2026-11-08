@@ -20,6 +20,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         node: [24, 26]
+        # `24` is the newest 24.x; this proves the minimum in `engines` (ADR 0003).
+        include:
+          - os: ubuntu-latest
+            node: "24.15"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -31,6 +35,46 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+
+  # ADR 0003 gate: the packed CLI installs from npm with nothing to compile, and works.
+  install:
+    name: Packed install / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.15"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Install the packed CLI into an empty project and use it
+        shell: bash
+        env:
+          SATI_ACTOR: ci
+          AI_AGENT: ""
+        run: |
+          set -euo pipefail
+          pkg="$RUNNER_TEMP/pkg"
+          proj="$RUNNER_TEMP/proj"
+          mkdir -p "$pkg" "$proj"
+          (cd packages/cli && npm pack --pack-destination "$pkg")
+          cd "$proj"
+          git init -q
+          git -c user.name=ci -c user.email=ci@example.com commit -q --allow-empty -m init
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund "$pkg"/*.tgz
+          test "$(ls node_modules)" = "@kongpda"
+          npx sati --version
+          npx sati init --yes
+          npx sati task create "Installed from the packed tarball"
+          npx sati search tarball --json | grep -q "Installed from the packed tarball"
+          npx sati doctor
 
   # PLAN Phase 3 gate: the four-worktree scenario passes 100 seeded 1,000-step runs. Each shard
   # takes about 15 minutes, so pushes and PRs run one seed per shard (10 runs); the nightly and

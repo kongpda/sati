@@ -1,12 +1,11 @@
 import { defineConfig } from "tsdown";
 
-// Bundle workspace packages and pure-JS deps into the CLI. drizzle-orm and zod ship hundreds of
-// small ESM files; resolving them at startup cost ~200 ms, over the 150 ms command budget.
-// citty is tiny, so it stays external. SQLite is Node's built-in node:sqlite.
+// Every runtime package is a devDependency, so tsdown bundles it and `npm install` fetches only
+// this package: about 3 MB instead of 29. Only the code used ends up in the bundle, split per
+// command, so `sati --version` loads none of it. SQLite is Node's built-in node:sqlite.
 export default defineConfig({
   entry: ["src/index.ts"],
   format: "esm",
   platform: "node",
-  noExternal: [/^@sati\//, /^drizzle-orm(\/|$)/, /^zod(\/|$)/, "ulid"],
   banner: { js: "#!/usr/bin/env node" },
 });

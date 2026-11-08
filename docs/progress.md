@@ -1429,3 +1429,20 @@ Measured on the 50,000-record bench project in this orb (25,000 tasks, 25,000 no
   (descending specificity), and a test string became a template literal.
 - `pnpm test:ui`: 35 of 36 pass. The 2,000-card scroll test measures 38 to 43 fps in this orb's
   headless Chromium with or without this change (floor 55), so the orb cannot judge it; CI can.
+
+### One-package install (2026-11-08)
+
+- Every runtime package of the CLI is now a devDependency, so tsdown bundles it: the MCP SDK,
+  hono, @hono/node-server, @clack/prompts, citty and micromatch join zod and drizzle-orm. The
+  `noExternal` list (deprecated in tsdown) is gone. Bundled CommonJS reaches Node built-ins
+  through rolldown's `createRequire` shim; the dist imports nothing but `node:` modules.
+- `npm install` of the packed CLI: 29 MB and 109 packages to 2.9 MB and one package (the tarball
+  is 0.77 MB). PLAN's 15 MB budget is met. `sati --version` still loads no command code (70 to
+  120 ms in this orb, as before).
+- Checked from the installed package: interactive `init` (clack prompts), `--yes` init, task
+  create, search, doctor, the MCP server over stdio (initialize, 17 tools, `sati_brief`) and the
+  UI server (app page, session cookie, 401 without it).
+- CI: a job on Node 24.15 exactly proves the `engines` minimum (also checked here: 24.15.0
+  works, 24.14.0 is refused). A new `install` job packs the CLI, installs it into an empty
+  project on Linux, macOS and Windows, and runs init, create, search and doctor. Its script ran
+  here as written.

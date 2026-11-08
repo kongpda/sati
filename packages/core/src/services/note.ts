@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
-import { Note } from "../domain/schemas.js";
+import { BodyText, Note } from "../domain/schemas.js";
 import { refuseSecrets } from "../domain/secrets.js";
 import { COMMENT_TAG } from "./comment.js";
 import {
@@ -14,7 +14,9 @@ import {
 } from "./context.js";
 import { acknowledgeHandoff } from "./handoff.js";
 
-const fields = Note.pick({ title: true, body: true, tags: true, links: true, pinned: true });
+const fields = Note.pick({ title: true, tags: true, links: true, pinned: true }).extend({
+  body: BodyText,
+});
 /**
  * `private: true` keeps a note on this machine. Set when it is created; a private note can be
  * shared later (`false`), but a shared one is already in `.sati/` and git history, so it cannot

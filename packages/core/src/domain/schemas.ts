@@ -50,7 +50,12 @@ export const BodyText = z
   .string()
   .max(LIMITS.body)
   .refine((v) => utf8Bytes(v) <= LIMITS.body, "is over 100 KB");
-const body = BodyText;
+/**
+ * Stored text keeps the older character cap: records written before the byte cap (100,000 Khmer
+ * characters is about 300 KB) must still import and stay editable. New text is checked in bytes
+ * by the write inputs, which replace these fields with `BodyText`.
+ */
+const body = z.string().max(LIMITS.body);
 const shortText = z.string().max(LIMITS.shortText);
 const list = <T extends z.ZodType>(item: T) => z.array(item).max(LIMITS.array);
 const pathGlob = z.string().min(1).max(LIMITS.path);

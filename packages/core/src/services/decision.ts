@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { Decision } from "../domain/schemas.js";
+import { BodyText, Decision } from "../domain/schemas.js";
 import { baseFields, insertWithLog, mustGet, parseInput, type ServiceContext } from "./context.js";
 
 export const RecordDecisionInput = Decision.pick({
@@ -11,7 +11,11 @@ export const RecordDecisionInput = Decision.pick({
   featureIds: true,
 })
   .partial({ context: true, consequences: true, supersedes: true, featureIds: true })
-  .extend({ decision: Decision.shape.decision.min(1) });
+  .extend({
+    context: BodyText.optional(),
+    decision: BodyText.min(1),
+    consequences: BodyText.optional(),
+  });
 export type RecordDecisionInput = z.input<typeof RecordDecisionInput>;
 
 /** Decisions are append-only: to change one, record a new one that `supersedes` it. */

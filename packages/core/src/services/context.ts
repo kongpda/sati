@@ -88,8 +88,15 @@ export async function listAll<E extends StoredEntity>(
   for (let after: string | undefined; ; ) {
     const page = await r.list(entity, ctx.projectId, { ...opts, limit: PAGE, after });
     out.push(...page);
-    after = page.at(-1)?.id;
-    if (page.length < PAGE || !after) return out;
+    const last = page.at(-1)?.id;
+    if (page.length < PAGE || !last) return out;
+    // A store that ignores the cursor (an older `sati serve` daemon) would return this page forever.
+    if (last === after) {
+      throw new SatiError("INTERNAL", "The database server did not page through the records.", {
+        hint: `Stop the old \`${CLI_NAME} serve\` process and start it again from this version.`,
+      });
+    }
+    after = last;
   }
 }
 

@@ -1446,3 +1446,35 @@ Measured on the 50,000-record bench project in this orb (25,000 tasks, 25,000 no
   works, 24.14.0 is refused). A new `install` job packs the CLI, installs it into an empty
   project on Linux, macOS and Windows, and runs init, create, search and doctor. Its script ran
   here as written.
+
+### Integrated onto origin/main (2026-11-08)
+
+- This clone's work (Phase 5c, compact files, handoff index, node:sqlite, cursor paging, task
+  panel, one-package install) was built on `3d78187`, while another thread pushed Phases 5b, 7a,
+  7b, 7c, 8 and the first real-project trial. The work was replayed on `origin/main`; our own
+  Phase 5b commits were dropped in favour of the pushed ones, which fix the same items.
+- Both lines had a migration numbered 5 (`0004_fts_cards` and `0004_note_handoff_status`), and
+  `migrate()` tracks only the number, so a database upgraded by one build would skip the other's
+  migration. The handoff migration is now `0005_note_handoff_status` (schema 6); its `UPDATE` is
+  idempotent. This clone's database was rebuilt from `.sati/`.
+- The incremental export (`only`) wrote private notes and cards to `.sati/`. It now leaves them
+  out, like the full export; a test fails without the fix.
+
+### Review fixes (2026-11-08)
+
+- Claims across machines: a holder was identified by a hash of the hostname, which every cloud
+  orb and host-network container shares, so a brief in one clone could release a live claim from
+  another. The machine key now adds the boot id and the pid namespace (boot time off Linux). A
+  restarted MCP server takes over the actor's live claims whose old holder process is gone.
+- Export: `flush()` now retries records a failed export put back and waits for a running
+  export; the MCP server runs one full repair export when it starts; `sati wait --hook` exports
+  what it wrote.
+- `listAll` stops with an error when a page does not move past the cursor (an old `sati serve`
+  ignores `after`), instead of looping forever. `context_put` re-checks the path it updates.
+- `sati doctor` skips the worktrees check on git without `worktree list -z` instead of failing.
+- Review drift: agents commit their work, and the `.sati/` export of their completion, after
+  `task_complete`, so almost every task read as "branch changed after it was sent". A move that
+  changed only `.sati/` no longer counts; an unknown move (commit gone, no git) still does.
+- Byte caps apply to new text only. Stored records keep the older 100,000-character cap, so a
+  record written before the byte cap (40,000 Khmer characters is 120 KB) still imports and stays
+  editable instead of failing every import.

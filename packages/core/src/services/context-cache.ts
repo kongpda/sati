@@ -92,7 +92,10 @@ export async function putContext(ctx: ServiceContext, input: unknown): Promise<C
   };
   return ctx.store.write(async (w) => {
     // Looked up by path in SQL, not by reading every card.
-    const [existing] = await listAll(w, ctx, "context", { path: data.path });
+    // The path check also guards against a store that ignores the filter (an old daemon).
+    const existing = (await listAll(w, ctx, "context", { path: data.path })).find(
+      (e) => e.path === data.path,
+    );
     if (existing) {
       if (hidden === true && !existing.private) throw alreadyShared("card");
       const keepPrivate = existing.private === true && hidden !== false;

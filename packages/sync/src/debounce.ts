@@ -41,15 +41,27 @@ export function afterWrites(
 ): AfterWrites {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let pending = new Map<string, WrittenRecord>();
+  /** The export in progress: one at a time, so a later run never writes before an earlier one. */
+  let running: Promise<void> | undefined;
   const run = async () => {
     timer = undefined;
+    while (running) await running;
+    if (pending.size === 0) return;
     const batch = pending;
     pending = new Map();
+    const job = (async () => {
+      try {
+        await fn([...batch.values()]);
+      } catch (err) {
+        for (const [key, rec] of batch) if (!pending.has(key)) pending.set(key, rec);
+        onError(err);
+      }
+    })();
+    running = job;
     try {
-      await fn([...batch.values()]);
-    } catch (err) {
-      for (const [key, rec] of batch) if (!pending.has(key)) pending.set(key, rec);
-      onError(err);
+      await job;
+    } finally {
+      if (running === job) running = undefined;
     }
   };
   return {
@@ -66,10 +78,11 @@ export function afterWrites(
       },
       close: () => store.close(),
     },
+    // Also runs records a failed export put back, and waits for one already running.
     flush: async () => {
-      if (timer === undefined) return;
       clearTimeout(timer);
       await run();
+      while (running) await running;
     },
   };
 }

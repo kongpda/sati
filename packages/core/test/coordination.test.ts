@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   acknowledgeHandoff,
   acquireLock,
+  adoptClaims,
   buildBrief,
   claimHealth,
   claimTask,
@@ -145,6 +146,25 @@ describe("review pinned to a commit", () => {
     const done = await updateTask(person, task.id, { status: "done" });
     expect(done.completion?.approvedCommit).toBe(B);
   });
+
+  it("does not count a commit that only touched .sati/ as a move", async () => {
+    const { ctx, person, heads, task } = await inReview();
+    heads.main = B;
+    let changed = [".sati/tasks/tsk_x.json", ".sati"];
+    const repo = { ...ctx.repo, changedBetween: async () => changed } as RepoIndex;
+    const git = { ...ctx, repo };
+    const reviewer = { ...person, repo };
+    expect((await reviewDrift(git, [task])).get(task.id)?.moved).toBe(false);
+    // A sibling folder that merely starts with the same letters is real work.
+    changed = [".sati/tasks/tsk_x.json", ".satisfy/run.ts"];
+    expect((await reviewDrift(git, [task])).get(task.id)?.moved).toBe(true);
+    await expect(
+      updateTask(reviewer, task.id, { status: "done", approvedCommit: A }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    changed = [".sati/tasks/tsk_x.json"];
+    const done = await updateTask(reviewer, task.id, { status: "done", approvedCommit: A });
+    expect(done.completion?.approvedCommit).toBe(A);
+  });
 });
 
 describe("claims of stopped agents", () => {
@@ -172,6 +192,35 @@ describe("claims of stopped agents", () => {
     const released = await releaseExpiredClaims(dead);
     expect(released.map((r) => r.id)).toEqual([t.id]);
     expect((await getRecord(ctx, "task", t.id)).status).toBe("todo");
+  });
+
+  // A reloaded MCP server works on under a new process id; its claims must follow it, not lapse.
+  it("a restarted server adopts its actor's claims only when the old process has exited", async () => {
+    const { ctx, clock } = await setup();
+    const old = { ...ctx, processes: { self: { host: "box", pid: 1 }, alive: () => true } };
+    const mine = await claimTask(old, (await createTask(ctx, { title: "mine" })).id);
+    const other = await as(ctx, "codex@b", "agent");
+    await claimTask(
+      { ...other, processes: old.processes },
+      (await createTask(ctx, { title: "theirs" })).id,
+    );
+    const restarted = (alive: boolean | null) => ({
+      ...ctx,
+      processes: { self: { host: "box", pid: 2 }, alive: () => alive },
+    });
+    // The old process still runs (a second session as the same actor), or nobody can tell.
+    expect(await adoptClaims(restarted(true))).toEqual([]);
+    expect(await adoptClaims(restarted(null))).toEqual([]);
+
+    const adopted = await adoptClaims(restarted(false));
+    expect(adopted.map((t) => t.id)).toEqual([mine.id]);
+    expect(adopted[0]?.claim).toMatchObject({ holder: { pid: 2 }, token: mine.claim?.token });
+    // Now held by a live process, the claim survives a stopped-agent sweep.
+    clock.advance(5 * 60_000);
+    const sweep = { ...ctx, processes: { alive: (h: { pid: number }) => h.pid === 2 } };
+    expect((await releaseExpiredClaims(sweep)).map((t) => t.id)).not.toContain(mine.id);
+    // Adopting again is a no-op.
+    expect(await adoptClaims(restarted(false))).toEqual([]);
   });
 
   it("releases none when most holders look stopped at once", async () => {

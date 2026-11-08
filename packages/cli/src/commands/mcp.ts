@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { CONFIG_DIR, readSettings } from "@sati/core";
+import { adoptClaims, CONFIG_DIR, readSettings } from "@sati/core";
 import { defineCommand } from "citty";
 import pkg from "../../package.json" with { type: "json" };
 import { openRuntime, printError, processProbe } from "../runtime.js";
@@ -16,12 +16,16 @@ export default defineCommand({
       const { project, location } = rt;
       // The MCP server lives as long as the agent session, so its claims name it as the holder.
       const ctx = { ...rt.ctx, processes: processProbe(true) };
+      // A reloaded server takes over the claims its exited predecessor held for this actor.
+      const adopt = (c: typeof ctx) =>
+        adoptClaims(c).catch((err: unknown) => printError(err, false));
       // Loaded here so the MCP SDK never slows down the other commands.
       const { serveStdio } = await import("@sati/mcp");
       const { kind } = readSettings(project.settings);
       const templates = () => readTemplateFiles(location.root);
       if (project.mode !== "git") {
         try {
+          await adopt(ctx);
           await serveStdio(ctx, pkg.version, kind, location.root, templates);
         } finally {
           await ctx.store.close();
@@ -39,7 +43,12 @@ export default defineCommand({
         },
         (err) => printError(err, false),
       );
+      // Each write exports only what it touched, so one full export before serving repairs anything
+      // an earlier process could not write (a crash inside the debounce window, a failed export).
+      // It rewrites only changed files, and runs before any write can race it.
+      await exportSnapshot(ctx, dir).catch((err: unknown) => printError(err, false));
       try {
+        await adopt({ ...ctx, store: synced.store });
         await serveStdio(
           { ...ctx, store: synced.store },
           pkg.version,

@@ -57,7 +57,13 @@ const quiet = (cwd: string, args: string[]) =>
  */
 async function worktreesCheck(ctx: ServiceContext, root: string): Promise<DoctorCheck | null> {
   const base = defaultBase(root);
-  const [, ...linked] = worktreePaths(root);
+  let linked: { path: string; branch: string | null }[];
+  try {
+    [, ...linked] = worktreePaths(root);
+  } catch {
+    // `git worktree list -z` needs git 2.36; older git just skips this check.
+    return null;
+  }
   if (!base || linked.length === 0) return null;
   const seen: LinkedWorktree[] = [];
   for (const w of linked) {

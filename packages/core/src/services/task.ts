@@ -4,6 +4,7 @@ import { findDependencyCycle, PRIORITY_RANK } from "../domain/rules.js";
 import {
   BodyText,
   type Claim,
+  CONFIG_DIR,
   CommitSha,
   Completion,
   IsoDay,
@@ -49,7 +50,7 @@ const fields = TaskShape.pick({
   assigneeIds: true,
   checklist: true,
   milestoneId: true,
-});
+}).extend({ body: BodyText });
 const optional = {
   body: true,
   status: true,
@@ -237,6 +238,11 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
     parseInput(UpdateTaskInput, input);
   // Git is read outside the transaction: the approval compares with the branch as it is now.
   const approving = patch.status === "done" ? await branchHeadOf(ctx, id) : undefined;
+  // Read before the transaction: git is not called while the write lock is held.
+  const approvedMoved =
+    approvedCommit && approving?.head
+      ? await movedBeyondSnapshot(ctx, approvedCommit, approving.head)
+      : false;
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "task", id);
     checkToken(before, token, ctx.actorId);
@@ -262,7 +268,7 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
         }
         reviewNote = null;
         const head = approving && approving.branch === completion.branch ? approving.head : null;
-        if (approvedCommit && head && head !== approvedCommit) {
+        if (approvedCommit && head && approvedMoved) {
           throw new SatiError(
             "CONFLICT",
             `Branch ${completion.branch} moved to ${head.slice(0, 12)} after the commit you approved.`,
@@ -615,6 +621,34 @@ export function claimHealth(ctx: ServiceContext, tasks: readonly Task[]): ClaimH
 }
 
 /**
+ * Points the caller's live claims at this process when the process that held them has exited.
+ * An agent tool that restarts its MCP server (a reload or reconnect) keeps working on the same
+ * tasks under a new process id; without this its claims would look abandoned. A holder that is
+ * still running (another session as the same actor) or that this machine cannot check keeps them.
+ */
+export async function adoptClaims(ctx: ServiceContext): Promise<Task[]> {
+  const probe = ctx.processes;
+  const self = probe?.self;
+  if (!probe || !self) return [];
+  const now = nowIso(ctx);
+  return ctx.store.write(async (w) => {
+    const tasks = await w.list("task", ctx.projectId, {
+      status: ["in_progress", "review", "blocked"],
+      limit: 500,
+    });
+    const adopted: Task[] = [];
+    for (const t of tasks) {
+      const c = t.claim;
+      if (!c?.holder || c.actorId !== ctx.actorId || c.leaseUntil <= now) continue;
+      if (c.holder.host === self.host && c.holder.pid === self.pid) continue;
+      if (probe.alive(c.holder) !== false) continue;
+      adopted.push(await updateWithLog(w, ctx, "task", t, { claim: { ...c, holder: self } }));
+    }
+    return adopted;
+  });
+}
+
+/**
  * Clears claims whose lease has run out, or whose holder process has exited (see
  * `claimHealth`), so abandoned work returns to the pool: an `in_progress` task goes back to
  * `todo`; `review` and `blocked` tasks keep their status. Writes only when something is
@@ -774,6 +808,23 @@ export interface ReviewDrift {
   moved: boolean;
 }
 
+/**
+ * True when the branch moved from `from` to `to` in more than sati's own snapshot. Agents commit
+ * their work, and with it the `.sati/` export of their completion, after `task_complete`; a move
+ * that only touched `.sati/` is not new work to review. Unknown (no git method, or git failed)
+ * counts as moved.
+ */
+async function movedBeyondSnapshot(
+  ctx: ServiceContext,
+  from: string,
+  to: string,
+): Promise<boolean> {
+  if (from === to) return false;
+  const changed = await ctx.repo?.changedBetween?.(from, to);
+  if (!changed) return true;
+  return changed.some((p) => p !== CONFIG_DIR && !p.startsWith(`${CONFIG_DIR}/`));
+}
+
 /** Review drift for each task that was finished at a known commit. Needs git; empty without it. */
 export async function reviewDrift(
   ctx: ServiceContext,
@@ -789,7 +840,8 @@ export async function reviewDrift(
     if (!heads.has(c.branch)) heads.set(c.branch, await branchHead(c.branch));
     const head = heads.get(c.branch) ?? null;
     const seen = c.approvedCommit ?? c.commit;
-    out.set(t.id, { commit: seen, branch: c.branch, head, moved: head !== null && head !== seen });
+    const moved = head !== null && (await movedBeyondSnapshot(ctx, seen, head));
+    out.set(t.id, { commit: seen, branch: c.branch, head, moved });
   }
   return out;
 }

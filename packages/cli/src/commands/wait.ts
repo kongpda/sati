@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { CLI_NAME, markWaiting, resolveId, SatiError, shortHandle, type Task } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { closeRuntime, execute, openRuntime, printError } from "../runtime.js";
+import { closeRuntime, execute, openRuntime, printError, withExport } from "../runtime.js";
 
 /** The part of Claude Code's Notification and UserPromptSubmit hook input we read. */
 interface HookInput {
@@ -43,9 +43,9 @@ async function runHook(): Promise<void> {
     const input = parsed && typeof parsed === "object" ? (parsed as HookInput) : {};
     const waiting = hookWaiting(input);
     if (waiting === undefined) return;
-    const { ctx } = await openRuntime();
-    // No task: every task the caller holds. With none held, nothing is written.
-    await markWaiting(ctx, { waiting });
+    // No task: every task the caller holds. With none held, nothing is written. Exported like
+    // any other command's write, so .sati/ never lags behind the database.
+    await withExport(await openRuntime(), ({ ctx }) => markWaiting(ctx, { waiting }));
   } catch (err) {
     printError(err, false);
     process.exitCode = 1;

@@ -13,7 +13,9 @@ import {
   doctorChecks,
   ensureActor,
   getProject,
+  importRecords,
   isSatiError,
+  listAll,
   recordDecision,
   restoreRecord,
   undoActivity,
@@ -134,6 +136,20 @@ describe("edge branches", () => {
     );
   });
 
+  // Records written under the older character cap must still import and stay editable.
+  it("imports and edits a stored body over 100 KB, but new text is capped", async () => {
+    const { ctx } = await setup();
+    const other = await setup();
+    const old = await createNote(other.ctx, { title: "Old" });
+    const record = { ...old, projectId: ctx.projectId, body: "ក".repeat(40_000) };
+    await importRecords(ctx, [{ entity: "note", source: `notes/${old.id}.json`, record }]);
+    const renamed = await updateNote(ctx, old.id, { title: "Renamed" });
+    expect(renamed.body).toBe(record.body);
+    expect(await code(() => updateNote(ctx, old.id, { body: `${record.body}!` }))).toBe(
+      "VALIDATION",
+    );
+  });
+
   it("reports doctor checks and blocks review mistakes", async () => {
     const { ctx, clock } = await setup();
     const clean = await doctorChecks(ctx);
@@ -201,5 +217,16 @@ describe("edge branches", () => {
         createTask(ctx, { title: "Parent", subtasks: [{ title: "A", dependsOn: [3] }] }),
       ),
     ).toBe("VALIDATION");
+  });
+});
+
+// A store that ignores the paging cursor (a `sati serve` daemon from an older version) used to
+// make every full read loop forever once an entity held 500 records.
+describe("listAll", () => {
+  it("fails instead of looping when the store does not move past the cursor", async () => {
+    const { ctx } = await setup();
+    const page = Array.from({ length: 500 }, (_, i) => ({ id: `tsk_${i}` }));
+    const stuck = { list: async () => page } as unknown as Parameters<typeof listAll>[0];
+    await expect(listAll(stuck, ctx, "task")).rejects.toMatchObject({ code: "INTERNAL" });
   });
 });

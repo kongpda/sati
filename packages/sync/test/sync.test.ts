@@ -232,4 +232,41 @@ describe("afterWrites", () => {
     await vi.advanceTimersByTimeAsync(10);
     expect(onError).toHaveBeenCalledWith(new Error("disk full"));
   });
+
+  // Shutdown must not drop what a failed export put back, nor race one still running.
+  it("flush retries records a failed export kept, and waits for a running export", async () => {
+    vi.useFakeTimers();
+    const a = await clone();
+    const runs: string[][] = [];
+    let fail = true;
+    let release: () => void = () => {};
+    const synced = afterWrites(
+      a.store,
+      10,
+      async (written) => {
+        if (fail) {
+          fail = false;
+          throw new Error("disk full");
+        }
+        await new Promise<void>((r) => {
+          release = r;
+        });
+        runs.push(written.map((w) => w.id));
+      },
+      () => {},
+    );
+    const t = await createTask({ ...a, store: synced.store }, { title: "x" });
+    await vi.advanceTimersByTimeAsync(10);
+    expect(runs).toEqual([]);
+    let flushed = false;
+    const done = synced.flush().then(() => {
+      flushed = true;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(flushed).toBe(false);
+    release();
+    await done;
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toContain(t.id);
+  });
 });

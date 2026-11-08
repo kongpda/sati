@@ -22,6 +22,8 @@ export interface RepoIndex {
   head(): Promise<string | null>;
   /** The commit a local branch points at, or null when the branch does not exist. */
   branchHead?(branch: string): Promise<string | null>;
+  /** Repo-relative files that differ between two commits; null when git cannot tell. */
+  changedBetween?(from: string, to: string): Promise<string[] | null>;
   /**
    * Repo-relative files a worktree changed: committed since its merge-base with the base branch,
    * staged, unstaged and untracked. Null when the path is not a worktree of this repo.

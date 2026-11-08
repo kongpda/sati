@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
-import { DecisionId, Feature } from "../domain/schemas.js";
+import { BodyText, DecisionId, Feature } from "../domain/schemas.js";
 import { FEATURE_TRANSITIONS, featureRemovalNeedsDecision } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
 import {
@@ -23,7 +23,7 @@ const fields = Feature.pick({
   tests: true,
   acceptance: true,
   milestoneId: true,
-});
+}).extend({ description: BodyText });
 export const CreateFeatureInput = fields.partial({
   description: true,
   status: true,

@@ -45,3 +45,7 @@ sati doctor         # health checks
 - [Guard rules](https://github.com/kongpda/sati/blob/main/docs/guide/guard.md)
 - [FAQ](https://github.com/kongpda/sati/blob/main/docs/guide/faq.md)
 - [Glossary](https://github.com/kongpda/sati/blob/main/docs/guide/glossary.md)
+
+## License
+
+MIT. The package also bundles third-party code; their licenses are in `dist/THIRD_PARTY_LICENSES.md` and `dist/ui/licenses.md`.

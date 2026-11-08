@@ -1,0 +1,34 @@
+{
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "9f7e3643abb334027021bce36498078778e048ca",
+    "completedAt": "2026-11-08T12:23:49.969Z",
+    "completedBy": "actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "filesTouched": [
+      "LICENSE",
+      "packages/cli/LICENSE",
+      "packages/cli/package.json",
+      "packages/cli/README.md",
+      ".github/workflows/ci.yml"
+    ],
+    "summary": "MIT LICENSE at the root and in packages/cli; package.json license MIT; README note; CI checks the tarball ships the license files."
+  },
+  "createdAt": "2026-11-08T12:23:49.509Z",
+  "createdBy": "actr_01M6WY12CQKVQGM84WENFXR3YC",
+  "id": "tsk_01M6XHTTG5TSNDQKY6V51YK9Z6",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-08T12:23:49.512Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "claim": "2026-11-08T12:23:49.971Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "completion": "2026-11-08T12:23:49.971Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "status": "2026-11-08T12:23:49.971Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "worktree": "2026-11-08T12:23:49.798Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC"
+  },
+  "status": "review",
+  "title": "Set the project license to MIT",
+  "updatedAt": "2026-11-08T12:23:49.980Z",
+  "version": 3,
+  "worktree": "/home/user/workspace/repo"
+}

@@ -1510,3 +1510,9 @@ Measured on the 50,000-record bench project in this orb (25,000 tasks, 25,000 no
   tasks as waiting, because an agent that ended its turn on a claimed task is waiting on a
   person (completed tasks hold no claim). The 0005 migration marks handoffs from builds without
   acknowledgements as unread; they are delivered once, as before.
+
+### MIT license (2026-11-08)
+
+- The project is MIT licensed (copyright Phallinda Kong): `LICENSE` at the root and in
+  `packages/cli`, so npm ships it; `@kongpda/sati` declares `"license": "MIT"`. CI's packed-install
+  job checks the tarball carries `LICENSE` and both third-party license files.

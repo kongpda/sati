@@ -70,6 +70,7 @@ jobs:
           npm init -y > /dev/null
           npm install --no-audit --no-fund "$pkg"/*.tgz
           test "$(ls node_modules)" = "@kongpda"
+          for f in LICENSE dist/THIRD_PARTY_LICENSES.md dist/ui/licenses.md; do test -s "node_modules/@kongpda/sati/$f"; done
           npx sati --version
           npx sati init --yes
           npx sati task create "Installed from the packed tarball"

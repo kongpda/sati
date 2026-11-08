@@ -1,7 +1,9 @@
 {
+  "blockedReason": null,
   "body": "Claims across machines (machine key + adopt on MCP restart), export repair and flush retry, wait --hook export, listAll cursor guard, putContext path re-check, doctor on old git, review drift ignores .sati-only commits, byte caps only on new text.",
   "branch": "integrate",
   "completion": {
+    "approvedCommit": "baf62d25ab5f97a20db8158f29a512a374490754",
     "branch": "integrate",
     "commit": "baf62d25ab5f97a20db8158f29a512a374490754",
     "completedAt": "2026-11-08T06:50:52.296Z",
@@ -26,17 +28,20 @@
   "id": "tsk_01M6WYKVKC64SSJH0SSX04NMGH",
   "priority": "high",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-08T06:47:58.322Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "blockedReason": "2026-11-08T16:43:52.607Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "branch": "2026-11-08T06:48:01.500Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
     "claim": "2026-11-08T06:50:52.298Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
-    "completion": "2026-11-08T06:50:52.298Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
-    "status": "2026-11-08T06:50:52.298Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "completion": "2026-11-08T16:43:52.607Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "reviewNote": "2026-11-08T16:43:52.607Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:43:52.607Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "worktree": "2026-11-08T06:48:01.500Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC"
   },
-  "status": "review",
+  "status": "done",
   "title": "Fix review findings on the integrated branch",
-  "updatedAt": "2026-11-08T06:50:52.303Z",
-  "version": 3,
+  "updatedAt": "2026-11-08T16:43:52.611Z",
+  "version": 4,
   "worktree": "/home/user/workspace/repo"
 }

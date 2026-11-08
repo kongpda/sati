@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "c4651dc6ff57753d135b2c06419a808281c0dfbe",
     "branch": "main",
     "commit": "33b3db9a3e08c0d84a6e1044c155535a3538c0d8",
     "completedAt": "2026-11-08T13:41:56.048Z",
@@ -25,16 +27,19 @@
   "id": "tsk_01M6XKCD06ERNXC5WCGE962ZCR",
   "priority": "high",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-08T12:50:54.089Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "blockedReason": "2026-11-08T16:43:53.219Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "claim": "2026-11-08T13:41:56.050Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
-    "completion": "2026-11-08T13:41:56.050Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
-    "status": "2026-11-08T13:41:56.050Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "completion": "2026-11-08T16:43:53.219Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "reviewNote": "2026-11-08T16:43:53.219Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:43:53.219Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "worktree": "2026-11-08T12:50:54.396Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC"
   },
-  "status": "review",
+  "status": "done",
   "title": "Final polish pass: dead code, review fixes, page design",
-  "updatedAt": "2026-11-08T13:41:56.054Z",
-  "version": 3,
+  "updatedAt": "2026-11-08T16:43:53.223Z",
+  "version": 4,
   "worktree": "/home/user/workspace/repo"
 }

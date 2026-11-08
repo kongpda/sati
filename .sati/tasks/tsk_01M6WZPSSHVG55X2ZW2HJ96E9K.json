@@ -1,7 +1,9 @@
 {
+  "blockedReason": null,
   "body": "Handoff --to across clones, frozen compact empty fields, serve protocol version, bundled license notices, CI install job runs mcp and ui.",
   "branch": "main",
   "completion": {
+    "approvedCommit": "c4651dc6ff57753d135b2c06419a808281c0dfbe",
     "branch": "main",
     "commit": "5e072ee99483d95d56568bd58369b105a233824b",
     "completedAt": "2026-11-08T07:11:52.525Z",
@@ -26,16 +28,19 @@
   "id": "tsk_01M6WZPSSHVG55X2ZW2HJ96E9K",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-08T07:07:03.350Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "blockedReason": "2026-11-08T16:43:52.769Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "claim": "2026-11-08T07:11:52.527Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
-    "completion": "2026-11-08T07:11:52.527Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
-    "status": "2026-11-08T07:11:52.527Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "completion": "2026-11-08T16:43:52.769Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "reviewNote": "2026-11-08T16:43:52.769Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:43:52.769Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "worktree": "2026-11-08T07:07:03.797Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC"
   },
-  "status": "review",
+  "status": "done",
   "title": "Fix the remaining low-risk review items",
-  "updatedAt": "2026-11-08T07:11:52.533Z",
-  "version": 3,
+  "updatedAt": "2026-11-08T16:43:52.773Z",
+  "version": 4,
   "worktree": "/home/user/workspace/repo"
 }

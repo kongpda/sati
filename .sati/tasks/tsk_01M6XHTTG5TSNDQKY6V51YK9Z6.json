@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "c4651dc6ff57753d135b2c06419a808281c0dfbe",
     "branch": "main",
     "commit": "9f7e3643abb334027021bce36498078778e048ca",
     "completedAt": "2026-11-08T12:23:49.969Z",
@@ -19,16 +21,19 @@
   "id": "tsk_01M6XHTTG5TSNDQKY6V51YK9Z6",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-08T12:23:49.512Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "blockedReason": "2026-11-08T16:43:52.924Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "claim": "2026-11-08T12:23:49.971Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
-    "completion": "2026-11-08T12:23:49.971Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
-    "status": "2026-11-08T12:23:49.971Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "completion": "2026-11-08T16:43:52.924Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "reviewNote": "2026-11-08T16:43:52.924Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:43:52.924Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "worktree": "2026-11-08T12:23:49.798Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC"
   },
-  "status": "review",
+  "status": "done",
   "title": "Set the project license to MIT",
-  "updatedAt": "2026-11-08T12:23:49.980Z",
-  "version": 3,
+  "updatedAt": "2026-11-08T16:43:52.928Z",
+  "version": 4,
   "worktree": "/home/user/workspace/repo"
 }

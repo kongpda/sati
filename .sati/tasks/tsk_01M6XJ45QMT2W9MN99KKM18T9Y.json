@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "c4651dc6ff57753d135b2c06419a808281c0dfbe",
     "branch": "main",
     "commit": "b096a39fa95e310d6a578d46debc9d4ff89c9a5c",
     "completedAt": "2026-11-08T12:28:56.338Z",
@@ -15,16 +17,19 @@
   "id": "tsk_01M6XJ45QMT2W9MN99KKM18T9Y",
   "priority": "low",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-08T12:28:55.929Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "blockedReason": "2026-11-08T16:43:53.070Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "claim": "2026-11-08T12:28:56.340Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
-    "completion": "2026-11-08T12:28:56.340Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
-    "status": "2026-11-08T12:28:56.340Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC",
+    "completion": "2026-11-08T16:43:53.070Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "reviewNote": "2026-11-08T16:43:53.070Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:43:53.070Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "worktree": "2026-11-08T12:28:56.193Z#000000#actr_01M6WY12CQKVQGM84WENFXR3YC"
   },
-  "status": "review",
+  "status": "done",
   "title": "Add the repository field to the CLI package",
-  "updatedAt": "2026-11-08T12:28:56.344Z",
-  "version": 3,
+  "updatedAt": "2026-11-08T16:43:53.077Z",
+  "version": 4,
   "worktree": "/home/user/workspace/repo"
 }

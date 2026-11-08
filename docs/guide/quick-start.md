@@ -5,7 +5,7 @@ work in one repository and see the same tasks, features and decisions.
 
 ## Install
 
-sati needs Node.js 22 or newer.
+sati needs Node.js 24.15 or newer.
 
 Add it to the project as a dev dependency, so every teammate and CI get the same version from
 the lockfile:

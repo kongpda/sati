@@ -99,7 +99,7 @@ describe("daemon server", () => {
 
   // If the transaction cannot start, the client must be told instead of waiting forever.
   it("answers a begin that fails before it starts", async () => {
-    owner.db.pragma(`user_version = ${LATEST_SCHEMA_VERSION + 1}`);
+    owner.db.exec(`PRAGMA user_version = ${LATEST_SCHEMA_VERSION + 1}`);
     const client = await connect();
     client.write(frame({ id: 7, op: "begin", mode: "write", txn: 7 }));
     const reply = await within(nextFrame(client));

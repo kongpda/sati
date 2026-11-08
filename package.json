@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@10.18.0",
   "engines": {
-    "node": ">=22"
+    "node": ">=24.15"
   },
   "scripts": {
     "build": "turbo run build",
@@ -22,7 +22,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.6.4",
     "@changesets/cli": "3.0.3",
-    "@types/node": "^22.0.0",
+    "@types/node": "^24.0.0",
     "@vitest/coverage-v8": "5.1.0",
     "tsdown": "0.23.4",
     "turbo": "2.11.10",
@@ -32,9 +32,6 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ],
-    "ignoredBuiltDependencies": [
-      "better-sqlite3"
     ],
     "auditConfig": {
       "ignoreGhsas": [

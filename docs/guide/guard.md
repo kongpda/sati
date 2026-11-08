@@ -92,7 +92,7 @@ guard:
         fetch-depth: 0
     - uses: actions/setup-node@v4
       with:
-        node-version: 22
+        node-version: 24
     - run: npm install -g @kongpda/sati
     - shell: bash
       env:

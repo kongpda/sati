@@ -7,7 +7,7 @@ Status: **blocked on human steps** (gate not passed yet).
 | Item | State |
 | --- | --- |
 | Monorepo (pnpm, Turborepo, strict tsconfig, Biome) | done |
-| GitHub Actions CI (3 OS x Node 22/24) | done, not yet run (no GitHub remote) |
+| GitHub Actions CI (3 OS x Node 24/26) | done, not yet run (no GitHub remote) |
 | Changesets + provenance publish workflow | done; npm scope, npm 2FA and `NPM_TOKEN` secret need a human |
 | Product name + npm/domain check | open, needs a human |
 | `AGENTS.md`, conventions, ADR template | done |
@@ -1339,6 +1339,7 @@ notes only when the caller holds a task; handoffs stay out of it, as before.
   published yet, so no one has one.
 - Measured, 200 new tasks: 343,917 bytes to 107,917 on disk; 43 KiB to 30 KiB packed in git.
 
+
 ### Fix: claims read every note (2026-11-08)
 
 - Found while running `pnpm bench` for ADR 0003: the claim step failed with "database is locked"
@@ -1354,3 +1355,38 @@ notes only when the caller holds a task; handoffs stay out of it, as before.
   compares). The MCP server runs the same export, debounced, after its writes. The export reads
   in a snapshot, so it delays the caller but does not block other writers. Worth an incremental
   export later.
+
+### Switch to node:sqlite (ADR 0003, 2026-11-08)
+
+- Accepted by the owner. `packages/store-sqlite` opens `DatabaseSync` from `node:sqlite` and runs
+  Drizzle through its `sqlite-proxy` driver, with an LRU cache of 256 prepared statements per
+  connection. `update` checks its version guard with `RETURNING id` instead of `changes`.
+  Duplicate keys are recognised by SQLite's extended result codes (1555, 2067), looked up through
+  `DrizzleQueryError.cause`. Search hits are copied out of node:sqlite's null-prototype rows.
+- `sati doctor` and the UI server call `integrityCheck()`, `vacuum()` and `dataVersion()` on the
+  store instead of driver pragmas.
+- Node 24.15 is the minimum: `engines`, CI (Node 24 and 26; the guard job on 24), the guard
+  guide, the README and quick start. The CLI checks the version before any command loads and
+  exits 1 with a hint. Checked on Node 22.23.4: `error: sati needs Node.js 24.15 or newer`.
+- The lockfile was edited rather than regenerated: pnpm kept better-sqlite3 as a resolved
+  optional peer of drizzle-orm, and a fresh lockfile would have moved about 300 unrelated
+  transitive versions. A reachability check from the importers finds no orphan entries, and
+  `pnpm install --frozen-lockfile` passes.
+- Node builds SQLite with the 2 MB default page cache; better-sqlite3 compiled in 16 MB. With
+  2 MB, the concurrent-claim p95 was 24 to 84 ms against 27 to 51 ms on better-sqlite3. The store
+  now sets `cache_size = -16000`, and three runs measured 27, 31 and 49 ms.
+- Gate results, in this orb (2 CPUs, Node 26.12.1; slower than the macOS numbers above, and both
+  drivers miss the read and search budgets here):
+  - Tests: lint, typecheck and 460 tests pass, including the 20-process claim test (one winner,
+    no `SQLITE_BUSY`) and the four-agent end-to-end test.
+  - `pnpm bench`, three runs each, better-sqlite3 then node:sqlite: seeding 50,000 records
+    19 to 21 s, then 12 to 17 s; CLI read p95 360 to 382 ms, then 304 to 441 ms (the orb slowed
+    during the later runs: `--version`, which loads no SQLite, went from 76 to 131 ms).
+  - Head to head on one 50,000-record file, alternating processes: search p95 84 to 87 ms on
+    better-sqlite3 and 99 to 104 ms on node:sqlite (+15 to 20%; a larger cache or mmap won back
+    about 5%, not enough to keep). 200 point reads: 19 to 20 ms, then 13 to 14 ms, from the
+    statement cache.
+  - Install of the packed CLI into an empty project: 56 MB to 29 MB, no `.node` files. Init,
+    create, search and `doctor` work from the installed package.
+  - Not run here: a clean install on macOS and Windows. The CI matrix covers both on Node 24
+    and 26 once this is pushed.

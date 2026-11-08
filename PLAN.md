@@ -34,11 +34,11 @@ The whole stack is TypeScript, so one core library powers the CLI, the MCP serve
 
 | Layer | Choice | Why |
 | --- | --- | --- |
-| Language / runtime | TypeScript (strict), Node.js 22+ (24 LTS recommended), ESM only | npm distribution; agents and editors already run Node |
+| Language / runtime | TypeScript (strict), Node.js 24.15+ (24 and 26 LTS), ESM only | npm distribution; agents and editors already run Node |
 | Monorepo | pnpm workspaces + Turborepo | Fast installs, cached builds per package |
 | Build | tsdown (or tsup) | Bundles the CLI into a single file; fast startup |
 | Schemas | Zod 4 | One schema drives DB validation, REST, MCP tool inputs and JSON files |
-| Local database | SQLite via `better-sqlite3`, WAL mode, FTS5 | Synchronous and the fastest Node SQLite driver; safe concurrent readers; built-in full-text search |
+| Local database | SQLite via Node's built-in `node:sqlite` (ADR 0003), WAL mode, FTS5 | No native addon to download or compile; synchronous; safe concurrent readers; built-in full-text search |
 | ORM / migrations | Drizzle ORM + drizzle-kit | Typed SQL, no runtime overhead, plain SQL migrations |
 | Hosted database | PostgreSQL 16+ (Drizzle pg dialect) | You already run it; row-level tenancy and `LISTEN/NOTIFY` |
 | IDs | Prefixed ULIDs (`tsk_01JC…`), short display handle (`tsk_8f3k2a`) | Sortable and collision-free across worktrees; no sequential numbers to clash |
@@ -56,7 +56,7 @@ The whole stack is TypeScript, so one core library powers the CLI, the MCP serve
 | Release | Changesets, npm provenance, GitHub Actions | Versioned, signed, reproducible releases |
 | Hosted deploy | Single Docker image (server + UI) behind a reverse proxy | Runs on any VPS |
 
-**Considered and rejected:** Bun as the runtime (users install with npm/Node); `node:sqlite` (revisit once stable, as it would remove the native dependency); a markdown-files-only store like Backlog.md (no fast queries, no atomic claims); Electron or Tauri for v1 (a browser UI served by the CLI ships faster; Tauri can wrap it later).
+**Considered and rejected:** Bun as the runtime (users install with npm/Node); `better-sqlite3` (replaced by `node:sqlite` in ADR 0003: the native addon was half the install and needed a compiler where no prebuilt binary existed); a markdown-files-only store like Backlog.md (no fast queries, no atomic claims); Electron or Tauri for v1 (a browser UI served by the CLI ships faster; Tauri can wrap it later).
 
 ## Architecture
 
@@ -146,7 +146,7 @@ agent-sati/
 │  │  ├─ src/domain/   # zod schemas, status machines, rules
 │  │  ├─ src/services/ # claimTask, completeTask, checkImpact, brief…
 │  │  └─ src/ports/    # StorageAdapter, GitPort, EventBus, Clock
-│  ├─ store-sqlite/    # better-sqlite3 + drizzle, migrations, FTS5, path resolver
+│  ├─ store-sqlite/    # node:sqlite + drizzle, migrations, FTS5, path resolver
 │  ├─ store-postgres/  # hosted adapter, tenancy, LISTEN/NOTIFY
 │  ├─ store-remote/    # HTTP client adapter (local CLI → hosted server)
 │  ├─ sync/            # JSON export/import, merge driver, git hook installer
@@ -425,7 +425,7 @@ Agents call sati dozens of times per session, so the CLI must feel instant. Ever
 | UI first load | under 1 s; JS under 250 KB gzipped | Route-level code splitting, no heavy chart library |
 | Board with 2,000 cards | 60 fps scroll and drag | TanStack Virtual, memoised cards |
 | Live update latency (agent write → UI) | under 500 ms | `PRAGMA data_version` poll every 250 ms + SSE |
-| Install size (`@kongpda/sati`) | under 15 MB incl. native SQLite | Prebuilt `better-sqlite3` binaries, UI shipped as static assets |
+| Install size (`@kongpda/sati`) | under 15 MB | Node's built-in SQLite (no native addon), UI shipped as static assets |
 
 **Database hygiene:** indexes on `(projectId, status)`, `(projectId, featureId)`, and claim lease expiry; `PRAGMA optimize` on close; a weekly `VACUUM` run by `sati doctor`. Old activity is compacted into daily summaries after 90 days (configurable).
 
@@ -441,7 +441,7 @@ flowchart LR
 ### Phase 0 — Foundations (week 1)
 
 - [x] Create the monorepo: pnpm workspaces, Turborepo, `tsconfig.base.json` (strict, `noUncheckedIndexedAccess`), Biome
-- [x] GitHub Actions: lint, typecheck, test on Linux, macOS and Windows with Node 22 and 24
+- [x] GitHub Actions: lint, typecheck, test on Linux, macOS and Windows with Node 24 and 26
 - [ ] Changesets, npm scope reserved, two-factor on npm, provenance publishing workflow
 - [ ] Pick the product name and check npm and domain availability
 - [x] Write `AGENTS.md` and the contribution conventions (conventional commits, ADR template)
@@ -741,7 +741,7 @@ The riskiest code is concurrency and merging, so those get the heaviest testing:
 **CI pipeline (GitHub Actions)**
 
 1. Install with frozen lockfile; Biome lint; typecheck.
-2. Unit, property and integration tests on Linux, macOS and Windows × Node 22 and 24.
+2. Unit, property and integration tests on Linux, macOS and Windows × Node 24 and 26.
 3. Concurrency, E2E and Playwright on Linux.
 4. Benchmarks with regression check; bundle size check.
 5. `pnpm audit` + OSV scan; licence check.
@@ -783,7 +783,7 @@ A second pass over this plan found 12 gaps that would cause real bugs in product
 | Risk | Impact | Mitigation |
 | --- | --- | --- |
 | Agents ignore sati and just edit code | Guards never trigger; tracking is incomplete | Hooks inject the brief and run the guard regardless; `pre-commit` is the backstop |
-| Native `better-sqlite3` fails to install on some machines | Install friction | Prebuilt binaries for all major platforms; switch to `node:sqlite` once stable |
+| `node:sqlite` is a release candidate, so its API may change in a Node minor | Store breaks on a Node update | Only `packages/store-sqlite` imports it; CI runs the newest Node 24 and 26 (ADR 0003) |
 | Merge driver not registered on a teammate's clone (git config is local) | Raw JSON conflicts | `sati doctor` and every CLI run re-register it; conflicts still resolve with `sati sync resolve` |
 | Guard too strict, so developers turn it off | Protection lost | Clear messages, `warn` by default for unprotected features, logged one-off overrides |
 | Brief grows too big as projects grow | Wasted agent context | Hard token cap, ranking by relevance to the claimed task, compaction of old done tasks |

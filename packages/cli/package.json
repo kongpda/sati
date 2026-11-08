@@ -11,7 +11,7 @@
     "dist"
   ],
   "engines": {
-    "node": ">=22"
+    "node": ">=24.15"
   },
   "publishConfig": {
     "access": "public",
@@ -27,7 +27,6 @@
     "@clack/prompts": "1.8.1",
     "@hono/node-server": "2.1.6",
     "@modelcontextprotocol/sdk": "1.32.2",
-    "better-sqlite3": "13.0.3",
     "citty": "0.2.2",
     "hono": "4.13.16",
     "micromatch": "4.0.8"

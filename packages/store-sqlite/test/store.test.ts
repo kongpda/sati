@@ -1,11 +1,11 @@
 import { existsSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { SatiError } from "@sati/core";
-import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { LATEST_SCHEMA_VERSION, SqliteStore } from "../src/index.js";
 import { MIGRATIONS } from "../src/migrations.gen.js";
-import { ACTOR, NOW, note, PROJECT_ID, project, task, tmpDb } from "./fixtures.js";
+import { ACTOR, NOW, note, PROJECT_ID, pragma, project, task, tmpDb } from "./fixtures.js";
 
 let path: string;
 let store: SqliteStore;
@@ -22,16 +22,16 @@ afterEach(async () => {
 describe("open", () => {
   it("migrates a new DB to the latest schema with WAL on", () => {
     expect(store.schemaVersion).toBe(LATEST_SCHEMA_VERSION);
-    expect(store.db.pragma("journal_mode", { simple: true })).toBe("wal");
-    expect(store.db.pragma("busy_timeout", { simple: true })).toBe(5000);
+    expect(pragma(store.db, "journal_mode")).toBe("wal");
+    expect(pragma(store.db, "busy_timeout")).toBe(5000);
   });
 
   // Upgrades must be reversible: a failed or bad migration should never lose the user's data.
   it("backs up an existing DB before migrating it", async () => {
     const v1 = tmpDb();
-    const raw = new Database(v1);
+    const raw = new DatabaseSync(v1);
     raw.exec(MIGRATIONS[0]?.sql ?? "");
-    raw.pragma("user_version = 1");
+    raw.exec("PRAGMA user_version = 1");
     raw.close();
     const upgraded = await SqliteStore.open(v1);
     expect(upgraded.schemaVersion).toBe(LATEST_SCHEMA_VERSION);
@@ -47,7 +47,7 @@ describe("open", () => {
 
   // An old MCP server still running after an upgrade must not write with the old schema.
   it("refuses writes when a newer binary has upgraded the schema", async () => {
-    store.db.pragma(`user_version = ${LATEST_SCHEMA_VERSION + 1}`);
+    store.db.exec(`PRAGMA user_version = ${LATEST_SCHEMA_VERSION + 1}`);
     const err = await store.write((w) => w.insert("task", task())).catch((e) => e);
     expect(err).toBeInstanceOf(SatiError);
     expect(err.code).toBe("SCHEMA_TOO_NEW");
@@ -191,7 +191,7 @@ describe("queries", () => {
         throw new Error("boom");
       })
       .catch(() => undefined);
-    expect(store.db.inTransaction).toBe(false);
+    expect(store.db.isTransaction).toBe(false);
   });
 
   // Only duplicate keys mean "already exists"; other constraint failures are different bugs.
@@ -297,7 +297,7 @@ describe("search", () => {
     expect(await store.read((r) => r.search(PROJECT_ID, "old"))).toEqual([]);
     expect(await store.read((r) => r.search(PROJECT_ID, "new"))).toHaveLength(1);
     store.db.prepare("DELETE FROM tasks WHERE id = ?").run(t.id);
-    const count = (sql: string) => (store.db.prepare(sql).get() as { n: number }).n;
+    const count = (sql: string) => store.db.prepare(sql).get()?.n;
     expect(count("SELECT count(*) AS n FROM search_fts")).toBe(0);
     expect(count("SELECT count(*) AS n FROM search_rowids")).toBe(0);
   });
@@ -306,9 +306,9 @@ describe("search", () => {
   // without the backfill their edits would leave stale text in the index.
   it("upgrading from schema v3 keeps existing records searchable and editable", async () => {
     const v3 = tmpDb();
-    const raw = new Database(v3);
+    const raw = new DatabaseSync(v3);
     for (const m of MIGRATIONS.slice(0, 3)) raw.exec(m.sql);
-    raw.pragma("user_version = 3");
+    raw.exec("PRAGMA user_version = 3");
     const t = task({ title: "Legacy title" });
     raw
       .prepare(
@@ -346,9 +346,9 @@ describe("search", () => {
       ...extra,
     });
     const v4 = tmpDb();
-    const raw = new Database(v4);
+    const raw = new DatabaseSync(v4);
     for (const m of MIGRATIONS.slice(0, 4)) raw.exec(m.sql);
-    raw.pragma("user_version = 4");
+    raw.exec("PRAGMA user_version = 4");
     const old = card("ctx_01J0000000000000000000000B", "venue/old.pdf", { facts: ["Parking 40"] });
     raw
       .prepare(
@@ -378,9 +378,9 @@ describe("search", () => {
   // schema v6 must be marked by the migration, or the next claim would never deliver them.
   it("finds handoff notes by index, including ones written before schema v6", async () => {
     const v4 = tmpDb();
-    const raw = new Database(v4);
+    const raw = new DatabaseSync(v4);
     for (const m of MIGRATIONS.slice(0, 5)) raw.exec(m.sql);
-    raw.pragma("user_version = 5");
+    raw.exec("PRAGMA user_version = 5");
     const acknowledged = { by: ACTOR, at: NOW };
     const unread = note({ tags: ["handoff"] });
     const read = note({ tags: ["handoff"], acknowledged });
@@ -485,8 +485,10 @@ describe("activity", () => {
 // instead of sorting every task. A temp B-tree in the plan means a full sort.
 describe("query plans", () => {
   const plan = (sql: string): string =>
-    (store.db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all() as { detail: string }[])
-      .map((r) => r.detail)
+    store.db
+      .prepare(`EXPLAIN QUERY PLAN ${sql}`)
+      .all()
+      .map((r) => String(r.detail))
       .join("\n");
 
   it("list and ready queries walk an index in (rank, id) order", () => {

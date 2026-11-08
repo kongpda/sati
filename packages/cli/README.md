@@ -16,7 +16,7 @@ paths another agent has locked, and from deleting features that already ship.
 
 ## Install
 
-Node.js 22 or newer:
+Node.js 24.15 or newer:
 
 ```bash
 cd my-project

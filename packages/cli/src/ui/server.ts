@@ -144,7 +144,7 @@ function httpStatus(code: string): 400 | 404 | 409 | 500 {
 function dataVersion(rt: UiRuntime): number {
   const store = rt.dataStore ?? rt.ctx.store;
   if (!(store instanceof SqliteStore)) return 0;
-  return Number(store.db.pragma("data_version", { simple: true }));
+  return store.dataVersion();
 }
 
 function openApi() {

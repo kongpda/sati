@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import { DatabaseSync, type SQLInputValue, type StatementSync } from "node:sqlite";
 import {
   type Activity,
   type ActivityQuery,
@@ -19,11 +20,10 @@ import {
   type StoredEntity,
   type Task,
 } from "@sati/core";
-import Database from "better-sqlite3";
 import { and, asc, desc, eq, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
-import { type BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
+import { drizzle, type SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 import { buildFtsQuery } from "./fts.js";
-import { LATEST_SCHEMA_VERSION, migrate } from "./migrate.js";
+import { LATEST_SCHEMA_VERSION, migrate, userVersion } from "./migrate.js";
 import * as s from "./schema.js";
 
 const TABLES: Record<StoredEntity, s.EntityTable> = {
@@ -82,29 +82,83 @@ function toRow(entity: StoredEntity, rec: EntityMap[StoredEntity]): Row {
 
 const clampLimit = (n: number | undefined) => Math.min(Math.max(n ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
 
+/** Extended result codes for a duplicate key. */
+const SQLITE_CONSTRAINT_PRIMARYKEY = 1555;
+const SQLITE_CONSTRAINT_UNIQUE = 2067;
+
+/** The SQLite result code of `err` or its causes. Drizzle wraps driver errors. */
+function sqliteErrcode(err: unknown): number | undefined {
+  for (let e = err; e instanceof Error; e = e.cause) {
+    if ("errcode" in e && typeof e.errcode === "number") return e.errcode;
+  }
+  return undefined;
+}
+
+/** Prepared statements kept per connection. Drizzle builds the same few hundred SQL strings. */
+const STATEMENT_CACHE_SIZE = 256;
+
+/**
+ * Runs Drizzle's SQL on the connection, for Drizzle's `sqlite-proxy` driver (ADR 0003). That
+ * driver wants rows as arrays of values, in column order.
+ */
+function proxy(db: DatabaseSync) {
+  const cache = new Map<string, StatementSync>();
+  const prepare = (query: string) => {
+    let stmt = cache.get(query);
+    if (stmt) {
+      // Re-insert so the Map's insertion order is least recently used first.
+      cache.delete(query);
+    } else {
+      stmt = db.prepare(query);
+      stmt.setReturnArrays(true);
+      if (cache.size >= STATEMENT_CACHE_SIZE) {
+        const oldest = cache.keys().next();
+        if (!oldest.done) cache.delete(oldest.value);
+      }
+    }
+    cache.set(query, stmt);
+    return stmt;
+  };
+  return async (query: string, params: unknown[], method: "run" | "all" | "values" | "get") => {
+    const stmt = prepare(query);
+    const args = params as SQLInputValue[];
+    if (method === "run") {
+      stmt.run(...args);
+      return { rows: [] };
+    }
+    // `get` with no row gives `rows: undefined`, which the driver maps to `undefined`.
+    if (method === "get") return { rows: stmt.get(...args) as unknown as unknown[] };
+    return { rows: stmt.all(...args) as unknown[] };
+  };
+}
+
 export interface OpenOptions {
   /** Open without migrating or writing (e.g. for `doctor`). */
   readonly?: boolean;
 }
 
 export class SqliteStore implements StorageAdapter {
-  readonly db: Database.Database;
-  readonly orm: BetterSQLite3Database;
+  readonly db: DatabaseSync;
+  readonly orm: SqliteRemoteDatabase;
+  private readonly readOnly: boolean;
   /** Schema version found in the file at open time (after any migration). */
   readonly schemaVersion: number;
   private queue: Promise<unknown> = Promise.resolve();
 
-  private constructor(db: Database.Database, schemaVersion: number) {
+  private constructor(db: DatabaseSync, readonly: boolean, schemaVersion: number) {
     this.db = db;
-    this.orm = drizzle(db);
+    this.orm = drizzle(proxy(db));
+    this.readOnly = readonly;
     this.schemaVersion = schemaVersion;
   }
 
   static async open(path: string, opts: OpenOptions = {}): Promise<SqliteStore> {
-    if (!opts.readonly) mkdirSync(dirname(path), { recursive: true });
-    let db: Database.Database;
+    const readonly = opts.readonly ?? false;
+    if (!readonly) mkdirSync(dirname(path), { recursive: true });
+    let db: DatabaseSync;
     try {
-      db = new Database(path, { readonly: opts.readonly ?? false });
+      // `timeout` is SQLite's busy timeout: wait up to 5 s for another process's lock.
+      db = new DatabaseSync(path, { readOnly: readonly, timeout: 5000 });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (message.includes("unable to open database file")) {
@@ -114,16 +168,35 @@ export class SqliteStore implements StorageAdapter {
       }
       throw err;
     }
-    if (!opts.readonly) {
-      db.pragma("journal_mode = WAL");
-      db.pragma("synchronous = NORMAL");
-    }
-    db.pragma("busy_timeout = 5000");
-    db.pragma("foreign_keys = ON");
-    const version = opts.readonly
-      ? (db.pragma("user_version", { simple: true }) as number)
-      : await migrate(db, path);
-    return new SqliteStore(db, version);
+    if (!readonly) db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL");
+    // Node builds SQLite with its 2 MB default page cache. 16 MB, as better-sqlite3 had, keeps
+    // FTS updates and searches on large projects in memory (ADR 0003).
+    db.exec("PRAGMA foreign_keys = ON; PRAGMA cache_size = -16000");
+    const version = readonly ? userVersion(db) : await migrate(db, path);
+    return new SqliteStore(db, readonly, version);
+  }
+
+  /** `PRAGMA integrity_check`: "ok", or the problems found, one per line. */
+  integrityCheck(): Promise<string> {
+    return this.exclusive(async () =>
+      this.db
+        .prepare("PRAGMA integrity_check")
+        .all()
+        .map((r) => String(r.integrity_check))
+        .join("\n"),
+    );
+  }
+
+  /** `PRAGMA data_version`: changes when another connection commits to the file. */
+  dataVersion(): number {
+    return Number(this.db.prepare("PRAGMA data_version").get()?.data_version ?? 0);
+  }
+
+  /** Rebuilds the file to drop free pages. */
+  vacuum(): Promise<void> {
+    return this.exclusive(async () => {
+      this.db.exec("VACUUM");
+    });
   }
 
   /** Serialises callers in this process; SQLite locking handles other processes. */
@@ -142,7 +215,7 @@ export class SqliteStore implements StorageAdapter {
         this.db.exec("COMMIT");
         return result;
       } catch (err) {
-        if (this.db.inTransaction) this.db.exec("ROLLBACK");
+        if (this.db.isTransaction) this.db.exec("ROLLBACK");
         throw err;
       }
     });
@@ -153,7 +226,7 @@ export class SqliteStore implements StorageAdapter {
       this.db.exec("BEGIN IMMEDIATE");
       try {
         // Checked inside the lock: another process may have upgraded the schema since we opened.
-        const current = this.db.pragma("user_version", { simple: true }) as number;
+        const current = userVersion(this.db);
         if (current > LATEST_SCHEMA_VERSION) {
           throw new SatiError(
             "SCHEMA_TOO_NEW",
@@ -165,7 +238,7 @@ export class SqliteStore implements StorageAdapter {
         this.db.exec("COMMIT");
         return result;
       } catch (err) {
-        if (this.db.inTransaction) this.db.exec("ROLLBACK");
+        if (this.db.isTransaction) this.db.exec("ROLLBACK");
         throw err;
       }
     });
@@ -173,8 +246,8 @@ export class SqliteStore implements StorageAdapter {
 
   async close(): Promise<void> {
     await this.exclusive(async () => {
-      if (this.db.open) {
-        if (!this.db.readonly) this.db.pragma("optimize");
+      if (this.db.isOpen) {
+        if (!this.readOnly) this.db.exec("PRAGMA optimize");
         this.db.close();
       }
     });
@@ -182,7 +255,7 @@ export class SqliteStore implements StorageAdapter {
 
   private readonly reader: StorageReader = {
     getProject: async () => {
-      const row = this.orm
+      const row = await this.orm
         .select({ data: s.projects.data })
         .from(s.projects)
         .where(isNull(s.projects.deletedAt))
@@ -194,13 +267,13 @@ export class SqliteStore implements StorageAdapter {
 
     get: async <E extends StoredEntity>(entity: E, id: string) => {
       const t: s.EntityTable = TABLES[entity];
-      const row = this.orm.select({ data: t.data }).from(t).where(eq(t.id, id)).get();
+      const row = await this.orm.select({ data: t.data }).from(t).where(eq(t.id, id)).get();
       return row ? (JSON.parse(row.data) as EntityMap[E]) : undefined;
     },
 
     findBySuffix: async <E extends StoredEntity>(entity: E, suffix: string) => {
       const t: s.EntityTable = TABLES[entity];
-      const rows = this.orm
+      const rows = await this.orm
         .select({ data: t.data })
         .from(t)
         .where(
@@ -214,7 +287,7 @@ export class SqliteStore implements StorageAdapter {
 
     getByKey: async <E extends StoredEntity>(entity: E, projectId: string, key: string) => {
       const t: s.EntityTable = TABLES[entity];
-      const row = this.orm
+      const row = await this.orm
         .select({ data: t.data })
         .from(t)
         .where(and(eq(t.projectId, projectId), eq(t.key, key)))
@@ -250,7 +323,7 @@ export class SqliteStore implements StorageAdapter {
           sql`exists (select 1 from json_each(${t.data}, '$.assigneeIds') where value = ${q.assigneeId})`,
         );
       }
-      const rows = this.orm
+      const rows = await this.orm
         .select({ data: t.data })
         .from(t)
         .where(and(...where))
@@ -263,7 +336,7 @@ export class SqliteStore implements StorageAdapter {
 
     readyTasks: async (projectId, now, limit) => {
       const t = s.tasks;
-      const rows = this.orm
+      const rows = await this.orm
         .select({ data: t.data })
         .from(t)
         .where(
@@ -301,8 +374,9 @@ export class SqliteStore implements StorageAdapter {
              AND entity IN (${entities.map(() => "?").join(",")})
            ORDER BY rank LIMIT ?`,
         )
-        .all(match, projectId, ...entities, clampLimit(opts.limit)) as SearchHit[];
-      return rows;
+        .all(match, projectId, ...entities, clampLimit(opts.limit));
+      // node:sqlite rows have a null prototype; callers get plain objects.
+      return rows.map((r) => ({ ...r }) as unknown as SearchHit);
     },
 
     listActivity: async (projectId: string, q: ActivityQuery = {}) => {
@@ -315,7 +389,7 @@ export class SqliteStore implements StorageAdapter {
         // Rows are appended inside the write transaction and writers queue, so rowid order is
         // commit order. Ids and `at` come from each process's clock and can disagree with it.
         // VACUUM may renumber rowids but keeps their order, and the cursor is looked up by id.
-        const cursor = this.orm
+        const cursor = await this.orm
           .select({ seq: sql<number>`rowid` })
           .from(a)
           .where(and(eq(a.id, q.after), eq(a.projectId, projectId)))
@@ -326,16 +400,16 @@ export class SqliteStore implements StorageAdapter {
           });
         }
         where.push(sql`rowid > ${cursor.seq}`);
-        return this.orm
+        const rows = await this.orm
           .select({ data: a.data })
           .from(a)
           .where(and(...where))
           .orderBy(sql`rowid`)
           .limit(clampLimit(q.limit))
-          .all()
-          .map((r) => JSON.parse(r.data) as Activity);
+          .all();
+        return rows.map((r) => JSON.parse(r.data) as Activity);
       }
-      const rows = this.orm
+      const rows = await this.orm
         .select({ data: a.data })
         .from(a)
         .where(and(...where))
@@ -346,7 +420,7 @@ export class SqliteStore implements StorageAdapter {
     },
 
     getActivity: async (id: string) => {
-      const row = this.orm
+      const row = await this.orm
         .select({ data: s.activity.data })
         .from(s.activity)
         .where(eq(s.activity.id, id))
@@ -361,12 +435,10 @@ export class SqliteStore implements StorageAdapter {
     insert: async (entity, record) => {
       try {
         const t: s.EntityTable = TABLES[entity];
-        this.orm.insert(t).values(toRow(entity, record)).run();
+        await this.orm.insert(t).values(toRow(entity, record)).run();
       } catch (err) {
-        if (
-          err instanceof Database.SqliteError &&
-          (err.code === "SQLITE_CONSTRAINT_PRIMARYKEY" || err.code === "SQLITE_CONSTRAINT_UNIQUE")
-        ) {
+        const code = sqliteErrcode(err);
+        if (code === SQLITE_CONSTRAINT_PRIMARYKEY || code === SQLITE_CONSTRAINT_UNIQUE) {
           throw new SatiError("CONFLICT", `${entity} ${record.id} already exists`);
         }
         throw err;
@@ -376,12 +448,13 @@ export class SqliteStore implements StorageAdapter {
     update: async (entity, record, expectedVersion) => {
       const t: s.EntityTable = TABLES[entity];
       const { id: _id, ...row } = toRow(entity, record);
-      const res = this.orm
+      const changed = await this.orm
         .update(t)
         .set(row)
         .where(and(eq(t.id, record.id), eq(t.version, expectedVersion)))
-        .run();
-      if (res.changes !== 1) {
+        .returning({ id: t.id })
+        .all();
+      if (changed.length !== 1) {
         throw new SatiError(
           "CONFLICT",
           `${entity} ${record.id} was changed by someone else (expected version ${expectedVersion})`,
@@ -391,7 +464,7 @@ export class SqliteStore implements StorageAdapter {
     },
 
     appendActivity: async (a) => {
-      this.orm
+      await this.orm
         .insert(s.activity)
         .values({
           id: a.id,

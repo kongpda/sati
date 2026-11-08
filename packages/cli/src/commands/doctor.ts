@@ -104,9 +104,9 @@ export default defineCommand({
           const checks: DoctorCheck[] = await doctorChecks(rt.ctx);
           const store = rt.ctx.store;
           if (store instanceof SqliteStore) {
-            const integrity = String(store.db.pragma("integrity_check", { simple: true }));
+            const integrity = await store.integrityCheck();
             checks.push({ name: "integrity", ok: integrity === "ok", detail: integrity });
-            if (args.vacuum) store.db.exec("VACUUM");
+            if (args.vacuum) await store.vacuum();
           }
           if (rt.location.mode !== "standalone") {
             checks.push(hooksCheck(rt.location.root));

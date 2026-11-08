@@ -1,11 +1,16 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { DatabaseSync } from "node:sqlite";
 import type { Note, Project, Task } from "@sati/core";
 
 export const NOW = "2026-11-03T12:00:00.000Z";
 export const ACTOR = "actr_01JC0000000000000000000000";
 export const PROJECT_ID = "prj_01JC0000000000000000000000";
+
+/** The first column of `PRAGMA <name>`. */
+export const pragma = (db: DatabaseSync, name: string) =>
+  Object.values(db.prepare(`PRAGMA ${name}`).get() ?? {})[0];
 
 export const tmpDb = () => join(mkdtempSync(join(tmpdir(), "sati-store-")), "sati.db");
 

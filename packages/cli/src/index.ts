@@ -3,6 +3,18 @@ import { defineCommand } from "citty";
 import pkg from "../package.json" with { type: "json" };
 import { main } from "./main.js";
 
+// The store needs node:sqlite as in Node 24.15 (ADR 0003). Commands load lazily, so this check
+// runs before anything imports it. `engines.node` is `>=major.minor`.
+const [needMajor = 0, needMinor = 0] = pkg.engines.node.slice(2).split(".").map(Number);
+const [major = 0, minor = 0] = process.versions.node.split(".").map(Number);
+if (major < needMajor || (major === needMajor && minor < needMinor)) {
+  process.stderr.write(
+    `error: ${CLI_NAME} needs Node.js ${needMajor}.${needMinor} or newer; this is ${process.version}.\n` +
+      `hint: Install Node.js ${needMajor} LTS or newer from https://nodejs.org, then run ${CLI_NAME} again.\n`,
+  );
+  process.exit(1);
+}
+
 // Subcommands load on demand so `sati --version` and `--help` stay fast.
 const lazy = (load: () => Promise<{ default: unknown }>) => () =>
   load().then((m) => m.default as ReturnType<typeof defineCommand>);

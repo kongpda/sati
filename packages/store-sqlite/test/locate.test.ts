@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { clearLocateCache, locateDb, SqliteStore } from "../src/index.js";
+import { pragma } from "./fixtures.js";
 
 // native: on Windows this expands 8.3 short names (RUNNER~1), as git does.
 const tmp = () => realpathSync.native(mkdtempSync(join(tmpdir(), "sati-locate-")));
@@ -88,7 +89,7 @@ describe("locateDb", () => {
     const repo = tmp();
     git(repo, "init", "-q");
     const store = await SqliteStore.open(locateDb(repo).path);
-    expect(store.db.pragma("journal_mode", { simple: true })).toBe("wal");
+    expect(pragma(store.db, "journal_mode")).toBe("wal");
     await store.close();
   });
 });

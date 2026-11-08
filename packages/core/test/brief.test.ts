@@ -124,6 +124,8 @@ describe("buildBrief", () => {
 
     // Every section present (shipped features, paths matching nothing, stale context): emptied
     // sections fold into one closing line rather than a heading each, so the cap still holds.
+    const files = [{ path: "src/m0/a.ts", blob: "old" }];
+    ctx.repo = { files: async () => [...files], head: async () => "h" };
     for (let i = 0; i < 10; i++) {
       await createFeature(ctx, {
         title: long(i),
@@ -133,11 +135,13 @@ describe("buildBrief", () => {
       });
       await putContext(ctx, { path: `src/m${i}`, summary: long(i) });
     }
-    ctx.repo = { files: async () => [{ path: "src/m0/a.ts", blob: "new" }], head: async () => "h" };
+    files[0] = { path: "src/m0/a.ts", blob: "new" };
+    expect((await buildBrief(ctx)).markdown).toContain("## Stale context");
     const full = await buildBrief({ ...long200, repo: ctx.repo }, { maxTokens: 200 });
     expect(full.tokens).toBeLessThanOrEqual(200);
     expect(full.markdown).toMatch(/\n… \d+ more items left out to keep this brief short\.\n$/u);
-  }, 20_000);
+    // About 8 s alone (900+ writes); the whole gate runs every package's tests at once.
+  }, 60_000);
 
   // PLAN: a feature glob that matches zero tracked files is reported. doctor repeats this in Phase 5.
   it("names feature globs that match no tracked file", async () => {

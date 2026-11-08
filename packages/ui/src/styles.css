@@ -274,6 +274,27 @@ textarea {
 .meta button {
   margin-left: 8px;
 }
+/* A card's meta: the text wraps as prose (labels clear of the date), select stays at the end. */
+.card .meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.card .meta-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.7;
+}
+.card .meta-text .badge {
+  margin-left: 6px;
+}
+.card .meta > button[aria-pressed] {
+  margin-left: 0;
+  flex: none;
+}
+.card .meta .waits {
+  white-space: nowrap;
+}
 .page {
   padding: 16px 18px 32px;
   overflow: auto;

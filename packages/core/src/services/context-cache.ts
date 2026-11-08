@@ -115,7 +115,19 @@ export async function putContext(ctx: ServiceContext, input: unknown): Promise<C
   });
 }
 
-/** Context entries with a `stale` flag, recomputed from the git index on every call. */
+/**
+ * Whether a card's files changed since it was saved: null when it cannot be told (no file list,
+ * or a card saved before its folder had one, which has no hash to compare).
+ */
+export function staleness(
+  contentHash: string,
+  path: string,
+  files: readonly RepoFile[] | undefined,
+) {
+  return files && contentHash !== "" ? moduleHash(path, files) !== contentHash : null;
+}
+
+/** Context entries with a `stale` flag, recomputed from the file list on every call. */
 export async function getContext(ctx: ServiceContext, input: unknown = {}): Promise<ContextView[]> {
   const { path } = parseInput(GetContextInput, input);
   const all = await ctx.store.read((r) => listAll(r, ctx, "context"));
@@ -123,6 +135,6 @@ export async function getContext(ctx: ServiceContext, input: unknown = {}): Prom
   if (entries.length === 0) return [];
   const files = ctx.repo ? await ctx.repo.files() : undefined;
   return entries
-    .map((e) => ({ ...e, stale: files ? moduleHash(e.path, files) !== e.contentHash : null }))
+    .map((e) => ({ ...e, stale: staleness(e.contentHash, e.path, files) }))
     .sort((a, b) => a.path.localeCompare(b.path));
 }

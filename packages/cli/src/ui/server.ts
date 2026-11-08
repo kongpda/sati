@@ -229,7 +229,8 @@ async function snapshot(rt: UiRuntime) {
     };
   });
   const { tasks, features, notes, decisions, actors, milestones, activity, locks } = loaded;
-  const files = ctx.repo ? (await ctx.repo.files()).map((f) => f.path) : [];
+  // Listing files walks the folder (or runs git); only feature paths need it.
+  const files = ctx.repo && features.length > 0 ? (await ctx.repo.files()).map((f) => f.path) : [];
   const featuresWithMatches = features.map((f) => {
     const matchCount =
       files.length === 0

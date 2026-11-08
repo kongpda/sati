@@ -182,7 +182,8 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
   });
 
   // A glob that matches nothing is a stale feature path. `sati doctor` repeats this in Phase 5.
-  const files = !short && ctx.repo ? (await ctx.repo.files()).map((f) => f.path) : [];
+  const withPaths = data.allFeatures.some((f) => f.paths.length > 0);
+  const files = !short && withPaths && ctx.repo ? (await ctx.repo.files()).map((f) => f.path) : [];
   const globMatchers = new Map<string, (file: string) => boolean>();
   const matcher = (glob: string) => {
     let m = globMatchers.get(glob);

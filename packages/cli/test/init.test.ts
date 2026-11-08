@@ -198,6 +198,36 @@ describe("sati init", () => {
     expect(list.code, list.stderr).toBe(0);
   });
 
+  // Trial: outside git a card never said its file changed, so a fresh agent gave old answers.
+  it("standalone mode marks a card stale when its file changes, without opening it", () => {
+    const dir = tempDir();
+    const home = tempDir();
+    const env = { HOME: home };
+    expect(run(dir, ["init", "--yes", "--kind", "general", "--tools", ""], env).code).toBe(0);
+    mkdirSync(join(dir, "venue"));
+    writeFileSync(join(dir, "venue", "quote.pdf"), "total 2,870");
+    writeFileSync(join(dir, "budget.xlsx"), "7,500");
+    const put = (path: string) =>
+      run(dir, ["card", "put", path, "--summary", "read", "--json"], env).code;
+    expect(put("venue")).toBe(0);
+    expect(put("budget.xlsx")).toBe(0);
+    const stale = () =>
+      Object.fromEntries(
+        (
+          JSON.parse(run(dir, ["card", "get", "--json"], env).stdout) as {
+            path: string;
+            stale: boolean | null;
+          }[]
+        ).map((c) => [c.path, c.stale]),
+      );
+    expect(stale()).toEqual({ venue: false, "budget.xlsx": false });
+    writeFileSync(join(dir, "venue", "quote.pdf"), "total 3,070 (revised)");
+    expect(stale()).toEqual({ venue: true, "budget.xlsx": false });
+    // Saving the card again after re-reading clears it.
+    expect(put("venue")).toBe(0);
+    expect(stale()).toEqual({ venue: false, "budget.xlsx": false });
+  });
+
   it("--kind general sets up a project without feature, lock or guard rules", () => {
     const dir = tempDir();
     const home = tempDir();

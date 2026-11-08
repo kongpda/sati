@@ -14,7 +14,9 @@ import {
   SatiError,
   type ServiceContext,
   type Task,
+  type TaskRow,
   takeOverTask,
+  taskRow,
   updateTask,
 } from "@sati/core";
 import { defineCommand } from "citty";
@@ -161,14 +163,18 @@ const ls = defineCommand({
     "due-by": { type: "string", description: "Only tasks due on or before YYYY-MM-DD" },
     assignee: { type: "string", description: "Only tasks assigned to this name, id or me" },
     ready: { type: "boolean", description: "Only unclaimed tasks whose dependencies are done" },
+    full: {
+      type: "boolean",
+      description: "Whole records with --json (body, completion); by default short rows",
+    },
     ...pagination,
     ...json,
   },
   run: ({ args }) =>
     execute(
       args.json,
-      async ({ ctx }) =>
-        listTasks(ctx, {
+      async ({ ctx }) => {
+        const tasks = await listTasks(ctx, {
           status: list(args.status),
           featureId: await ref(ctx, "feature", args.feature),
           milestoneId: await ref(ctx, "milestone", args.milestone),
@@ -178,8 +184,11 @@ const ls = defineCommand({
           ready: args.ready,
           limit: int(args.limit, "limit"),
           offset: int(args.offset, "offset"),
-        }),
-      (tasks: Task[]) =>
+        });
+        // Agents read this list often: short rows cost a fraction of the tokens.
+        return args.full ? tasks : tasks.map(taskRow);
+      },
+      (tasks: (Task | TaskRow)[]) =>
         rows(tasks, `No tasks. Create one with \`${CLI_NAME} task create "title"\`.`),
     ),
 });
@@ -431,7 +440,10 @@ const complete = defineCommand({
           token: await claimToken(ctx, taskId, args.token),
         });
       },
-      (t: Task) => `Completed ${row(t)}`,
+      (t: Task) =>
+        t.status === "review"
+          ? `Completed ${row(t)}\n  Waiting for a person to approve it (settings --review).`
+          : `Completed ${row(t)}`,
     ),
 });
 

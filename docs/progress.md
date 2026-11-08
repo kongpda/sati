@@ -1244,3 +1244,41 @@ notes only when the caller holds a task; handoffs stay out of it, as before.
   mutation that exports private records fails the UI test). The token-saving gate (20 questions on
   a real folder of Office and PDF files, at least 70% fewer tokens in a fresh session) needs a
   manual run with an agent tool's own usage report; it is part of the real-project trial.
+
+## 2026-11-08 — Real-project trial 1: an event office folder
+
+- Setup: the packed `@kongpda/sati` tarball installed globally (10 s), `sati init --kind general`
+  in a folder outside git (standalone, 0.3 s), and a sample Spring Fair folder of 9 real files
+  (3 PDF, 2 Word, 3 Excel, 1 PowerPoint). A person made the plan on the board from the Event
+  template with the fair's date (18 tasks, due dates counted back) in under a minute, recorded 3
+  decisions and 2 notes, and assigned an agent 20 committee questions (one about confidential pay).
+- Session 1: a fresh agent with only the CLI read all 9 files, answered 20/20 with sources, saved 9
+  cards (the HR one private) and a note listing 3 risks it found by comparing files.
+- Between sessions the venue quote was revised and 4 more stalls paid. Session 2, a fresh agent,
+  answered 20/20 correctly, re-reading only the 2 changed files: file reading went from about
+  16,200 to 4,400 tokens (73% fewer). It kept the confidential rate out of the answers.
+- Measured as tool output (characters / 4), not the agent tool's own usage report, which the
+  subagents do not expose; the Phase 8 gate still needs that report from a real agent tool.
+- Fixed from what the trial showed:
+  - Outside git a card could never tell its file had changed; session 2 found the 2 changes only by
+    comparing modified times itself. Standalone folders now list files by size and modified time
+    (`stat` only; sati still never opens them, skipping dot folders and `node_modules`, at most
+    20,000 files), so `stale` works there. A card saved before this has no hash and reads "not
+    checked", not "changed". Rules, workflow and tool descriptions now say to trust `stale`.
+  - Session 2 spent more tokens on sati than on the files: `task list --json` (42 KB) and
+    `card show --json` were mostly merge stamps. The CLI's `--json` and every MCP result now drop
+    `stamps`, and `task list` returns short rows unless `--full` (as MCP `task_list` already did):
+    42 KB → 7.6 KB here.
+  - Recall returned 14 records for "What does Menu B cost per head?", most sharing only "b" or
+    "per", including the private pay card. A question of four or more words now needs two shared
+    words for a partial match; that answer is now 2 records and 241 tokens.
+  - Both agents had to map MCP tool names to commands; both rules blocks now end with the CLI
+    command for each step. `task complete` says when the task waits for a person.
+  - Board: To do held all 18 template tasks as if each could start; a card now says "waits for
+    3 tasks". Due dates in another year show the year. Labels no longer touch the date, and select
+    sits at the card's end. A phone opens on the first column with tasks, not an empty Working on
+    it. A second plan with the same name now says what to do on the board too.
+- Still open from the trial: comments get `note_` ids (by design, documented in the glossary),
+  and `sourceSeen` stays free text; with staleness outside git it is now only for people.
+- PLAN "Try it on 3 real projects for 1 week" stays open: this was one simulated project in an
+  afternoon, with the owner's real folders still to come.

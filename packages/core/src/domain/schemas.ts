@@ -93,6 +93,13 @@ const base = {
   stamps: z.record(z.string().max(80), hlcStamp).optional(),
 };
 
+/**
+ * `JSON.stringify` replacer for what agents and scripts read: drops the per-field `stamps`, which
+ * only the merge driver uses and which can be half the size of a record.
+ */
+export const withoutStamps = (key: string, value: unknown): unknown =>
+  key === "stamps" ? undefined : value;
+
 export const MODES = ["git", "stealth", "standalone"] as const;
 export const Mode = z.enum(MODES);
 export type Mode = z.infer<typeof Mode>;

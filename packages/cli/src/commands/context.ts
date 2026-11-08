@@ -14,7 +14,7 @@ const state = (e: ContextView) =>
   e.stale === null
     ? e.sourceSeen
       ? `read at ${e.sourceSeen}`
-      : "no git"
+      : "not checked"
     : e.stale
       ? "STALE"
       : "fresh";
@@ -38,7 +38,7 @@ const render = (e: ContextView) => {
 };
 
 const get = defineCommand({
-  meta: { name: "get", description: "Show cards; in git, flags those whose files changed" },
+  meta: { name: "get", description: "Show cards, flagging STALE those whose files changed since" },
   args: {
     path: {
       type: "positional",
@@ -73,7 +73,7 @@ const put = defineCommand({
     tags: { type: "string", description: "Comma-separated tags" },
     seen: {
       type: "string",
-      description: "The file version you read (modified time or hash), for the next reader",
+      description: "The file version you read, such as its modified time 2026-11-08T04:01Z",
     },
     tokens: { type: "string", description: "About how many tokens reading the file took" },
     "key-files": { type: "string", description: "Comma-separated most important files" },

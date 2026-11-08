@@ -1,6 +1,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, api, COLUMNS, type Deletable, type Snapshot, type Task } from "./api.js";
+import {
+  ApiError,
+  api,
+  COLUMNS,
+  type Deletable,
+  phoneColumn,
+  type Snapshot,
+  type Task,
+} from "./api.js";
 import { Board, boardOrder } from "./board.js";
 import { Changes } from "./changes.js";
 import { NewTask } from "./forms.js";
@@ -56,9 +64,11 @@ export function App() {
   );
   const [filter, setFilter] = useState("");
   const [feature, setFeature] = useState("");
-  const [column, setColumn] = useState(() =>
-    window.matchMedia(PHONE).matches ? "in_progress" : "all",
+  // On a phone, null until the person picks a column: the board picks one that has tasks.
+  const [picked, setColumn] = useState<string | null>(() =>
+    window.matchMedia(PHONE).matches ? null : "all",
   );
+  const column = picked ?? phoneColumn(query.data?.tasks ?? []);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const [toast, setToastState] = useState<{ message: string; undo?: () => void } | null>(null);
@@ -84,7 +94,7 @@ export function App() {
   // breakpoint switches, or the board keeps a layout made for the other width.
   useEffect(() => {
     const phone = window.matchMedia(PHONE);
-    const onChange = () => setColumn(phone.matches ? "in_progress" : "all");
+    const onChange = () => setColumn(phone.matches ? null : "all");
     phone.addEventListener("change", onChange);
     return () => phone.removeEventListener("change", onChange);
   }, []);
@@ -517,6 +527,7 @@ export function App() {
             ) : (
               <Board
                 tasks={tasks}
+                allTasks={data?.tasks ?? []}
                 features={data?.features ?? []}
                 actors={data?.actors ?? []}
                 fresh={fresh}

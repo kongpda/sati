@@ -88,6 +88,15 @@ describe("context cache", () => {
     ]);
   });
 
+  // A card saved before its folder had a file list has no hash: "not checked", not "changed".
+  it("keeps stale null for a card saved without a file list once one appears", async () => {
+    const { ctx } = await setup();
+    await putContext(ctx, { path: "venue", summary: "Quotes" });
+    const later: ServiceContext = { ...ctx, repo: fakeRepo([{ path: "venue/a.pdf", blob: "1" }]) };
+    expect((await getContext(later))[0]?.stale).toBeNull();
+    expect((await buildBrief(later)).markdown).not.toContain("Stale context");
+  });
+
   it("rejects paths outside the repo and empty summaries", async () => {
     const { ctx } = await withRepo([]);
     await expect(putContext(ctx, { path: "../x", summary: "s" })).rejects.toMatchObject({

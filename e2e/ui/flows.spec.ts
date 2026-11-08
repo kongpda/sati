@@ -438,7 +438,7 @@ test("plans a task with a due date, an assignee and a checklist", async ({ page 
       assigneeIds: string[];
       checklist: { text: string; done: boolean }[];
     }[]
-  >("task", "list", "--assignee", "me");
+  >("task", "list", "--assignee", "me", "--full");
   expect(task).toMatchObject({
     dueDate: null,
     checklist: [
@@ -674,7 +674,8 @@ test("j and k step through the cards in board order and keep ?task= in step", as
   // On a phone (the switch follows a resize, not just the first load) only the chosen column.
   const choice = page.getByLabel("Column", { exact: true });
   await page.setViewportSize({ width: 375, height: 760 });
-  await expect(choice).toHaveValue("in_progress");
+  // A phone opens on one column (the first of Working on it, Waiting, To do, Backlog with tasks).
+  await expect(choice).not.toHaveValue("all");
   await choice.selectOption("todo");
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await at("j", todoAlpha);

@@ -25,6 +25,21 @@ describe("sati CLI", () => {
     expect(sati(dir, "task", "list").stderr).toContain("hint: Run `sati init`.");
   });
 
+  // Trial: `task list --json` and `show --json` were mostly merge stamps; agents read them often.
+  it("lists short task rows by default, whole records with --full, and never prints stamps", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = satiJson<Rec>(dir, "task", "create", "Book catering", "--body", "Menu A and B").data;
+    const [short] = satiJson<Record<string, unknown>[]>(dir, "task", "list").data;
+    expect(short).toMatchObject({ id: t.id, title: "Book catering", status: "todo" });
+    expect(short).not.toHaveProperty("body");
+    const [full] = satiJson<Record<string, unknown>[]>(dir, "task", "list", "--full").data;
+    expect(full).toMatchObject({ body: "Menu A and B" });
+    const shown =
+      sati(dir, "task", "show", t.id, "--json").stdout + sati(dir, "task", "show", t.id).stdout;
+    expect(full).not.toHaveProperty("stamps");
+    expect(shown).not.toContain("stamps");
+  });
+
   it("runs a task from creation to completion, gating the ready list on dependencies", async () => {
     const dir = await tempRepo({ init: true });
     const dep = satiJson<Rec>(dir, "task", "create", "Schema", "--labels", "db,core").data;

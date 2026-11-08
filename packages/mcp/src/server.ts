@@ -58,8 +58,8 @@ import {
   type StoredEntity,
   search,
   shortHandle,
-  type Task,
   type TemplateFile,
+  taskRow,
   UpdateFeatureInput,
   UpdateMilestoneInput,
   UpdateNoteInput,
@@ -69,6 +69,7 @@ import {
   updateNote,
   updateTask,
   WORKFLOW,
+  withoutStamps,
 } from "@sati/core";
 import { z } from "zod";
 import pkg from "../package.json" with { type: "json" };
@@ -153,38 +154,9 @@ async function recordLinks(ctx: ServiceContext, links: string[]): Promise<string
   );
 }
 
-/**
- * A task as a list row: what an agent needs to pick, filter or update it (version for
- * expectedVersion), with empty and unset fields left out. A full record carries the body,
- * completion and per-field stamps, several times the size; task_list asks for it with detail.
- */
-function taskRow(t: Task): Record<string, unknown> {
-  const row: Record<string, unknown> = {
-    id: t.id,
-    title: t.title,
-    status: t.status,
-    priority: t.priority,
-    version: t.version,
-  };
-  if (t.featureId) row.featureId = t.featureId;
-  if (t.milestoneId) row.milestoneId = t.milestoneId;
-  if (t.parentId) row.parentId = t.parentId;
-  if (t.dependsOn.length) row.dependsOn = t.dependsOn;
-  if (t.labels.length) row.labels = t.labels;
-  if (t.dueDate) row.dueDate = t.dueDate;
-  if (t.assigneeIds?.length) row.assigneeIds = t.assigneeIds;
-  if (t.claim) row.claim = { actorId: t.claim.actorId, leaseUntil: t.claim.leaseUntil };
-  if (t.checklist?.length) {
-    row.checklist = `${t.checklist.filter((c) => c.done).length}/${t.checklist.length}`;
-  }
-  if (t.reviewNote) row.reviewNote = t.reviewNote;
-  if (t.needsReview) row.needsReview = true;
-  return row;
-}
-
 /** Results go back as compact JSON: agents parse it fine and it costs fewer tokens. */
 function ok(value: unknown): CallToolResult {
-  return { content: [{ type: "text", text: JSON.stringify(value) }] };
+  return { content: [{ type: "text", text: JSON.stringify(value, withoutStamps) }] };
 }
 
 /** Domain errors become tool errors with a code and hint the agent can act on. */
@@ -375,7 +347,7 @@ function registerTools(
     "context_get",
     {
       description:
-        "Cards: what agents learned about files, folders and modules (summary, facts, tags, sourceSeen). Before opening a file, get its card; if the file is unchanged since sourceSeen (you check), use the card instead. In git, stale: true means the files changed; re-read, then context_put.",
+        "Cards: what agents learned about files, folders and modules (summary, facts, tags, sourceSeen). Before opening a file, get its card: stale: false means the file is unchanged since the card was saved, so use the card instead; stale: true means it changed: re-read it, then context_put.",
       inputSchema: GetContextInput,
       annotations: { readOnlyHint: true },
     },
@@ -409,7 +381,7 @@ function registerTools(
     "recall",
     {
       description:
-        "What do we know about X? One call returns the best cards, notes, decisions and open tasks for a question, with ids and sources, under 1,000 tokens. Answer from it; open a file only when its card is missing or the file changed since the card's sourceSeen.",
+        "What do we know about X? One call returns the best cards, notes, decisions and open tasks for a question, with ids and sources, under 1,000 tokens. Answer from it; open a file only when its card is missing or marked stale (the file changed since).",
       inputSchema: RecallInput,
       annotations: { readOnlyHint: true },
     },

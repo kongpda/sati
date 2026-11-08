@@ -45,8 +45,8 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
 - Ask first: `recall` with the question returns what people and agents already know (cards,
   notes, decisions, open tasks) in under 1,000 tokens. Answer from it when it is enough.
 - Cards are memory of files. sati never opens a file; you do. Before opening one, `context_get`
-  its path: if the file's modified time or hash still matches the card's `sourceSeen` (or, in
-  git, `stale` is false), use the card instead of reading the file.
+  its path: when `stale` is false the file is unchanged since the card was saved, so use the card
+  instead of reading the file. `stale: true` means it changed: read it again, then save the card.
 - After reading a file, `context_put` a card: a short summary, up to 50 facts worth quoting
   ("Hall B quote: $2,400, valid until 1 December"), tags, `sourceSeen` and `sourceTokens`. Never
   paste the file's contents. Writes holding a secret are refused.

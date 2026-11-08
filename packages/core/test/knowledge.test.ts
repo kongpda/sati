@@ -219,6 +219,30 @@ describe("recall", () => {
     expect(subjectWords("what is it")).toEqual(["what", "is", "it"]);
   });
 
+  // Trial: "What does Menu B cost per head?" brought back 14 records, most sharing only "b".
+  it("leaves out records that share only one word of a longer question", async () => {
+    const { ctx } = await setup();
+    await putContext(ctx, {
+      path: "catering/proposal.docx",
+      summary: "Catering proposal.",
+      facts: ["Menu B (vegetarian): USD 8.00 per head", "Menu A: USD 9.50 per head"],
+    });
+    await putContext(ctx, { path: "finance/budget.xlsx", summary: "Budget: catering line 2,200" });
+    await putContext(ctx, {
+      path: "marketing/brand.pdf",
+      summary: "Brand guide, page b of the kit",
+    });
+    await putContext(ctx, { path: "stalls/list.xlsx", summary: "Stall holders: 27 of 40 paid" });
+    const titles = async (question: string) =>
+      (await recall(ctx, { question })).items.map((i) => i.title).sort();
+    expect(await titles("What does Menu B cost per head?")).toEqual(["catering/proposal.docx"]);
+    // A question about two things still finds each of them.
+    expect(await titles("menu price per head and stall holders paid")).toEqual([
+      "catering/proposal.docx",
+      "stalls/list.xlsx",
+    ]);
+  });
+
   it("stays under the cap and says how many were left out", async () => {
     const { ctx } = await setup();
     for (let i = 0; i < 40; i++) {

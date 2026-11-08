@@ -363,9 +363,12 @@ export async function applyTemplate(
       (m) => m.title.toLowerCase() === title.toLowerCase(),
     );
     if (same) {
-      throw new SatiError("CONFLICT", `A plan named "${same.title}" already exists.`, {
-        hint: `Give this one another name, or add tasks to ${shortHandle(same.id)}.`,
-      });
+      // The board shows the message and drops a hint holding a command or id; agents get both.
+      throw new SatiError(
+        "CONFLICT",
+        `A plan named "${same.title}" already exists. Give this one another name.`,
+        { hint: `Or add tasks to the existing plan \`${shortHandle(same.id)}\`.` },
+      );
     }
     const milestone = await createMilestoneIn(w, ctx, milestoneInput);
     const created: Task[] = [];

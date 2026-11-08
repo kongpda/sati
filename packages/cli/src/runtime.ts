@@ -1,6 +1,14 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  type Dirent,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir, userInfo } from "node:os";
 import { dirname, join } from "node:path";
 import {
@@ -28,6 +36,7 @@ import {
   type StorageAdapter,
   type StoredEntity,
   systemClock,
+  withoutStamps,
 } from "@sati/core";
 import {
   connectStore,
@@ -131,6 +140,49 @@ export function gitRepoIndex(root: string): RepoIndex {
         return null; // no commits yet
       }
     },
+  };
+}
+
+/** A folder walk stops here, so a project made in a home folder cannot stall every command. */
+const FOLDER_FILES_CAP = 20_000;
+
+/**
+ * A standalone folder's files, for card staleness without git: each file's size and modified
+ * time from `stat`, so a changed file reads as changed and sati still never opens it. Dot
+ * folders (`.sati`, `.git`) and `node_modules` are skipped; the walk is sorted, so the same
+ * folder always gives the same list.
+ */
+export function folderIndex(root: string): RepoIndex {
+  return {
+    files: async () => {
+      const out: RepoFile[] = [];
+      const walk = (dir: string, prefix: string): void => {
+        let entries: Dirent[];
+        try {
+          entries = readdirSync(dir, { withFileTypes: true });
+        } catch {
+          return; // unreadable folder: its files simply have no version
+        }
+        entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+        for (const e of entries) {
+          if (out.length >= FOLDER_FILES_CAP) return;
+          if (e.name.startsWith(".") || e.name === "node_modules") continue;
+          const path = `${prefix}${e.name}`;
+          if (e.isDirectory()) walk(join(dir, e.name), `${path}/`);
+          else if (e.isFile()) {
+            try {
+              const st = statSync(join(dir, e.name));
+              out.push({ path, blob: `st:${st.size}:${Math.trunc(st.mtimeMs)}` });
+            } catch {
+              // vanished between readdir and stat
+            }
+          }
+        }
+      };
+      walk(root, "");
+      return out;
+    },
+    head: async () => null,
   };
 }
 
@@ -239,7 +291,8 @@ export async function openRuntime(cwd: string = process.cwd()): Promise<Runtime>
   const identity = actorIdentity({ env: process.env, worktree: location.root, user: osUser() });
   const actor = await ensureActor({ ...deps, projectId: project.id }, identity);
   const ctx: ServiceContext = { ...deps, projectId: project.id, actorId: actor.id };
-  if (location.mode !== "standalone") ctx.repo = gitRepoIndex(location.root);
+  ctx.repo =
+    location.mode === "standalone" ? folderIndex(location.root) : gitRepoIndex(location.root);
   return { ctx, project, actor, location };
 }
 
@@ -390,7 +443,7 @@ export async function output<T>(
 ): Promise<void> {
   try {
     const value = await fn();
-    const text = json ? JSON.stringify(value, null, 2) : render(value);
+    const text = json ? JSON.stringify(value, withoutStamps, 2) : render(value);
     // An empty rendering prints nothing at all (a quiet git hook), not a blank line.
     if (text !== "") process.stdout.write(`${text}\n`);
   } catch (err) {

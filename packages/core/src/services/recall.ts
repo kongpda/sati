@@ -5,7 +5,7 @@ import type { SearchableEntity, SearchHit } from "../ports/storage.js";
 import { estimateTokens } from "./brief.js";
 import { COMMENT_TAG } from "./comment.js";
 import { parseInput, type ServiceContext } from "./context.js";
-import { moduleHash } from "./context-cache.js";
+import { staleness } from "./context-cache.js";
 
 /** PLAN Phase 8: a recall answer stays under 1,000 tokens, so asking is cheaper than reading. */
 export const RECALL_TOKEN_CAP = 1_000;
@@ -23,7 +23,7 @@ const OPEN = new Set(["backlog", "todo", "in_progress", "review", "blocked"]);
  * without this list "what did the venue say" would rank every record holding "the".
  */
 const STOP = new Set(
-  "a an and are as at be by can could did do does for from had has have how i in is it its me my of on or our should so that the their them then there these they this to was we were what when where which who why will with would you your about any".split(
+  "a an and are as at be by can could did do does for from had has have how i in is it its me my of on or our per should so that the their them then there these they this to was we were what when where which who why will with would you your about any".split(
     " ",
   ),
 );
@@ -75,6 +75,36 @@ export function subjectWords(question: string): string[] {
   return kept.length > 0 ? kept : words;
 }
 
+/**
+ * Words a record matching only part of the question must share with it. A short question keeps
+ * any match; from four words on it takes two, so one stray word ("b" in "Menu B") does not
+ * bring a record in, while a question about two things still finds each of them.
+ */
+const needed = (words: readonly string[]) => (words.length >= 4 ? 2 : 1);
+
+/** The searchable text of a record, as the index holds it. */
+function textOf(record: ContextEntry | Note | Decision | Task): string {
+  if ("path" in record)
+    return [record.path, record.summary, ...(record.facts ?? []), ...(record.tags ?? [])].join(" ");
+  if ("decision" in record)
+    return [record.title, record.context, record.decision, record.consequences].join(" ");
+  if ("status" in record) return [record.title, record.body, ...record.labels].join(" ");
+  return [record.title, record.body, ...record.tags].join(" ");
+}
+
+/**
+ * How many question words a text holds, as whole words or word starts ("price" in "prices").
+ * One- and two-letter words must match exactly, so "b" matches "Menu B" but not "budget".
+ */
+function shared(words: readonly string[], text: string): number {
+  const tokens = text.toLowerCase().split(/[^\p{L}\p{N}\p{M}]+/u);
+  return words.filter((w) =>
+    tokens.some((t) =>
+      w.length <= 2 ? t === w : t.startsWith(w) || (t.length >= 4 && w.startsWith(t)),
+    ),
+  ).length;
+}
+
 /** Facts that mention a subject word come first, so the answer is usually the first fact. */
 function rankFacts(facts: readonly string[], words: readonly string[]): string[] {
   const score = (f: string) => words.filter((w) => f.toLowerCase().includes(w)).length;
@@ -98,10 +128,10 @@ export async function recall(ctx: ServiceContext, input: unknown): Promise<Recal
     const opts = { entities: KINDS, limit: CANDIDATES };
     // Records holding every subject word first, then those holding any, best first in each.
     const hits: SearchHit[] = [...(await r.search(ctx.projectId, query, opts))];
+    const all = new Set(hits.map((h) => h.id));
     if (hits.length < CANDIDATES) {
-      const seen = new Set(hits.map((h) => h.id));
       for (const h of await r.search(ctx.projectId, query, { ...opts, match: "any" })) {
-        if (!seen.has(h.id)) hits.push(h);
+        if (!all.has(h.id)) hits.push(h);
       }
     }
     const records: { hit: SearchHit; record: ContextEntry | Note | Decision | Task }[] = [];
@@ -109,6 +139,8 @@ export async function recall(ctx: ServiceContext, input: unknown): Promise<Recal
       const record = await r.get(hit.entity as (typeof KINDS)[number], hit.id);
       if (!record || record.deletedAt !== null) continue;
       if (hit.entity === "task" && !OPEN.has((record as Task).status)) continue;
+      // A record holding only one word of a longer question ("b", "per") is noise, not memory.
+      if (!all.has(hit.id) && shared(words, textOf(record)) < needed(words)) continue;
       records.push({ hit, record });
     }
     return records;
@@ -134,7 +166,7 @@ export async function recall(ctx: ServiceContext, input: unknown): Promise<Recal
         text: c.summary,
         facts: rankFacts(c.facts ?? [], words),
         sourceSeen: c.sourceSeen ?? null,
-        stale: files ? moduleHash(c.path, files) !== c.contentHash : null,
+        stale: staleness(c.contentHash, c.path, files),
       };
     }
     if (hit.entity === "decision") {

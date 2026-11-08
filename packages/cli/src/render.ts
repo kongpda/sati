@@ -18,7 +18,7 @@ export function rows(items: readonly Row[], empty: string): string {
   return items.length ? items.map(row).join("\n") : empty;
 }
 
-const SKIP = new Set(["projectId", "deletedAt"]);
+const SKIP = new Set(["projectId", "deletedAt", "stamps"]);
 
 /** `key: value` lines for one record, skipping empty values. */
 export function record(r: Row & Record<string, unknown>): string {

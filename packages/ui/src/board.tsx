@@ -18,6 +18,7 @@ import { capital, fullTime } from "./words.js";
 
 export function Board({
   tasks,
+  allTasks,
   features,
   actors,
   fresh,
@@ -29,6 +30,8 @@ export function Board({
   onMove,
 }: {
   tasks: Task[];
+  /** Every task, for which ones a card is waiting on. */
+  allTasks: Task[];
   features: Feature[];
   actors: Actor[];
   fresh: Set<string>;
@@ -41,6 +44,11 @@ export function Board({
 }) {
   const { featureName, columns } = boardColumns(tasks, features);
   const people = new Map(actors.map((a) => [a.id, a]));
+  // From every task, not only the filtered ones: a hidden task can still hold another one up.
+  const open = new Set(
+    allTasks.filter((t) => t.status !== "done" && t.status !== "cancelled").map((t) => t.id),
+  );
+  const waiting = (t: Task) => (t.dependsOn ?? []).filter((id) => open.has(id)).length;
   // A drag starts only after the pointer moves, so a plain click still opens the card.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -74,6 +82,7 @@ export function Board({
             rows={rows}
             featureName={features.length > 0 ? featureName : null}
             people={people}
+            waiting={waiting}
             fresh={fresh}
             selected={selected}
             onOpen={onOpen}
@@ -89,6 +98,7 @@ export function Board({
               task={dragged}
               feature={featureName(dragged.featureId)}
               people={people}
+              waiting={waiting(dragged)}
               fresh={false}
               selected={selected.has(dragged.id)}
             />
@@ -107,6 +117,7 @@ function Column({
   rows,
   featureName,
   people,
+  waiting,
   fresh,
   selected,
   onOpen,
@@ -121,6 +132,7 @@ function Column({
   /** null when there are no features: no lane headings, so no "No feature" in every column. */
   featureName: ((id: string | null) => string) | null;
   people: Map<string, Actor>;
+  waiting: (task: Task) => number;
   fresh: Set<string>;
   selected: Set<string>;
   onOpen: (id: string) => void;
@@ -178,6 +190,7 @@ function Column({
                   task={item.task}
                   feature={featureName?.(item.task.featureId) ?? ""}
                   people={people}
+                  waiting={waiting(item.task)}
                   fresh={fresh.has(item.task.id)}
                   selected={selected.has(item.task.id)}
                   onOpen={onOpen}
@@ -197,6 +210,7 @@ function Card({
   task,
   feature,
   people,
+  waiting,
   fresh,
   selected,
   onOpen,
@@ -206,6 +220,7 @@ function Card({
   task: Task;
   feature: string;
   people: Map<string, Actor>;
+  waiting: number;
   fresh: boolean;
   selected: boolean;
   onOpen: (id: string) => void;
@@ -236,6 +251,7 @@ function Card({
         task={task}
         feature={feature}
         people={people}
+        waiting={waiting}
         fresh={fresh}
         selected={selected}
         onReviewed={onReviewed}
@@ -250,6 +266,7 @@ function CardBody({
   task,
   feature,
   people,
+  waiting,
   fresh,
   selected,
   onToggle,
@@ -258,6 +275,8 @@ function CardBody({
   task: Task;
   feature: string;
   people: Map<string, Actor>;
+  /** Open tasks this one depends on. */
+  waiting: number;
   fresh: boolean;
   selected: boolean;
   onToggle?: (id: string) => void;
@@ -271,45 +290,54 @@ function CardBody({
     <>
       {onToggle ? null : <div className="title">{task.title}</div>}
       <div className="meta">
-        {fresh ? <span className="new-badge">new</span> : null}
-        <time dateTime={task.updatedAt} title={fullTime(task.updatedAt)}>
-          {ago(task.updatedAt)}
-        </time>
-        {feature ? ` · ${feature}` : ""}
-        {urgent ? ` · ${capital(task.priority)}` : ""}
-        {due ? (
-          <>
-            {" · "}
-            <time dateTime={task.dueDate ?? undefined} className={due.late ? "late" : undefined}>
-              {due.late ? `late, ${due.text}` : due.text}
-            </time>
-          </>
-        ) : null}
-        {steps.length ? ` · ${steps.filter((c) => c.done).length}/${steps.length} steps` : ""}
-        {(task.labels ?? []).map((l) => (
-          <span key={l} className="badge">
-            {l}
-          </span>
-        ))}
-        {assignees.length ? (
-          <span className="avatars">
-            {assignees.map((a) => (
-              <Avatar key={a.id} actor={a} label />
-            ))}
-          </span>
-        ) : null}
-        {onReviewed && task.needsReview ? (
-          <>
-            {" · edited in two places "}
-            <button
-              type="button"
-              aria-label={`${task.title} looks right after the merge`}
-              onClick={() => onReviewed(task.id)}
-            >
-              Looks right
-            </button>
-          </>
-        ) : null}
+        <span className="meta-text">
+          {fresh ? <span className="new-badge">new</span> : null}
+          <time dateTime={task.updatedAt} title={fullTime(task.updatedAt)}>
+            {ago(task.updatedAt)}
+          </time>
+          {feature ? ` · ${feature}` : ""}
+          {urgent ? ` · ${capital(task.priority)}` : ""}
+          {due ? (
+            <>
+              {" · "}
+              <time dateTime={task.dueDate ?? undefined} className={due.late ? "late" : undefined}>
+                {due.late ? `late, ${due.text}` : due.text}
+              </time>
+            </>
+          ) : null}
+          {steps.length ? ` · ${steps.filter((c) => c.done).length}/${steps.length} steps` : ""}
+          {/* A plan's later stages sit in To do from the start; say which ones cannot start yet. */}
+          {waiting > 0 && task.status === "todo" ? (
+            <span className="waits">
+              {" "}
+              · waits for {waiting === 1 ? "1 task" : `${waiting} tasks`}
+            </span>
+          ) : null}
+          {(task.labels ?? []).map((l) => (
+            <span key={l} className="badge">
+              {l}
+            </span>
+          ))}
+          {assignees.length ? (
+            <span className="avatars">
+              {assignees.map((a) => (
+                <Avatar key={a.id} actor={a} label />
+              ))}
+            </span>
+          ) : null}
+          {onReviewed && task.needsReview ? (
+            <>
+              {" · edited in two places "}
+              <button
+                type="button"
+                aria-label={`${task.title} looks right after the merge`}
+                onClick={() => onReviewed(task.id)}
+              >
+                Looks right
+              </button>
+            </>
+          ) : null}
+        </span>
         {onToggle ? (
           <button
             type="button"

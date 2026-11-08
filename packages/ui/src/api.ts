@@ -21,6 +21,8 @@ export interface Task {
   assigneeIds?: string[];
   checklist?: { text: string; done: boolean }[];
   labels?: string[];
+  /** Tasks that must be done first. */
+  dependsOn?: string[];
 }
 
 export interface Feature {
@@ -311,6 +313,15 @@ export const COLUMNS = [
   ["cancelled", "Cancelled"],
 ] as const;
 
+/**
+ * The column a phone opens on: the first with tasks of Working on it, Waiting for approval, To do
+ * and Backlog, so a new plan does not open on an empty column. Working on it when all are empty.
+ */
+export function phoneColumn(tasks: readonly { status: string }[]): string {
+  const order = ["in_progress", "review", "todo", "backlog"];
+  return order.find((s) => tasks.some((t) => t.status === s)) ?? "in_progress";
+}
+
 /** Today's calendar day in the reader's time zone, as YYYY-MM-DD. */
 export function today(now = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -328,7 +339,9 @@ export function dueLabel(
 ): { text: string; late: boolean } {
   const [y, m, d] = day.split("-").map(Number);
   const date = new Date(y ?? 0, (m ?? 1) - 1, d ?? 1);
-  const text = `due ${date.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}`;
+  // A plan often runs into next year, so the year shows whenever it is not this one.
+  const year = date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" as const };
+  const text = `due ${date.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short", ...year })}`;
   const open = status !== "done" && status !== "cancelled";
   return { text, late: open && day < today(now) };
 }

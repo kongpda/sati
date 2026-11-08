@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Snapshot, Task } from "../src/api.js";
+import { dueLabel, phoneColumn, type Snapshot, type Task } from "../src/api.js";
 import { myWork, weekEnd } from "../src/my-work.js";
 
 const you = "actr_you";
@@ -54,5 +54,21 @@ describe("myWork", () => {
     expect(titles(lists.assigned)).toEqual(["mine, Friday", "mine, undated"]);
     expect(titles(lists.due)).toEqual(["late, theirs", "Sunday"]);
     expect(lists.end).toBe("2026-11-08");
+  });
+});
+
+describe("board words", () => {
+  // Trial: a plan made in November had every due date in next year, shown without the year.
+  it("shows the year on a due date in another year", () => {
+    const now = new Date(2026, 10, 8);
+    expect(dueLabel("2026-11-20", "todo", now).text).not.toMatch(/2026/u);
+    expect(dueLabel("2027-01-23", "todo", now).text).toMatch(/2027/u);
+  });
+
+  // Trial: a new plan opened on an empty Working on it column on a phone.
+  it("opens a phone on the first column with tasks", () => {
+    expect(phoneColumn([{ status: "todo" }, { status: "backlog" }])).toBe("todo");
+    expect(phoneColumn([{ status: "todo" }, { status: "review" }])).toBe("review");
+    expect(phoneColumn([{ status: "done" }])).toBe("in_progress");
   });
 });

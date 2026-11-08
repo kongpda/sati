@@ -616,3 +616,54 @@ async function checkParent(
     current = (await mustGet(r, ctx, "task", current)).parentId;
   }
 }
+
+/** A task as a list row; see `taskRow`. */
+export type TaskRow = Pick<Task, "id" | "title" | "status" | "priority" | "version"> &
+  Partial<
+    Pick<
+      Task,
+      | "featureId"
+      | "milestoneId"
+      | "parentId"
+      | "dependsOn"
+      | "labels"
+      | "dueDate"
+      | "assigneeIds"
+      | "reviewNote"
+      | "needsReview"
+    >
+  > & {
+    claim?: { actorId: string; leaseUntil: string };
+    /** Steps done of all, as "2/5". */
+    checklist?: string;
+  };
+
+/**
+ * A task as a list row: what an agent needs to pick, filter or update it (version for
+ * expectedVersion), with empty and unset fields left out. A full record carries the body,
+ * completion and per-field stamps, several times the size; MCP `task_list` asks for it with
+ * `detail: "full"`, the CLI with `--full`.
+ */
+export function taskRow(t: Task): TaskRow {
+  const row: TaskRow = {
+    id: t.id,
+    title: t.title,
+    status: t.status,
+    priority: t.priority,
+    version: t.version,
+  };
+  if (t.featureId) row.featureId = t.featureId;
+  if (t.milestoneId) row.milestoneId = t.milestoneId;
+  if (t.parentId) row.parentId = t.parentId;
+  if (t.dependsOn.length) row.dependsOn = t.dependsOn;
+  if (t.labels.length) row.labels = t.labels;
+  if (t.dueDate) row.dueDate = t.dueDate;
+  if (t.assigneeIds?.length) row.assigneeIds = t.assigneeIds;
+  if (t.claim) row.claim = { actorId: t.claim.actorId, leaseUntil: t.claim.leaseUntil };
+  if (t.checklist?.length) {
+    row.checklist = `${t.checklist.filter((c) => c.done).length}/${t.checklist.length}`;
+  }
+  if (t.reviewNote) row.reviewNote = t.reviewNote;
+  if (t.needsReview) row.needsReview = true;
+  return row;
+}

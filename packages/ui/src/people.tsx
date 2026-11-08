@@ -14,6 +14,9 @@ export function personName(actor: Pick<Actor, "name" | "kind" | "displayName">):
   return actor.name.split("@")[0] || actor.name;
 }
 
+/** Built once: a Segmenter is costly to make, and initials render on every card. */
+const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
 /** First letters (whole graphemes, so Khmer clusters stay intact) of the first two words. */
 export function initialsOf(actor: Pick<Actor, "name" | "kind" | "displayName" | "initials">) {
   if (actor.initials) return actor.initials;
@@ -22,8 +25,7 @@ export function initialsOf(actor: Pick<Actor, "name" | "kind" | "displayName" | 
       ? personName(actor)
       : (actor.name.split("@")[0] ?? "");
   const words = base.split(/[\s._-]+/u).filter(Boolean);
-  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
-  const first = (w: string) => segmenter.segment(w)[Symbol.iterator]().next().value?.segment ?? "";
+  const first = (w: string) => GRAPHEMES.segment(w)[Symbol.iterator]().next().value?.segment ?? "";
   return words.slice(0, 2).map(first).join("").toLocaleUpperCase();
 }
 

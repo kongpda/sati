@@ -359,6 +359,19 @@ export function today(now = new Date()): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
+/** "Fri 4 Dec", for due days and near times; built once, since a formatter is costly to make. */
+export const SHORT_DAY = new Intl.DateTimeFormat(undefined, {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+});
+const SHORT_DAY_YEAR = new Intl.DateTimeFormat(undefined, {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
 /**
  * A due day in the reader's words, for example "due Fri 4 Dec", and whether it has passed.
  * The date has no zone ("by Friday"), so it is read as a local day, never shifted by UTC.
@@ -371,8 +384,7 @@ export function dueLabel(
   const [y, m, d] = day.split("-").map(Number);
   const date = new Date(y ?? 0, (m ?? 1) - 1, d ?? 1);
   // A plan often runs into next year, so the year shows whenever it is not this one.
-  const year = date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" as const };
-  const text = `due ${date.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short", ...year })}`;
+  const text = `due ${(date.getFullYear() === now.getFullYear() ? SHORT_DAY : SHORT_DAY_YEAR).format(date)}`;
   const open = status !== "done" && status !== "cancelled";
   return { text, late: open && day < today(now) };
 }

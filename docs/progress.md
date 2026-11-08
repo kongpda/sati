@@ -1478,3 +1478,11 @@ Measured on the 50,000-record bench project in this orb (25,000 tasks, 25,000 no
 - Byte caps apply to new text only. Stored records keep the older 100,000-character cap, so a
   record written before the byte cap (40,000 Khmer characters is 120 KB) still imports and stays
   editable instead of failing every import.
+
+### Board scroll speed (2026-11-08)
+
+- Date formatters (`Intl.DateTimeFormat`) and the grapheme `Intl.Segmenter` are built once
+  instead of per card render; cards are memoised; lane sorting uses one shared `Intl.Collator`.
+- 2,000-card scroll with vsync uncapped: 67–103 fps before, 122–211 fps after; script time per
+  240-frame scroll fell from about 2.3 s to 0.6 s. The vsync-capped test still reads about 47 fps
+  in this orb's headless Chromium (floor 55), so the Phase 4 gate stays open for CI to judge.

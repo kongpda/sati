@@ -1,4 +1,4 @@
-import { ApiError, COLUMNS } from "./api.js";
+import { ApiError, COLUMNS, SHORT_DAY } from "./api.js";
 
 /*
  * The words people read in the board. The CLI and MCP keep their own terms (`in_progress`,
@@ -72,29 +72,32 @@ export function activityWords(verb: string, entity: string, diff: Record<string,
   }
 }
 
+// `toLocaleString` with options builds a new formatter on every call. On a large board that was
+// a third of each scroll frame (every card's tooltip), so these are built once, in the reader's
+// own locale.
+const CLOCK = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
+const FULL = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
+const DAY = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", year: "numeric" });
+
 /** A clock time in the reader's zone and their own 12 or 24 hour style; the day if not today. */
 export function untilTime(iso: string, now = new Date()): string {
   const at = new Date(iso);
-  const time = at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const time = CLOCK.format(at);
   if (at.toDateString() === now.toDateString()) return time;
-  return `${at.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })} ${time}`;
+  return `${SHORT_DAY.format(at)} ${time}`;
 }
 
 /** The full local date and time, for tooltips; never the raw ISO string. */
 export function fullTime(iso: string): string {
   const at = new Date(iso);
   if (Number.isNaN(at.getTime())) return iso;
-  return at.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+  return FULL.format(at);
 }
 
 /** A calendar day (YYYY-MM-DD, no zone) as the reader writes dates, read as a local day. */
 export function dayWords(day: string): string {
   const [y, m, d] = day.split("-").map(Number);
-  return new Date(y ?? 0, (m ?? 1) - 1, d ?? 1).toLocaleDateString([], {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return DAY.format(new Date(y ?? 0, (m ?? 1) - 1, d ?? 1));
 }
 
 /**

@@ -11,7 +11,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { type Actor, ago, COLUMNS, dueLabel, type Feature, type Task, waitingOn } from "./api.js";
 import { Avatar } from "./people.js";
 import { capital, fullTime } from "./words.js";
@@ -232,7 +232,8 @@ function Column({
   );
 }
 
-function Card({
+/** Memoised: each scroll frame re-renders the column, and cards whose props are unchanged skip it. */
+const Card = memo(function Card({
   task,
   feature,
   people,
@@ -292,7 +293,7 @@ function Card({
       />
     </div>
   );
-}
+});
 
 /** The meta line. Without the handlers it is the plain copy shown while dragging. */
 function CardBody({
@@ -396,6 +397,9 @@ function CardBody({
   );
 }
 
+/** One collator for every lane sort; `localeCompare` sets one up on each call. */
+const COLLATOR = new Intl.Collator();
+
 type LaneRow = { kind: "lane"; key: string; title: string } | { kind: "task"; task: Task };
 
 /** One function for the board's layout, so the board and j/k agree on the order. */
@@ -428,7 +432,7 @@ function laneRows(tasks: Task[], featureName: (id: string | null) => string): La
     const left = featureName(a.featureId);
     const right = featureName(b.featureId);
     if (!left !== !right) return left ? -1 : 1;
-    return left.localeCompare(right);
+    return COLLATOR.compare(left, right);
   });
   const rows: LaneRow[] = [];
   let last = "\0";

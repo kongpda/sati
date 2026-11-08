@@ -1,4 +1,5 @@
 {
+  "blockedReason": null,
   "body": "Undo safety, subtask cycles, deleted deps, Bash guard bypasses, settings flag, brace globs, merge needsReview, UI server JSON errors, secret scanner, UI live updates, task panel, shortcuts, review approval, markdown.",
   "completion": {
     "completedAt": "2026-11-07T04:06:10.660Z",
@@ -34,14 +35,17 @@
   "id": "tsk_01M6T24CTXYS1M5F16EWCNKT1X",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-07T03:51:42.688Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "blockedReason": "2026-11-08T16:44:35.469Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "claim": "2026-11-07T04:06:10.662Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
     "completion": "2026-11-07T04:06:10.662Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "status": "2026-11-07T04:06:10.662Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+    "reviewNote": "2026-11-08T16:44:35.469Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:44:35.469Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3"
   },
-  "status": "review",
+  "status": "done",
   "title": "Fix bugs found in the 2026-11-07 deep review",
-  "updatedAt": "2026-11-07T04:06:10.665Z",
-  "version": 3
+  "updatedAt": "2026-11-08T16:44:35.473Z",
+  "version": 4
 }

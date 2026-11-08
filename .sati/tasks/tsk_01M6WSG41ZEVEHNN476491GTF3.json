@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "9b7dcf8cb5d1bec56fc770292e67f9efe9787250",
     "branch": "main",
     "commit": "7d91d66302fc4ffffa6fa3f5b2e2bed428083be6",
     "completedAt": "2026-11-08T05:21:59.597Z",
@@ -21,17 +23,20 @@
   "id": "tsk_01M6WSG41ZEVEHNN476491GTF3",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-08T05:18:33.028Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "blockedReason": "2026-11-08T16:44:38.114Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "branch": "2026-11-08T05:18:41.988Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
     "claim": "2026-11-08T05:21:59.611Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
-    "completion": "2026-11-08T05:21:59.611Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
-    "status": "2026-11-08T05:21:59.611Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "completion": "2026-11-08T16:44:38.114Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "reviewNote": "2026-11-08T16:44:38.114Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:44:38.114Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "worktree": "2026-11-08T05:18:41.988Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX"
   },
-  "status": "review",
+  "status": "done",
   "title": "Phase 5b: core fixes (in_progress claim, import link checks, byte limits, brief cap)",
-  "updatedAt": "2026-11-08T05:21:59.617Z",
-  "version": 3,
+  "updatedAt": "2026-11-08T16:44:38.118Z",
+  "version": 4,
   "worktree": "/home/user/workspace/repo"
 }

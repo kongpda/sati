@@ -1,4 +1,5 @@
 {
+  "blockedReason": null,
   "completion": {
     "completedAt": "2026-11-07T10:25:53.040Z",
     "completedBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
@@ -35,14 +36,17 @@
   "id": "tsk_01M6TRP4JF7P5TPY0KM7MRDE68",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-07T10:25:52.722Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "blockedReason": "2026-11-08T16:44:37.261Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "claim": "2026-11-07T10:25:53.041Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
     "completion": "2026-11-07T10:25:53.041Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "status": "2026-11-07T10:25:53.041Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+    "reviewNote": "2026-11-08T16:44:37.261Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:44:37.261Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3"
   },
-  "status": "review",
+  "status": "done",
   "title": "Review: bloat and bugs in the recent work",
-  "updatedAt": "2026-11-07T10:25:53.045Z",
-  "version": 3
+  "updatedAt": "2026-11-08T16:44:37.265Z",
+  "version": 4
 }

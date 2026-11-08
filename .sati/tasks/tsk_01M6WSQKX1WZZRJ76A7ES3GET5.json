@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "9b7dcf8cb5d1bec56fc770292e67f9efe9787250",
     "branch": "main",
     "commit": "80e67fbec5c55efb565ae1906e3c6215cfa42080",
     "completedAt": "2026-11-08T05:26:33.168Z",
@@ -18,17 +20,20 @@
   "id": "tsk_01M6WSQKX1WZZRJ76A7ES3GET5",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-08T05:22:38.631Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "blockedReason": "2026-11-08T16:44:38.253Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "branch": "2026-11-08T05:22:38.980Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
     "claim": "2026-11-08T05:26:33.172Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
-    "completion": "2026-11-08T05:26:33.172Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
-    "status": "2026-11-08T05:26:33.172Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "completion": "2026-11-08T16:44:38.253Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "reviewNote": "2026-11-08T16:44:38.253Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:44:38.253Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "worktree": "2026-11-08T05:22:38.980Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX"
   },
-  "status": "review",
+  "status": "done",
   "title": "Phase 5b: MCP feature_upsert create schema and absolute feature_check paths",
-  "updatedAt": "2026-11-08T05:26:33.179Z",
-  "version": 3,
+  "updatedAt": "2026-11-08T16:44:38.257Z",
+  "version": 4,
   "worktree": "/home/user/workspace/repo"
 }

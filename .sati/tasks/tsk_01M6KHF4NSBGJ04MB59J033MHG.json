@@ -1,4 +1,5 @@
 {
+  "blockedReason": null,
   "completion": {
     "completedAt": "2026-11-06T17:57:11.135Z",
     "completedBy": "actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
@@ -19,14 +20,17 @@
   "id": "tsk_01M6KHF4NSBGJ04MB59J033MHG",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-04T15:05:02.395Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "blockedReason": "2026-11-08T16:44:35.334Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "claim": "2026-11-06T17:57:11.137Z#000000#actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
     "completion": "2026-11-06T17:57:11.137Z#000000#actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE",
-    "status": "2026-11-06T17:57:11.137Z#000000#actr_01M6GKBMQ3BFM8DA5ACPJ1SJBE"
+    "reviewNote": "2026-11-08T16:44:35.334Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:44:35.334Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3"
   },
-  "status": "review",
+  "status": "done",
   "title": "Implement Phase 3 four-worktree coordination gate",
-  "updatedAt": "2026-11-06T17:57:11.140Z",
-  "version": 7
+  "updatedAt": "2026-11-08T16:44:35.338Z",
+  "version": 8
 }

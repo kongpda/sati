@@ -1,4 +1,5 @@
 {
+  "blockedReason": null,
   "completion": {
     "completedAt": "2026-11-07T07:27:31.244Z",
     "completedBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
@@ -30,14 +31,17 @@
   "id": "tsk_01M6TECKASQVTVCS7ABS3GC00K",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-07T07:25:54.396Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "blockedReason": "2026-11-08T16:44:36.547Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "claim": "2026-11-07T07:27:31.246Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
     "completion": "2026-11-07T07:27:31.246Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "status": "2026-11-07T07:27:31.246Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+    "reviewNote": "2026-11-08T16:44:36.547Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:44:36.547Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3"
   },
-  "status": "review",
+  "status": "done",
   "title": "Phase 7a: People display names, initials and colours",
-  "updatedAt": "2026-11-07T07:27:31.250Z",
-  "version": 3
+  "updatedAt": "2026-11-08T16:44:36.551Z",
+  "version": 4
 }

@@ -1,4 +1,5 @@
 {
+  "blockedReason": null,
   "body": "Settings kind code|general (written only when general). General hides Features, file reservations, the guard and the Agents page in the UI, and the feature and lock tools in MCP. init --kind, settings --kind, UI Settings.",
   "completion": {
     "completedAt": "2026-11-07T08:16:47.960Z",
@@ -37,14 +38,17 @@
   "id": "tsk_01M6TGNN1AYDGCF8MR5QGK2E69",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-07T08:05:48.207Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "blockedReason": "2026-11-08T16:44:36.833Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "claim": "2026-11-07T08:16:47.962Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
     "completion": "2026-11-07T08:16:47.962Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "status": "2026-11-07T08:16:47.962Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+    "reviewNote": "2026-11-08T16:44:36.833Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:44:36.833Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3"
   },
-  "status": "review",
+  "status": "done",
   "title": "Phase 7a: project kind code or general",
-  "updatedAt": "2026-11-07T08:16:47.966Z",
-  "version": 3
+  "updatedAt": "2026-11-08T16:44:36.837Z",
+  "version": 4
 }

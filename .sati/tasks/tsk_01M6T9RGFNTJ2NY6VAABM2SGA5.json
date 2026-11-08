@@ -1,4 +1,5 @@
 {
+  "blockedReason": null,
   "completion": {
     "completedAt": "2026-11-07T06:06:32.924Z",
     "completedBy": "actr_01M6T236RQYJH3YTDMJC6YS2TR",
@@ -23,14 +24,17 @@
   "id": "tsk_01M6T9RGFNTJ2NY6VAABM2SGA5",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-07T06:05:01.816Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
+    "blockedReason": "2026-11-08T16:44:35.944Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "claim": "2026-11-07T06:06:32.926Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
     "completion": "2026-11-07T06:06:32.926Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR",
-    "status": "2026-11-07T06:06:32.926Z#000000#actr_01M6T236RQYJH3YTDMJC6YS2TR"
+    "reviewNote": "2026-11-08T16:44:35.944Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:44:35.944Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3"
   },
-  "status": "review",
+  "status": "done",
   "title": "Phase 7a: note edit, pin, tags and delete with Undo in the UI",
-  "updatedAt": "2026-11-07T06:06:32.930Z",
-  "version": 3
+  "updatedAt": "2026-11-08T16:44:35.948Z",
+  "version": 4
 }

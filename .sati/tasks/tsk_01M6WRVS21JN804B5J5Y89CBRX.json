@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "9b7dcf8cb5d1bec56fc770292e67f9efe9787250",
     "branch": "main",
     "commit": "4156f3d9e9a67390eaf2b4c14fef79ec5a6cb253",
     "completedAt": "2026-11-08T05:07:26.995Z",
@@ -18,17 +20,20 @@
   "id": "tsk_01M6WRVS21JN804B5J5Y89CBRX",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-08T05:07:26.415Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "blockedReason": "2026-11-08T16:44:37.971Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "branch": "2026-11-08T05:07:26.706Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
     "claim": "2026-11-08T05:07:26.999Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
-    "completion": "2026-11-08T05:07:26.999Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
-    "status": "2026-11-08T05:07:26.999Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "completion": "2026-11-08T16:44:37.971Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "reviewNote": "2026-11-08T16:44:37.971Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:44:37.971Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "worktree": "2026-11-08T05:07:26.706Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX"
   },
-  "status": "review",
+  "status": "done",
   "title": "Bundle the CLI's dependencies; CI checks the packed install and Node 24.15",
-  "updatedAt": "2026-11-08T05:07:27.014Z",
-  "version": 3,
+  "updatedAt": "2026-11-08T16:44:37.975Z",
+  "version": 4,
   "worktree": "/home/user/workspace/repo"
 }

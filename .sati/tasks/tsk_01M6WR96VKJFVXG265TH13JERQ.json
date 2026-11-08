@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "9b7dcf8cb5d1bec56fc770292e67f9efe9787250",
     "branch": "main",
     "commit": "f4e824e2b89bd840e1ffc901d8b22a01ea15c01b",
     "completedAt": "2026-11-08T04:57:18.491Z",
@@ -19,17 +21,20 @@
   "id": "tsk_01M6WR96VKJFVXG265TH13JERQ",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-08T04:57:17.948Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "blockedReason": "2026-11-08T16:44:37.829Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "branch": "2026-11-08T04:57:18.224Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
     "claim": "2026-11-08T04:57:18.495Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
-    "completion": "2026-11-08T04:57:18.495Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
-    "status": "2026-11-08T04:57:18.495Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "completion": "2026-11-08T16:44:37.829Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "reviewNote": "2026-11-08T16:44:37.829Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:44:37.829Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "worktree": "2026-11-08T04:57:18.224Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX"
   },
-  "status": "review",
+  "status": "done",
   "title": "Task panel leaves room for the board; choice lists scroll under their legend",
-  "updatedAt": "2026-11-08T04:57:18.507Z",
-  "version": 3,
+  "updatedAt": "2026-11-08T16:44:37.832Z",
+  "version": 4,
   "worktree": "/home/user/workspace/repo"
 }

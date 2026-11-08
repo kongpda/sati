@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "9b7dcf8cb5d1bec56fc770292e67f9efe9787250",
     "branch": "main",
     "commit": "26cfa533a6045c586f059aa7bb22bc02c13da769",
     "completedAt": "2026-11-08T05:47:22.184Z",
@@ -20,17 +22,20 @@
   "id": "tsk_01M6WTEKVJ9ZP9GG39S5HQ9PC1",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-08T05:35:12.247Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "blockedReason": "2026-11-08T16:44:38.529Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "branch": "2026-11-08T05:35:12.559Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
     "claim": "2026-11-08T05:47:22.197Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
-    "completion": "2026-11-08T05:47:22.197Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
-    "status": "2026-11-08T05:47:22.197Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX",
+    "completion": "2026-11-08T16:44:38.529Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "reviewNote": "2026-11-08T16:44:38.529Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
+    "status": "2026-11-08T16:44:38.529Z#000000#actr_01M6XKM4GDZ7AA598EJYPDR5A3",
     "worktree": "2026-11-08T05:35:12.559Z#000000#actr_01M6WQBKWF82CNPQ1B97ZQEWZX"
   },
-  "status": "review",
+  "status": "done",
   "title": "Phase 5b: UI keyboard order, feature paths edit, stale session page, 375 px layout",
-  "updatedAt": "2026-11-08T05:47:22.204Z",
-  "version": 3,
+  "updatedAt": "2026-11-08T16:44:38.533Z",
+  "version": 4,
   "worktree": "/home/user/workspace/repo"
 }

@@ -13,7 +13,8 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 
 ## Start
 - Call \`${CLI_NAME}_brief\` first. It lists your claimed task, ready tasks, what others changed since
-  your last session and recent decisions.
+  your last session and recent decisions. If the session already opened with the brief (a
+  session-start hook printed it), do not call it again.
 - Do not crawl the repo to rediscover what the brief already tells you.
 
 ## Pick work
@@ -27,6 +28,12 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
   that task. If a write fails with a stale token, your lease ran out and another agent took the
   task: stop work on it and re-read it before doing anything else.
 - New work: \`task_create\`. It returns likely duplicates; reuse one instead of adding another.
+  Set \`effort\`: \`light\` for mechanical work (a rename, a typo, a one-file edit, a doc tweak),
+  \`deep\` for design or cross-cutting work; leave it unset for the rest (\`standard\`).
+- A \`light\` task you claimed can go to a subagent on a small, cheaper model (in Claude Code, the
+  Agent tool with \`model: "haiku"\`). Keep the claim, give the subagent the task text and the
+  files, check its result, then \`task_complete\` yourself. \`task_list\` with \`effort: "light"\`
+  finds such tasks.
 - A release or launch plan: \`roadmap_upsert\` with \`template: "release"\` (or one in
   \`.${CLI_NAME}/templates/\`) and \`targetDate\` creates the milestone and its tasks in stages.
 
@@ -89,7 +96,8 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 
 ## Start
 - Call \`${CLI_NAME}_brief\` first. It lists your claimed task, ready tasks, what others changed since
-  your last session and recent decisions.
+  your last session and recent decisions. If the session already opened with the brief (a
+  session-start hook printed it), do not call it again.
 - Use \`search\` and \`note_get\` before asking the person for something already written down.
 
 ## Pick work
@@ -101,7 +109,10 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 - \`task_claim\` returns \`claim.token\`. Pass it to every \`task_update\` and \`task_complete\` on
   that task. If a write fails with a stale token, someone took the task over: stop and re-read it.
 - New work: \`task_create\`, with \`milestoneId\` for the plan it belongs to. It returns likely
-  duplicates; reuse one instead of adding another. \`subtasks[]\` splits it into steps.
+  duplicates; reuse one instead of adding another. \`subtasks[]\` splits it into steps. Set
+  \`effort: "light"\` for quick, mechanical todos and \`"deep"\` for ones that need careful thought.
+- A \`light\` task you claimed can go to a subagent on a small, cheaper model. Keep the claim,
+  check its result, then \`task_complete\` yourself.
 - Plans: \`roadmap_upsert\` creates or updates a milestone (goal, target date, status). With
   \`template\` (\`event\`, \`campaign\`, \`release\`, or one in \`.${CLI_NAME}/templates/\`) it creates the whole
   plan: tasks in stages, each stage waiting for the one before, due dates counted back from

@@ -218,6 +218,14 @@ export const PRIORITIES = ["low", "medium", "high", "urgent"] as const;
 export const Priority = z.enum(PRIORITIES);
 export type Priority = z.infer<typeof Priority>;
 
+/**
+ * How much thinking a task needs, so an agent can pick a model for it: `light` work (a rename,
+ * a typo, a one-file edit) can go to a subagent on a small model. Unset means `standard`.
+ */
+export const EFFORTS = ["light", "standard", "deep"] as const;
+export const Effort = z.enum(EFFORTS);
+export type Effort = z.infer<typeof Effort>;
+
 export const Completion = z.strictObject({
   summary: z.string().trim().min(1).max(LIMITS.shortText),
   /**
@@ -275,6 +283,8 @@ export const TaskShape = z.strictObject({
   checklist: z.array(ChecklistItem).max(100).optional(),
   /** The plan it belongs to, for tasks without a feature (a general project has none). */
   milestoneId: MilestoneId.nullable().optional(),
+  /** How much thinking it needs; unset is `standard`. See `EFFORTS`. */
+  effort: Effort.nullable().optional(),
 });
 
 export const Task = TaskShape.refine((t) => t.status !== "done" || t.completion !== null, {

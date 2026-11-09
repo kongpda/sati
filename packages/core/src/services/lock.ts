@@ -69,7 +69,7 @@ export interface AcquireLockResult {
 
 const allLocks = (r: StorageReader, ctx: ServiceContext) => listAll(r, ctx, "lock");
 
-export const isLive = (l: Lock, now: string) => l.leaseUntil > now;
+export const isLive = (l: Pick<Lock, "leaseUntil">, now: string) => l.leaseUntil > now;
 
 /** Other actors' live locks. */
 export async function othersLiveLocks(r: StorageReader, ctx: ServiceContext): Promise<Lock[]> {
@@ -93,8 +93,19 @@ export async function acquireLock(ctx: ServiceContext, input: unknown): Promise<
   const data = parseInput(AcquireLockInput, input);
   const paths = [...new Set(data.paths)];
   return ctx.store.write(async (w) => {
-    if (data.taskId) await mustGet(w, ctx, "task", data.taskId);
     const now = nowIso(ctx);
+    if (data.taskId) {
+      // A lock tagged with a task is freed when that task finishes, so it must be the caller's
+      // task; tagged with another actor's, it would outlive the caller's own work.
+      const claim = (await mustGet(w, ctx, "task", data.taskId)).claim;
+      if (claim && claim.actorId !== ctx.actorId && isLive({ leaseUntil: claim.leaseUntil }, now)) {
+        const name = await actorName(w, claim.actorId);
+        throw new SatiError("CONFLICT", `Task ${data.taskId} is claimed by ${name}.`, {
+          hint: "Tag the lock with a task you hold, or leave out the task.",
+          details: { holder: claim.actorId, holderName: name },
+        });
+      }
+    }
     const live: Lock[] = [];
     for (const l of await allLocks(w, ctx)) {
       if (isLive(l, now)) live.push(l);
@@ -184,6 +195,25 @@ export async function releaseTaskLocks(
   const out: Lock[] = [];
   for (const l of mine) out.push(await softDelete(w, ctx, l));
   return out;
+}
+
+/**
+ * Moves the lease of the caller's live locks for a task out to `leaseUntil`, so a lock does not
+ * lapse while the claim it serves is renewed. Call inside `store.write`. Expired locks are left
+ * alone: another agent may already hold those paths.
+ */
+export async function renewTaskLocks(
+  w: StorageWriter,
+  ctx: ServiceContext,
+  taskId: string,
+  leaseUntil: string,
+): Promise<void> {
+  const now = nowIso(ctx);
+  for (const l of await allLocks(w, ctx)) {
+    if (l.taskId !== taskId || l.actorId !== ctx.actorId) continue;
+    if (!isLive(l, now) || l.leaseUntil >= leaseUntil) continue;
+    await updateWithLog(w, ctx, "lock", l, { leaseUntil });
+  }
 }
 
 function softDelete(w: StorageWriter, ctx: ServiceContext, lock: Lock): Promise<Lock> {

@@ -39,8 +39,8 @@ const BLOCK_RE = new RegExp(
 export const RULES_BLOCK = `${START}
 ## Project memory: ${CLI_NAME} (required)
 This repo uses \`${CLI_NAME}\` for tasks, features and decisions. Several agents work here in parallel.
-1. Start: call \`${CLI_NAME}_brief\` (or run \`${CLI_NAME} brief\`). Do not crawl the repo first; use \`context_get\`.
-2. Before coding: \`task_claim\` a ready task. Never work on a task claimed by another agent.
+1. Start: call \`${CLI_NAME}_brief\` (or run \`${CLI_NAME} brief\`), unless the session already opened with the brief. Do not crawl the repo first; use \`context_get\`.
+2. Before coding: \`task_claim\` a ready task. Never work on a task claimed by another agent. A task marked \`light\` can go to a subagent on a small model; you keep the claim and check its work.
 3. Before deleting, moving or rewriting code: run \`feature_check\` on the paths. If blocked, stop and ask.
 4. Before editing a shared area: \`lock_acquire\` the paths; release when done.
 5. Record why: \`decision_record\` for any removal, revert or rejected approach.
@@ -56,8 +56,8 @@ ${END}
 export const GENERAL_RULES_BLOCK = `${START}
 ## Project memory: ${CLI_NAME} (required)
 This project uses \`${CLI_NAME}\` for plans, todos, notes and decisions. People and agents work here together.
-1. Start: call \`${CLI_NAME}_brief\` (or run \`${CLI_NAME} brief\`).
-2. Before working on a todo: \`task_claim\` it. Never work on a task claimed by someone else.
+1. Start: call \`${CLI_NAME}_brief\` (or run \`${CLI_NAME} brief\`), unless the session already opened with the brief.
+2. Before working on a todo: \`task_claim\` it. Never work on a task claimed by someone else. A task marked \`light\` can go to a subagent on a small model; you keep the claim and check its work.
 3. Ask before reading: \`recall\` what is known. Before opening a file, \`context_get\` its card and reuse it if the file is unchanged; after reading one, \`context_put\` a card with facts and \`sourceSeen\`.
 4. Keep what you learn: \`note_upsert\` for facts, research and meeting notes.
 5. Record why: \`decision_record\` for a choice worth remembering, or a rejected option.

@@ -5,7 +5,8 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
 
 ## Start
 - Call `sati_brief` first. It lists your claimed task, ready tasks, what others changed since
-  your last session and recent decisions.
+  your last session and recent decisions. If the session already opened with the brief (a
+  session-start hook printed it), do not call it again.
 - Use `search` and `note_get` before asking the person for something already written down.
 
 ## Pick work
@@ -17,7 +18,10 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
 - `task_claim` returns `claim.token`. Pass it to every `task_update` and `task_complete` on
   that task. If a write fails with a stale token, someone took the task over: stop and re-read it.
 - New work: `task_create`, with `milestoneId` for the plan it belongs to. It returns likely
-  duplicates; reuse one instead of adding another. `subtasks[]` splits it into steps.
+  duplicates; reuse one instead of adding another. `subtasks[]` splits it into steps. Set
+  `effort: "light"` for quick, mechanical todos and `"deep"` for ones that need careful thought.
+- A `light` task you claimed can go to a subagent on a small, cheaper model. Keep the claim,
+  check its result, then `task_complete` yourself.
 - Plans: `roadmap_upsert` creates or updates a milestone (goal, target date, status). With
   `template` (`event`, `campaign`, `release`, or one in `.sati/templates/`) it creates the whole
   plan: tasks in stages, each stage waiting for the one before, due dates counted back from

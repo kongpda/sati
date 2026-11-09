@@ -27,6 +27,8 @@ export interface Task {
   /** What a blocked task waits on. */
   blockedReason?: string | null;
   dueDate?: string | null;
+  /** How much thinking it needs; unset is standard. A light task suits a small-model agent. */
+  effort?: "light" | "standard" | "deep" | null;
   /** The plan it belongs to directly; a task can also be in one through its feature. */
   milestoneId?: string | null;
   assigneeIds?: string[];

@@ -260,8 +260,8 @@ Yes, sati injects its rules into every agent's rules file, but rules alone are a
 <!-- sati:start v1 -->
 ## Project memory: sati (required)
 This repo uses `sati` for tasks, features and decisions. Several agents work here in parallel.
-1. Start: call `sati_brief` (or run `sati brief`). Do not crawl the repo first; use `context_get`.
-2. Before coding: `task_claim` a ready task. Never work on a task claimed by another agent.
+1. Start: call `sati_brief` (or run `sati brief`), unless the session already opened with the brief. Do not crawl the repo first; use `context_get`.
+2. Before coding: `task_claim` a ready task. Never work on a task claimed by another agent. A task marked `light` can go to a subagent on a small model; you keep the claim and check its work.
 3. Before deleting, moving or rewriting code: run `feature_check` on the paths. If blocked, stop and ask.
 4. Before editing a shared area: `lock_acquire` the paths; release when done.
 5. Record why: `decision_record` for any removal, revert or rejected approach.
@@ -279,8 +279,8 @@ A `general` project (Phase 7a) gets this shorter block instead, since it has no 
 <!-- sati:start v1 -->
 ## Project memory: sati (required)
 This project uses `sati` for plans, todos, notes and decisions. People and agents work here together.
-1. Start: call `sati_brief` (or run `sati brief`).
-2. Before working on a todo: `task_claim` it. Never work on a task claimed by someone else.
+1. Start: call `sati_brief` (or run `sati brief`), unless the session already opened with the brief.
+2. Before working on a todo: `task_claim` it. Never work on a task claimed by someone else. A task marked `light` can go to a subagent on a small model; you keep the claim and check its work.
 3. Ask before reading: `recall` what is known. Before opening a file, `context_get` its card and reuse it if the file is unchanged; after reading one, `context_put` a card with facts and `sourceSeen`.
 4. Keep what you learn: `note_upsert` for facts, research and meeting notes.
 5. Record why: `decision_record` for a choice worth remembering, or a rejected option.
@@ -700,6 +700,28 @@ Added 2026-11-09 at the owner's request, before work moves to the cloud: a deep 
 - [x] `docs/ideas.md`: review findings not fixed, each with a reason
 
 **Gate:** each fixed item has a regression test where it can be tested; `pnpm lint && pnpm typecheck && pnpm test` and `pnpm test:ui` pass; axe reports zero serious issues.
+
+### Phase 5f — Effort routing and deferred fixes (2026-11-10)
+
+Added 2026-11-10 at the owner's request: mark easy tasks so an agent can hand them to a subagent on a small, cheaper model, and fix the code-only items from `docs/ideas.md`.
+
+**Effort routing**
+
+- [x] Optional task field `effort` (`light`, `standard`, `deep`); unset means `standard`; `null` clears it
+- [x] `effort` on `task create`, `task update` and `task list` (CLI flags, MCP tools); `task list --effort light` filters, in the ready queue too
+- [x] The brief and task rows show a non-standard effort (`[medium, light]`)
+- [x] The workflow and rules: set `light` for mechanical work and `deep` for design work; keep the claim and hand a light task to a subagent on a small model, then check its work before `task_complete`
+- [x] The board: an effort select in the new-task form and the task panel, and cards name a light or deep effort
+
+**Deferred fixes**
+
+- [x] A holder's write that renews its claim also renews the leases of its locks tagged with that task
+- [x] `lock_acquire` with a task another actor holds is refused
+- [x] The doctor hint for stale hooks names `sati init --upgrade --yes`
+- [x] The post-checkout import prints only when it changed something (already true through `sync import --quiet`; covered by an existing test)
+- [x] The rules call `sati_brief` only when the session-start hook has not already given the brief
+
+**Gate:** each item has a test where it can be tested; `pnpm lint && pnpm typecheck && pnpm test` and `pnpm test:ui` pass.
 
 ### Phase 6 — Hosted mode (deferred to v2)
 

@@ -261,6 +261,19 @@ describe("sati CLI", () => {
     expect(r.data.error.code).toBe("INVALID_TRANSITION");
   });
 
+  it("sets, lists and clears a task's effort", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = satiJson<Rec>(dir, "task", "create", "Fix typo", "--effort", "light").data;
+    satiJson<Rec>(dir, "task", "create", "Plain");
+    expect(t.effort).toBe("light");
+    const light = satiJson<Rec[]>(dir, "task", "list", "--effort", "light").data;
+    expect(light.map((r) => r.title)).toEqual(["Fix typo"]);
+    expect(sati(dir, "task", "list").stdout).toMatch(/medium {2}light {2}Fix typo/u);
+    const cleared = satiJson<Rec>(dir, "task", "update", t.id, "--effort", "none").data;
+    expect(cleared.effort).toBeNull();
+    expect(sati(dir, "task", "create", "x", "--effort", "huge").code).toBe(5);
+  });
+
   it("rejects a stale --expected-version with CONFLICT (exit 4)", async () => {
     const dir = await tempRepo({ init: true });
     const t = satiJson<Rec>(dir, "task", "create", "x").data;

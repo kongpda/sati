@@ -100,6 +100,10 @@ async function oneAssignee(ctx: ServiceContext, value: string | undefined) {
 const fields = {
   body: { type: "string", description: "Details in Markdown (- reads stdin)" },
   priority: { type: "string", description: "low | medium | high | urgent" },
+  effort: {
+    type: "string",
+    description: "light (fine for a small model) | standard | deep, or none",
+  },
   feature: { type: "string", description: "Feature id or handle" },
   parent: { type: "string", description: "Parent task id or handle" },
   depends: { type: "string", description: "Comma-separated task ids this task waits on" },
@@ -135,6 +139,7 @@ const create = defineCommand({
           body: bodyText(args.body),
           status: args.status,
           priority: args.priority,
+          effort: due(args.effort),
           featureId: await ref(ctx, "feature", args.feature),
           parentId: await ref(ctx, "task", args.parent),
           dependsOn: await refs(ctx, "task", args.depends),
@@ -162,6 +167,7 @@ const ls = defineCommand({
     label: { type: "string", description: "Only tasks with this label" },
     "due-by": { type: "string", description: "Only tasks due on or before YYYY-MM-DD" },
     assignee: { type: "string", description: "Only tasks assigned to this name, id or me" },
+    effort: { type: "string", description: "Only tasks of this effort: light | standard | deep" },
     ready: { type: "boolean", description: "Only unclaimed tasks whose dependencies are done" },
     full: {
       type: "boolean",
@@ -181,6 +187,7 @@ const ls = defineCommand({
           label: args.label,
           dueBy: args["due-by"],
           assigneeId: await oneAssignee(ctx, args.assignee),
+          effort: args.effort,
           ready: args.ready,
           limit: int(args.limit, "limit"),
           offset: int(args.offset, "offset"),
@@ -240,6 +247,7 @@ const update = defineCommand({
           body: bodyText(args.body),
           status: args.status,
           priority: args.priority,
+          effort: due(args.effort),
           featureId: await ref(ctx, "feature", args.feature),
           parentId: await ref(ctx, "task", args.parent),
           dependsOn: await refs(ctx, "task", args.depends),

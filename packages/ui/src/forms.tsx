@@ -15,6 +15,26 @@ import { capital, plainError, statusWord } from "./words.js";
 
 const PRIORITIES = ["low", "medium", "high", "urgent"] as const;
 
+/** Effort options; a light task can go to an agent on a small, cheaper model. */
+export function EffortSelect({
+  className,
+  chosen,
+}: {
+  className?: string;
+  chosen?: string | null;
+}) {
+  return (
+    <label className={className}>
+      Effort
+      <select name="effort" defaultValue={chosen ?? "standard"}>
+        <option value="light">Light: quick, mechanical</option>
+        <option value="standard">Standard</option>
+        <option value="deep">Deep: needs careful thought</option>
+      </select>
+    </label>
+  );
+}
+
 /** Where a milestone may go next; mirrors MILESTONE_TRANSITIONS in core, which enforces it. */
 const MILESTONE_NEXT: Record<string, string[]> = {
   planned: ["active"],
@@ -204,6 +224,7 @@ export function NewTask({
       onSubmit={(form) => {
         const featureId = text(form, "featureId");
         const dueDate = text(form, "dueDate");
+        const effort = text(form, "effort");
         const milestoneId = text(form, "milestoneId");
         const assigneeIds = form.getAll("assigneeIds").map(String);
         return api
@@ -215,6 +236,7 @@ export function NewTask({
             labels: parseLabels(text(form, "labels")),
             ...(featureId ? { featureId } : {}),
             ...(dueDate ? { dueDate } : {}),
+            ...(effort && effort !== "standard" ? { effort } : {}),
             ...(milestoneId ? { milestoneId } : {}),
             ...(assigneeIds.length ? { assigneeIds } : {}),
           })
@@ -247,6 +269,7 @@ export function NewTask({
             <option value="backlog">Backlog</option>
           </select>
         </label>
+        <EffortSelect />
         {data.features.length > 0 ? (
           <label>
             Feature

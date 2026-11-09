@@ -7,6 +7,7 @@ import {
   CONFIG_DIR,
   CommitSha,
   Completion,
+  Effort,
   IsoDay,
   LIMITS,
   type Note,
@@ -31,7 +32,7 @@ import {
   updateWithLog,
 } from "./context.js";
 import { handoffFor, unreadHandoff } from "./handoff.js";
-import { releaseTaskLocks } from "./lock.js";
+import { releaseTaskLocks, renewTaskLocks } from "./lock.js";
 import { DEFAULT_LEASE_MINUTES, readSettings } from "./project.js";
 import { listInput } from "./query.js";
 
@@ -50,6 +51,7 @@ const fields = TaskShape.pick({
   assigneeIds: true,
   checklist: true,
   milestoneId: true,
+  effort: true,
 }).extend({ body: BodyText });
 const optional = {
   body: true,
@@ -65,6 +67,7 @@ const optional = {
   assigneeIds: true,
   checklist: true,
   milestoneId: true,
+  effort: true,
 } as const;
 
 const Subtask = z.strictObject({
@@ -148,6 +151,8 @@ export const ListTasksInput = listInput("task").extend({
   dueBy: IsoDay.optional(),
   /** Only tasks assigned to this actor. */
   assigneeId: z.string().max(100).optional(),
+  /** Only tasks of this effort; a task without one counts as `standard`. */
+  effort: Effort.optional(),
 });
 export type CreateTaskInput = z.input<typeof CreateTaskInput>;
 export type UpdateTaskInput = z.input<typeof UpdateTaskInput>;
@@ -316,6 +321,7 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
       // Any write by the holder renews its lease and means it is no longer waiting, unless this
       // write is the question.
       claim = { ...(await lease(w, ctx, undefined, claim)), token: claim.token };
+      await renewTaskLocks(w, ctx, before.id, claim.leaseUntil);
       if (needsInput) claim.waiting = { kind: "question", text: needsInput, since: nowIso(ctx) };
     } else if (patch.status === "in_progress" && claim === null) {
       // Starting work is claiming it: an in_progress task with no claim would look free to
@@ -422,6 +428,7 @@ async function applyClaim(
     );
   }
   const claim = { ...(await lease(w, ctx, leaseMinutes)), token: before.version + 1 };
+  await renewTaskLocks(w, ctx, before.id, claim.leaseUntil);
   const actor = await w.get("actor", ctx.actorId);
   // Where the work happens, so worktree checks and cleanup can find the task's branch.
   const place = {
@@ -781,6 +788,7 @@ export async function markWaiting(ctx: ServiceContext, input: unknown): Promise<
         ? { ...(await lease(w, ctx, undefined, claim)), token: claim.token }
         : rest;
       if (waiting) next.waiting = { ...waiting, since: claim.waiting?.since ?? now };
+      if (mine) await renewTaskLocks(w, ctx, t.id, next.leaseUntil);
       out.push(await updateWithLog(w, ctx, "task", t, { claim: next }));
     }
     return out;
@@ -865,7 +873,7 @@ export async function listTasks(ctx: ServiceContext, input: unknown = {}): Promi
         }
       : undefined;
     if (!ready) return r.list("task", ctx.projectId, { ...query, inMilestone });
-    const { status, featureId, parentId, label, dueBy, assigneeId } = query;
+    const { status, featureId, parentId, label, dueBy, assigneeId, effort } = query;
     const start = query.offset ?? 0;
     return (await r.readyTasks(ctx.projectId, nowIso(ctx), 500))
       .filter(
@@ -878,7 +886,8 @@ export async function listTasks(ctx: ServiceContext, input: unknown = {}): Promi
           (!parentId || t.parentId === parentId) &&
           (!label || t.labels.includes(label)) &&
           (!dueBy || (t.dueDate != null && t.dueDate <= dueBy)) &&
-          (!assigneeId || (t.assigneeIds ?? []).includes(assigneeId)),
+          (!assigneeId || (t.assigneeIds ?? []).includes(assigneeId)) &&
+          (!effort || (t.effort ?? "standard") === effort),
       )
       .slice(start, start + (query.limit ?? 50));
   });
@@ -950,6 +959,7 @@ export type TaskRow = Pick<Task, "id" | "title" | "status" | "priority" | "versi
       | "labels"
       | "dueDate"
       | "assigneeIds"
+      | "effort"
       | "reviewNote"
       | "needsReview"
     >
@@ -980,6 +990,7 @@ export function taskRow(t: Task): TaskRow {
   if (t.labels.length) row.labels = t.labels;
   if (t.dueDate) row.dueDate = t.dueDate;
   if (t.assigneeIds?.length) row.assigneeIds = t.assigneeIds;
+  if (t.effort) row.effort = t.effort;
   if (t.claim) row.claim = { actorId: t.claim.actorId, leaseUntil: t.claim.leaseUntil };
   if (t.checklist?.length) {
     row.checklist = `${t.checklist.filter((c) => c.done).length}/${t.checklist.length}`;

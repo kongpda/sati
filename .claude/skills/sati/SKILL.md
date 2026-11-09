@@ -10,7 +10,8 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
 
 ## Start
 - Call `sati_brief` first. It lists your claimed task, ready tasks, what others changed since
-  your last session and recent decisions.
+  your last session and recent decisions. If the session already opened with the brief (a
+  session-start hook printed it), do not call it again.
 - Do not crawl the repo to rediscover what the brief already tells you.
 
 ## Pick work
@@ -24,6 +25,12 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
   that task. If a write fails with a stale token, your lease ran out and another agent took the
   task: stop work on it and re-read it before doing anything else.
 - New work: `task_create`. It returns likely duplicates; reuse one instead of adding another.
+  Set `effort`: `light` for mechanical work (a rename, a typo, a one-file edit, a doc tweak),
+  `deep` for design or cross-cutting work; leave it unset for the rest (`standard`).
+- A `light` task you claimed can go to a subagent on a small, cheaper model (in Claude Code, the
+  Agent tool with `model: "haiku"`). Keep the claim, give the subagent the task text and the
+  files, check its result, then `task_complete` yourself. `task_list` with `effort: "light"`
+  finds such tasks.
 - A release or launch plan: `roadmap_upsert` with `template: "release"` (or one in
   `.sati/templates/`) and `targetDate` creates the milestone and its tasks in stages.
 

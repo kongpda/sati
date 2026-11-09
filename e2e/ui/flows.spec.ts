@@ -36,15 +36,18 @@ test("creates, edits, filters and bulk-moves tasks", async ({ page }) => {
   await expect(form.getByRole("button", { name: "Create task" })).toBeDisabled();
   await form.getByLabel("Title").fill("Write the release notes");
   await form.getByLabel("Priority").selectOption("high");
+  await form.getByLabel("Effort").selectOption("light");
   await form.getByLabel("Labels").fill("launch, docs, launch");
   await form.getByRole("button", { name: "Create task" }).click();
   await expect(form).toHaveCount(0);
   const card = page.getByRole("button", { name: "Write the release notes", exact: true });
   await expect(card).toBeVisible();
+  // A light task is marked on its card, so a person sees what an agent may hand to a small model.
+  await expect(page.locator(".card", { has: card }).getByText(/· Light/u)).toBeVisible();
   const created = ui
     .sati<{ title: string; priority: string; labels: string[] }[]>("task", "list")
     .find((t) => t.title === "Write the release notes");
-  expect(created).toMatchObject({ priority: "high", labels: ["launch", "docs"] });
+  expect(created).toMatchObject({ priority: "high", effort: "light", labels: ["launch", "docs"] });
 
   // `c` opens the same form without typing the letter into it; Esc closes it unsaved. Focus went
   // back to the New task button, and shortcuts skip a focused button, so leave it first.

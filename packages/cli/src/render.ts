@@ -5,12 +5,14 @@ interface Row {
   title: string;
   status?: string;
   priority?: string;
+  effort?: string | null | undefined;
   dueDate?: string | null | undefined;
 }
 
 export function row(r: Row): string {
   const due = r.dueDate ? `due ${r.dueDate}` : "";
-  return [shortHandle(r.id), r.status, r.priority, due, r.title].filter(Boolean).join("  ");
+  const effort = r.effort && r.effort !== "standard" ? r.effort : "";
+  return [shortHandle(r.id), r.status, r.priority, effort, due, r.title].filter(Boolean).join("  ");
 }
 
 /** Empty lists teach the next command instead of printing nothing. */
@@ -25,7 +27,7 @@ export function record(r: Row & Record<string, unknown>): string {
   const lines = [row(r)];
   for (const [k, v] of Object.entries(r)) {
     if (SKIP.has(k) || v === null || v === "" || (Array.isArray(v) && v.length === 0)) continue;
-    if (k === "title" || k === "status" || k === "priority") continue;
+    if (k === "title" || k === "status" || k === "priority" || k === "effort") continue;
     lines.push(`  ${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`);
   }
   return lines.join("\n");

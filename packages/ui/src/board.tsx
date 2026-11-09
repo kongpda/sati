@@ -360,6 +360,7 @@ function CardBody({
           </time>
           {feature ? ` · ${feature}` : ""}
           {urgent ? ` · ${capital(task.priority)}` : ""}
+          {task.effort === "light" || task.effort === "deep" ? ` · ${capital(task.effort)}` : ""}
           {due ? (
             <>
               {" · "}

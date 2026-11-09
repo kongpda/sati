@@ -9,6 +9,8 @@ same task, edit each other's files or delete code that already ships.
 ![The sati board with tasks held by two agents](https://raw.githubusercontent.com/kongpda/sati/main/docs/assets/board-light.png)
 
 - **Tasks with claims**: an agent claims a task before it codes; nobody else can take it.
+- **Effort routing**: mark a task `light`, and an agent can hand it to a subagent on a small,
+  cheaper model.
 - **A brief, not a crawl**: `sati brief` gives an agent its task, the ready queue and what changed
   since its last session.
 - **Protected features**: the guard blocks deleting or gutting shipped code, in the editor, in git

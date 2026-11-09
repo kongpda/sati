@@ -259,7 +259,7 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       : "";
     const hand = data.handoffs.get(t.id);
     const stopped = hand ? `\n  \`\`\`data\n  handoff: ${clip(hand, 200)}\n  \`\`\`` : "";
-    return `- ${shortHandle(t.id)} [${t.status === "todo" ? "" : `${t.status}, `}${t.priority}] ${clip(t.title, LINE_CHARS)}${extra}${note}${stopped}`;
+    return `- ${shortHandle(t.id)} [${t.status === "todo" ? "" : `${t.status}, `}${t.priority}${t.effort && t.effort !== "standard" ? `, ${t.effort}` : ""}] ${clip(t.title, LINE_CHARS)}${extra}${note}${stopped}`;
   };
 
   const mine: string[] = [];

@@ -8,7 +8,15 @@ import {
   type Task,
   waitingOn,
 } from "./api.js";
-import { Assignees, DecisionForm, MilestoneForm, NoteForm, PlanForm, PlanSelect } from "./forms.js";
+import {
+  Assignees,
+  DecisionForm,
+  EffortSelect,
+  MilestoneForm,
+  NoteForm,
+  PlanForm,
+  PlanSelect,
+} from "./forms.js";
 import { Markdown } from "./markdown.js";
 import { Avatar, nameOf, personName } from "./people.js";
 import { isThreadNote, Thread, threadOf } from "./thread.js";
@@ -593,6 +601,9 @@ export function Activity({ data }: { data: Snapshot }) {
   );
 }
 
+/** The effort select's value: standard is the default, stored as unset. */
+const effortValue = (v: FormDataEntryValue | null) => (v === "light" || v === "deep" ? v : null);
+
 const EDITABLE = ["backlog", "todo", "in_progress", "review", "blocked", "cancelled"];
 
 /** A person approves work in review by moving it to done; done is otherwise read-only here. */
@@ -663,6 +674,7 @@ export function TaskSheet({
     task?.body,
     task?.status,
     task?.dueDate ?? null,
+    task?.effort ?? null,
     task?.milestoneId ?? null,
     task?.assigneeIds ?? [],
   ]);
@@ -747,6 +759,7 @@ export function TaskSheet({
             body: String(form.get("body") ?? ""),
             status: String(form.get("status") ?? base.status),
             dueDate: String(form.get("dueDate") ?? "") || null,
+            effort: effortValue(form.get("effort")),
             milestoneId: form.has("milestoneId")
               ? String(form.get("milestoneId")) || null
               : (base.milestoneId ?? null),
@@ -757,6 +770,7 @@ export function TaskSheet({
             body: base.body,
             status: base.status,
             dueDate: base.dueDate ?? null,
+            effort: base.effort ?? null,
             milestoneId: base.milestoneId ?? null,
             assigneeIds: base.assigneeIds ?? [],
           };
@@ -766,6 +780,7 @@ export function TaskSheet({
             body: task.body,
             status: task.status,
             dueDate: task.dueDate ?? null,
+            effort: task.effort ?? null,
             milestoneId: task.milestoneId ?? null,
             assigneeIds: task.assigneeIds ?? [],
           };
@@ -806,6 +821,7 @@ export function TaskSheet({
           Due date
           <input className="field" type="date" name="dueDate" defaultValue={task.dueDate ?? ""} />
         </label>
+        <EffortSelect className="sheet-label" chosen={task.effort ?? null} />
         {data.milestones.length > 0 ? (
           <PlanSelect className="sheet-label" data={data} chosen={task.milestoneId ?? null} />
         ) : null}

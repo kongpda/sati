@@ -105,7 +105,10 @@ sati_brief ──> task_claim ──> feature_check / lock_acquire ──> code 
 3. **Check and lock.** Before deleting or rewriting code, the agent runs `feature_check` on the
    paths; before editing a shared area, `lock_acquire`.
 4. **Record why.** A removal, revert or rejected approach gets a `decision_record`.
-5. **Complete.** `task_complete` with a summary and the files touched. By default an agent's
+5. **Hand off easy work.** A task marked `--effort light` (a rename, a typo, a one-file edit)
+   can go to a subagent on a small, cheaper model, such as Haiku in Claude Code. The agent keeps
+   the claim and checks the result.
+6. **Complete.** `task_complete` with a summary and the files touched. By default an agent's
    task then waits for a person to approve it (`sati settings --review agents|all|none`).
 
 The full rules agents follow: [Agent workflow](docs/guide/agent-workflow.md).
@@ -198,6 +201,7 @@ If you are an agent working in a repo that uses sati:
 ```bash
 sati brief                     # what an agent sees at session start
 sati next                      # claim the top ready task
+sati task create "Fix the typo in /pricing" --effort light   # light | standard | deep
 sati task list | create | claim | update | complete
 sati handoff <task> --next "…" # leave a where-I-stopped note
 sati wait "Which plan tier?"   # tell the person you are blocked on them

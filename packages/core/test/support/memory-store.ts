@@ -105,6 +105,7 @@ export class MemoryStore implements StorageAdapter {
           rows = rows.filter((r) =>
             ((r.assigneeIds as string[] | undefined) ?? []).includes(q.assigneeId ?? ""),
           );
+        if (q.effort) rows = rows.filter((r) => (r.effort ?? "standard") === q.effort);
         if (q.updatedSince)
           rows = rows.filter((r) => String(r.updatedAt) >= (q.updatedSince ?? ""));
         if (q.handoff) {

@@ -1632,3 +1632,14 @@ Status: **gate passed** (2026-11-09).
 - The package is not on npm yet, so the README says so and gives a from-source install.
 - Fixed while checking: the quick start and FAQ still told people to run `sati export --all`, which fails since Phase 5e removed the no-op flag; the quick start listed four agent tools, but `init` also writes rules for Copilot, Windsurf, Cline and Kiro.
 - The screenshots come from a seeded demo project (`acme-shop`) at 1560×560, 2× scale.
+
+## 2026-11-10 — Phase 5f: effort routing and deferred fixes
+
+Status: **gate passed** (2026-11-10).
+
+- Added at the owner's request after Claude Code moved subagent status lines to a small model: tasks take an optional `effort` (`light`, `standard`, `deep`) so an agent can hand quick, mechanical work to a subagent on a cheaper model. It is set and filtered on `task create|update|list` (CLI `--effort`, MCP fields), shown in the brief and task rows when not standard, and in the board's new-task form, task panel and cards.
+- Choices on ambiguous items: an unset effort counts as `standard` in filters, so old tasks are not hidden; the rules name no model, only "a small model" (the workflow gives Claude Code's `model: "haiku"` as an example), so no project setting was added; the agent keeps the claim and checks the subagent's work before `task_complete`, so claims, tokens and review stay with one actor.
+- Fixed from `docs/ideas.md`: a holder's claim renewal (update, re-claim, `wait`) also moves out the lease of its live locks tagged with that task, without reviving expired ones; `lock_acquire` tagged with a task another actor holds is refused (CONFLICT); doctor's hooks and setup hints say `init --upgrade --yes`, which works without a terminal; the rules call `sati_brief` only when the session did not already open with it. The quiet post-checkout import was already done (`sync import --quiet`, tested in `hardening.test.ts`).
+- Left in `docs/ideas.md` with their reasons: the short-handle and `findBySuffix` port change, the token in the `open` argv, conflict-marker order, drag overscan, Tailwind.
+- The managed rules block changed (items 1 and 2), so `sati init --upgrade --yes` rewrites it; this repo's `AGENTS.md` was refreshed that way.
+- Verified locally (CI is blocked by billing): lint (the 12 old CSS warnings), typecheck, core 297 (branch coverage 90.8%), store-sqlite 53, sync 41, mcp 26, ui 20, cli 143, `pnpm test:ui` 79.

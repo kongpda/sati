@@ -34,8 +34,8 @@ From Phase 2 onward this repo is tracked in sati itself; a managed rules block w
 <!-- sati:start v1 -->
 ## Project memory: sati (required)
 This repo uses `sati` for tasks, features and decisions. Several agents work here in parallel.
-1. Start: call `sati_brief` (or run `sati brief`). Do not crawl the repo first; use `context_get`.
-2. Before coding: `task_claim` a ready task. Never work on a task claimed by another agent.
+1. Start: call `sati_brief` (or run `sati brief`), unless the session already opened with the brief. Do not crawl the repo first; use `context_get`.
+2. Before coding: `task_claim` a ready task. Never work on a task claimed by another agent. A task marked `light` can go to a subagent on a small model; you keep the claim and check its work.
 3. Before deleting, moving or rewriting code: run `feature_check` on the paths. If blocked, stop and ask.
 4. Before editing a shared area: `lock_acquire` the paths; release when done.
 5. Record why: `decision_record` for any removal, revert or rejected approach.

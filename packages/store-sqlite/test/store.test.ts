@@ -122,6 +122,21 @@ describe("queries", () => {
     expect(reversed.map((t) => t.id)).toEqual([low.id, urgent.id]);
   });
 
+  // Tasks from before the effort field have none; they count as standard, not as missing.
+  it("filters by effort, counting an unset effort as standard", async () => {
+    const light = task({ effort: "light" });
+    const plain = task();
+    const deep = task({ effort: "deep" });
+    await store.write(async (w) => {
+      for (const t of [light, plain, deep]) await w.insert("task", t);
+    });
+    const ids = async (effort: string) =>
+      (await store.read((r) => r.list("task", PROJECT_ID, { effort }))).map((t) => t.id);
+    expect(await ids("light")).toEqual([light.id]);
+    expect(await ids("standard")).toEqual([plain.id]);
+    expect(await ids("deep")).toEqual([deep.id]);
+  });
+
   it("finds a milestone's tasks directly or through their feature, and no others", async () => {
     const M = "mil_01JC0000000000000000000001";
     const F = "feat_01JC000000000000000000001";

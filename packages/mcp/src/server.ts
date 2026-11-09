@@ -269,7 +269,7 @@ function registerTools(
     "task_list",
     {
       description:
-        'List tasks. Filter by status, feature, milestone (tasks in it directly or through their feature), label, assigneeId or dueBy (due on or before a date), combined; `ready: true` returns unclaimed todo tasks whose dependencies are done. For "what is left for a milestone", pass milestoneId with the open statuses. Returns short rows (no body, history or stamps); pass detail: "full" for whole records.',
+        'List tasks. Filter by status, feature, milestone (tasks in it directly or through their feature), label, assigneeId, effort (unset counts as standard) or dueBy (due on or before a date), combined; `ready: true` returns unclaimed todo tasks whose dependencies are done. For "what is left for a milestone", pass milestoneId with the open statuses. Returns short rows (no body, history or stamps); pass detail: "full" for whole records.',
       inputSchema: linkable(ListTasksInput).extend({
         detail: z.enum(["short", "full"]).optional(),
       }),
@@ -286,7 +286,7 @@ function registerTools(
     "task_create",
     {
       description:
-        "Create a task. New tasks start in todo (or backlog). Optional dueDate (YYYY-MM-DD), milestoneId (the plan it belongs to), assigneeIds (actor ids: who should do it) and checklist ([{text, done}]). The result lists `similar` existing tasks; if one is the same work, cancel the new task and use that one.",
+        "Create a task. New tasks start in todo (or backlog). Optional dueDate (YYYY-MM-DD), milestoneId (the plan it belongs to), assigneeIds (actor ids: who should do it) checklist ([{text, done}]) and effort: light for mechanical work a small-model subagent can do, deep for design work, unset for the rest. The result lists `similar` existing tasks; if one is the same work, cancel the new task and use that one.",
       inputSchema: linkable(CreateTaskInput),
       annotations: { destructiveHint: false },
     },
@@ -315,7 +315,7 @@ function registerTools(
     "task_update",
     {
       description:
-        'Update a task\'s fields or status. checklist and assigneeIds replace the whole list, so send them with expectedVersion; dueDate or milestoneId null clears it. While the task is claimed, pass the token from task_claim; a stale token means your claim was lost, so stop. Renews your lease. Moving it back to todo releases it. needsInput asks a person a question and shows the task under "Needs you" until your next write. Moving to blocked takes a reason saying what it waits on.',
+        'Update a task\'s fields or status. checklist and assigneeIds replace the whole list, so send them with expectedVersion; dueDate, milestoneId or effort null clears it. While the task is claimed, pass the token from task_claim; a stale token means your claim was lost, so stop. Renews your lease. Moving it back to todo releases it. needsInput asks a person a question and shows the task under "Needs you" until your next write. Moving to blocked takes a reason saying what it waits on.',
       inputSchema: linkable(UpdateTaskInput).extend({ id: Ref }),
     },
     ({ id, ...input }) => run(async () => updateTask(ctx, await task(id), await links(ctx, input))),

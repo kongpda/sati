@@ -33,7 +33,7 @@ function hooksCheck(root: string): DoctorCheck {
     "hooks",
     "pre-commit",
   );
-  const fix = `Run \`${runHint(root, "init --upgrade")}\`.`;
+  const fix = `Run \`${runHint(root, "init --upgrade --yes")}\`.`;
   if (!existsSync(runner)) {
     return { name: "hooks", ok: false, detail: `This clone has no ${CLI_NAME} git hooks. ${fix}` };
   }
@@ -68,7 +68,7 @@ async function upgradeCheck(root: string): Promise<DoctorCheck> {
     name: "setup",
     ok: false,
     detail: [
-      `${files.length} managed file(s) are out of date. Run \`${runHint(root, "init --upgrade")}\`.`,
+      `${files.length} managed file(s) are out of date. Run \`${runHint(root, "init --upgrade --yes")}\`.`,
       ...files.map((f) => `  ${f.action === "create" ? "missing" : "stale  "} ${f.path}`),
     ].join("\n"),
   };

@@ -1,7 +1,9 @@
 {
+  "blockedReason": null,
   "body": "Root README for GitHub (humans + agents), shorter npm README, fix stale export --all in docs/guide.",
   "branch": "main",
   "completion": {
+    "approvedCommit": "de140773d049842059ba0b1d3949ec48aa7932ee",
     "branch": "main",
     "commit": "141510ae50ad2b3695d8a4d63e8d99fa1b953e49",
     "completedAt": "2026-11-09T17:26:56.341Z",
@@ -23,17 +25,20 @@
   "id": "tsk_01M70N9FSKVA4CG26Y2QTE3Z73",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-09T17:21:59.092Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "blockedReason": "2026-11-09T18:15:44.107Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "branch": "2026-11-09T17:22:06.970Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
     "claim": "2026-11-09T17:26:56.342Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "completion": "2026-11-09T17:26:56.342Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "status": "2026-11-09T17:26:56.342Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-09T18:15:44.107Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "reviewNote": "2026-11-09T18:15:44.107Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-09T18:15:44.107Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "worktree": "2026-11-09T17:22:06.970Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
   },
-  "status": "review",
+  "status": "done",
   "title": "Write root README and refresh npm README",
-  "updatedAt": "2026-11-09T17:26:56.344Z",
-  "version": 3,
+  "updatedAt": "2026-11-09T18:15:44.110Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

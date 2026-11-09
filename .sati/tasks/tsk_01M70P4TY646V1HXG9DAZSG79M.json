@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "de140773d049842059ba0b1d3949ec48aa7932ee",
     "branch": "main",
     "commit": "d364f2b18a75347b5f8fb1f1daddede338c3fd32",
     "completedAt": "2026-11-09T17:43:40.612Z",
@@ -45,17 +47,20 @@
   "id": "tsk_01M70P4TY646V1HXG9DAZSG79M",
   "priority": "high",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-09T17:36:55.240Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "blockedReason": "2026-11-09T18:15:44.230Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "branch": "2026-11-09T17:36:57.655Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
     "claim": "2026-11-09T17:43:40.613Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "completion": "2026-11-09T17:43:40.613Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "status": "2026-11-09T17:43:40.613Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-09T18:15:44.230Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "reviewNote": "2026-11-09T18:15:44.230Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-09T18:15:44.230Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "worktree": "2026-11-09T17:36:57.655Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
   },
-  "status": "review",
+  "status": "done",
   "title": "Phase 5f: effort routing and deferred fixes",
-  "updatedAt": "2026-11-09T17:43:40.615Z",
-  "version": 3,
+  "updatedAt": "2026-11-09T18:15:44.232Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

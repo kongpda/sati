@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "de140773d049842059ba0b1d3949ec48aa7932ee",
     "branch": "main",
     "commit": "8449990de6236d764fdafe9482f23db0e5c0c0c0",
     "completedAt": "2026-11-08T18:35:39.573Z",
@@ -27,17 +29,20 @@
   "id": "tsk_01M6Y61N3Q2A65RNWB8RRBVBPT",
   "priority": "high",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-08T18:17:04.893Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "blockedReason": "2026-11-09T18:15:43.849Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "branch": "2026-11-08T18:17:05.176Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
     "claim": "2026-11-08T18:35:39.575Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "completion": "2026-11-08T18:35:39.575Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "status": "2026-11-08T18:35:39.575Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-09T18:15:43.849Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "reviewNote": "2026-11-09T18:15:43.849Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-09T18:15:43.849Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "worktree": "2026-11-08T18:17:05.176Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
   },
-  "status": "review",
+  "status": "done",
   "title": "Final pre-cloud pass: deep review, bug fixes, security, UI polish, axe audit",
-  "updatedAt": "2026-11-08T18:35:39.577Z",
-  "version": 3,
+  "updatedAt": "2026-11-09T18:15:43.851Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

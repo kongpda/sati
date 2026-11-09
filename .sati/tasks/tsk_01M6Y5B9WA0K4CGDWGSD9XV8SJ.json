@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "de140773d049842059ba0b1d3949ec48aa7932ee",
     "branch": "main",
     "commit": "a2f53c26f74230752ab50dd551b712d146195dc4",
     "completedAt": "2026-11-08T18:07:43.398Z",
@@ -19,17 +21,20 @@
   "id": "tsk_01M6Y5B9WA0K4CGDWGSD9XV8SJ",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-08T18:04:52.496Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "blockedReason": "2026-11-09T18:15:43.977Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "branch": "2026-11-08T18:04:52.738Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
     "claim": "2026-11-08T18:07:43.400Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "completion": "2026-11-08T18:07:43.400Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "status": "2026-11-08T18:07:43.400Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-09T18:15:43.977Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "reviewNote": "2026-11-09T18:15:43.977Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-09T18:15:43.977Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "worktree": "2026-11-08T18:04:52.738Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
   },
-  "status": "review",
+  "status": "done",
   "title": "Dedupe clip/plural text helpers in core",
-  "updatedAt": "2026-11-08T18:07:43.402Z",
-  "version": 3,
+  "updatedAt": "2026-11-09T18:15:43.979Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

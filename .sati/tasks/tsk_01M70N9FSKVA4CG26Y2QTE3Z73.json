@@ -1,0 +1,39 @@
+{
+  "body": "Root README for GitHub (humans + agents), shorter npm README, fix stale export --all in docs/guide.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "141510ae50ad2b3695d8a4d63e8d99fa1b953e49",
+    "completedAt": "2026-11-09T17:26:56.341Z",
+    "completedBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "filesTouched": [
+      "README.md",
+      "packages/cli/README.md",
+      "docs/assets/board-light.png",
+      "docs/assets/board-dark.png",
+      "docs/guide/quick-start.md",
+      "docs/guide/faq.md",
+      "docs/progress.md",
+      ".changeset/readme.md"
+    ],
+    "summary": "Root README for GitHub (people + agents) with board screenshots, real brief and guard output, tools/MCP tables; shorter npm README; fixed stale 'sati export --all' and tool list in guides."
+  },
+  "createdAt": "2026-11-09T17:21:59.090Z",
+  "createdBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+  "id": "tsk_01M70N9FSKVA4CG26Y2QTE3Z73",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-09T17:21:59.092Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "branch": "2026-11-09T17:22:06.970Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "claim": "2026-11-09T17:26:56.342Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-09T17:26:56.342Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "status": "2026-11-09T17:26:56.342Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "worktree": "2026-11-09T17:22:06.970Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
+  },
+  "status": "review",
+  "title": "Write root README and refresh npm README",
+  "updatedAt": "2026-11-09T17:26:56.344Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

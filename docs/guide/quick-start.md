@@ -55,8 +55,9 @@ sati init --yes --mode git --tools claude-code,codex
 The live database is shared by every worktree of the repository, so agents in parallel
 worktrees see the same tasks.
 
-Supported agent tools: `claude-code`, `codex`, `cursor`, `gemini-cli`. For each tool, `init` adds
-a managed rules block, the MCP server and, where the tool has them, hooks.
+Supported agent tools: `claude-code`, `codex`, `cursor` and `gemini-cli` get a managed rules
+block, the MCP server and, where the tool has them, hooks. `copilot`, `windsurf`, `cline` and
+`kiro` get the rules block.
 
 After you upgrade sati, refresh the git hooks, merge driver and `.gitattributes`:
 
@@ -102,7 +103,7 @@ sign-in URL only. The URL holds a one-time token; do not share it.
 ```bash
 sati doctor              # stale leases, orphan locks, DB integrity, hook health
 sati doctor --vacuum     # also compact the database
-sati export --all        # write every record to .sati/
+sati export              # write every record to .sati/
 sati import              # load records from .sati/ into the live database
 ```
 

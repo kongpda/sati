@@ -1624,3 +1624,11 @@ Status: **gate passed** (2026-11-09).
 - The axe spec now also runs in dark mode at both sizes: 79/79 UI tests pass, zero axe issues of any level. A visual sweep of every page at 1280 and 390 px found no overflow.
 - PR #1 (changesets "Version Packages") is left open: merging it starts the release workflow, which is the owner's call. No other branches, worktrees or stashes.
 - Verified locally (CI is blocked by billing): lint (the 12 old CSS warnings), typecheck, core 291, store-sqlite 52, sync 41, mcp 26, ui 20, cli 142, `pnpm test:ui` 79. Core branch coverage fell to 89.6% with the new code and is back to 90.2% with tests for the brace counter.
+
+## 2026-11-10 — README
+
+- A root `README.md` for GitHub, written for people and agents: what sati solves, a board screenshot (light and dark, `docs/assets/`), quick start, the session loop with a real `sati brief`, a real guard block (exit 10), modes, every agent tool `init` sets up, the MCP tools, a section for agents, the CLI, data and security, docs and contributing. Every command and flag in it was run against the built CLI.
+- The npm README (`packages/cli/README.md`) stays short and links to the root README; its image uses an absolute URL, since npm ships only `dist`.
+- The package is not on npm yet, so the README says so and gives a from-source install.
+- Fixed while checking: the quick start and FAQ still told people to run `sati export --all`, which fails since Phase 5e removed the no-op flag; the quick start listed four agent tools, but `init` also writes rules for Copilot, Windsurf, Cline and Kiro.
+- The screenshots come from a seeded demo project (`acme-shop`) at 1560×560, 2× scale.

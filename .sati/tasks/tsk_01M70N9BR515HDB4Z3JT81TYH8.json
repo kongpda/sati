@@ -1,0 +1,18 @@
+{
+  "blockedReason": null,
+  "body": "Root README for GitHub (humans + agents), shorter npm README, fix stale 'sati export --all' in docs/guide.",
+  "createdAt": "2026-11-09T17:21:54.949Z",
+  "createdBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+  "id": "tsk_01M70N9BR515HDB4Z3JT81TYH8",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-09T17:21:54.951Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "blockedReason": "2026-11-09T17:22:06.844Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "status": "2026-11-09T17:22:06.844Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
+  },
+  "status": "cancelled",
+  "title": "Write root README and refresh npm README",
+  "updatedAt": "2026-11-09T17:22:06.847Z",
+  "version": 2
+}

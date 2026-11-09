@@ -57,7 +57,7 @@ statuses and acceptance criteria, decisions have reasons, and every write has an
   Keep a Changelog style (Added / Changed / Fixed / Removed); `--format digest` gives a short
   weekly summary; tasks labelled `internal` are left
   out. It prints to stdout, so the agent or person chooses where it goes; sati writes no user files.
-- **Feature lists.** `sati features --format md` prints what the product does today, from shipped
+- **Feature lists.** `sati feature list --format md` prints what the product does today, from shipped
   features with their acceptance criteria, for a README, a sales sheet or a release page.
 - **In the UI,** a Changes page shows the same timeline with filters and "Copy changelog" and
   "Copy feature list" buttons that use the same generators, so both ways give the same text.

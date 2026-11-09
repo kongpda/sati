@@ -763,7 +763,7 @@ A capability is not done until both ways have it, with tests on both. sati itsel
 - [x] Changes: `sati changes --since <date|7d|last-session|milestone>` and MCP `changes`: done tasks (summary, release note, files touched), features that moved status, decisions, new and edited notes, and what is now blocked or overdue, grouped by milestone or feature, compact, with ids
 - [x] The brief's "Since your last session" section, which PLAN promises and the brief does not have yet: up to 5 changes by other actors since the caller's last brief, inside the 1,500-token cap
 - [x] Changelog and digest are formats of `changes`, not commands of their own: `sati changes --since … --format changelog|digest|plain` (MCP `changes` takes `format`). `changelog` is Markdown built from release notes (falling back to summaries), grouped Added / Changed / Fixed / Removed by task label and feature status; `digest` is a short weekly summary to paste into email or chat. It prints to stdout; the agent or person decides where it goes (`> CHANGELOG.md`), because sati writes no user files
-- [x] Feature list: `sati features --format md` prints what the product does today, from shipped features with their acceptance criteria and milestone, for READMEs, sales sheets or release pages
+- [x] Feature list: `sati feature list --format md` prints what the product does today, from shipped features with their acceptance criteria and milestone, for READMEs, sales sheets or release pages
 - [x] UI "Changes" page: a timeline by day (done, decided, shipped, changed), filters by date, milestone, person or agent, and "Copy changelog" / "Copy feature list" buttons using the same generators
 
 **Phase 7c — The brain for every agent**

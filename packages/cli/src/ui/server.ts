@@ -46,6 +46,7 @@ import { bodyLimit } from "hono/body-limit";
 import { getCookie, setCookie } from "hono/cookie";
 import micromatch from "micromatch";
 import { z } from "zod";
+import pkg from "../../package.json" with { type: "json" };
 
 /**
  * Cookies are shared by every port on 127.0.0.1, so two `sati ui` servers would overwrite each
@@ -150,7 +151,7 @@ function dataVersion(rt: UiRuntime): number {
 function openApi() {
   return {
     openapi: "3.1.0",
-    info: { title: `${CLI_NAME} local ui`, version: "0.0.0" },
+    info: { title: `${CLI_NAME} local ui`, version: pkg.version },
     paths: {
       "/api/snapshot": { get: { summary: "Board payload" } },
       "/api/search": {

@@ -1,6 +1,7 @@
-import { existsSync, unlinkSync } from "node:fs";
-import { connect } from "node:net";
-import { CLI_NAME, SatiError } from "@sati/core";
+import { once } from "node:events";
+import { unlinkSync } from "node:fs";
+import { connect, type Server } from "node:net";
+import { CLI_NAME, SatiError, type StorageAdapter } from "@sati/core";
 import { listenStore, socketPath as socketPathFor } from "@sati/store-sqlite";
 import { defineCommand } from "citty";
 import { closeRuntime, openRuntime } from "../runtime.js";
@@ -20,6 +21,35 @@ function isLive(socketPath: string): Promise<boolean> {
   });
 }
 
+const running = () =>
+  new SatiError("CONFLICT", `${CLI_NAME} serve is already running for this project.`, {
+    hint: `Stop the other \`${CLI_NAME} serve\` first, or just use it: other commands already connect to it.`,
+  });
+
+/**
+ * Listen first and probe only when the address is taken. Checking before listening let two
+ * starts race: the loser crashed with an unhandled EADDRINUSE instead of exiting 4 (review 5.6).
+ * A stale Unix socket file is removed once; a Windows pipe goes away with its process.
+ */
+async function listen(store: StorageAdapter, socketPath: string): Promise<Server> {
+  for (let attempt = 0; ; attempt++) {
+    const server = listenStore(store, socketPath);
+    try {
+      await once(server, "listening");
+      return server;
+    } catch (err) {
+      server.close();
+      // macOS reports a taken socket path as EEXIST as well.
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== "EADDRINUSE" && code !== "EEXIST") throw err;
+      if (process.platform === "win32" || attempt > 0 || (await isLive(socketPath))) {
+        throw running();
+      }
+      unlinkSync(socketPath);
+    }
+  }
+}
+
 export default defineCommand({
   meta: {
     name: "serve",
@@ -30,16 +60,7 @@ export default defineCommand({
     process.env.SATI_DAEMON_OWNER = "1";
     const rt = await openRuntime();
     const socketPath = socketPathFor(rt.location.path);
-    // A stale Unix socket file blocks listen(). A Windows pipe goes away with its process.
-    if (process.platform !== "win32" && existsSync(socketPath)) {
-      if (await isLive(socketPath)) {
-        throw new SatiError("CONFLICT", `${CLI_NAME} serve is already running for this project.`, {
-          hint: `Stop the other \`${CLI_NAME} serve\` first, or just use it: other commands already connect to it.`,
-        });
-      }
-      unlinkSync(socketPath);
-    }
-    const server = listenStore(rt.ctx.store, socketPath);
+    const server = await listen(rt.ctx.store, socketPath);
     process.stdout.write(`${CLI_NAME} serve ${socketPath}\n`);
     const stop = () => {
       server.close();

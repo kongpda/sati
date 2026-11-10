@@ -2,7 +2,7 @@ import { CLI_NAME, listTasks, systemClock } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { readProjects } from "../projects.js";
+import { pruneProjects, readProjects } from "../projects.js";
 import { output } from "../runtime.js";
 
 export default defineCommand({
@@ -11,11 +11,24 @@ export default defineCommand({
     description:
       "Projects this machine knows. Add `--project <slug>` to any command to run it against one",
   },
-  args: { ...json },
+  args: {
+    prune: {
+      type: "boolean",
+      description: "First forget projects whose folder or database is gone",
+    },
+    ...json,
+  },
   run: ({ args }) =>
     output(
       args.json,
       async () => {
+        if (args.prune) {
+          // On stderr, so `--json` keeps its shape: the list of remaining projects.
+          const gone = pruneProjects();
+          process.stderr.write(
+            `Forgot ${gone.length} ${gone.length === 1 ? "project" : "projects"} whose folder or database is gone.\n`,
+          );
+        }
         const known = readProjects();
         const rows = [];
         for (const project of known) {

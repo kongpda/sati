@@ -49,6 +49,8 @@ export async function startUi(): Promise<Ui> {
     GIT_CONFIG_GLOBAL: devNull,
     GIT_CONFIG_NOSYSTEM: "1",
     SATI_ACTOR: "playwright",
+    // Keep these temp repos out of the developer's ~/.sati/projects.json (review 5.7).
+    SATI_REGISTRY: join(mkdtempSync(join(tmpdir(), "sati-registry-")), "projects.json"),
     CLAUDECODE: "",
     AI_AGENT: "",
   };

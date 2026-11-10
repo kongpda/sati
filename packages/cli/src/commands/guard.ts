@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, realpathSync } from "node:fs";
+import { readdirSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
   CLI_NAME,
@@ -22,6 +22,7 @@ import {
   printError,
   type Runtime,
   readProjectConfig,
+  readStdin,
 } from "../runtime.js";
 
 /** `SATI_GUARD=off` lets one blocked run through; the override is logged. */
@@ -106,7 +107,7 @@ interface HookInput {
 async function runHook(): Promise<void> {
   let rt: Runtime | undefined;
   try {
-    const input = parseJson(readFileSync(0, "utf8"), "The hook input", "USAGE", {
+    const input = parseJson(readStdin(), "The hook input", "USAGE", {
       hint: "Claude Code pipes the edit as JSON on stdin; run --hook only from its PreToolUse hook.",
     }) as HookInput;
     const cwd = input.cwd ?? process.cwd();

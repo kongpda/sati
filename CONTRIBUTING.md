@@ -10,6 +10,9 @@ pnpm build          # the CLI tests and the board tests run packages/cli/dist
 pnpm lint && pnpm typecheck && pnpm test
 ```
 
+Each `sati init` registers its project in `~/.sati/projects.json`. The tests point
+`SATI_REGISTRY` at a temp file, so a test run leaves the real registry alone.
+
 Before the first `pnpm test:ui` (the Playwright tests in `e2e/ui`), install the browser:
 
 ```bash

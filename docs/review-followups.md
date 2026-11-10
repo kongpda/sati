@@ -433,8 +433,8 @@ Effort: `standard`; items 5.1 to 5.4 are `light`.
 - **Plan:** accept both on all three. Check how `packages/cli/src/main.ts` finds unknown flags before using citty's `alias`, since the check is custom.
 - **Tests:** both spellings work on list, create and update.
 
-- [ ] Both spellings accepted
-- [ ] Tests
+- [x] Both spellings accepted (citty `alias`; the unknown-flag check already reads aliases)
+- [x] Tests
 
 ### 5.2 Clearing links with `none`
 
@@ -444,22 +444,22 @@ Effort: `standard`; items 5.1 to 5.4 are `light`.
 - **Plan:** in `packages/cli/src/commands/task.ts`, run `--feature` and `--parent` through `orNone` and map `--depends none` to `[]`. Confirm core accepts `null` for `featureId` and `parentId` in `UpdateTaskInput`.
 - **Tests:** set then clear each one.
 
-- [ ] `none` for feature, parent, depends
-- [ ] Tests, changeset
+- [x] `none` for feature, parent, depends (core already took `null` and `[]`)
+- [x] Tests, changeset
 
 ### 5.3 `--body -` with empty stdin
 
 *Certain (reproduced).* `sati note create T --body - </dev/null` creates a note with an empty body.
 
-- [ ] In `packages/cli/src/runtime.ts` (`readText`), fail with USAGE (exit 2) when `-` reads zero bytes; hint: "Nothing arrived on stdin."
-- [ ] Test
+- [x] In `packages/cli/src/runtime.ts` (`readText`), fail with USAGE (exit 2) when `-` reads zero bytes; hint: "Nothing arrived on stdin."
+- [x] Test
 
 ### 5.4 Stdin reads without the TTY check
 
 *Unsure.* `commands/nudge.ts` and `commands/guard.ts` call `readFileSync(0)`; `commands/wait.ts` checks `process.stdin.isTTY` first.
 
-- [ ] One `readStdin()` helper in `runtime.ts` with the TTY check; use it in all three
-- [ ] Test `guard --hook` run from a terminal-like stdin does not throw
+- [x] One `readStdin()` helper in `runtime.ts` with the TTY check; use it in all three
+- [x] Test `guard --hook` run from a terminal-like stdin does not throw. Reproduced under `script`: it waited for Ctrl-D. Now it fails at once with the hook hint (exit 1, since exit 2 would block the edit)
 
 ### 5.5 `sati review` output
 
@@ -469,16 +469,16 @@ Effort: `standard`; items 5.1 to 5.4 are `light`.
 - **Plan:** print each finding's message; filter decisions to those created in the range (by commit time) or linked to features the range touches; drop `.sati/` paths from the count and list.
 - **Tests:** a range with a blocked finding prints its message; a decision outside the range is not listed.
 
-- [ ] Findings printed
-- [ ] Decisions limited to the range
-- [ ] `.sati/` left out
-- [ ] Tests, changeset
+- [x] Findings printed
+- [x] Decisions limited to the range: made since the commit time of the range base, or linked to a touched feature; newest 50
+- [x] `.sati/` left out of the paths and the feature match (the guard still sees every change)
+- [x] Tests, changeset
 
 ### 5.6 Small
 
-- [ ] `packages/cli/src/ui/server.ts` `openApi()` has version `"0.0.0"` by hand: import the CLI version. *Certain.*
-- [ ] `commands/serve.ts`: two starts can race between the liveness check and `listen`. Listen first and handle `EADDRINUSE` with the liveness probe. *Unsure; from the code only.*
-- [ ] `commands/projects.ts` opens every registered project's database. Add pruning of entries whose path is gone (already an open recommendation). *Certain.*
+- [x] `packages/cli/src/ui/server.ts` `openApi()` has version `"0.0.0"` by hand: import the CLI version. *Certain.*
+- [x] `commands/serve.ts`: two starts can race between the liveness check and `listen`. Listen first and handle `EADDRINUSE` with the liveness probe. *Unsure; from the code only.* Reproduced: of two starts, the loser crashed with an unhandled `EADDRINUSE` (exit 1) in 14 of 15 runs; macOS also reports `EEXIST`. Fixed, 0 of 15 after
+- [x] `commands/projects.ts` opens every registered project's database. Add pruning of entries whose path is gone (already an open recommendation). *Certain.* `sati projects --prune`, only on request, since an unmounted drive also looks gone. Run once here: it dropped 42 entries
 
 ### 5.7 CLI tests write to the real registry
 
@@ -486,8 +486,8 @@ Effort: `standard`; items 5.1 to 5.4 are `light`.
 
 - **Plan:** find where the registry path is resolved; honour an environment variable for it (one may exist: check `detect.ts` and `runtime.ts`); set it to a temp folder in `packages/cli/test/helpers.ts` and the e2e scripts. Then run the new prune once.
 
-- [ ] Registry location override used by all tests
-- [ ] Verify: a full test run adds no entry to the real registry
+- [x] Registry location override used by all tests: `SATI_REGISTRY`, set per test file in `packages/cli/test/setup-registry.ts` and in `e2e/ui/server.ts`
+- [x] Verify: a full test run adds no entry to the real registry (same hash before and after)
 
 ---
 

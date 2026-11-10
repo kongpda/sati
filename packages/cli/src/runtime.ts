@@ -502,11 +502,30 @@ export async function openRuntime(cwd: string = process.cwd()): Promise<Runtime>
   return { ctx, project, actor, location };
 }
 
-/** Text from a file, or from stdin for `-`. A bad path is a usage error, not a crash. */
+/**
+ * Piped stdin, or "" when stdin is a terminal. Hooks read their JSON input this way, so running
+ * one by hand in a terminal does not wait for Ctrl-D (review 5.4).
+ */
+export function readStdin(): string {
+  return process.stdin.isTTY ? "" : readFileSync(0, "utf8");
+}
+
+/**
+ * Text from a file, or from stdin for `-`. A bad path is a usage error, not a crash, and so is
+ * `-` with nothing on stdin: an empty body was almost always a mistaken pipe (review 5.3).
+ */
 export function readText(path: string): string {
   try {
-    return readFileSync(path === "-" ? 0 : path, "utf8");
+    if (path !== "-") return readFileSync(path, "utf8");
+    const text = readFileSync(0, "utf8");
+    if (text.length === 0) {
+      throw new SatiError("USAGE", "- reads stdin, and stdin was empty.", {
+        hint: "Nothing arrived on stdin. Pipe the text in, or pass it as the value.",
+      });
+    }
+    return text;
   } catch (err) {
+    if (isSatiError(err)) throw err;
     const code = (err as NodeJS.ErrnoException).code;
     if (code === "ENOENT") {
       throw new SatiError("NOT_FOUND", `There is no file ${path}.`, {

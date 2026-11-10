@@ -1,8 +1,14 @@
-import { readFileSync } from "node:fs";
 import { CLI_NAME, markWaiting, resolveId, SatiError, shortHandle, type Task } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { closeRuntime, execute, openRuntime, printError, withExport } from "../runtime.js";
+import {
+  closeRuntime,
+  execute,
+  openRuntime,
+  printError,
+  readStdin,
+  withExport,
+} from "../runtime.js";
 
 /** The part of Claude Code's Notification and UserPromptSubmit hook input we read. */
 interface HookInput {
@@ -38,8 +44,7 @@ function hookWaiting(
  */
 async function runHook(): Promise<void> {
   try {
-    const raw = process.stdin.isTTY ? "{}" : readFileSync(0, "utf8");
-    const parsed: unknown = JSON.parse(raw || "{}");
+    const parsed: unknown = JSON.parse(readStdin() || "{}");
     const input = parsed && typeof parsed === "object" ? (parsed as HookInput) : {};
     const waiting = hookWaiting(input);
     if (waiting === undefined) return;

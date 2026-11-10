@@ -47,7 +47,11 @@ export function run(
     AI_AGENT: "",
     ...env,
   };
-  if (env.HOME !== undefined) overrides.USERPROFILE = env.HOME;
+  // A test that sets HOME wants the registry inside it, not the per-file one from the setup.
+  if (env.HOME !== undefined) {
+    overrides.USERPROFILE = env.HOME;
+    overrides.SATI_REGISTRY ??= "";
+  }
   const full: NodeJS.ProcessEnv = { ...process.env };
   // Windows env names ignore case: drop `Path` before setting `PATH`, or the child sees both.
   if (process.platform === "win32") {

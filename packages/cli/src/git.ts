@@ -160,6 +160,26 @@ function rangeBase(root: string, range: string): string {
 }
 
 /**
+ * When the range starts: the commit time of its base, as an ISO string. `sati review` lists the
+ * decisions made since then. Undefined if git cannot read it.
+ */
+export function rangeStart(root: string, range: string): string | undefined {
+  try {
+    const out = git(root, [
+      "log",
+      "-1",
+      "--format=%cI",
+      "--end-of-options",
+      rangeBase(root, range),
+    ]);
+    const at = Date.parse(out.toString("utf8").trim());
+    return Number.isNaN(at) ? undefined : new Date(at).toISOString();
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Changes between two revisions, as in `origin/main...HEAD`. The range is a git revision
  * expression, not a shell command, and may not start with `-`.
  */

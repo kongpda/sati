@@ -1751,3 +1751,16 @@ Status: **done** (2026-11-10). Task `tsk_01M71V5T8TCQVHG674T0HQQ3NH`.
 - 4.5 (owner decision, `dec_xb8bpt`): `ifSimilar: "return"` creates nothing when a match scores 0.8 or more (`STRONG_SIMILARITY`). Choice: 0.8, because the tests' near-identical titles score 1 and a reworded title about 0.75.
 - 4.6 (owner decision, `dec_xxt1qn`): the rules block names the claim token, `recall` and `light`, and skips the brief when the session opened with it. Both blocks got shorter. This repo ran `sati init --upgrade --yes`.
 - Verified locally: lint (the 12 old CSS warnings), typecheck, knip clean, core 327, store-sqlite 68, sync 52, mcp 30, ui 21, cli 151, `pnpm test:ui` 79 passed. Core branch coverage 90.9%.
+
+## 2026-11-10 — Phase 5h WP5: CLI
+
+Status: **done** (2026-11-10). Task `tsk_0ffgtz`.
+
+- 5.1: `--label` and `--labels` are aliases on `task list`, `create` and `update`.
+- 5.2: `--feature none`, `--parent none` and `--depends none` clear the link; core already accepted `null` and `[]`.
+- 5.3: `--body -` with empty stdin exits 2 with "Nothing arrived on stdin."
+- 5.4 (unsure): reproduced under `script` that `guard --hook` in a terminal waited for Ctrl-D. `readStdin()` in `runtime.ts` returns "" for a terminal; guard, nudge and wait use it. Guard then fails at once with its hint, exit 1, because exit 2 would block the edit.
+- 5.5: `sati review` prints each finding, lists decisions made since the commit time of the range base or linked to a touched feature (newest 50), and leaves `.sati/` out of paths and feature matches. Choice: commit time of the base, since decisions carry no commit.
+- 5.6: the board's OpenAPI version comes from `package.json`. `serve` listens first and probes only on `EADDRINUSE` or `EEXIST` (macOS); a script starting two serves 15 times saw the loser crash 14 times before and 0 after. `sati projects --prune` forgets entries whose folder or database is gone. Choice: only on request, since an unmounted drive also looks gone.
+- 5.7: `SATI_REGISTRY` overrides the registry path. Each CLI test file sets it to a temp file (`test/setup-registry.ts`), and so does `e2e/ui/server.ts`. A full test run left `~/.sati/projects.json` byte-identical. The prune ran once here and dropped 42 entries; about 1,900 `sati-cli-*` entries remain because their temp folders still exist.
+- Verified locally: lint (the 12 old CSS warnings), typecheck, knip clean, core 327, store-sqlite 68, sync 52, mcp 30, ui 21, cli 162, `pnpm test:ui` 79 passed.

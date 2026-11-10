@@ -1,0 +1,58 @@
+{
+  "body": "docs/review-followups.md WP5.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "a1f66527e9c725955479c04c7d0720110b458353",
+    "completedAt": "2026-11-10T04:46:32.118Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "CONTRIBUTING.md",
+      "PLAN.md",
+      "docs/guide/faq.md",
+      "docs/progress.md",
+      "docs/review-followups.md",
+      "e2e/ui/server.ts",
+      "packages/cli/src/commands/guard.ts",
+      "packages/cli/src/commands/nudge.ts",
+      "packages/cli/src/commands/projects.ts",
+      "packages/cli/src/commands/review.ts",
+      "packages/cli/src/commands/serve.ts",
+      "packages/cli/src/commands/task.ts",
+      "packages/cli/src/commands/wait.ts",
+      "packages/cli/src/git.ts",
+      "packages/cli/src/projects.ts",
+      "packages/cli/src/runtime.ts",
+      "packages/cli/src/ui/server.ts",
+      "packages/cli/test/helpers.ts",
+      "packages/cli/vitest.config.ts",
+      ".changeset/wp5-cli.md",
+      "packages/cli/test/cli-flags.test.ts",
+      "packages/cli/test/setup-registry.ts"
+    ],
+    "summary": "WP5 done: label aliases, none clears links, empty stdin refused, readStdin for hooks, review output fixed, serve race fixed, projects --prune, SATI_REGISTRY for tests."
+  },
+  "createdAt": "2026-11-10T04:35:36.142Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "standard",
+  "id": "tsk_01M71VTXJE98KP8ZF5E10FFGTZ",
+  "labels": [
+    "review",
+    "cli"
+  ],
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T04:35:36.144Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-10T04:35:40.221Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T04:46:32.120Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T04:46:32.120Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T04:46:32.120Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-10T04:35:40.221Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "review",
+  "title": "Review follow-ups WP5: CLI (5.1-5.7)",
+  "updatedAt": "2026-11-10T04:46:32.122Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

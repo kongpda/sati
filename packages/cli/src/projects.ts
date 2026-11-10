@@ -15,11 +15,17 @@ interface KnownProject {
   db: string;
 }
 
-function file(home = homedir()): string {
-  return join(home, ".sati", "projects.json");
+/**
+ * The registry of projects on this machine. `SATI_REGISTRY` points it elsewhere, so test runs
+ * do not fill the real one (review 5.7); an explicit `home` wins over it.
+ */
+function file(home?: string): string {
+  const override = process.env.SATI_REGISTRY;
+  if (home === undefined && override) return override;
+  return join(home ?? homedir(), ".sati", "projects.json");
 }
 
-export function readProjects(home = homedir()): KnownProject[] {
+export function readProjects(home?: string): KnownProject[] {
   const path = file(home);
   if (!existsSync(path)) return [];
   const parsed = parseJson(readFileSync(path, "utf8"), path);
@@ -33,7 +39,7 @@ export function readProjects(home = homedir()): KnownProject[] {
   });
 }
 
-export function rememberProject(project: KnownProject, home = homedir()): void {
+export function rememberProject(project: KnownProject, home?: string): void {
   const all = readProjects(home).filter(
     (p) => p.slug !== project.slug && p.projectId !== project.projectId,
   );
@@ -43,7 +49,26 @@ export function rememberProject(project: KnownProject, home = homedir()): void {
   writeFileAtomic(path, `${JSON.stringify(all, null, 2)}\n`);
 }
 
-export function projectLocation(slug: string, home = homedir()): DbLocation {
+/**
+ * Drops entries whose folder or database is gone, such as deleted temp repos. Returns what it
+ * dropped. Only on request: a folder on an unmounted drive also looks gone.
+ */
+export function pruneProjects(home?: string): KnownProject[] {
+  const all = readProjects(home);
+  const gone = all.filter((p) => !existsSync(p.root) || !existsSync(p.db));
+  if (gone.length === 0) return [];
+  writeFileAtomic(
+    file(home),
+    `${JSON.stringify(
+      all.filter((p) => !gone.includes(p)),
+      null,
+      2,
+    )}\n`,
+  );
+  return gone;
+}
+
+export function projectLocation(slug: string, home?: string): DbLocation {
   const found = readProjects(home).find((p) => p.slug === slug);
   if (!found) {
     throw new SatiError("NOT_FOUND", `No project named ${slug} on this machine.`, {

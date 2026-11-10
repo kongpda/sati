@@ -55,12 +55,21 @@ function orNone(value: string | undefined): string | null | undefined {
   return value === NONE ? null : value;
 }
 
-/** `--milestone` on create and update: an id or handle, or `none` to take the task out of it. */
-async function milestone(
+/**
+ * `--milestone`, `--feature` and `--parent` on create and update: an id or handle, or `none` to
+ * clear the link.
+ */
+async function link(
   ctx: ServiceContext,
+  entity: "milestone" | "feature" | "task",
   value: string | undefined,
 ): Promise<string | null | undefined> {
-  return value === NONE ? null : ref(ctx, "milestone", value);
+  return value === NONE ? null : ref(ctx, entity, value);
+}
+
+/** `--depends`: comma-separated ids or handles, or `none` to clear the list. */
+async function depends(ctx: ServiceContext, value: string | undefined) {
+  return value === NONE ? [] : refs(ctx, "task", value);
 }
 
 /**
@@ -104,10 +113,11 @@ const fields = {
     type: "string",
     description: "light (fine for a small model) | standard | deep, or none",
   },
-  feature: { type: "string", description: "Feature id or handle" },
-  parent: { type: "string", description: "Parent task id or handle" },
-  depends: { type: "string", description: "Comma-separated task ids this task waits on" },
-  labels: { type: "string", description: "Comma-separated labels" },
+  feature: { type: "string", description: "Feature id or handle, or none" },
+  parent: { type: "string", description: "Parent task id or handle, or none" },
+  depends: { type: "string", description: "Comma-separated task ids this task waits on, or none" },
+  // `task list` filters with --label; both spellings work on every task command (review 5.1).
+  labels: { type: "string", alias: "label", description: "Comma-separated labels" },
   branch: { type: "string", description: "Git branch for this task" },
   worktree: { type: "string", description: "Worktree path for this task" },
   due: { type: "string", description: "Due day YYYY-MM-DD, or none" },
@@ -141,14 +151,14 @@ const create = defineCommand({
           status: args.status,
           priority: args.priority,
           effort: orNone(args.effort),
-          featureId: await ref(ctx, "feature", args.feature),
-          parentId: await ref(ctx, "task", args.parent),
-          dependsOn: await refs(ctx, "task", args.depends),
+          featureId: await link(ctx, "feature", args.feature),
+          parentId: await link(ctx, "task", args.parent),
+          dependsOn: await depends(ctx, args.depends),
           labels: list(args.labels),
           branch: args.branch,
           worktree: args.worktree,
           dueDate: orNone(args.due),
-          milestoneId: await milestone(ctx, args.milestone),
+          milestoneId: await link(ctx, "milestone", args.milestone),
           assigneeIds: await assignees(ctx, args.assign),
           subtasks: args.subtasks ? parseJson(args.subtasks, "--subtasks", "USAGE") : undefined,
         }),
@@ -168,7 +178,7 @@ const ls = defineCommand({
       type: "string",
       description: "Only tasks in this milestone, directly or through their feature",
     },
-    label: { type: "string", description: "Only tasks with this label" },
+    label: { type: "string", alias: "labels", description: "Only tasks with this label" },
     "due-by": { type: "string", description: "Only tasks due on or before YYYY-MM-DD" },
     assignee: { type: "string", description: "Only tasks assigned to this name, id or me" },
     effort: { type: "string", description: "Only tasks of this effort: light | standard | deep" },
@@ -259,14 +269,14 @@ const update = defineCommand({
           status: args.status,
           priority: args.priority,
           effort: orNone(args.effort),
-          featureId: await ref(ctx, "feature", args.feature),
-          parentId: await ref(ctx, "task", args.parent),
-          dependsOn: await refs(ctx, "task", args.depends),
+          featureId: await link(ctx, "feature", args.feature),
+          parentId: await link(ctx, "task", args.parent),
+          dependsOn: await depends(ctx, args.depends),
           labels: list(args.labels),
           branch: args.branch,
           worktree: args.worktree,
           dueDate: orNone(args.due),
-          milestoneId: await milestone(ctx, args.milestone),
+          milestoneId: await link(ctx, "milestone", args.milestone),
           assigneeIds: await assignees(ctx, args.assign),
           expectedVersion: int(args["expected-version"], "expected-version"),
           token: await claimToken(ctx, taskId, args.token),

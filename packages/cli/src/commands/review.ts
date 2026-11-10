@@ -1,17 +1,42 @@
 import {
   CLI_NAME,
   checkChanges,
+  type Decision,
   listRecords,
   listTasks,
   reviewDrift,
   SatiError,
+  type ServiceContext,
   shortHandle,
 } from "@sati/core";
 import { defineCommand } from "citty";
 import micromatch from "micromatch";
 import { json } from "../args.js";
-import { defaultBase, rangeChanges } from "../git.js";
+import { defaultBase, rangeChanges, rangeStart } from "../git.js";
 import { execute } from "../runtime.js";
+
+const SNAPSHOT = ".sati/";
+
+/**
+ * Decisions that belong to the range: made since it started, or about a feature it touches.
+ * Newest first, at most 50, so an old project does not list its whole history.
+ */
+async function rangeDecisions(
+  ctx: ServiceContext,
+  since: string | undefined,
+  features: ReadonlySet<string>,
+): Promise<Decision[]> {
+  const out: Decision[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const page = await listRecords(ctx, "decision", { limit: 500, offset });
+    for (const d of page) {
+      const recent = since !== undefined && d.createdAt >= since;
+      if (recent || d.featureIds.some((id) => features.has(id))) out.push(d);
+    }
+    // Pages run oldest first.
+    if (page.length < 500) return out.reverse().slice(0, 50);
+  }
+}
 
 export default defineCommand({
   meta: {
@@ -44,7 +69,8 @@ export default defineCommand({
         // rangeChanges validates the range, reads names with -z and tells deletions from edits,
         // as `guard --range` does.
         const changes = rangeChanges(rt.location.root, span);
-        const paths = changes.map((c) => c.path);
+        // The `.sati/` snapshot changes with every write; it is not the code under review.
+        const paths = changes.map((c) => c.path).filter((p) => !p.startsWith(SNAPSHOT));
         const guard = changes.length
           ? await checkChanges(rt.ctx, { changes })
           : { verdict: "ok" as const, findings: [] };
@@ -52,7 +78,11 @@ export default defineCommand({
         const touched = features.filter((f) =>
           paths.some((path) => micromatch.isMatch(path, f.paths, { dot: true })),
         );
-        const decisions = await listRecords(rt.ctx, "decision", { limit: 20 });
+        const decisions = await rangeDecisions(
+          rt.ctx,
+          rangeStart(rt.location.root, span),
+          new Set(touched.map((f) => f.id)),
+        );
         const inReview = await listTasks(rt.ctx, { status: ["review"], limit: 500 });
         const drift = await reviewDrift(rt.ctx, inReview);
         return {
@@ -74,6 +104,8 @@ export default defineCommand({
             ? `features:\n${report.features.map((f) => `- ${f.title}`).join("\n")}`
             : "features: none matched",
           `guard: ${report.guard.verdict} (${report.guard.findings.length} findings)`,
+          // A blocked guard with no reason gives the reviewer nothing to act on.
+          ...report.guard.findings.map((f) => `- ${f.level}: ${f.message}`),
           report.decisions.length
             ? `decisions:\n${report.decisions.map((d) => `- ${d.title}`).join("\n")}`
             : "decisions: none",

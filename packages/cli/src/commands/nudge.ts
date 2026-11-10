@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import {
   CLI_NAME,
   readSettings,
@@ -8,7 +7,7 @@ import {
   worktreeWarnings,
 } from "@sati/core";
 import { defineCommand } from "citty";
-import { closeRuntime, openRuntime, printError } from "../runtime.js";
+import { closeRuntime, openRuntime, printError, readStdin } from "../runtime.js";
 
 /** The part of Claude Code's hook input we read. */
 interface HookInput {
@@ -17,9 +16,8 @@ interface HookInput {
 }
 
 function readHookInput(): HookInput {
-  if (process.stdin.isTTY) return {};
   try {
-    const value: unknown = JSON.parse(readFileSync(0, "utf8"));
+    const value: unknown = JSON.parse(readStdin() || "{}");
     return value && typeof value === "object" ? (value as HookInput) : {};
   } catch {
     return {};

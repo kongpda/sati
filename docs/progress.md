@@ -1778,3 +1778,20 @@ Status: **done except the owner's manual screen-reader pass** (2026-11-10). Task
 - 6.5: one parity test compares `PRIORITIES`, `MILESTONE_NEXT`, `COLORS`, `COMMENT_TAG` and `COMMENT_MAX` with core's, importing single core source files because core's index needs Node types. The three kind-word maps are now `kindLabel` in `words.ts`. Choice: the context kind reads "card", the board's word elsewhere, instead of "file summary".
 - Found while verifying: the machine's disk was full (ENOSPC failed one a11y run). Old `sati-*` and Playwright temp folders in `$TMPDIR` from test runs were removed, freeing about 1.8 GB.
 - Verified locally: lint (the 12 old CSS warnings), typecheck, knip clean, core 327, store-sqlite 68, sync 52, mcp 30, ui 25, cli 162, `pnpm test:ui` 86 passed.
+
+## 2026-11-10 — Phase 5h WP9: Release and CI
+
+Status: **done except the owner's items** (2026-11-10). Task `tsk_hm0svw`.
+
+- Changesets (owner decision): the 65 entries written for a package that never shipped are replaced by one `initial-release.md`, a minor bump for `@kongpda/sati` that describes the product. The per-change history stays in this file. Decision recorded.
+- Every `uses:` in `ci.yml` and `release.yml` is pinned to a commit SHA, with the tag in a comment. `renovate.json` extends `helpers:pinGitHubActionDigests`.
+- `release.yml` builds, packs the CLI, installs the tarball into an empty git project and runs `sati --version` and `sati init --yes` before `changesets/action`.
+- `ci.yml` (owner decision): one e2e shard on pull requests, ten on `main` and nightly. The guard job builds sati from the base ref in a separate worktree, so a PR cannot change the check that judges it.
+- `packages/cli/package.json` has `homepage`, `bugs` and `keywords`. The CLI build no longer emits `dist/index.d.mts`.
+- `@types/node` is pinned to `24.19.2` at the root and in `e2e`.
+- `packages/ui/tsconfig.json` extends the base config. The stricter flags found three optional fields (`Actor` display fields, the milestone and decision form props) that needed `| undefined`. `vite.config.ts` is now type-checked; its stray backtick is fixed.
+- `packages/store-sqlite/scripts/fts-sql.py` deleted after `sati guard` said ok. Decision recorded.
+- Found while verifying: the WP6 "removed step has Undo" flow failed once under full-suite load with two copies of the step. Cause: when a checklist save settled, the panel reset the list to the snapshot it had, which could still be the one from before the save. The removed step came back for a moment, and Undo then added a second copy. The reset now skips a snapshot older than the last saved version. The flow asserts the step stays gone after the save lands, and that Undo leaves exactly one copy on screen and on the server. No changeset: the fix is to unreleased behaviour, covered by the initial-release entry.
+- Not checked: none of the workflow changes can run until GitHub billing is fixed. `actionlint` is clean on both files.
+- Left for the owner: close PR #1, make the repo public before the first release (provenance and README images), require CI checks on `main`, approve the npm publish.
+- Verified locally: lint (the 12 old CSS warnings), typecheck, knip clean, build, core 327, store-sqlite 68, sync 52, mcp 30, ui 25, cli 162, `pnpm test:ui` 86 passed.

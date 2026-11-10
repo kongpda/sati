@@ -1,0 +1,56 @@
+{
+  "body": "docs/review-followups.md WP9. Owner: one initial-release changeset for 0.1.0; packed-install step; guard from base ref; 1 e2e shard on PRs, 10 on main and nightly. No publish, no GitHub settings.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "64c413b7f6efa58d905e371d5c9a853de41c42eb",
+    "completedAt": "2026-11-10T05:31:08.073Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/release.yml",
+      "renovate.json",
+      ".changeset/initial-release.md",
+      "packages/cli/package.json",
+      "packages/cli/tsdown.config.ts",
+      "package.json",
+      "e2e/package.json",
+      "pnpm-lock.yaml",
+      "packages/ui/tsconfig.json",
+      "packages/ui/src/api.ts",
+      "packages/ui/src/forms.tsx",
+      "packages/ui/vite.config.ts",
+      "packages/ui/src/pages.tsx",
+      "e2e/ui/flows.spec.ts",
+      "packages/store-sqlite/scripts/fts-sql.py",
+      "docs/review-followups.md",
+      "docs/progress.md",
+      "docs/ideas.md",
+      "PLAN.md"
+    ],
+    "summary": "WP9: one initial-release changeset, actions pinned to SHAs, packed-install release step, guard built from base ref, one e2e shard on PRs, CLI package metadata, no d.mts, @types/node 24.19.2, UI tsconfig extends base, fts-sql.py removed; fixed a checklist Undo duplicate found while verifying. Owner items open: PR #1, public repo, required checks, npm publish."
+  },
+  "createdAt": "2026-11-10T05:21:41.063Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "standard",
+  "id": "tsk_01M71YF9P8RFS1B0D95PHM0SVW",
+  "labels": [
+    "review",
+    "ci"
+  ],
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T05:21:41.065Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-10T05:21:44.364Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T05:31:08.074Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T05:31:08.074Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T05:31:08.074Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-10T05:21:44.364Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "review",
+  "title": "Review follow-ups WP9: Release and CI",
+  "updatedAt": "2026-11-10T05:31:08.076Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

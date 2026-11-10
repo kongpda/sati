@@ -15,16 +15,37 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint && pnpm typecheck && pnpm test
-      - uses: changesets/action@v1
+      - run: pnpm build
+      # Review WP9: never publish a tarball that does not install and run. CI's install job does
+      # more; this is the minimum that must pass on the commit being released.
+      - name: Install the packed CLI into an empty project and use it
+        shell: bash
+        env:
+          SATI_ACTOR: ci
+          AI_AGENT: ""
+        run: |
+          set -euo pipefail
+          pkg="$RUNNER_TEMP/pkg"
+          proj="$RUNNER_TEMP/proj"
+          mkdir -p "$pkg" "$proj"
+          (cd packages/cli && npm pack --pack-destination "$pkg")
+          cd "$proj"
+          git init -q
+          git -c user.name=ci -c user.email=ci@example.com commit -q --allow-empty -m init
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund "$pkg"/*.tgz
+          npx sati --version
+          npx sati init --yes
+      - uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           publish: pnpm release
         env:

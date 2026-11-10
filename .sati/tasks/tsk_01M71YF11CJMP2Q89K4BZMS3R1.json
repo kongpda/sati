@@ -1,0 +1,23 @@
+{
+  "blockedReason": null,
+  "body": "docs/review-followups.md WP9. Owner: one initial-release changeset; packed-install step; guard from base ref; 1 shard on PRs, 10 on main and nightly. No publish.",
+  "createdAt": "2026-11-10T05:21:32.204Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "standard",
+  "id": "tsk_01M71YF11CJMP2Q89K4BZMS3R1",
+  "labels": [
+    "review",
+    "ci"
+  ],
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T05:21:32.206Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "blockedReason": "2026-11-10T05:22:54.158Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T05:22:54.158Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "cancelled",
+  "title": "Review follow-ups WP9: Release and CI",
+  "updatedAt": "2026-11-10T05:22:54.160Z",
+  "version": 2
+}

@@ -68,5 +68,7 @@ export default defineConfig({
   format: "esm",
   platform: "node",
   banner: { js: "#!/usr/bin/env node" },
+  // A binary, not a library: no type declarations to ship.
+  dts: false,
   plugins: [thirdPartyLicenses()],
 });

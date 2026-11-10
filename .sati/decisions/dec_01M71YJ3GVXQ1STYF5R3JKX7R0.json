@@ -1,0 +1,15 @@
+{
+  "consequences": "CHANGELOG 0.1.0 has one readable entry. The per-change history stays in docs/progress.md and git. Changesets added from now on describe changes against 0.1.0.",
+  "context": "Review WP9 (owner decision): most entries fixed behaviour nobody had installed, and two compared against better-sqlite3 and a 29 MB install that never shipped. A first changelog should say what the tool does.",
+  "createdAt": "2026-11-10T05:23:13.051Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "decision": "Removed the 66 per-change changesets and wrote one initial-release entry (minor, 0.0.0 to 0.1.0) that describes the product.",
+  "id": "dec_01M71YJ3GVXQ1STYF5R3JKX7R0",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T05:23:13.053Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "title": "One initial-release changeset for 0.1.0",
+  "updatedAt": "2026-11-10T05:23:13.051Z",
+  "version": 1
+}

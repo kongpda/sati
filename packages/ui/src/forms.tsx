@@ -326,7 +326,7 @@ export function MilestoneForm({
   onClose,
   onSaved,
 }: {
-  milestone?: Milestone;
+  milestone?: Milestone | undefined;
   onClose: () => void;
   onSaved: (milestone: Milestone) => void;
 }) {
@@ -416,7 +416,7 @@ export function DecisionForm({
   onSaved,
 }: {
   data: Snapshot;
-  replaces?: Decision;
+  replaces?: Decision | undefined;
   onClose: () => void;
   onSaved: (decision: Decision) => void;
 }) {

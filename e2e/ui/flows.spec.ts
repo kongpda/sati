@@ -1180,13 +1180,17 @@ test("the board says what happened after each action, and a removed step has Und
   await sheet.getByLabel("New step").fill("Count the chairs");
   await sheet.getByRole("button", { name: "Add", exact: true }).click();
   await sheet.getByRole("button", { name: "Remove step Count the chairs" }).click();
-  await expect(sheet.getByRole("checkbox", { name: "Count the chairs" })).toHaveCount(0);
+  const steps = sheet.getByRole("checkbox", { name: "Count the chairs" });
+  const saved = () => ui.sati<{ checklist: { text: string }[] }>("task", "show", t.id).checklist;
+  await expect(steps).toHaveCount(0);
   await expect(toast).toContainText("Removed the step Count the chairs.");
+  // Once the removal is saved, the step must stay gone: a snapshot from before the save used to
+  // bring it back for a moment, and Undo then added it a second time.
+  await expect.poll(saved).toEqual([]);
+  await expect(steps).toHaveCount(0);
   await page.getByRole("button", { name: "Undo" }).click();
-  await expect(sheet.getByRole("checkbox", { name: "Count the chairs" })).toBeVisible();
-  expect(ui.sati<{ checklist: { text: string }[] }>("task", "show", t.id).checklist).toEqual([
-    expect.objectContaining({ text: "Count the chairs" }),
-  ]);
+  await expect(steps).toHaveCount(1);
+  await expect.poll(saved).toEqual([expect.objectContaining({ text: "Count the chairs" })]);
 
   await page.getByRole("link", { name: "Agents", exact: true }).click();
   await page.getByRole("button", { name: "Free up tasks whose time ran out" }).click();

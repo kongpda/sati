@@ -1045,13 +1045,15 @@ function Checklist({
   // arrives meanwhile must not reset it (the ticks would flicker back, then forward).
   const pending = useRef(0);
   const [settled, setSettled] = useState(0);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: items is new on every snapshot; the version says when it changed
-  useEffect(() => {
-    if (pending.current === 0) setShown(items);
-  }, [version, settled]);
   // Quick ticks run one after another, each with the version the last save returned; sent
   // together, the second would carry a stale version and be refused.
   const latest = useRef(version);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: items is new on every snapshot; the version says when it changed
+  useEffect(() => {
+    // A save that just settled can come before the snapshot it made: the old list would bring
+    // a removed step back for a moment, and Undo would then add it a second time.
+    if (pending.current === 0 && version >= latest.current) setShown(items);
+  }, [version, settled]);
   // The list as last saved: a refused tick goes back to it, not to the list of the render it
   // was clicked in, which misses ticks saved since.
   const saved = useRef(items);

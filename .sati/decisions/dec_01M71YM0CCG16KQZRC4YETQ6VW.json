@@ -1,0 +1,15 @@
+{
+  "consequences": "The migration SQL and its comments are the record. A future trigger change is written by hand as a new migration. git history keeps the script.",
+  "context": "Review WP9: a one-off Python generator that wrote drizzle/0003_fts_rowids.sql. Nothing references it, it is the only Python in the repo, and migrations are never regenerated: a change adds a new migration.",
+  "createdAt": "2026-11-10T05:24:15.371Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "decision": "Deleted packages/store-sqlite/scripts/fts-sql.py.",
+  "id": "dec_01M71YM0CCG16KQZRC4YETQ6VW",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T05:24:15.373Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "title": "Delete the FTS trigger generator script",
+  "updatedAt": "2026-11-10T05:24:15.371Z",
+  "version": 1
+}

@@ -25,9 +25,9 @@ jobs:
           - os: ubuntu-latest
             node: "24.15"
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
@@ -45,9 +45,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24.15"
           cache: pnpm
@@ -93,8 +93,9 @@ jobs:
           kill "$ui"
 
   # PLAN Phase 3 gate: the four-worktree scenario passes 100 seeded 1,000-step runs. Each shard
-  # takes about 15 minutes, so pushes and PRs run one seed per shard (10 runs); the nightly and
-  # manual runs do ten per shard (100 runs).
+  # takes about 15 minutes. Pull requests run one shard (owner decision, review WP9); pushes to
+  # main run all ten with one seed each (10 runs); the nightly and manual runs do ten per shard
+  # (100 runs).
   e2e:
     name: E2E / shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
@@ -102,11 +103,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        shard: ${{ fromJSON(github.event_name == 'pull_request' && '[0]' || '[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]') }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: pnpm
@@ -127,9 +128,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: pnpm
@@ -137,7 +138,7 @@ jobs:
       - run: pnpm build
       - run: pnpm --filter @sati/e2e exec playwright install --with-deps chromium
       - run: pnpm test:ui
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
           name: playwright-report
@@ -152,36 +153,35 @@ jobs:
     name: Dependency audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
       - run: pnpm audit --prod
       - run: pnpm audit
-      - uses: google/osv-scanner-action/osv-scanner-action@v2.7.0
+      - uses: google/osv-scanner-action/osv-scanner-action@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
         with:
           scan-args: |-
             --config=osv-scanner.toml
             --lockfile=pnpm-lock.yaml
 
-  # Catches a commit that skipped the pre-commit hook with --no-verify.
+  # Catches a commit that skipped the pre-commit hook with --no-verify. The guard is built from
+  # the base revision, so a pull request cannot change the check that judges it (review WP9).
   guard:
     name: Guard changed paths
     # Scheduled and manual runs have no change range to check.
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
       - name: Check changes against the base snapshot
         shell: bash
         env:
@@ -207,7 +207,11 @@ jobs:
             echo "The base revision has no Sati protection registry."
             exit 0
           fi
-          sati=(node packages/cli/dist/index.mjs)
+          # Build sati from the base revision in its own worktree, never from the change itself.
+          guard_src="$RUNNER_TEMP/guard"
+          git worktree add -q --detach "$guard_src" "$base"
+          (cd "$guard_src" && pnpm install --frozen-lockfile && pnpm build)
+          sati=(node "$guard_src/packages/cli/dist/index.mjs")
           "${sati[@]}" init --mode git --yes --tools ''
           "${sati[@]}" sync import
           "${sati[@]}" guard --range "$base..$head"

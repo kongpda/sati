@@ -92,9 +92,9 @@ export interface Actor {
   kind: string;
   tool: string | null;
   worktree: string | null;
-  displayName?: string;
-  initials?: string;
-  color?: string;
+  displayName?: string | undefined;
+  initials?: string | undefined;
+  color?: string | undefined;
 }
 
 export interface Milestone {

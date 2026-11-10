@@ -23,7 +23,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.6.4",
     "@changesets/cli": "3.0.3",
-    "@types/node": "^24.0.0",
+    "@types/node": "24.19.2",
     "@vitest/coverage-v8": "5.1.0",
     "knip": "6.43.0",
     "tsdown": "0.23.4",

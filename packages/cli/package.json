@@ -4,6 +4,20 @@
   "description": "Local-first memory, task and feature manager for AI coding agents",
   "type": "module",
   "license": "MIT",
+  "homepage": "https://github.com/kongpda/sati#readme",
+  "bugs": {
+    "url": "https://github.com/kongpda/sati/issues"
+  },
+  "keywords": [
+    "ai-agents",
+    "claude-code",
+    "codex",
+    "cursor",
+    "mcp",
+    "task-manager",
+    "cli",
+    "local-first"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kongpda/sati.git",

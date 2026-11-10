@@ -92,7 +92,7 @@ Repo, docs and release:
 - **PLAN drift**: the tech-stack table names TanStack Router, shadcn/Radix, cmdk, Tiptap, `@hono/zod-openapi` and pino, none used, with no ADR; "ten internal packages", `e2e/guard/`, CI benchmarks, bundle-size and licence checks, `sati migrate` and release channels are not built; two Phase 0 boxes and two open decisions are settled but unticked.
 - **`docs/team-brain.md`** parity table describes the state before Phase 7a.
 - **Small doc errors**: "every command takes `--json`" (six do not); the FAQ adds `rules sync` after `init --upgrade`, which already does it; "absolute path" for hooks where a project install records `node_modules/.bin/sati`; no dev-setup section (`playwright install chromium`, `pnpm local`).
-- **Leftovers**: `packages/store-sqlite/scripts/fts-sql.py` is referenced nowhere; `dist/index.d.mts` (10 bytes) ships; the cli `package.json` has no `homepage`, `bugs` or `keywords`; `@types/node` is 22 in `e2e` and 24 at the root; the UI tsconfig does not extend the base.
+- **Leftovers**: `packages/store-sqlite/scripts/fts-sql.py` is referenced nowhere; `dist/index.d.mts` (10 bytes) ships; the cli `package.json` has no `homepage`, `bugs` or `keywords`; `@types/node` is 22 in `e2e` and 24 at the root; the UI tsconfig does not extend the base. All fixed in review WP9 (2026-11-10).
 
 Review coverage: `sync`, `mcp`, `ui`, the UI server and the repo files were read in full. In `core`, ten services were not read (`recall`, `brief`, `changes`, `shell-changes`, `guard`, `overlap`, `similar`, `workflow`, `template`, `doctor`). The CLI `--help` sweep was partial. No dead-code search ran (no knip config).
 

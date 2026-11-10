@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   // The product name lives in core; the board's title and brand use it.
   define: { __PRODUCT_NAME__: JSON.stringify(PRODUCT_NAME) },
-  // \`license\` writes the bundled packages' license texts to dist/licenses.md, shipped with the CLI.
+  // `license` writes the bundled packages' license texts to dist/licenses.md, shipped with the CLI.
   build: {
     outDir: "dist",
     emptyOutDir: true,

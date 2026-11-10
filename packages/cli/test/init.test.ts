@@ -149,6 +149,7 @@ describe("sati init", () => {
       { cwd: dir, encoding: "utf8", env: { ...process.env, PATH: base, SATI_ACTOR: "tester" } },
     );
     expect(r.status).toBe(0);
+    expect(r.stdout).toContain(".git/sati/hooks/pre-commit");
     // No PATH warning: the configs no longer need `sati` on PATH.
     expect(r.stderr).toBe("");
     expect(JSON.parse(readFileSync(join(dir, ".mcp.json"), "utf8")).mcpServers.sati).toEqual({

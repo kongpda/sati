@@ -228,6 +228,14 @@ describe("MCP server", () => {
     const token = claimed.body.claim.token;
     expect(token).toEqual(expect.any(Number));
 
+    // With no id the top ready task is claimed; the token must sit where the description says
+    // (claim.token), the same as with an id, or the agent's next write has no token (review WP10).
+    await call(client, "task_create", { title: "Write the docs" });
+    const next = await call(client, "task_claim", {});
+    expect(next.body).toMatchObject({ title: "Write the docs", status: "in_progress" });
+    expect(next.body.claim.token).toEqual(expect.any(Number));
+    expect(next.body.acceptance).toEqual([]);
+
     // PLAN review fix 2: writes on a claimed task must present the claim's fencing token.
     const noToken = await call(client, "task_update", { id: handle, body: "halfway" });
     expect(noToken).toMatchObject({ isError: true, body: { error: { code: "CONFLICT" } } });

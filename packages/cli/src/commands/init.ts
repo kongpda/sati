@@ -71,7 +71,7 @@ interface InitPlan {
   upgrade: Project | undefined;
 }
 
-export interface InitResult {
+interface InitResult {
   project: Project;
   actor: Actor;
   db: string;
@@ -297,7 +297,7 @@ function writeManaged(p: InitPlan): void {
   writePlanned(p.root, p.agentFiles, p.mode === "stealth" ? excludeFileFor(p.db) : undefined);
 }
 
-export interface UpgradeResult {
+interface UpgradeResult {
   upgraded: Project;
   files: FileChange[];
   notes: string[];

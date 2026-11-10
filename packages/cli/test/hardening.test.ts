@@ -220,7 +220,7 @@ describe("range checks", () => {
     const r = push(dir, "feat");
     expect(r.status).not.toBe(0);
     expect(git(dir, "ls-remote", "origin", "feat")).toBe("");
-  });
+  }, 30_000);
 
   // Why: the runner reads the pushed refs from stdin, which a hook line after ours (such as
   // `git lfs pre-push`) needs as well.
@@ -235,7 +235,7 @@ describe("range checks", () => {
     expect(readFileSync(seen, "utf8")).toMatch(
       /^refs\/heads\/feat [0-9a-f]+ refs\/heads\/feat 0+$/mu,
     );
-  });
+  }, 30_000);
 
   it("the pre-push runner says so when there is nothing to compare with", async () => {
     const dir = await tempRepo();

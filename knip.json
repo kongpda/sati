@@ -1,0 +1,18 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.mjs"]
+    },
+    "packages/cli": {
+      "entry": ["scripts/*.mjs", "bench/*.ts"],
+      "ignoreDependencies": ["ulid", "drizzle-orm", "@sati/ui"]
+    },
+    "packages/core": {
+      "entry": ["scripts/*.mjs"]
+    },
+    "packages/store-sqlite": {
+      "entry": ["scripts/*.mjs"]
+    }
+  }
+}

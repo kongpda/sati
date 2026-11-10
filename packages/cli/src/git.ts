@@ -97,20 +97,23 @@ function diffChanges(
   // `--numstat -z` prints "added<TAB>removed<TAB>path\0". A rename is
   // "added<TAB>removed<TAB>\0old\0new\0". Binary files show "-" counts.
   const removed = new Map<string, number>();
+  const added = new Map<string, number>();
   const stat = git(root, [...diffArgs, "--numstat", ...tail])
     .toString("utf8")
     .split("\0");
   for (let i = 0; i < stat.length; i++) {
     const entry = stat[i];
     if (!entry) continue;
-    const [, del, path] = entry.split("\t");
+    const [add, del, path] = entry.split("\t");
     if (del === undefined || del === "-") continue;
+    let name = path;
     if (path === "" && stat[i + 1] && stat[i + 2] !== undefined) {
-      removed.set(stat[i + 2] as string, Number(del));
+      name = stat[i + 2] as string;
       i += 2;
-      continue;
     }
-    if (path) removed.set(path, Number(del));
+    if (!name) continue;
+    removed.set(name, Number(del));
+    added.set(name, Number(add));
   }
   const modified = kinds
     .filter((c) => c.kind === "modified" && removed.has(c.path))
@@ -126,6 +129,7 @@ function diffChanges(
     return {
       ...change,
       removedLines: del,
+      addedLines: added.get(change.path) ?? 0,
       ...(lines === undefined ? {} : { baseLines: lines }),
     };
   });

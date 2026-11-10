@@ -6,9 +6,40 @@ export interface ShellChange {
   from?: string;
 }
 
-const WRAPPERS = new Set(["sudo", "command", "exec", "env"]);
+/** Words that run the next word as the command; `then` and `do` open an `if` or loop body. */
+const WRAPPERS = new Set([
+  "sudo",
+  "command",
+  "exec",
+  "env",
+  "time",
+  "nice",
+  "nohup",
+  "then",
+  "do",
+  "else",
+]);
 
-/** Splits a command on `&&`, `||`, `;` and `|` without breaking quotes. */
+/** Wrapper flags that take the next word as their value (`sudo -u root`, `nice -n 5`). */
+const WRAPPER_VALUE_FLAGS = new Set([
+  "-u",
+  "-g",
+  "-h",
+  "-p",
+  "-C",
+  "-D",
+  "-r",
+  "-t",
+  "-U",
+  "-n",
+  "-f",
+  "-o",
+]);
+
+/** A redirection such as `>out`, `2>&1` or `&>log`; a bare `>` takes the next word. */
+const REDIRECT = /^(?:\d*|&)(?:>>?|<)/u;
+
+/** Splits a command on `&&`, `||`, `;`, `|` and `&` without breaking quotes or `2>&1`. */
 function segments(command: string): string[] {
   const out: string[] = [];
   let current = "";
@@ -42,7 +73,10 @@ function segments(command: string): string[] {
       i++;
       continue;
     }
-    if (ch === ";" || ch === "|" || ch === "\n") {
+    // A lone `&` runs the left side in the background; in `2>&1` or `&>` it is a redirection.
+    const lone =
+      ch === "&" && command[i - 1] !== ">" && command[i - 1] !== "<" && command[i + 1] !== ">";
+    if (ch === ";" || ch === "|" || ch === "\n" || lone) {
       out.push(current);
       current = "";
       continue;
@@ -127,7 +161,14 @@ function under(dir: string | undefined, path: string): string {
 }
 
 /** git options that take the next word as their value. */
-const GIT_VALUE_OPTIONS = new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace"]);
+const GIT_VALUE_OPTIONS = new Set([
+  "-C",
+  "-c",
+  "--config-env",
+  "--git-dir",
+  "--work-tree",
+  "--namespace",
+]);
 
 interface Command {
   cmd: string;
@@ -144,8 +185,21 @@ interface Command {
 function command(argv: readonly string[], dir: string | undefined): Command | undefined {
   let rest = argv.map((w, i) => (i === argv.length - 1 ? w.replace(/\)+$/u, "") : w));
   rest = rest.map((w, i) => (i === 0 ? w.replace(/^[({]+/u, "") : w)).filter((w) => w !== "");
-  while (rest[0] && /^[A-Za-z_][A-Za-z0-9_]*=/u.test(rest[0])) rest = rest.slice(1);
-  while (rest[0] && WRAPPERS.has(baseName(rest[0]))) rest = rest.slice(1);
+  // Redirections are not arguments: `rm a 2>&1` removes only `a`.
+  rest = rest.filter(
+    (w, i) => !REDIRECT.test(w) && !/^(?:\d*|&)(?:>>?|<)$/u.test(rest[i - 1] ?? ""),
+  );
+  for (;;) {
+    while (rest[0] && /^[A-Za-z_][A-Za-z0-9_]*=/u.test(rest[0])) rest = rest.slice(1);
+    if (!rest[0] || !WRAPPERS.has(baseName(rest[0]))) break;
+    rest = rest.slice(1);
+    // The wrapper's own flags: `env -i`, `sudo -u root`, `nice -n 5`.
+    while (rest[0]?.startsWith("-")) {
+      const flag = rest[0];
+      rest = rest.slice(flag === "--" || !WRAPPER_VALUE_FLAGS.has(flag) ? 1 : 2);
+      if (flag === "--") break;
+    }
+  }
   const first = rest[0];
   if (first === undefined) return undefined;
   const cmd = baseName(first);
@@ -156,7 +210,7 @@ function command(argv: readonly string[], dir: string | undefined): Command | un
       const [opt = "", value] = args;
       if (GIT_VALUE_OPTIONS.has(opt)) {
         if (opt === "-C" && value !== undefined) dir = under(dir, value);
-        if (opt === "-c" && value !== undefined) config.push(value);
+        if ((opt === "-c" || opt === "--config-env") && value !== undefined) config.push(value);
         args = args.slice(2);
       } else args = args.slice(1);
     }
@@ -199,6 +253,12 @@ const deletes = (paths: readonly string[], dir: string | undefined): ShellChange
 
 const SHELLS = new Set(["sh", "bash", "zsh", "dash"]);
 
+/** The script a shell runs with `-c`, also in combined flags such as `bash -lc`. */
+function shellScript(args: readonly string[]): string | undefined {
+  const at = args.findIndex((w) => /^-[a-z]*c[a-z]*$/u.test(w));
+  return at < 0 ? undefined : args[at + 1];
+}
+
 function walk(commandLine: string, start: string | undefined): ShellChange[] {
   let dir = start;
   const out: ShellChange[] = [];
@@ -219,8 +279,8 @@ function walk(commandLine: string, start: string | undefined): ShellChange[] {
     } else if (cmd === "git" && args[0] === "mv") {
       out.push(...moves(args.slice(1), c.dir));
     } else if (SHELLS.has(cmd)) {
-      const script = args[args.indexOf("-c") + 1];
-      if (args.includes("-c") && script !== undefined) out.push(...walk(script, dir));
+      const script = shellScript(args);
+      if (script !== undefined) out.push(...walk(script, dir));
     }
   }
   return out;
@@ -238,9 +298,18 @@ export function parseShellChanges(commandLine: string): ShellChange[] {
 /** Short flags of `git commit` that take a value, so letters after them are that value. */
 const COMMIT_VALUE_FLAGS = new Set(["m", "F", "C", "c", "t", "S", "u"]);
 
+/** `--no-verify` or a prefix git accepts for it; `--no-ver` could also be `--no-verbose`. */
+const isNoVerify = (word: string) => word.startsWith("--no-veri") && "--no-verify".startsWith(word);
+
+/** Commands that can remove or disable a git hook file. */
+const HOOK_FILE_COMMANDS = new Set(["rm", "unlink", "mv", "cp", "ln", "chmod", "truncate"]);
+const HOOK_FILE = /(?:^|\/)(?:\.git\/hooks|sati\/hooks)(?:\/|$)/u;
+
+const HOOKS_PATH = "core.hookspath";
+
 function skipsVerify(args: readonly string[]): boolean {
   for (const word of args) {
-    if (word === "--no-verify") return true;
+    if (isNoVerify(word)) return true;
     if (!/^-[A-Za-z]+$/u.test(word)) continue;
     for (const letter of word.slice(1)) {
       if (letter === "n") return true;
@@ -251,25 +320,45 @@ function skipsVerify(args: readonly string[]): boolean {
 }
 
 /**
- * Why a command would skip git's hooks, or undefined: `git commit --no-verify` (or `-n`),
- * `git push --no-verify`, or a `-c core.hooksPath=` override. The pre-commit guard never runs
- * for these, so the PreToolUse hook blocks them instead.
+ * Why a command would skip git's hooks, or undefined: `git commit --no-verify` (or `-n`, or a
+ * prefix such as `--no-verif`), `git push --no-verify`, a `core.hooksPath` override through
+ * `-c`, `--config-env`, `git config` or `GIT_CONFIG_KEY_n`, or removing a hook file. The
+ * pre-commit guard never runs after these, so the PreToolUse hook blocks them instead.
  */
 export function hookBypass(commandLine: string): string | undefined {
   for (const segment of segments(commandLine)) {
-    const c = command(words(segment), undefined);
+    const argv = words(segment);
+    if (argv.some((w) => /^GIT_CONFIG_KEY_\d+=core\.hookspath$/iu.test(w))) {
+      return "Setting core.hooksPath through GIT_CONFIG_KEY skips the git hooks.";
+    }
+    const c = command(argv, undefined);
     if (!c) continue;
-    if (SHELLS.has(c.cmd) && c.args.includes("-c")) {
-      const inner = hookBypass(c.args[c.args.indexOf("-c") + 1] ?? "");
+    const script = SHELLS.has(c.cmd) ? shellScript(c.args) : undefined;
+    if (script !== undefined) {
+      const inner = hookBypass(script);
       if (inner) return inner;
+    }
+    if (HOOK_FILE_COMMANDS.has(c.cmd) && operands(c.args).some((w) => HOOK_FILE.test(w))) {
+      return `\`${c.cmd}\` on a git hook file turns the hooks off.`;
     }
     if (c.cmd !== "git") continue;
     const [sub, ...rest] = c.args;
-    if (sub !== "commit" && sub !== "push") continue;
-    if (c.config.some((kv) => kv.toLowerCase().startsWith("core.hookspath="))) {
-      return `\`git ${sub}\` with -c core.hooksPath skips the git hooks.`;
+    const mentions = (w: string) => w.toLowerCase().includes(HOOKS_PATH);
+    if (sub === "config") {
+      // `git config core.hooksPath` and `git config get …` only read it; a value sets it.
+      const plain = operands(rest).filter((w) => w !== "set");
+      const reads = rest.some(
+        (w) => w.startsWith("--get") || w.startsWith("--unset") || w === "--list",
+      );
+      const reading = reads || plain[0] === "get" || plain[0] === "unset" || plain.length < 2;
+      if (!reading && plain.some(mentions)) return "Changing core.hooksPath skips the git hooks.";
+      continue;
     }
-    const skips = sub === "commit" ? skipsVerify(rest) : rest.includes("--no-verify");
+    if (c.config.some(mentions) || argv.some((w) => w.startsWith("--config-env") && mentions(w))) {
+      return `\`git ${sub ?? ""}\` with a core.hooksPath override skips the git hooks.`;
+    }
+    if (sub !== "commit" && sub !== "push") continue;
+    const skips = sub === "commit" ? skipsVerify(rest) : rest.some(isNoVerify);
     if (skips) return `\`git ${sub} --no-verify\` skips the git hooks.`;
   }
   return undefined;

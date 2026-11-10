@@ -73,6 +73,7 @@ export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> 
     locks: await listAll(r, ctx, "lock"),
     review: (await listAll(r, ctx, "task")).filter((t) => t.needsReview === true),
     links: await linkProblems(r, ctx),
+    mode: (await r.getProject())?.mode ?? "git",
     private: [
       ...(await listAll(r, ctx, "note")).filter((n) => n.private).map((n) => `note "${n.title}"`),
       ...(await listAll(r, ctx, "context")).filter((c) => c.private).map((c) => `card ${c.path}`),
@@ -134,9 +135,11 @@ export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> 
       name: "private",
       ok: true,
       detail:
-        data.private.length === 0
-          ? "Nothing is private; every note and card is shared through .sati/."
-          : `${data.private.length} private item(s) stay on this machine only: ${data.private.slice(0, 5).join(", ")}${data.private.length > 5 ? ` …and ${data.private.length - 5} more` : ""}.`,
+        data.mode !== "git"
+          ? `Nothing is shared: in ${data.mode} mode every record stays on this machine.`
+          : data.private.length === 0
+            ? "Nothing is private; every note and card is shared through .sati/."
+            : `${data.private.length} private item(s) stay on this machine only: ${data.private.slice(0, 5).join(", ")}${data.private.length > 5 ? ` …and ${data.private.length - 5} more` : ""}.`,
     },
   );
   return checks;

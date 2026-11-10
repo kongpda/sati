@@ -106,7 +106,7 @@ export interface Milestone {
   version: number;
 }
 
-export interface Lock {
+interface Lock {
   id: string;
   actorId: string;
   paths: string[];
@@ -115,7 +115,7 @@ export interface Lock {
   taskId: string | null;
 }
 
-export interface Activity {
+interface Activity {
   id: string;
   actorId: string;
   verb: string;
@@ -223,7 +223,7 @@ export interface TemplateSummary {
   stages: { title: string; offsetDays: number | null; tasks: number }[];
 }
 
-export interface Drift {
+interface Drift {
   commit: string;
   branch: string;
   head: string | null;

@@ -50,7 +50,7 @@ function hooksCheck(root: string): DoctorCheck {
 }
 
 /**
- * Whether the hooks, merge driver and agent files match this version. After an
+ * Whether the hooks, merge driver (git mode) and agent files match this version. After an
  * update they lag behind until `init --upgrade` runs, and nothing else would say so.
  */
 async function upgradeCheck(root: string): Promise<DoctorCheck> {
@@ -62,7 +62,7 @@ async function upgradeCheck(root: string): Promise<DoctorCheck> {
     return { name: "setup", ok: false, detail: `Cannot check: ${(err as Error).message}` };
   }
   if (files.length === 0) {
-    return { name: "setup", ok: true, detail: "Hooks, merge driver and agent files are current." };
+    return { name: "setup", ok: true, detail: "The git hooks and agent files are current." };
   }
   return {
     name: "setup",

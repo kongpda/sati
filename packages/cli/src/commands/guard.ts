@@ -1,4 +1,4 @@
-import { readFileSync, realpathSync } from "node:fs";
+import { readdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
   CLI_NAME,
@@ -52,12 +52,16 @@ function realish(path: string): string {
  * the repo. Both sides go through realpath: with a symlinked cwd (/tmp -> /private/tmp) a plain
  * `relative` calls everything outside the repo and the guard would pass silently.
  */
-export function inRepo(root: string, cwd: string, path: string): string | undefined {
+function inRepo(root: string, cwd: string, path: string): string | undefined {
   const rel = relative(realish(root), realish(resolve(cwd, path)));
   // A file may be named `..foo`; only `..` itself or `../x` leaves the repo.
   if (rel === "" || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) return undefined;
   return rel.split(sep).join("/");
 }
+
+/** True when `path`, relative to `cwd`, is the repo root itself. */
+const isRepoRoot = (root: string, cwd: string, path: string) =>
+  relative(realish(root), realish(resolve(cwd, path))) === "";
 
 /** A general project has no features or file locks to protect, so the guard has nothing to do. */
 const guardOff = (rt: Runtime) => readSettings(rt.project.settings).kind === "general";
@@ -125,6 +129,12 @@ async function runHook(): Promise<void> {
     const changes: Change[] =
       typeof command === "string"
         ? shellChanges.flatMap((change): Change[] => {
+            // `rm -rf .` (or the root by name) removes everything at the top of the repo.
+            if (isRepoRoot(root, cwd, change.from ?? change.path)) {
+              return readdirSync(root)
+                .filter((name) => name !== ".git")
+                .map((name): Change => ({ path: name, kind: "deleted" }));
+            }
             const path = inRepo(root, cwd, change.path);
             const from = change.from === undefined ? undefined : inRepo(root, cwd, change.from);
             // Moving a file out of the repo removes it from the repo.

@@ -6,7 +6,9 @@ import {
   listRecords,
   type Note,
   resolveId,
+  resolveLinks,
   restoreRecord,
+  type ServiceContext,
   updateNote,
 } from "@sati/core";
 import { defineCommand } from "citty";
@@ -14,10 +16,19 @@ import { expectedVersion, id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
 import { bodyText, execute, int, list } from "../runtime.js";
 
+/** A short handle in `--links` becomes the full id, as over MCP, so the link shows in threads. */
+const linksOf = async (ctx: ServiceContext, raw: string | undefined) => {
+  const links = list(raw);
+  return links && resolveLinks(ctx, links);
+};
+
 const fields = {
   body: { type: "string", description: "Note text in Markdown (- reads stdin)" },
   tags: { type: "string", description: "Comma-separated tags" },
-  links: { type: "string", description: "Comma-separated links (URLs, paths or ids)" },
+  links: {
+    type: "string",
+    description: "Comma-separated links (URLs, paths, ids or short handles)",
+  },
   pinned: { type: "boolean", description: "Pin the note (pinned notes reach every brief)" },
   private: {
     type: "boolean",
@@ -41,7 +52,7 @@ const create = defineCommand({
           title: args.title,
           body: bodyText(args.body),
           tags: list(args.tags),
-          links: list(args.links),
+          links: await linksOf(ctx, args.links),
           pinned: args.pinned,
           private: args.private,
         }),
@@ -94,7 +105,7 @@ const update = defineCommand({
           title: args.title,
           body: bodyText(args.body),
           tags: list(args.tags),
-          links: list(args.links),
+          links: await linksOf(ctx, args.links),
           pinned: args.pinned,
           private: args.private,
           reviewed: args.reviewed ? true : undefined,

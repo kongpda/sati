@@ -170,6 +170,8 @@ describe("listChanges", () => {
       "2026-11-01T00:00:00.000Z",
     );
     expect(await code(() => listChanges(ctx, { since: "yesterday" }))).toBe("VALIDATION");
+    // Date.parse rolls 2026-02-31 over to March 3; a day that does not exist is a typo.
+    expect(await code(() => listChanges(ctx, { since: "2026-02-31" }))).toBe("VALIDATION");
     const v1 = await createMilestone(ctx, { title: "v1" });
     expect(await code(() => listChanges(ctx, { since: v1.id }))).toBe("VALIDATION");
     await updateMilestone(ctx, v1.id, { status: "active" });
@@ -279,6 +281,29 @@ describe("formatChanges", () => {
     expect(digest).toContain("- and 2 more\n");
     expect(digest).toContain("- and 4 more\n");
     expect(digest.split("\n").length).toBeLessThan(20);
+  });
+
+  // The digest goes to people outside the team; `internal` work must not reach it, blocked or not.
+  it("leaves internal tasks out of the digest's needs-attention list", async () => {
+    const { ctx } = await setup();
+    const secret = await createTask(ctx, {
+      title: "Quiet vendor swap",
+      labels: ["internal"],
+      dueDate: "2026-11-01",
+    });
+    const visible = await createTask(ctx, { title: "Book the hall" });
+    for (const t of [secret, visible]) {
+      const claimed = await claimTask(ctx, t.id);
+      await updateTask(ctx, t.id, {
+        status: "blocked",
+        reason: "waiting",
+        token: claimed.claim?.token,
+      });
+    }
+    const digest = formatChanges(await listChanges(ctx), "digest");
+    expect(digest).toContain("Book the hall (blocked)");
+    expect(digest).not.toContain("Quiet vendor swap");
+    expect(digest).toContain("Needs attention: 1 blocked task, 0 overdue.");
   });
 });
 

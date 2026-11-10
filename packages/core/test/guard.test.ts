@@ -90,6 +90,29 @@ describe("checkChanges: protected features", () => {
     // 10 of 40 = 25%, under 30%. Without the cap it would be 500/40.
     expect(r.verdict).toBe("warn");
   });
+
+  // Review WP10: the share is summed over the feature's changed files, so one small edit to a
+  // big file hid any number of emptied small ones. An emptied file loses all its behaviour, the
+  // same as a deleted one, so it is blocked the same way.
+  it("blocks emptying a protected file, however big the other changed files are", async () => {
+    const { ctx } = await setup();
+    await billing(ctx);
+    const big = { path: "src/billing/big.ts", removedLines: 1, addedLines: 0, baseLines: 5000 };
+    const emptied = { path: "src/billing/a.ts", removedLines: 100, addedLines: 0, baseLines: 100 };
+    const r = await checkChanges(ctx, { changes: [big, emptied] });
+    expect(r.verdict).toBe("blocked");
+    expect(r.findings[0]).toMatchObject({
+      rule: "protected-delete",
+      paths: [big.path, emptied.path],
+    });
+    expect(r.findings[0]?.message).toContain("empties src/billing/a.ts");
+    // A rewrite removes every old line but adds new ones: still an edit, not a removal.
+    const rewritten = { ...emptied, addedLines: 90 };
+    expect((await checkChanges(ctx, { changes: [big, rewritten] })).verdict).toBe("warn");
+    // Without added-line counts (older callers) nothing changes.
+    const { addedLines: _, ...noCount } = emptied;
+    expect((await checkChanges(ctx, { changes: [big, noCount] })).verdict).toBe("warn");
+  });
 });
 
 describe("checkChanges: other rules", () => {

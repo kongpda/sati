@@ -127,3 +127,7 @@ with a fixed code:
 | 8 | Invalid status transition |
 | 9 | Ambiguous short id |
 | 10 | `sati guard` found a blocked change |
+
+Commands that other tools start follow those tools' rules instead: `sati guard --hook` exits 2
+to block an edit, as Claude Code expects, and `sati nudge`, `sati wait --hook` and
+`sati merge-driver` exit 1 on any error.

@@ -1,15 +1,25 @@
 {
   "body": "docs/review-followups.md WP7: one store contract suite run against MemoryStore and SqliteStore; fix the memory store until both pass.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "heartbeatAt": "2026-11-10T03:44:54.571Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 98879
-    },
-    "leaseUntil": "2026-11-10T05:44:54.571Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "e8bb83f2da9afdaba830f7885cddf733c681fc52",
+    "completedAt": "2026-11-10T03:48:35.999Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/core/test/support/store-contract.ts",
+      "packages/core/test/store-contract.test.ts",
+      "packages/core/test/support/memory-store.ts",
+      "packages/store-sqlite/test/contract.test.ts",
+      "packages/store-sqlite/src/store.ts",
+      "packages/store-sqlite/tsdown.config.ts",
+      "packages/store-sqlite/tsconfig.build.json",
+      "packages/cli/test/coordination.test.ts",
+      "PLAN.md",
+      "docs/progress.md",
+      "docs/review-followups.md"
+    ],
+    "summary": "Review WP7 done (e155335 plus a fix-up). A store contract suite in core/test/support/store-contract.ts runs against MemoryStore and SqliteStore. The memory store now orders, clamps, seeks and checks unique keys as SQL does. SqliteStore.update now turns a unique-key violation into CONFLICT. The fix-up removed stray .d.ts files and builds store-sqlite from src only. CLI coordination tests get a 30 s timeout."
   },
   "createdAt": "2026-11-10T03:44:52.858Z",
   "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
@@ -22,13 +32,14 @@
   "stamps": {
     "*": "2026-11-10T03:44:52.858Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "branch": "2026-11-10T03:44:54.572Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "claim": "2026-11-10T03:44:54.572Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-10T03:44:54.572Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T03:48:36.000Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T03:48:36.000Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T03:48:36.000Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "worktree": "2026-11-10T03:44:54.572Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Review follow-ups WP7: test store parity",
-  "updatedAt": "2026-11-10T03:44:54.572Z",
-  "version": 2,
+  "updatedAt": "2026-11-10T03:48:36.000Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

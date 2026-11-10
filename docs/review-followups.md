@@ -587,21 +587,85 @@ Effort: `standard`. Almost every item needs the owner: publishing and GitHub set
 
 Effort: `deep`. Read-only first; fixes go through the same rule as Phase 5g: fix what is certain with a test, list the rest here under a new heading.
 
-- [ ] Read in full and review: `packages/core/src/services/recall.ts`, `brief.ts`, `changes.ts`, `shell-changes.ts`, `guard.ts`, `overlap.ts`, `similar.ts`, `workflow.ts`, `template.ts`, `doctor.ts`. Look for: writes outside one transaction or without an activity row, input not validated with Zod, full-table reads in hot paths, text that reaches an agent unfenced, wrong error codes.
-- [ ] `guard.ts` and `shell-changes.ts` deserve the most care: they are the safety checks. Try to get a removal past the guard (renames, moves across features, binary files, paths with spaces, a ratio just under `guard.maxRemovalRatio`).
+- [x] Read in full and review: `packages/core/src/services/recall.ts`, `brief.ts`, `changes.ts`, `shell-changes.ts`, `guard.ts`, `overlap.ts`, `similar.ts`, `workflow.ts`, `template.ts`, `doctor.ts`. Look for: writes outside one transaction or without an activity row, input not validated with Zod, full-table reads in hot paths, text that reaches an agent unfenced, wrong error codes.
+- [x] `guard.ts` and `shell-changes.ts` deserve the most care: they are the safety checks. Try to get a removal past the guard (renames, moves across features, binary files, paths with spaces, a ratio just under `guard.maxRemovalRatio`).
 - [x] CLI `--help` sweep: for every command and subcommand, compare the help text with what the command does. Check exit codes against the README table (1 internal, 2 usage, 3 not found, 4 conflict, 5 validation, 6 not initialized, 7 schema newer, 8 invalid transition, 9 ambiguous id, 10 guard blocked).
-- [ ] Compare each MCP tool with its CLI command: same fields, same defaults, same errors.
-- [ ] `doctor` in a stealth-mode project.
-- [ ] Dead code: add a knip config (entry points: each package's `src/index.ts`, the CLI bin, test files, scripts) as a dev dependency and report what it finds. The cli's `ulid` and `drizzle-orm` dev dependencies are unused on purpose (they are bundled); ignore them in the config. Adding a dev tool is a stack change: ask the owner or write an ADR first.
-- [ ] Windows: path handling in `hooks.ts`, `detect.ts`, the named pipe in `remote.ts`. Cannot be run here; read only, and list doubts.
-- [ ] Add the findings to this file and to `docs/progress.md`.
+- [x] Compare each MCP tool with its CLI command: same fields, same defaults, same errors.
+- [x] `doctor` in a stealth-mode project.
+- [x] Dead code: add a knip config (entry points: each package's `src/index.ts`, the CLI bin, test files, scripts) as a dev dependency and report what it finds. The cli's `ulid` and `drizzle-orm` dev dependencies are unused on purpose (they are bundled); ignore them in the config. Adding a dev tool is a stack change: ask the owner or write an ADR first.
+- [x] Windows: path handling in `hooks.ts`, `detect.ts`, the named pipe in `remote.ts`. Cannot be run here; read only, and list doubts.
+- [x] Add the findings to this file and to `docs/progress.md`.
 
 ### Found by the WP10 `--help` sweep (2026-11-10)
 
 - [x] `sati decision delete <handle>` looked the handle up among deleted decisions, so a live decision failed with NOT_FOUND (exit 3); a full id worked. Fixed, with a CLI test that deletes and restores a task, note and decision by handle.
 - [ ] Hook-mode exit codes differ from the README table on purpose: `guard --hook` exits 2 to block an edit (Claude Code's contract), and `nudge`, `wait --hook` and `merge-driver` exit 1 on any error. Now stated in their help; the README table could note it too.
 - [ ] `milestone update --date` cannot clear a date (`task --due none` can). Left as is; an idea, not a bug.
+- [x] Hook-mode exit codes are now noted under the exit code table in `docs/guide/quick-start.md`.
+- [x] `milestone update --date` cannot clear a date: moved to `docs/ideas.md`.
 - [ ] `card show --help` prints `USAGE sati card get`, and the `context` alias prints `(sati card)`: the aliases share one command definition. Cosmetic.
+
+### Found by the WP10 review (2026-11-10)
+
+Fixed in WP10, each with a test:
+
+- [x] `doctor` in stealth mode said `.sati/` was shared and named the merge driver. It now says nothing is shared.
+- [x] `sati changes --digest` listed internal tasks under "Needs attention".
+- [x] Feature acceptance criteria reached the brief unfenced. They are now in a `data` fence.
+- [x] `--since 2026-02-31` rolled over to March 3. Dates that roll over are now refused (exit 5).
+- [x] `task_claim` with no id returned a different shape from the CLI. It now returns the task with its feature's `acceptance`.
+- [x] `sati note create --links` stored a short handle as written; MCP stored the full id. Both use core `resolveLinks` now.
+- [x] Guard: emptying a protected file passed when a big edit elsewhere kept the feature's total removal ratio under the limit. An emptied file is now blocked like a delete.
+- [x] Shell hook: `rm -rf .` and `rm -rf <repo root>` resolved to no path and passed. They now count as deleting every top-level entry.
+- [x] Shell hook: wrappers with flags (`time`, `nice -n 5`, `nohup`, `env -i`, `sudo -u root`), `bash -lc`, a background `&`, and `then`/`do` bodies hid an `rm`. Redirections such as `2>&1` are no longer read as paths.
+- [x] Hook skips the hook missed: `--no-verif` and other prefixes git accepts, `git config core.hooksPath`, `--config-env`, `GIT_CONFIG_KEY_n=core.hooksPath`, and `rm`/`mv`/`chmod` on a hook file.
+- [x] The workflow said every brief line is fenced. It now says titles are shown as one clipped line.
+- [x] knip added (ADR 0005). It found 8 exports used only in their own file; they are no longer exported.
+
+Not fixed. Each needs a decision, is a known limit, or is small:
+
+Core services:
+
+- [ ] `lastSession` runs one query per sibling actor in the brief (N+1).
+- [ ] The brief reads every note and card with `listAll` at each session start (overlaps WP3.2).
+- [ ] Silent caps in the brief: 500 tasks, features and locks, and only the 20 newest decisions. Say when a list is cut.
+- [ ] "Today" for due dates and `--since` is UTC, not the user's day.
+- [ ] `sati changes` prints titles unclipped.
+- [ ] `recall` drops a first item bigger than the budget instead of clipping it.
+- [ ] The chars/4 token estimate is low for CJK and Khmer text.
+- [ ] Overlap is keyed by worktree, and glob lock paths are not matched against changed files.
+- [ ] `doctor` reads the task list three times and prints full ids.
+- [ ] One-line text outside fences (stale card summaries, feature paths) is clipped but not fenced. Accepted design; listed in case it changes.
+
+MCP and CLI parity (see also WP4.4 and WP5.2):
+
+- [ ] `note_upsert` and `roadmap_upsert` give a bare "Unrecognized key" for `expectedVersion`, `reviewed` or `acknowledge` on create.
+- [ ] `changes` takes a full actor id only, and the CLI `--actor` with an unknown name returns nothing instead of NOT_FOUND.
+- [ ] `search --help` does not mention `context` as a kind.
+- [ ] `guard --paths` silently drops paths outside the repo.
+- [ ] Absolute paths are stored as written in `filesTouched`, feature paths and tests, while context paths refuse them.
+- [ ] MCP schema errors have no `code`, and some core hints name CLI flags (`--force`, `--files`).
+
+Guard and shell hook (known limits, the pre-commit guard is the backstop):
+
+- [ ] A rename out of a protected feature only warns. Owner decision: block it like a delete?
+- [ ] Binary files have no line counts, so they are never ratio-checked. Document it in `docs/guide/guard.md`.
+- [ ] The Write tool and `> file` truncation only warn in the hook; the staged check catches them. The hook could compare with the file on disk.
+- [ ] Not parsed: `xargs rm`, `find -delete`, `eval`, scripts in other interpreters, paths in variables, `git -c alias.x=...`, `git commit-tree`.
+- [ ] `SATI_GUARD=off git commit` is allowed on purpose: it is the documented, logged override.
+- [ ] Accepted: removal spread over many small commits, a move out through a symlink, and `git commit -m "--no-verify"` being blocked.
+
+Windows (read only, not run):
+
+- [ ] `hooks.ts` compares paths with `/` where Windows gives `\` (likely).
+- [ ] `runtime.ts` `changedFiles` compares worktree paths the same way (likely).
+- [ ] `selfCommand` checks `X_OK`, which means nothing on Windows; use `process.execPath` (likely).
+- [ ] The MCP config runs `node_modules/.bin/sati` and the Claude Code hooks use `sh` syntax (likely).
+- [ ] `sati serve` has no `error` handler, so EADDRINUSE crashes instead of exiting 4. This can happen on macOS and Linux too (likely).
+- [ ] The `.gitattributes` line should add `text eol=lf` so autocrlf does not rewrite `.sati/` files (likely).
+- [ ] Renaming over an open file gives EPERM with no retry and leaves the `.tmp` file.
+- [ ] Doubtful: `existsSync` on a pipe, `isLocalInstall` case, the installed-self regex and CRLF, mixed line endings in rules blocks, `repoRelative` with `..foo` and no realpath, UNC paths never "network", `readFileSync(0)` on stdin.
+- Checked and fine: pipe naming, socket cleanup, `kill(0)`, display paths, `sh` quoting, JSON escaping, `-z` git parsing.
 
 
 ---

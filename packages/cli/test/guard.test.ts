@@ -93,11 +93,27 @@ describe("sati guard --staged", () => {
     git(dir, "add", ".");
     expect(sati(dir, "guard", "--staged").code).toBe(0);
 
+    // One line left in each file: 18 of 20 lines removed, and no file emptied.
+    writeFileSync(join(dir, "src/billing/tax.ts"), "line 0\n");
+    git(dir, "add", ".");
+    const r = sati(dir, "guard", "--staged");
+    expect(r.code).toBe(10);
+    expect(r.stdout).toContain("removes 90% of the changed lines");
+  });
+
+  // Review WP10: one changed line of a big file used to hide an emptied small file in the
+  // feature's total. git's added-line count now marks the emptied file, and it is blocked.
+  it("blocks emptying a protected file even when a big file's edit dilutes the total", async () => {
+    const { dir } = await billingRepo();
+    writeFileSync(join(dir, "src/billing/big.ts"), lines(5000));
+    git(dir, "add", ".");
+    git(dir, "commit", "-qm", "big");
+    writeFileSync(join(dir, "src/billing/big.ts"), lines(4999));
     writeFileSync(join(dir, "src/billing/tax.ts"), "");
     git(dir, "add", ".");
     const r = sati(dir, "guard", "--staged");
     expect(r.code).toBe(10);
-    expect(r.stdout).toContain("removes 95% of the changed lines");
+    expect(r.stdout).toContain("empties src/billing/tax.ts");
   });
 
   it("SATI_GUARD=off lets a blocked commit through and logs the override", async () => {
@@ -190,5 +206,18 @@ describe("sati guard --paths and --hook", () => {
     expect(skipped.code).toBe(2);
     expect(skipped.stderr).toContain("--no-verify");
     expect(bash("mv README.md /tmp/readme.md").code).toBe(0);
+  });
+
+  // Review WP10: the repo root resolved to no path at all, so `rm -rf .` passed the hook.
+  it("--hook blocks removing the whole repo, by `.` or by its absolute path", async () => {
+    const { dir } = await billingRepo();
+    const bash = (command: string, cwd = dir) =>
+      run(dir, ["guard", "--hook"], {}, JSON.stringify({ cwd, tool_input: { command } }));
+    for (const command of ["rm -rf .", `rm -rf ${dir}`, "cd src && rm -rf .."]) {
+      const r = bash(command);
+      expect(r.code, command).toBe(2);
+      expect(r.stderr, command).toContain("deletes src");
+    }
+    expect(bash("rm -rf .", join(dir, "src/billing")).code).toBe(2);
   });
 });

@@ -114,3 +114,26 @@ export async function search(ctx: ServiceContext, input: unknown): Promise<Searc
   const { query, ...opts } = parseInput(SearchInput, input);
   return ctx.store.read((r) => r.search(ctx.projectId, query, opts));
 }
+
+/** Record prefixes a note link may name by short handle. */
+const LINKABLE: Record<string, StoredEntity> = {
+  tsk: "task",
+  note: "note",
+  dec: "decision",
+  feat: "feature",
+  mil: "milestone",
+};
+
+/**
+ * Note links are URLs, paths or ids. A short handle of a record becomes its full id, so a comment
+ * linked by handle still shows in that record's thread; anything else is kept as written.
+ */
+export async function resolveLinks(ctx: ServiceContext, links: string[]): Promise<string[]> {
+  return Promise.all(
+    links.map(async (link) => {
+      const handle = parseHandle(link);
+      const entity = handle && !parseId(link) ? LINKABLE[handle.prefix] : undefined;
+      return entity ? resolveId(ctx, entity, link) : link;
+    }),
+  );
+}

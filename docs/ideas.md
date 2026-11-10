@@ -95,3 +95,9 @@ Repo, docs and release:
 - **Leftovers**: `packages/store-sqlite/scripts/fts-sql.py` is referenced nowhere; `dist/index.d.mts` (10 bytes) ships; the cli `package.json` has no `homepage`, `bugs` or `keywords`; `@types/node` is 22 in `e2e` and 24 at the root; the UI tsconfig does not extend the base.
 
 Review coverage: `sync`, `mcp`, `ui`, the UI server and the repo files were read in full. In `core`, ten services were not read (`recall`, `brief`, `changes`, `shell-changes`, `guard`, `overlap`, `similar`, `workflow`, `template`, `doctor`). The CLI `--help` sweep was partial. No dead-code search ran (no knip config).
+
+From the 2026-11-10 review (WP10), features rather than bugs:
+
+- **`milestone update --date none`** to clear a target date, as `task update --due none` does.
+- **CLI parity with MCP**: `task create --checklist`, similar tasks in `task create` output, `roadmap_upsert` `dryRun`, `brief --max-tokens`, `"me"` as an MCP assignee, listing deleted tasks and filtering by parent in `task list`.
+- **A per-file removal ratio** in the guard, or a check for stub files, so replacing a protected file with one line is blocked like emptying it. Needs an owner decision on the threshold.

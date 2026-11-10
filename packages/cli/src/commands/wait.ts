@@ -16,7 +16,7 @@ interface HookInput {
  * person, the person's next prompt answers it. Other notifications (auth, idle after the agent
  * finished its turn with no claim) change nothing.
  */
-export function hookWaiting(
+function hookWaiting(
   input: HookInput,
 ): { kind: "question" | "permission"; text: string } | null | undefined {
   if (input.hook_event_name === "UserPromptSubmit") return null;

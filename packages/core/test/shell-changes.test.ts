@@ -66,6 +66,28 @@ describe("parseShellChanges bypasses", () => {
     ]);
   });
 
+  // Review WP10: each of these deleted a guarded file while the hook saw nothing.
+  it("reads wrappers with flags, combined shell flags, background jobs and if or for bodies", () => {
+    const gone = [{ path: "src/a.ts", kind: "deleted" }];
+    for (const line of [
+      "time rm src/a.ts",
+      "nice -n 5 rm src/a.ts",
+      "nohup rm src/a.ts",
+      "env -i rm src/a.ts",
+      "env -u HOME FOO=1 rm src/a.ts",
+      "sudo -u root rm src/a.ts",
+      `bash -lc "rm src/a.ts"`,
+      `bash -ec 'rm src/a.ts'`,
+      "true & rm src/a.ts",
+      "if true; then rm src/a.ts; fi",
+      "for f in x; do rm src/a.ts; done",
+    ]) {
+      expect(parseShellChanges(line), line).toEqual(gone);
+    }
+    // `&` inside a redirection is not a separator.
+    expect(parseShellChanges("rm src/a.ts 2>&1 > /dev/null &>log")).toEqual(gone);
+  });
+
   it("leaves files that stay on disk alone", () => {
     expect(parseShellChanges("git rm --cached -r src")).toEqual([]);
   });
@@ -80,5 +102,28 @@ describe("parseShellChanges bypasses", () => {
     expect(hookBypass("git commit -mnew")).toBeUndefined();
     expect(hookBypass("git commit -m 'fix -n flag'")).toBeUndefined();
     expect(hookBypass("git push -n")).toBeUndefined();
+  });
+
+  // Review WP10: git takes any unique prefix of a long option, and the hooks can be turned off
+  // through config, the environment or by removing them. The guard never runs after any of these.
+  it("spots hook skips through option prefixes, config, the environment and the hook files", () => {
+    for (const line of [
+      "git commit --no-verif -m x",
+      "git commit --no-veri -m x",
+      "git push --no-verif",
+      "git config core.hooksPath /dev/null",
+      "git --config-env=core.hooksPath=HP commit -m x",
+      "git --config-env core.hooksPath=HP push",
+      "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null git commit",
+      "rm .git/hooks/pre-commit",
+      "chmod -x .git/hooks/pre-commit",
+      "mv .git/sati/hooks/pre-commit /tmp/x",
+    ]) {
+      expect(hookBypass(line), line).toBeDefined();
+    }
+    // `--no-ver` could be --no-verbose too, so git refuses it; reading the setting is fine.
+    expect(hookBypass("git commit --no-verbose -m x")).toBeUndefined();
+    expect(hookBypass("git config --get core.hooksPath")).toBeUndefined();
+    expect(hookBypass("cat .git/hooks/pre-commit")).toBeUndefined();
   });
 });

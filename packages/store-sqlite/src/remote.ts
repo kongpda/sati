@@ -111,7 +111,7 @@ const METHODS: ReadonlySet<string> = new Set([
 ]);
 
 /** How long a transaction may sit idle before the daemon rolls it back and drops the client. */
-export const TXN_IDLE_MS = 30_000;
+const TXN_IDLE_MS = 30_000;
 
 /** One process owns the SQLite file. Others send storage calls over this socket. */
 export function listenStore(

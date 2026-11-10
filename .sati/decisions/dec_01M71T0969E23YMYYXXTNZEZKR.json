@@ -1,0 +1,15 @@
+{
+  "consequences": "No behaviour removed. `pnpm knip` is clean. Both surfaces resolve links the same way, covered by a CLI test.",
+  "context": "Review WP10 ran knip (ADR 0005) and compared MCP with the CLI. The CLI stored short-handle note links as written while MCP resolved them to full ids.",
+  "createdAt": "2026-11-10T04:03:34.728Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "decision": "Remove `export` from 8 symbols knip found used only in their own file (inRepo, hookWaiting, TXN_IDLE_MS, InitResult, UpgradeResult, Lock, Activity, Drift). Remove recordLinks and LINKABLE from packages/mcp/src/server.ts; the same logic now lives in core as resolveLinks, used by MCP and the CLI note command.",
+  "id": "dec_01M71T0969E23YMYYXXTNZEZKR",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T04:03:34.729Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "title": "WP10: unexport single-file symbols, move MCP link resolving to core",
+  "updatedAt": "2026-11-10T04:03:34.728Z",
+  "version": 1
+}

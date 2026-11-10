@@ -28,6 +28,8 @@ const Change = z
     kind: z.enum(CHANGE_KINDS).default("modified"),
     /** Lines this change removes from the file. */
     removedLines: z.number().int().min(0).optional(),
+    /** Lines this change adds. With all base lines removed and none added, the file is emptied. */
+    addedLines: z.number().int().min(0).optional(),
     /** Lines the file had before the change. */
     baseLines: z.number().int().min(0).optional(),
     /** Previous path. Required when `kind` is `renamed`. */
@@ -108,6 +110,14 @@ function removalRatio(changes: ParsedChange[]): number {
   return base === 0 ? 0 : removed / base;
 }
 
+/** Every line of a file that had some was removed and none added. */
+const isEmptied = (c: ParsedChange) =>
+  c.kind === "modified" &&
+  c.addedLines === 0 &&
+  c.baseLines !== undefined &&
+  c.baseLines > 0 &&
+  (c.removedLines ?? 0) >= c.baseLines;
+
 function featureFinding(
   f: Feature,
   touched: ParsedChange[],
@@ -130,13 +140,24 @@ function featureFinding(
       : ` ${movedOut.map((c) => `${c.from} → ${c.path}`).join(", ")} moved out of the feature. Update its paths with \`${CLI_NAME} feature update ${f.id} --paths <globs>\`.`;
   if (f.protected) {
     const deleted = touched.filter((c) => c.kind === "deleted").map((c) => c.path);
+    // An emptied file loses all its behaviour, as a deleted one does. It is checked per file, so
+    // a small edit to a big file in the same feature cannot dilute it (review WP10).
+    const emptied = touched.filter(isEmptied).map((c) => c.path);
     const ratio = removalRatio(touched);
     const rule: GuardRule | undefined =
-      deleted.length > 0 ? "protected-delete" : ratio > maxRatio ? "protected-gutted" : undefined;
+      deleted.length + emptied.length > 0
+        ? "protected-delete"
+        : ratio > maxRatio
+          ? "protected-gutted"
+          : undefined;
     if (rule) {
+      const removals = [
+        deleted.length > 0 ? `deletes ${deleted.join(", ")}` : "",
+        emptied.length > 0 ? `empties ${emptied.join(", ")}` : "",
+      ].filter(Boolean);
       const what =
         rule === "protected-delete"
-          ? `deletes ${deleted.join(", ")} from shipped, protected feature ${name}`
+          ? `${removals.join(" and ")} from shipped, protected feature ${name}`
           : `removes ${Math.round(ratio * 100)}% of the changed lines of shipped, protected feature ${name} (limit ${Math.round(maxRatio * 100)}%)`;
       if (decisionId) {
         return {

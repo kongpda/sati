@@ -1703,3 +1703,15 @@ Status: **done** (2026-11-10). Task `tsk_01M71RY1KT78KK8VMMHVHGR60F`.
 - No core test depended on the old memory store behaviour.
 - Fix-up commit: the first WP7 commit also held `.d.ts` files that the store-sqlite build wrote next to core's sources, because its tsconfig includes `test/` and the contract test imports a core file. They are removed, and the store-sqlite build now uses `tsconfig.build.json` (src only). The CLI's worktree coordination tests get 30 s, like the other git tests: under a full parallel run they passed 5 s and failed every run.
 - Verified locally: lint (the 12 old CSS warnings), typecheck, core 313, store-sqlite 62, sync 52, mcp 27, ui 21, cli 147. Core branch coverage 90.86%.
+
+## 2026-11-10 — Phase 5h WP10: finish the review
+
+Status: **done** (2026-11-10). Task `tsk_01M71S808TB6CNMF2MYTK6V906`.
+
+- Read in full: the ten core services (`recall`, `brief`, `changes`, `shell-changes`, `guard`, `overlap`, `similar`, `workflow`, `template`, `doctor`), each MCP tool against its CLI command, `doctor` in a stealth project, and the Windows paths (read only). knip added with ADR 0005.
+- Fixed with tests: stealth `doctor` wording; internal tasks in the digest; unfenced acceptance criteria in the brief; `--since` dates that roll over; the `task_claim` result with no id; short-handle note links in the CLI; an emptied protected file hidden by the feature's total ratio; `rm -rf .` passing the shell hook; wrappers, `bash -lc`, `&` and `then`/`do` hiding an `rm`; and hook skips through `--no-verif`, `core.hooksPath` and hook files.
+- Choice: `SATI_GUARD=off git commit` stays allowed in the hook. It is the documented override, it is logged, and the hook's own message suggests it.
+- Choice: the root case maps `rm -rf .` to a delete of every top-level entry except `.git`, because a repo path cannot be empty. Prefix overlap then matches every feature glob.
+- Everything not fixed is listed in `docs/review-followups.md` under "Found by the WP10 review", with Windows doubts marked "likely" where the code reads wrong. Feature-sized items went to `docs/ideas.md`.
+- Test fix: the two pre-push hook tests in `hardening.test.ts` get 30 s, like the other git tests. They passed alone and timed out at 5 s under a full parallel run.
+- Verified locally: lint (the 12 old CSS warnings), typecheck, knip clean, core 319, store-sqlite 62, sync 52, mcp 27, ui 21, cli 150. Core branch coverage 90.82%.

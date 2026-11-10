@@ -271,8 +271,16 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
     }
     const f = t.featureId ? data.features.get(t.featureId) : undefined;
     if (f && f.acceptance.length > 0) {
-      mine.push(`  Acceptance (${shortHandle(f.id)} ${clip(f.title, 60)}):`);
-      for (const a of f.acceptance) mine.push(`  - ${clip(a, LINE_CHARS)}`);
+      // One item, so the fit never drops the fence's end without its start.
+      const criteria = f.acceptance.map((a) => `  - ${inert(clip(a, LINE_CHARS))}`);
+      mine.push(
+        [
+          `  Acceptance (${shortHandle(f.id)} ${clip(f.title, 60)}):`,
+          "  ```data",
+          ...criteria,
+          "  ```",
+        ].join("\n"),
+      );
     }
   }
 

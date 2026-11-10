@@ -752,7 +752,7 @@ Added 2026-11-10 at the owner's request: the items the Phase 5g review found and
 - [x] WP7 Test store parity
 - [x] WP8 Docs and PLAN drift
 - [ ] WP9 Release and CI
-- [ ] WP10 Finish the review
+- [x] WP10 Finish the review
 
 ### Phase 6 — Hosted mode (deferred to v2)
 

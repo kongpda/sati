@@ -40,6 +40,24 @@ describe("command audit fixes", () => {
     }
   });
 
+  // Threads match links by full id, so a handle stored as typed would never show the note there.
+  it("note create and update store a short-handle link as the full id, as MCP does", async () => {
+    const dir = await tempRepo({ init: true });
+    const task = satiJson<Rec>(dir, "task", "create", "Linked").data;
+    const links = `${shortHandle(task.id)},https://example.com`;
+    const note = satiJson<Rec & { links: string[] }>(dir, "note", "create", "N", "--links", links);
+    expect(note.data.links).toEqual([task.id, "https://example.com"]);
+    const updated = satiJson<Rec & { links: string[] }>(
+      dir,
+      "note",
+      "update",
+      note.data.id,
+      "--links",
+      shortHandle(task.id),
+    );
+    expect(updated.data.links).toEqual([task.id]);
+  });
+
   it("plan import reports a missing file or a folder as the user's mistake", async () => {
     const dir = await tempRepo({ init: true });
     const missing = satiJson<Err>(dir, "plan", "import", "nofile.md");

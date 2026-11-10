@@ -79,9 +79,9 @@ export interface Changes {
   /** Newest first. */
   items: ChangeItem[];
   /** Open tasks that are blocked now. */
-  blocked: { id: string; title: string }[];
+  blocked: { id: string; title: string; labels: string[] }[];
   /** Open tasks past their due day. */
-  overdue: { id: string; title: string; dueDate: string }[];
+  overdue: { id: string; title: string; labels: string[]; dueDate: string }[];
   /** Every milestone, in roadmap order, to group items by. */
   milestones: { id: string; title: string }[];
 }
@@ -256,11 +256,11 @@ export async function readChanges(
     items: kept,
     blocked: blockedTasks
       .filter((t) => inScope(milestoneOf(t)))
-      .map((t) => ({ id: t.id, title: t.title })),
+      .map((t) => ({ id: t.id, title: t.title, labels: t.labels })),
     overdue: dueTasks
       .filter((t) => inScope(milestoneOf(t)))
       .sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)))
-      .map((t) => ({ id: t.id, title: t.title, dueDate: String(t.dueDate) })),
+      .map((t) => ({ id: t.id, title: t.title, labels: t.labels, dueDate: String(t.dueDate) })),
     milestones: milestones.map((m) => ({ id: m.id, title: m.title })),
   };
 }
@@ -288,7 +288,8 @@ async function resolveSince(
   }
   if (/^\d{4}-\d{2}-\d{2}(T[\d:.]+Z)?$/u.test(input)) {
     const ms = Date.parse(input.length === 10 ? `${input}T00:00:00.000Z` : input);
-    if (!Number.isNaN(ms)) {
+    // Date.parse rolls a day that does not exist (2026-02-31) into the next month.
+    if (!Number.isNaN(ms) && new Date(ms).toISOString().slice(0, 10) === input.slice(0, 10)) {
       const since = new Date(ms).toISOString();
       return { since, basis: input.length === 10 ? input : since };
     }
@@ -480,14 +481,17 @@ function digest(c: Changes): string {
     for (const d of decisions.slice(0, 3)) out.push(`- ${clip(d.title, 140)}`);
     if (decisions.length > 3) out.push(`- and ${decisions.length - 3} more`);
   }
-  if (c.blocked.length + c.overdue.length > 0) {
+  const shared = (t: { labels: string[] }) => !t.labels.includes(INTERNAL_LABEL);
+  const blocked = c.blocked.filter(shared);
+  const overdue = c.overdue.filter(shared);
+  if (blocked.length + overdue.length > 0) {
     const attention = [
-      ...c.overdue.slice(0, 3).map((t) => `- ${clip(t.title, 120)} (overdue since ${t.dueDate})`),
-      ...c.blocked.slice(0, 3).map((t) => `- ${clip(t.title, 120)} (blocked)`),
+      ...overdue.slice(0, 3).map((t) => `- ${clip(t.title, 120)} (overdue since ${t.dueDate})`),
+      ...blocked.slice(0, 3).map((t) => `- ${clip(t.title, 120)} (blocked)`),
     ];
     out.push(
       "",
-      `Needs attention: ${plural(c.blocked.length, "blocked task")}, ${c.overdue.length} overdue.`,
+      `Needs attention: ${plural(blocked.length, "blocked task")}, ${overdue.length} overdue.`,
       ...attention,
     );
   }

@@ -1,15 +1,31 @@
 {
   "body": "docs/review-followups.md WP2: lock refusal only for in_progress, undo transition and link checks, ready queue past 500, plan import fences, unique clash on update, small items.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "heartbeatAt": "2026-11-10T04:04:56.726Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 98879
-    },
-    "leaseUntil": "2026-11-11T04:04:56.726Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "1c1db9b4269cd4c00675abaf17f0d639afc2be7b",
+    "completedAt": "2026-11-10T04:09:53.898Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/core/src/ports/storage.ts",
+      "packages/core/src/services/lock.ts",
+      "packages/core/src/services/plan.ts",
+      "packages/core/src/services/task.ts",
+      "packages/core/src/services/undo.ts",
+      "packages/core/test/coordination.test.ts",
+      "packages/core/test/edges.test.ts",
+      "packages/core/test/effort.test.ts",
+      "packages/core/test/review-fixes.test.ts",
+      "packages/core/test/support/memory-store.ts",
+      "packages/core/test/support/store-contract.ts",
+      "packages/store-sqlite/src/store.ts",
+      "docs/review-followups.md",
+      "docs/progress.md",
+      "PLAN.md",
+      ".changeset/wp2-core-correctness.md"
+    ],
+    "releaseNote": "Undo refuses forbidden reverts, ready filters see past 500 tasks, and plan import skips code fences.",
+    "summary": "WP2 done in 1c1db9b: lock refusal only for in_progress tasks; undo runs transition and link checks; ready list pages past 500 via a readyTasks cursor in both stores; plan import skips code fences; reduce in plan ordering; expired-lock verb decision recorded. Tests for each."
   },
   "createdAt": "2026-11-10T04:04:55.240Z",
   "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
@@ -23,13 +39,14 @@
   "stamps": {
     "*": "2026-11-10T04:04:55.240Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "branch": "2026-11-10T04:04:56.726Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "claim": "2026-11-10T04:04:56.726Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-10T04:04:56.726Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T04:09:53.899Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T04:09:53.899Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T04:09:53.899Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "worktree": "2026-11-10T04:04:56.726Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Review follow-ups WP2: core correctness",
-  "updatedAt": "2026-11-10T04:04:56.726Z",
-  "version": 2,
+  "updatedAt": "2026-11-10T04:09:53.899Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

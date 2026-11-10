@@ -35,6 +35,16 @@ describe("task effort", () => {
     });
   });
 
+  // Review WP2.3: the ready filter ran on the first 500 ready tasks only, so a light task past
+  // them never reached a subagent.
+  it("finds a filtered ready task past the first 500", async () => {
+    const { ctx } = await setup();
+    for (let i = 0; i < 600; i++) await createTask(ctx, { title: `t${i}` });
+    const last = await createTask(ctx, { title: "rename", effort: "light", priority: "low" });
+    const found = await listTasks(ctx, { ready: true, effort: "light" });
+    expect(found.map((t) => t.id)).toEqual([last.id]);
+  }, 30_000);
+
   // A new task carries `effort: null` like every other empty field; the `.sati/` file leaves it
   // out (EMPTY_FIELDS), so an older sati never sees the key.
   it("is shown only once set, and null clears it", async () => {

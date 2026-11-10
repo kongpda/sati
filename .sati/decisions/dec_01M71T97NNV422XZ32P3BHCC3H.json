@@ -1,0 +1,15 @@
+{
+  "consequences": "The log reads \"released by <caller>\" for an expired lock. Claims and locks stay consistent. Revisit if people misread these rows.",
+  "context": "Review WP2.6: acquireLock soft-deletes expired locks inline and logs each under the actor whose call cleaned them up. Task claims that run out are logged the same way.",
+  "createdAt": "2026-11-10T04:08:28.085Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "decision": "Rejected a new \"expire\" verb. The activity row keeps verb \"release\" under the caller. `release` is already an automatic verb that `sati changes` skips, and the row's diff shows the lease had passed. A new verb would change the Activity schema for a wording gain.",
+  "id": "dec_01M71T97NNV422XZ32P3BHCC3H",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T04:08:28.086Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "title": "Expired locks stay logged as \"release\" by the caller",
+  "updatedAt": "2026-11-10T04:08:28.085Z",
+  "version": 1
+}

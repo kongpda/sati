@@ -169,6 +169,20 @@ export function storeContract(name: string, open: () => Promise<StorageAdapter>)
       await store.close();
     });
 
+    // listTasks pages the ready queue to find filtered matches past the 500 cap (review WP2.3).
+    it("continues the ready queue after a cursor, and refuses an unknown cursor", async () => {
+      const urgent = task({ priority: "urgent" });
+      const a = task();
+      const b = task();
+      const store = await seeded(urgent, a, b);
+      const after = (cursor: string) =>
+        store.read((r) => r.readyTasks(PROJECT, NOW, 10, cursor)).then((ts) => ts.map((t) => t.id));
+      expect(await after(urgent.id)).toEqual([a.id, b.id]);
+      expect(await after(b.id)).toEqual([]);
+      expect(await errorCode(() => after("tsk_01JDUNKNOWNUNKNOWNUNKNOWNUN"))).toBe("NOT_FOUND");
+      await store.close();
+    });
+
     // A deleted actor keeps its name, so a new actor cannot take it and inherit its history.
     it("finds an actor by name, deleted or not, and keeps names unique", async () => {
       const old = actor("claude-code@main", { deletedAt: NOW });

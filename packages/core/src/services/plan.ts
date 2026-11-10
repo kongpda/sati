@@ -39,7 +39,17 @@ interface Item {
 export function parsePlan(markdown: string): Item[] {
   const items: Item[] = [];
   let heading = "Imported";
+  // The open code fence (its character and length), if any: lines inside are examples, not plan.
+  let fence: { char: string; length: number } | undefined;
   for (const [index, line] of markdown.split(/\r?\n/).entries()) {
+    const marker = /^(`{3,}|~{3,})/.exec(line.trim())?.[1];
+    if (marker) {
+      const char = marker[0] as string;
+      if (!fence) fence = { char, length: marker.length };
+      else if (char === fence.char && marker.length >= fence.length) fence = undefined;
+      continue;
+    }
+    if (fence) continue;
     const head = /^(#{1,6})\s+(.+)$/.exec(line.trim());
     if (head?.[2]) {
       heading = head[2].trim();
@@ -97,8 +107,9 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
     );
     // Computed once; each created milestone takes the next order (see createMilestoneIn).
     let nextOrder =
-      Math.max(-1, ...existing.milestones.filter((m) => m.deletedAt === null).map((m) => m.order)) +
-      1;
+      existing.milestones
+        .filter((m) => m.deletedAt === null)
+        .reduce((max, m) => Math.max(max, m.order), -1) + 1;
     const headings = [...new Set(items.map((i) => i.heading))];
     for (const title of headings) {
       const key = `plan:${createHash("sha256").update(title).digest("hex").slice(0, 16)}`;

@@ -352,8 +352,19 @@ export class SqliteStore implements StorageAdapter {
       return rows.map((r) => JSON.parse(r.data) as EntityMap[E]);
     },
 
-    readyTasks: async (projectId, now, limit) => {
+    readyTasks: async (projectId, now, limit, after) => {
       const t = s.tasks;
+      const cursor =
+        after === undefined
+          ? undefined
+          : await this.orm
+              .select({ rank: t.rank })
+              .from(t)
+              .where(and(eq(t.id, after), eq(t.projectId, projectId)))
+              .get();
+      if (after !== undefined && !cursor) {
+        throw new SatiError("NOT_FOUND", `No task with id ${after}.`);
+      }
       const rows = await this.orm
         .select({ data: t.data })
         .from(t)
@@ -370,6 +381,7 @@ export class SqliteStore implements StorageAdapter {
               LEFT JOIN tasks dep ON dep.id = d.value
               WHERE (dep.status IS NULL OR dep.status NOT IN ('done', 'cancelled'))
                 AND dep.deleted_at IS NULL)`,
+            cursor ? sql`(${t.rank}, ${t.id}) > (${cursor.rank}, ${after})` : undefined,
           ),
         )
         .orderBy(asc(t.rank), asc(t.id))

@@ -1715,3 +1715,15 @@ Status: **done** (2026-11-10). Task `tsk_01M71S808TB6CNMF2MYTK6V906`.
 - Everything not fixed is listed in `docs/review-followups.md` under "Found by the WP10 review", with Windows doubts marked "likely" where the code reads wrong. Feature-sized items went to `docs/ideas.md`.
 - Test fix: the two pre-push hook tests in `hardening.test.ts` get 30 s, like the other git tests. They passed alone and timed out at 5 s under a full parallel run.
 - Verified locally: lint (the 12 old CSS warnings), typecheck, knip clean, core 319, store-sqlite 62, sync 52, mcp 27, ui 21, cli 150. Core branch coverage 90.82%.
+
+## 2026-11-10 — Phase 5h WP2: core correctness
+
+Status: **done** (2026-11-10). Task `tsk_01M71T2QT8MKG5VX24KQNP6MSC`.
+
+- 2.1 (owner decision): `acquireLock` refuses a lock tagged with another actor's task only when that task is `in_progress`. Test: refused while in progress, allowed once the holder marks it blocked with the claim still live.
+- 2.2: `undoActivity` runs `assertTransition` for task, feature and milestone status, and `checkLinks` (now exported from `task.ts`) for task links, before writing. A failure is CONFLICT naming the cause, with "Edit the record by hand instead." Tests: undo of building -> removed is refused; undo restoring a link to a deleted feature is refused, and goes through once the feature is restored.
+- 2.3: `readyTasks` takes an optional `after` cursor in (rank, id) order, in both stores; `listTasks --ready` pages until the page is full. Store contract case added. Test: 600 ready tasks with the only light one last.
+- 2.4: `parsePlan` tracks backtick and tilde fences (closing needs the same character and at least the opener's length). Test with both kinds.
+- 2.5: already done in WP7.
+- 2.6: `Math.max(-1, ...)` replaced with `reduce`. Expired locks stay logged as `release` by the caller; a decision records why.
+- Verified locally: lint (12 old CSS warnings), typecheck, knip clean, core 324, store-sqlite 63, sync 52, mcp 27, ui 21, cli 150. Core branch coverage 90.91%.

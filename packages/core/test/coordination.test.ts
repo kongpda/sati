@@ -433,3 +433,20 @@ describe("a claim from a teammate's clone", () => {
     expect(removal.message).not.toContain(t.claim?.actorId);
   });
 });
+
+// Review WP2.1 (owner decision): a task in review or blocked keeps its claim while nobody works
+// on it. Refusing locks tagged with it would shut other agents out for the whole lease.
+describe("a lock tagged with another agent's task", () => {
+  it("is refused only while that task is in progress", async () => {
+    const { ctx } = await setup();
+    const a = await as(ctx, "claude@a", "agent");
+    const b = await as(ctx, "codex@b", "agent");
+    const t = await claimTask(a, (await createTask(a, { title: "Ship" })).id);
+    const tagged = () => acquireLock(b, { paths: ["src/**"], taskId: t.id });
+    await expect(tagged()).rejects.toMatchObject({ code: "CONFLICT" });
+    await updateTask(a, t.id, { status: "blocked", token: t.claim?.token });
+    expect((await getRecord(a, "task", t.id)).claim).not.toBeNull();
+    const lock = await tagged();
+    expect(lock.lock.paths).toEqual(["src/**"]);
+  });
+});

@@ -77,8 +77,11 @@ export interface StorageReader {
     projectId: string,
     query?: ListQuery,
   ): Promise<EntityMap[E][]>;
-  /** Tasks that are todo, not actively claimed at `now`, and whose dependencies are all done. */
-  readyTasks(projectId: string, now: string, limit: number): Promise<Task[]>;
+  /**
+   * Tasks that are todo, not actively claimed at `now`, and whose dependencies are all done, in
+   * (rank, id) order. `after` is a task id: the page starts after it, as in `list`.
+   */
+  readyTasks(projectId: string, now: string, limit: number, after?: string): Promise<Task[]>;
   /** Looks up an entity by its unique `key` (actor name, project slug). */
   getByKey<E extends StoredEntity>(
     entity: E,

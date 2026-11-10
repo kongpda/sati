@@ -196,9 +196,9 @@ Effort: `standard`.
 - **Problem:** `acquireLock` in `packages/core/src/services/lock.ts` throws CONFLICT when `taskId` is claimed live by another actor (added in Phase 5f). A task in `review` or `blocked` can keep a live claim while nobody works on it, so others are refused for the whole lease.
 - **Plan:** either limit the refusal to `in_progress`, or keep it and say so in the hint and the workflow text.
 
-- [ ] Owner decision recorded
-- [ ] Change or document
-- [ ] Test
+- [x] Owner decision recorded
+- [x] Change or document
+- [x] Test
 
 ### 2.2 Undo skips transition and link checks
 
@@ -208,9 +208,9 @@ Effort: `standard`.
 - **Plan:** when the patch has `status`, call `assertTransition` with the entity's machine. When it has link fields (`featureId`, `parentId`, `dependsOn`, `milestoneId`), run the same check `updateTask` uses; export that helper if needed. Throw CONFLICT with a hint to edit by hand.
 - **Tests:** undo of `todo → in_progress` after the task reached `done` is refused; undo that restores a link to a deleted feature is refused.
 
-- [ ] Transition check
-- [ ] Link check
-- [ ] Tests
+- [x] Transition check
+- [x] Link check
+- [x] Tests
 
 ### 2.3 Ready queue stops at 500
 
@@ -220,9 +220,9 @@ Effort: `standard`.
 - **Plan:** push `effort`, `dueBy`, `label` and `assignee` into the ready query in `packages/store-sqlite/src/store.ts` (the list query already has the `coalesce(json_extract(data,'$.effort'),'standard')` form) and mirror it in `packages/core/test/support/memory-store.ts`. If that is too wide a port change, page `readyTasks` until `limit` is filled.
 - **Tests:** 600 ready tasks with the only `light` one last; `task list --ready --effort light` returns it.
 
-- [ ] Filters in SQL, or paging
-- [ ] Memory store mirrors it
-- [ ] Test
+- [x] Filters in SQL, or paging
+- [x] Memory store mirrors it
+- [x] Test
 
 ### 2.4 `plan import` reads inside code fences
 
@@ -232,8 +232,8 @@ Effort: `standard`.
 - **Plan:** track fence state (a line that starts with three backticks or tildes toggles it) and skip lines inside.
 - **Tests:** a plan with a fenced checklist example creates no task from it.
 
-- [ ] Fence tracking
-- [ ] Test
+- [x] Fence tracking
+- [x] Test
 
 ### 2.5 Unique clash on update gives a raw SQLite error
 
@@ -243,13 +243,13 @@ Effort: `standard`.
 - **Plan:** move the constraint mapping into one helper and use it in both.
 - **Tests:** in `packages/store-sqlite/test/store.test.ts`, an update that breaks a unique index is CONFLICT.
 
-- [ ] Shared mapping
-- [ ] Test
+- [x] Shared mapping (done in WP7: `update` maps a unique clash to CONFLICT; the store contract tests it)
+- [x] Test
 
 ### 2.6 Small
 
-- [ ] `services/plan.ts`: `Math.max(-1, ...array)` spreads existing milestones into arguments; use `reduce`. *Certain, low.*
-- [ ] `acquireLock` soft-deletes expired locks inline and logs them under the caller. Decide whether the activity row should say "expired" (a new verb or a system note) so the log does not read as a release by the caller. *Likely, low.*
+- [x] `services/plan.ts`: `Math.max(-1, ...array)` spreads existing milestones into arguments; use `reduce`. *Certain, low.*
+- [x] `acquireLock` soft-deletes expired locks inline and logs them under the caller. Decide whether the activity row should say "expired" (a new verb or a system note) so the log does not read as a release by the caller. *Likely, low.* Decided: keep `release` under the caller (decision recorded); a new verb would change the Activity schema.
 
 ---
 

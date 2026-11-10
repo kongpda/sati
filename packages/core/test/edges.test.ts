@@ -98,6 +98,34 @@ describe("edge branches", () => {
     expect(await code(() => undoActivity(ctx, "act_01EDGE000000000000000001"))).toBe("VALIDATION");
   });
 
+  // Review WP2.2: undo wrote old values back without the checks a normal edit runs, so it could
+  // make a status move the state machine forbids or link a task to a deleted record.
+  it("refuses an undo that would break the state machine or restore a dead link", async () => {
+    const { ctx, store } = await setup();
+    const rows = () => store.read((r) => r.listActivity(ctx.projectId, { limit: 50 }));
+    const lastRow = async (entityId: string, field: string) =>
+      (await rows()).find((row) => row.entityId === entityId && Object.hasOwn(row.diff, field))
+        ?.id ?? "";
+
+    // building -> removed is allowed; removed -> building is not, so undo must refuse it.
+    const feature = await createFeature(ctx, { title: "Search", status: "building" });
+    await updateFeature(ctx, feature.id, { status: "removed" });
+    const removal = await lastRow(feature.id, "status");
+    expect(await code(() => undoActivity(ctx, removal))).toBe("CONFLICT");
+
+    // Moving a task from feature A to B, then deleting A: undo would link the task to a deleted A.
+    const a = await createFeature(ctx, { title: "A" });
+    const b = await createFeature(ctx, { title: "B" });
+    const task = await createTask(ctx, { title: "Linked", featureId: a.id });
+    await updateTask(ctx, task.id, { featureId: b.id });
+    const move = await lastRow(task.id, "featureId");
+    await deleteRecord(ctx, "feature", a.id);
+    expect(await code(() => undoActivity(ctx, move))).toBe("CONFLICT");
+    // With A back, the same undo goes through.
+    await restoreRecord(ctx, "feature", a.id);
+    expect(await undoActivity(ctx, move)).toMatchObject({ featureId: a.id });
+  });
+
   it("lets an agent close review once the gate is off", async () => {
     const { ctx } = await setup();
     const task = await createTask(ctx, { title: "Gate" });

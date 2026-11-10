@@ -166,8 +166,13 @@ export class MemoryStore implements StorageAdapter {
         const start = q.offset ?? 0;
         return rows.slice(start, start + clampLimit(q.limit)).map(clone) as never;
       },
-      readyTasks: async (projectId, now, limit) => {
+      readyTasks: async (projectId, now, limit, after) => {
         const tasks = live("task", projectId) as unknown as Task[];
+        const cursor = after === undefined ? undefined : table("task").get(after);
+        if (after !== undefined && (!cursor || cursor.projectId !== projectId)) {
+          throw new SatiError("NOT_FOUND", `No task with id ${after}.`);
+        }
+        const order = byRankThenId("task");
         // Like the SQL store: a deleted dependency counts as out of the way.
         const status = (id: string) => {
           const dep = table("task").get(id) as Task | undefined;
@@ -175,7 +180,8 @@ export class MemoryStore implements StorageAdapter {
         };
         return tasks
           .filter((t) => ready(t, status, now))
-          .sort(byRankThenId("task") as never)
+          .filter((t) => !cursor || order(t as never, cursor) > 0)
+          .sort(order as never)
           .slice(0, clampLimit(limit))
           .map(clone);
       },

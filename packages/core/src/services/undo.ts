@@ -1,7 +1,16 @@
-import { SatiError } from "../domain/errors.js";
+import { isSatiError, SatiError } from "../domain/errors.js";
 import type { StoredEntity, Task } from "../domain/schemas.js";
+import { FEATURE_TRANSITIONS, MILESTONE_TRANSITIONS, TASK_TRANSITIONS } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
-import { isCompacted, nowIso, type ServiceContext, updateWithLog } from "./context.js";
+import type { StorageReader } from "../ports/storage.js";
+import {
+  assertTransition,
+  isCompacted,
+  nowIso,
+  type ServiceContext,
+  updateWithLog,
+} from "./context.js";
+import { checkLinks } from "./task.js";
 
 const COORDINATION = new Set(["claim", "release", "complete"]);
 
@@ -30,6 +39,40 @@ function pair(value: unknown): { from?: unknown; to?: unknown } | undefined {
     return undefined;
   }
   return value as { from?: unknown; to?: unknown };
+}
+
+const MACHINES: Partial<Record<StoredEntity, Readonly<Record<string, readonly string[]>>>> = {
+  task: TASK_TRANSITIONS,
+  feature: FEATURE_TRANSITIONS,
+  milestone: MILESTONE_TRANSITIONS,
+};
+
+/**
+ * Runs the checks a normal edit runs on the values an undo writes back: the status move and,
+ * for a task, its links. Old values can be stale: a status the machine no longer allows from
+ * here, or a link to a record deleted since.
+ */
+async function checkRevert(
+  r: StorageReader,
+  ctx: ServiceContext,
+  entity: StoredEntity,
+  current: { id: string; status?: unknown },
+  patch: Record<string, unknown>,
+  activityId: string,
+): Promise<void> {
+  try {
+    const machine = MACHINES[entity];
+    if (machine && typeof patch.status === "string" && typeof current.status === "string") {
+      assertTransition(machine, entity, current.status, patch.status);
+    }
+    if (entity === "task") await checkLinks(r, ctx, current.id, patch);
+  } catch (err) {
+    if (!isSatiError(err)) throw err;
+    throw new SatiError("CONFLICT", `Undoing ${activityId} is not allowed now: ${err.message}`, {
+      hint: "Edit the record by hand instead.",
+      details: { cause: err.code },
+    });
+  }
 }
 
 /**
@@ -118,6 +161,7 @@ export async function undoActivity(ctx: ServiceContext, activityId: string) {
     if (Object.keys(patch).length === 0 && clear.length === 0) {
       throw new SatiError("VALIDATION", `Activity ${activityId} has no field change to revert.`);
     }
+    await checkRevert(w, ctx, act.entity, current, patch, activityId);
     return updateWithLog(w, ctx, act.entity, current, patch, { verb: "update", clear });
   });
 }

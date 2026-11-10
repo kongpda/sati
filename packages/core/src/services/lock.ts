@@ -95,10 +95,18 @@ export async function acquireLock(ctx: ServiceContext, input: unknown): Promise<
   return ctx.store.write(async (w) => {
     const now = nowIso(ctx);
     if (data.taskId) {
-      // A lock tagged with a task is freed when that task finishes, so it must be the caller's
-      // task; tagged with another actor's, it would outlive the caller's own work.
-      const claim = (await mustGet(w, ctx, "task", data.taskId)).claim;
-      if (claim && claim.actorId !== ctx.actorId && isLive({ leaseUntil: claim.leaseUntil }, now)) {
+      // A lock tagged with a task is freed when that task finishes, so it must not be a task
+      // another actor is working on. A task in review or blocked may keep its claim while nobody
+      // works on it; refusing then would shut everyone out for the whole lease.
+      const task = await mustGet(w, ctx, "task", data.taskId);
+      const claim = task.claim;
+      const working = task.status === "in_progress";
+      if (
+        working &&
+        claim &&
+        claim.actorId !== ctx.actorId &&
+        isLive({ leaseUntil: claim.leaseUntil }, now)
+      ) {
         const name = await actorName(w, claim.actorId);
         throw new SatiError("CONFLICT", `Task ${data.taskId} is claimed by ${name}.`, {
           hint: "Tag the lock with a task you hold, or leave out the task.",

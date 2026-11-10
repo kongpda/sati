@@ -149,6 +149,33 @@ describe("importPlan", () => {
     expect(tasks.map((t) => t.title).sort()).toEqual(["Book hall", "Pay deposit"]);
   });
 
+  // Review WP2.4: a plan that shows a checklist example in a code block got tasks and a
+  // milestone from the example.
+  it("skips headings and boxes inside code fences", async () => {
+    const { ctx } = await setup();
+    const md = [
+      "# Launch",
+      "- [ ] Write the post",
+      "```markdown",
+      "# Example heading",
+      "- [ ] Example item",
+      "```",
+      "~~~~",
+      "- [ ] Tilde example",
+      "~~~",
+      "- [ ] Still in the tilde fence",
+      "~~~~",
+      "- [ ] Send it",
+    ].join("\n");
+    await importPlan(ctx, { markdown: md });
+    expect((await listTasks(ctx, {})).map((t) => t.title).sort()).toEqual([
+      "Send it",
+      "Write the post",
+    ]);
+    const milestones = await listRecords(ctx, "milestone", {});
+    expect(milestones.map((m) => m.title)).toEqual(["Launch"]);
+  });
+
   it("rolls back everything when a write fails part-way", async () => {
     const { ctx, store } = await setup();
     const real = ctx.ids;

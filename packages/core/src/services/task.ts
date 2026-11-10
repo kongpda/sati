@@ -865,12 +865,15 @@ export async function reviewDrift(
   return out;
 }
 
+/** The store's page cap for ready tasks. */
+const READY_PAGE = 500;
+
 /**
  * Lists tasks; `ready: true` returns todo, unclaimed tasks whose dependencies are done.
  * `milestoneId` matches a task whose own `milestoneId` is that milestone, or whose feature is in
  * it, so the milestone's features are looked up before the store sees the query.
- * The store's ready query takes no filters, so the filters and paging apply here to up to 500
- * ready tasks. `includeDeleted` has no effect on ready tasks: a deleted task is never ready.
+ * The store's ready query takes no filters, so the filters apply here, page by page, until
+ * the page is full. `includeDeleted` has no effect on ready tasks: a deleted task is never ready.
  */
 export async function listTasks(ctx: ServiceContext, input: unknown = {}): Promise<Task[]> {
   const { ready, milestoneId, ...query } = parseInput(ListTasksInput, input);
@@ -886,26 +889,34 @@ export async function listTasks(ctx: ServiceContext, input: unknown = {}): Promi
     if (!ready) return r.list("task", ctx.projectId, { ...query, inMilestone });
     const { status, featureId, parentId, label, dueBy, assigneeId, effort } = query;
     const start = query.offset ?? 0;
-    return (await r.readyTasks(ctx.projectId, nowIso(ctx), 500))
-      .filter(
-        (t) =>
-          (!status || status.includes(t.status)) &&
-          (!featureId || t.featureId === featureId) &&
-          (!inMilestone ||
-            t.milestoneId === inMilestone.milestoneId ||
-            (t.featureId !== null && inMilestone.featureIds.includes(t.featureId))) &&
-          (!parentId || t.parentId === parentId) &&
-          (!label || t.labels.includes(label)) &&
-          (!dueBy || (t.dueDate != null && t.dueDate <= dueBy)) &&
-          (!assigneeId || (t.assigneeIds ?? []).includes(assigneeId)) &&
-          (!effort || (t.effort ?? "standard") === effort),
-      )
-      .slice(start, start + (query.limit ?? 50));
+    const want = start + (query.limit ?? 50);
+    const matches = (t: Task) =>
+      (!status || status.includes(t.status)) &&
+      (!featureId || t.featureId === featureId) &&
+      (!inMilestone ||
+        t.milestoneId === inMilestone.milestoneId ||
+        (t.featureId !== null && inMilestone.featureIds.includes(t.featureId))) &&
+      (!parentId || t.parentId === parentId) &&
+      (!label || t.labels.includes(label)) &&
+      (!dueBy || (t.dueDate != null && t.dueDate <= dueBy)) &&
+      (!assigneeId || (t.assigneeIds ?? []).includes(assigneeId)) &&
+      (!effort || (t.effort ?? "standard") === effort);
+    // Page through the ready queue: a match may sit past the first 500 ready tasks.
+    const out: Task[] = [];
+    const now = nowIso(ctx);
+    let after: string | undefined;
+    while (out.length < want) {
+      const page = await r.readyTasks(ctx.projectId, now, READY_PAGE, after);
+      out.push(...page.filter(matches));
+      if (page.length < READY_PAGE) break;
+      after = page[page.length - 1]?.id;
+    }
+    return out.slice(start, want);
   });
 }
 
 /** Checks that linked feature, parent and dependencies exist and form no cycle. */
-async function checkLinks(
+export async function checkLinks(
   r: StorageReader,
   ctx: ServiceContext,
   taskId: string,

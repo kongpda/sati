@@ -28,6 +28,8 @@ export function selfCommand(root: string): string[] {
   const arg = process.argv[1];
   if (!arg) throw new SatiError("INTERNAL", "Cannot tell where the sati binary is.");
   const script = resolve(arg);
+  // Windows has no execute bit (X_OK only checks the file exists) and cannot run a .js file.
+  if (process.platform === "win32") return [process.execPath, script];
   try {
     accessSync(script, constants.X_OK);
     return [script];
@@ -248,7 +250,8 @@ function git(root: string, ...args: string[]): string {
   }).trim();
 }
 
-const absFrom = (root: string, p: string) => (isAbsolute(p) ? p : resolve(root, p));
+/** A path git printed, in Node's form: on Windows git prints `C:/repo/.git`, Node `C:\repo\.git`. */
+export const absFrom = (root: string, p: string) => resolve(root, p);
 
 /**
  * True when `dir` comes from a `core.hooksPath` set outside this repo's own config (global,

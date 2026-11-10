@@ -1808,3 +1808,14 @@ Status: **done except items that need the owner or a Windows machine** (2026-11-
 - No changeset: every fix is to unreleased behaviour covered by the initial-release entry.
 - Left open: the Windows items that need a Windows machine; the owner decision on blocking a rename out of a protected feature.
 - Verified locally: lint (the 12 old CSS warnings), typecheck, knip clean, build, core 334, store-sqlite 69, sync 52, mcp 30, ui 25, cli 167. Each new test was run against the old code and failed there. `pnpm test:ui` not run: the board did not change.
+
+## 2026-11-10 — Phase 5h: Windows items reproduced without Windows
+
+Status: **done for the items a test can reach on macOS** (2026-11-10). Task `tsk_01M720414CF2MHA6RG318DZ2XE`.
+
+- `selfCommand` runs sati through `process.execPath` on Windows. `X_OK` only checks that a file exists there, so the hooks would have tried to run a `.js` file directly. Test: `process.platform` set to `win32`.
+- Hooks: a git dir printed as `C:/repo/.git` is now resolved to Node's form before it is compared with hook paths. Overlap: worktree paths from `git worktree list` are compared through `resolve`, so `C:/repo/wt` matches `C:\repo\wt`. Test: `node:path` mocked with its win32 functions.
+- No changeset: unreleased behaviour, covered by the initial-release entry.
+- Verified locally: lint, typecheck, knip clean, build, core 334, store-sqlite 69, sync 52, mcp 30, ui 25, cli 170. Each new test failed on the old code.
+- Left open, they need a Windows machine: the MCP config running `node_modules/.bin/sati` and the `sh` syntax in the Claude Code hooks, EPERM on rename over an open file, and the doubtful list.
+

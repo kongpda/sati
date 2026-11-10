@@ -1,0 +1,33 @@
+{
+  "body": "docs/review-followups.md Windows section: selfCommand X_OK, hooks.ts path compares, runtime.ts changedFiles worktree compare. Reproduce with path.win32 or a stubbed process.platform on macOS; items that need a Windows machine stay open.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "1f12d2ab94e0241223392fa6a96506ebacb801af",
+    "completedAt": "2026-11-10T05:52:30.001Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/cli/src/hooks.ts"
+    ],
+    "summary": "selfCommand uses process.execPath on Windows; git-printed paths resolved before compares in hooks and overlap; tests simulate win32."
+  },
+  "createdAt": "2026-11-10T05:50:29.004Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "standard",
+  "id": "tsk_01M720414CF2MHA6RG318DZ2XE",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T05:50:29.006Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-10T05:50:31.130Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T05:52:30.002Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T05:52:30.002Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T05:52:30.002Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-10T05:50:31.130Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "review",
+  "title": "Review follow-ups: Windows items reproducible by simulation",
+  "updatedAt": "2026-11-10T05:52:30.004Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

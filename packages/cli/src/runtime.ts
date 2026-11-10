@@ -53,7 +53,7 @@ import {
 } from "@sati/store-sqlite";
 import type { WrittenRecord } from "@sati/sync";
 import { writeFileAtomic } from "./atomic.js";
-import { defaultBase } from "./git.js";
+import { defaultBase, samePath } from "./git.js";
 import { runHint } from "./install.js";
 
 export interface Runtime {
@@ -250,7 +250,7 @@ export function worktreePaths(root: string): { path: string; branch: string | nu
  */
 function changedFiles(root: string, worktree: string): string[] | null {
   try {
-    if (!worktreePaths(root).some((w) => w.path === worktree)) return null;
+    if (!worktreePaths(root).some((w) => samePath(w.path, worktree))) return null;
     const files = new Set<string>();
     const base = defaultBase(worktree);
     if (base) {

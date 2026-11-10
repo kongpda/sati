@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { resolve } from "node:path";
 import { type ChangeKind, SatiError } from "@sati/core";
 
 export interface Change {
@@ -217,3 +218,6 @@ export function defaultBase(root: string): string | undefined {
   }
   return undefined;
 }
+
+/** Whether two paths name the same folder. Git prints `C:/repo/wt` on Windows where Node has `C:\repo\wt`. */
+export const samePath = (a: string, b: string): boolean => resolve(a) === resolve(b);

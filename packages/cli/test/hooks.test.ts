@@ -11,7 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join, sep } from "node:path";
 import { describe, expect, it } from "vitest";
-import { planHooks } from "../src/hooks.js";
+import { planHooks, selfCommand } from "../src/hooks.js";
 import { run, sati, satiJson, tempRepo } from "./helpers.js";
 
 interface Init {
@@ -258,5 +258,25 @@ describe("git hooks", () => {
     const again = satiJson<Init>(dir, "init", "--upgrade", "--yes");
     expect(again.data.files).toContainEqual({ path: ".git/hooks/pre-commit", action: "skip" });
     expect(read(dir, ".git/hooks/pre-commit")).toBe(theirs);
+  });
+});
+
+describe("selfCommand", () => {
+  // Windows has no execute bit: accessSync X_OK passes for any file, and a hook cannot run a
+  // .js file directly. sati must run itself through node there.
+  it("runs the script through node on Windows, even when it looks executable", () => {
+    const dir = mkdtempSync(join(tmpdir(), "sati-self-"));
+    const script = join(dir, "sati.js");
+    writeFileSync(script, "", { mode: 0o755 });
+    const { argv, platform } = process;
+    process.argv = [argv[0] ?? "", script];
+    try {
+      expect(selfCommand(dir)).toEqual([script]);
+      Object.defineProperty(process, "platform", { value: "win32" });
+      expect(selfCommand(dir)).toEqual([process.execPath, script]);
+    } finally {
+      Object.defineProperty(process, "platform", { value: platform });
+      process.argv = argv;
+    }
   });
 });

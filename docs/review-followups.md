@@ -667,9 +667,9 @@ Guard and shell hook (known limits, the pre-commit guard is the backstop):
 
 Windows (read only, not run). The open items below need a Windows machine to reproduce; they stay open until someone can run them there.
 
-- [ ] `hooks.ts` compares paths with `/` where Windows gives `\` (likely).
-- [ ] `runtime.ts` `changedFiles` compares worktree paths the same way (likely).
-- [ ] `selfCommand` checks `X_OK`, which means nothing on Windows; use `process.execPath` (likely).
+- [x] `hooks.ts` compares paths with `/` where Windows gives `\` (likely). Reproduced with Node's win32 path functions: git prints the git dir as `C:/repo/.git`, which was kept as is and never matched the hook paths Node builds with `\`. Every path git prints now goes through `resolve` (2026-11-10). The `/` joins in `shownPath` and `slashed` are for display and `sh` scripts, which take `/` on Windows too.
+- [x] `runtime.ts` `changedFiles` compares worktree paths the same way (likely). Reproduced with the win32 path functions: `C:/repo/wt` from `git worktree list` never equalled `C:\repo\wt`, so overlap warnings would never fire. Compared through `resolve` now (2026-11-10).
+- [x] `selfCommand` checks `X_OK`, which means nothing on Windows; use `process.execPath` (likely). Reproduced by setting `process.platform` to `win32`: an executable-looking script came back alone. On Windows it now always runs through `process.execPath` (2026-11-10).
 - [ ] The MCP config runs `node_modules/.bin/sati` and the Claude Code hooks use `sh` syntax (likely).
 - [x] `sati serve` has no `error` handler, so EADDRINUSE crashes instead of exiting 4. This can happen on macOS and Linux too (likely). Already fixed in WP5.6 (test: "of two serves started at once, one runs and the other exits 4").
 - [x] The `.gitattributes` line should add `text eol=lf` so autocrlf does not rewrite `.sati/` files (likely). Reproduced on macOS with `core.autocrlf=true`: the clone got CRLF records and the first export rewrote them. Done (2026-11-10, WP10 leftovers); `init --upgrade` replaces the old line.

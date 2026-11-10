@@ -1701,3 +1701,5 @@ Status: **done** (2026-11-10). Task `tsk_01M71RY1KT78KK8VMMHVHGR60F`.
 - Memory store fixed: every case failed on it before. It now orders, clamps, seeks and checks keys as SQL does; `search` and `readyTasks` are clamped too.
 - Found in `SqliteStore`: an update that gave an actor a name another actor holds threw a raw SQLite error (exit 1, "internal"). It now throws CONFLICT. No command renames an actor's `name` today, so this is a store fix with no changeset.
 - No core test depended on the old memory store behaviour.
+- Fix-up commit: the first WP7 commit also held `.d.ts` files that the store-sqlite build wrote next to core's sources, because its tsconfig includes `test/` and the contract test imports a core file. They are removed, and the store-sqlite build now uses `tsconfig.build.json` (src only). The CLI's worktree coordination tests get 30 s, like the other git tests: under a full parallel run they passed 5 s and failed every run.
+- Verified locally: lint (the 12 old CSS warnings), typecheck, core 313, store-sqlite 62, sync 52, mcp 27, ui 21, cli 147. Core branch coverage 90.86%.

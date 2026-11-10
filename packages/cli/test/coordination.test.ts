@@ -31,6 +31,7 @@ async function twoWorktrees() {
 }
 
 // PLAN Phase 5c: real git worktrees, not a fake RepoIndex.
+// Each case runs git and the CLI a dozen times; under a full parallel run that takes over 5 s.
 describe("worktree coordination through git", () => {
   it("warns an agent about a file another worktree changed, and about a base conflict", async () => {
     const { main, a, b } = await twoWorktrees();
@@ -61,7 +62,7 @@ describe("worktree coordination through git", () => {
     writeFileSync(join(a, "shared.ts"), "export const a = 9;\n");
     git(a, "commit", "-qam", "take main's value");
     expect(run(a, ["brief"], agent("codex-a")).stdout).not.toContain("Your branch conflicts");
-  });
+  }, 30_000);
 
   it("pins a review to the branch commit and lists finished worktrees in doctor", async () => {
     const { main, a } = await twoWorktrees();
@@ -102,7 +103,7 @@ describe("worktree coordination through git", () => {
     const doctor = run(main, ["doctor"], {}).stdout;
     expect(doctor).toMatch(/git worktree remove '.*-b'/);
     expect(doctor).not.toMatch(/git worktree remove '.*-a'/);
-  });
+  }, 30_000);
 
   it("marks held tasks waiting from the Notification hook and clears them on the next prompt", async () => {
     const dir = await tempRepo({ init: true });

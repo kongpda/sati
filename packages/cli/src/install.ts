@@ -18,8 +18,10 @@ export function isLocalInstall(
 ): boolean {
   if (!script || !existsSync(localBin(root))) return false;
   try {
-    const modules = realpathSync(join(root, "node_modules"));
-    return realpathSync(script).startsWith(`${modules}${sep}`);
+    // Windows paths ignore case, and git and Node may disagree on the drive letter's case.
+    const fold = (p: string) => (process.platform === "win32" ? p.toLowerCase() : p);
+    const modules = fold(realpathSync(join(root, "node_modules")));
+    return fold(realpathSync(script)).startsWith(`${modules}${sep}`);
   } catch {
     return false;
   }

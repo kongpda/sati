@@ -52,11 +52,14 @@ export function Changes({
   onOpenTask,
   onGo,
   onCopied,
+  onCopyFailed,
 }: {
   data: Snapshot;
   onOpenTask: (id: string) => void;
-  onGo: (path: string) => void;
+  /** Opens a list page at one record. */
+  onGo: (path: string, id: string) => void;
   onCopied: (message: string) => void;
+  onCopyFailed: () => void;
 }) {
   const [filter, setFilter] = useState<ChangesFilter>({
     since: "7d",
@@ -75,8 +78,8 @@ export function Changes({
     try {
       await navigator.clipboard.writeText(await text());
       onCopied(`Copied the ${label}.`);
-    } catch (err) {
-      onCopied(`Could not copy the ${label}: ${plainError(err)}`);
+    } catch {
+      onCopyFailed();
     }
   };
 
@@ -206,6 +209,7 @@ export function Changes({
                           : item.kind === "decision"
                             ? "/decisions"
                             : "/notes",
+                        item.id,
                       )
                     }
                   >

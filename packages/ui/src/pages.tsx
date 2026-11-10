@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ago,
   type Decision,
   type Milestone,
   type Note,
@@ -20,11 +19,14 @@ import {
 import { Markdown } from "./markdown.js";
 import { Avatar, holderName, nameOf, personName } from "./people.js";
 import { isThreadNote, Thread, threadOf } from "./thread.js";
+import { Ago } from "./time.js";
 
 /** Adds and deletes comments; the board passes one to every page with a thread. */
 interface ThreadActions {
   onAdd: (on: string, body: string) => Promise<unknown>;
   onDelete: (id: string, title: string) => void;
+  /** Whether a comment is typed but not sent on record `on`, so leaving can ask first. */
+  onDraft?: (typed: boolean, on: string) => void;
 }
 
 import { activityWords, capital, dayWords, fullTime, statusWord, untilTime } from "./words.js";
@@ -109,7 +111,7 @@ export function Features({
 }: {
   data: Snapshot;
   /** Rejects when the save is refused (the reason is already shown). */
-  onSavePaths: (id: string, paths: string, version: number) => Promise<unknown>;
+  onSavePaths: (id: string, paths: string, version: number) => Promise<{ paths: string[] }>;
   onReviewed: (id: string, version: number) => void;
 }) {
   return (
@@ -117,7 +119,7 @@ export function Features({
       <h1>Features</h1>
       <div className="list">
         {data.features.map((f) => (
-          <article key={f.id} className="row">
+          <article key={f.id} id={f.id} tabIndex={-1} className="row">
             <h2 className="row-title">{f.title}</h2>
             <div className="meta">
               {capital(f.status)}
@@ -166,7 +168,7 @@ function PathsForm({
   onSave,
 }: {
   feature: Snapshot["features"][number];
-  onSave: (id: string, paths: string, version: number) => Promise<unknown>;
+  onSave: (id: string, paths: string, version: number) => Promise<{ paths: string[] }>;
 }) {
   const [dirty, setDirty] = useState(false);
   const current = f.paths.join("\n");
@@ -181,9 +183,16 @@ function PathsForm({
       onInput={() => setDirty(true)}
       onSubmit={(e) => {
         e.preventDefault();
-        const input = new FormData(e.currentTarget).get("paths");
-        onSave(f.id, String(input ?? ""), f.version).then(
-          () => setDirty(false),
+        const input = String(new FormData(e.currentTarget).get("paths") ?? "");
+        onSave(f.id, input, f.version).then(
+          (saved) => {
+            // The saved paths are the baseline before the refetch lands, so they do not show
+            // as a change made elsewhere while the field is still dirty.
+            const paths = saved.paths.join("\n");
+            // Reload the field only when the server tidied what was typed.
+            loaded.current = { paths, n: loaded.current.n + (paths === input ? 0 : 1) };
+            setDirty(false);
+          },
           () => undefined,
         );
       }}
@@ -389,7 +398,7 @@ export function Notes({
       ) : null}
       <div className="list" style={{ marginTop: 16 }}>
         {shown.map((n) => (
-          <article key={n.id} className="row">
+          <article key={n.id} id={n.id} tabIndex={-1} className="row">
             <h2 className="row-title">
               {n.pinned ? <span className="badge">Pinned</span> : null}
               {n.private ? <span className="badge private">Private</span> : null}
@@ -397,7 +406,7 @@ export function Notes({
             </h2>
             <div className="meta">
               <time dateTime={n.updatedAt} title={fullTime(n.updatedAt)}>
-                {ago(n.updatedAt)}
+                <Ago iso={n.updatedAt} />
               </time>
               {n.tags.length ? ` · ${n.tags.join(", ")}` : ""}
               {n.needsReview ? (
@@ -486,11 +495,16 @@ export function Decisions({
       </div>
       <div className="list">
         {data.decisions.map((d) => (
-          <article key={d.id} className={replacedBy.has(d.id) ? "row replaced" : "row"}>
+          <article
+            key={d.id}
+            id={d.id}
+            tabIndex={-1}
+            className={replacedBy.has(d.id) ? "row replaced" : "row"}
+          >
             <h2 className="row-title">{d.title}</h2>
             <div className="meta">
               <time dateTime={d.createdAt} title={fullTime(d.createdAt)}>
-                {ago(d.createdAt)}
+                <Ago iso={d.createdAt} />
               </time>
               {d.supersedes ? ` · replaces ${titles.get(d.supersedes) ?? d.supersedes}` : ""}
               {replacedBy.has(d.id) ? ` · replaced by ${replacedBy.get(d.id)}` : ""}
@@ -586,7 +600,7 @@ export function Activity({ data }: { data: Snapshot }) {
               {subject ? <span className="subject"> {subject}</span> : null}
               <div className="meta">
                 <time dateTime={row.at} title={fullTime(row.at)}>
-                  {ago(row.at)}
+                  <Ago iso={row.at} />
                 </time>
                 {row.branch ? ` · ${row.branch}` : ""}
               </div>
@@ -603,6 +617,30 @@ export function Activity({ data }: { data: Snapshot }) {
 
 /** The effort select's value: standard is the default, stored as unset. */
 const effortValue = (v: FormDataEntryValue | null) => (v === "light" || v === "deep" ? v : null);
+
+/** The task fields the panel's form edits; the form reloads when one of them changes. */
+const fieldsOf = (t: Task | undefined) =>
+  JSON.stringify([
+    t?.id,
+    t?.title,
+    t?.body,
+    t?.status,
+    t?.dueDate ?? null,
+    t?.effort ?? null,
+    t?.milestoneId ?? null,
+    t?.assigneeIds ?? [],
+  ]);
+
+/** The same fields as the form reads them, to compare what was typed with a task. */
+const valuesOf = (t: Task) => ({
+  title: t.title,
+  body: t.body,
+  status: t.status,
+  dueDate: t.dueDate ?? null,
+  effort: effortValue(t.effort ?? null),
+  milestoneId: t.milestoneId ?? null,
+  assigneeIds: t.assigneeIds ?? [],
+});
 
 const EDITABLE = ["backlog", "todo", "in_progress", "review", "blocked", "cancelled"];
 
@@ -624,6 +662,7 @@ export function TaskSheet({
   onRelease,
   onTakeOver,
   onDelete,
+  onToast,
   thread,
 }: {
   data: Snapshot;
@@ -635,11 +674,13 @@ export function TaskSheet({
   /** Tells the app whether there are unsaved edits, so leaving can ask first. */
   onDirty: (dirty: boolean) => void;
   onClose: () => void;
-  /** Rejects when the save is refused (the reason is already shown). */
-  onSave: (id: string, patch: Record<string, unknown>) => Promise<{ version: number }>;
+  /** Resolves with the saved task; rejects when the save is refused (the reason is already shown). */
+  onSave: (id: string, patch: Record<string, unknown>) => Promise<Task>;
   onRelease: (id: string, force: boolean) => void;
   onTakeOver: (id: string) => void;
   onDelete: (id: string, title: string) => void;
+  /** Shows a short message, with an Undo button when `undo` is given. */
+  onToast: (message: string, undo?: () => void) => void;
   thread: ThreadActions;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
@@ -668,28 +709,49 @@ export function TaskSheet({
   // changed, and Save sends only the fields the person changed since the form loaded.
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const fields = JSON.stringify([
-    task?.id,
-    task?.title,
-    task?.body,
-    task?.status,
-    task?.dueDate ?? null,
-    task?.effort ?? null,
-    task?.milestoneId ?? null,
-    task?.assigneeIds ?? [],
-  ]);
+  // The body shows rendered until the person chooses to edit it (owner decision, review 6.2).
+  const [editingBody, setEditingBody] = useState(false);
+  const bodyField = useRef<HTMLTextAreaElement>(null);
+  const saveButton = useRef<HTMLButtonElement>(null);
+  // Save is disabled while saving, so focus goes back to it only once it is enabled again.
+  const refocus = useRef(false);
+  useEffect(() => {
+    if (saving || !refocus.current) return;
+    refocus.current = false;
+    saveButton.current?.focus();
+  }, [saving]);
+  const fields = fieldsOf(task);
   const formKey = useRef({ fields, n: 0, base: task });
-  if (formKey.current.fields !== fields && !dirty) {
+  // After a save the snapshot still holds the older task until the refetch lands; reloading
+  // from it would flash the old values back and drop focus from Save.
+  const older = task !== undefined && task.version < (formKey.current.base?.version ?? 0);
+  if (formKey.current.fields !== fields && !dirty && !older) {
     formKey.current = { fields, n: formKey.current.n + 1, base: task };
   }
   const changedElsewhere = dirty && formKey.current.fields !== fields;
   // Typing in the comment box or the new-step box is unsaved work too.
   const [commentDraft, setCommentDraft] = useState(false);
   const [stepDraft, setStepDraft] = useState(false);
-  const anyDirty = dirty || commentDraft || stepDraft;
+  // A task deleted elsewhere takes its unsaved edits with it: nothing is left to ask about.
+  const anyDirty = found && (dirty || commentDraft || stepDraft);
   useEffect(() => onDirty(anyDirty), [anyDirty, onDirty]);
   useEffect(() => () => onDirty(false), [onDirty]);
-  if (!task) return null;
+  if (!task) {
+    return (
+      <aside
+        className="sheet"
+        role="dialog"
+        aria-modal={modal ? "true" : "false"}
+        aria-label="Task deleted"
+        inert={inert}
+      >
+        <p role="status">This task was deleted.</p>
+        <button type="button" onClick={onClose}>
+          Close
+        </button>
+      </aside>
+    );
+  }
   const base = formKey.current.base ?? task;
   const feature = data.features.find((f) => f.id === task.featureId);
   // Someone else's live claim is ended with Take over or Release first, not deleted under them.
@@ -756,7 +818,8 @@ export function TaskSheet({
             a.length === b.length && a.every((x) => b.includes(x));
           const typed = {
             title: String(form.get("title") ?? ""),
-            body: String(form.get("body") ?? ""),
+            // The body field is there only while it is being edited.
+            body: form.has("body") ? String(form.get("body")) : base.body,
             status: String(form.get("status") ?? base.status),
             dueDate: String(form.get("dueDate") ?? "") || null,
             effort: effortValue(form.get("effort")),
@@ -765,33 +828,16 @@ export function TaskSheet({
               : (base.milestoneId ?? null),
             assigneeIds: form.getAll("assigneeIds").map(String),
           };
-          const was = {
-            title: base.title,
-            body: base.body,
-            status: base.status,
-            dueDate: base.dueDate ?? null,
-            effort: effortValue(base.effort ?? null),
-            milestoneId: base.milestoneId ?? null,
-            assigneeIds: base.assigneeIds ?? [],
-          };
-          const now = {
-            ...was,
-            title: task.title,
-            body: task.body,
-            status: task.status,
-            dueDate: task.dueDate ?? null,
-            effort: effortValue(task.effort ?? null),
-            milestoneId: task.milestoneId ?? null,
-            assigneeIds: task.assigneeIds ?? [],
-          };
+          const was = valuesOf(base);
+          const now = valuesOf(task);
+          const same = (a: unknown, b: unknown) =>
+            Array.isArray(a) && Array.isArray(b) ? sameList(a, b) : a === b;
           // Only what the person changed since the form loaded: a field an agent changed
           // meanwhile keeps the agent's value, and old tasks keep their shape.
           const patch: Record<string, unknown> = {};
           let clash = false;
           for (const key of Object.keys(typed) as (keyof typeof typed)[]) {
             const mine = typed[key];
-            const same = (a: unknown, b: unknown) =>
-              Array.isArray(a) && Array.isArray(b) ? sameList(a, b) : a === b;
             if (same(mine, was[key])) continue;
             patch[key] = mine;
             if (!same(was[key], now[key])) clash = true;
@@ -804,19 +850,55 @@ export function TaskSheet({
           // Both changed the same field: the version the form loaded makes the server refuse
           // it, so neither edit is lost without a word.
           void onSave(task.id, { ...patch, expectedVersion: clash ? base.version : task.version })
-            .then(() => setDirty(false))
+            .then((saved) => {
+              // The saved task is the new baseline before the refetch lands, so it does not
+              // look like a change made elsewhere. The form reloads only when it shows a
+              // field that differs from what was saved (another writer's change).
+              const after = valuesOf(saved);
+              const stale = (Object.keys(typed) as (keyof typeof typed)[]).some(
+                (key) => !same(typed[key], after[key]),
+              );
+              formKey.current = {
+                fields: fieldsOf(saved),
+                n: formKey.current.n + (stale ? 1 : 0),
+                base: saved,
+              };
+              setDirty(false);
+              setEditingBody(false);
+              onToast("Saved");
+              refocus.current = true;
+            })
             .catch(() => undefined)
             .finally(() => setSaving(false));
         }}
       >
         <input className="field" name="title" defaultValue={task.title} aria-label="Title" />
-        <textarea
-          className="field"
-          name="body"
-          rows={8}
-          defaultValue={task.body}
-          aria-label="Body"
-        />
+        <div className="sheet-details">
+          <h3>Details</h3>
+          {editingBody || !task.body.trim() ? (
+            <textarea
+              ref={bodyField}
+              className="field"
+              name="body"
+              rows={8}
+              defaultValue={task.body}
+              aria-label="Body"
+            />
+          ) : (
+            <>
+              <Markdown source={task.body} />
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingBody(true);
+                  requestAnimationFrame(() => bodyField.current?.focus());
+                }}
+              >
+                Edit details
+              </button>
+            </>
+          )}
+        </div>
         <label className="sheet-label">
           Due date
           <input className="field" type="date" name="dueDate" defaultValue={task.dueDate ?? ""} />
@@ -836,7 +918,7 @@ export function TaskSheet({
             ))}
           </select>
         </label>
-        <button type="submit" className="primary" disabled={saving}>
+        <button type="submit" className="primary" disabled={saving} ref={saveButton}>
           {saving ? "Saving…" : "Save"}
         </button>
       </form>
@@ -845,6 +927,7 @@ export function TaskSheet({
         items={task.checklist ?? []}
         onChange={(checklist, expectedVersion) => onSave(task.id, { checklist, expectedVersion })}
         onDraft={setStepDraft}
+        onRemoved={(text, undo) => onToast(`Removed the step ${text}.`, undo)}
       />
       {feature && feature.acceptance.length > 0 ? (
         <>
@@ -856,12 +939,6 @@ export function TaskSheet({
               <li key={`${i}:${item}`}>{item}</li>
             ))}
           </ul>
-        </>
-      ) : null}
-      {task.body.trim() ? (
-        <>
-          <h3>Details</h3>
-          <Markdown source={task.body} />
         </>
       ) : null}
       <Thread data={data} on={task.id} {...thread} onDraft={setCommentDraft} />
@@ -924,9 +1001,14 @@ function TaskSignals({ data, task }: { data: Snapshot; task: Task }) {
               : ""}
           </strong>
           <span className="meta">
-            {handoff.acknowledged
-              ? ` · read by ${nameOf(data, handoff.acknowledged.by)} ${ago(handoff.acknowledged.at)}`
-              : " · not read yet"}
+            {handoff.acknowledged ? (
+              <>
+                {` · read by ${nameOf(data, handoff.acknowledged.by)} `}
+                <Ago iso={handoff.acknowledged.at} />
+              </>
+            ) : (
+              " · not read yet"
+            )}
           </span>
         </p>
       ) : null}
@@ -943,6 +1025,7 @@ function Checklist({
   items,
   onChange,
   onDraft,
+  onRemoved,
 }: {
   version: number;
   items: { text: string; done: boolean }[];
@@ -952,6 +1035,8 @@ function Checklist({
   ) => Promise<{ version: number }>;
   /** Whether a step is typed but not added, so leaving can ask first. */
   onDraft: (typed: boolean) => void;
+  /** A step was removed; `undo` puts it back where it was. */
+  onRemoved: (text: string, undo: () => void) => void;
 }) {
   // Shown at once; a refused save puts back what the server has. A new version (a save from
   // here or anywhere) resets it to the server's list without remounting, so focus stays put.
@@ -995,6 +1080,9 @@ function Checklist({
         }),
     );
   };
+  // Undo runs after later renders, so it needs the list on screen then, not at the removal.
+  const current = useRef(shown);
+  current.current = shown;
   const done = shown.filter((c) => c.done).length;
   return (
     <section className="checklist" aria-labelledby="checklist-title">
@@ -1017,7 +1105,13 @@ function Checklist({
             <button
               type="button"
               aria-label={`Remove step ${c.text}`}
-              onClick={() => change(shown.filter((_, j) => j !== i))}
+              onClick={() => {
+                change(shown.filter((_, j) => j !== i));
+                onRemoved(c.text, () => {
+                  const list = current.current;
+                  change([...list.slice(0, i), c, ...list.slice(i)]);
+                });
+              }}
             >
               Remove
             </button>

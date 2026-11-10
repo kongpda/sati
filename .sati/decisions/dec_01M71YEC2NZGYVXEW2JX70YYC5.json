@@ -1,0 +1,15 @@
+{
+  "consequences": "One place to change a kind's word; the palette and Memory say 'card' as the rest of the board does.",
+  "context": "Review WP6.5 found three hand copies of the kind words that had already drifted.",
+  "createdAt": "2026-11-10T05:21:10.740Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "decision": "Removed HIT_KINDS (app.tsx) and KIND_WORDS (memory.tsx); every kind label now comes from kindLabel in words.ts. The context kind reads 'card', not 'file summary'.",
+  "id": "dec_01M71YEC2NZGYVXEW2JX70YYC5",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T05:21:10.743Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "title": "Board kind words come from one map",
+  "updatedAt": "2026-11-10T05:21:10.740Z",
+  "version": 1
+}

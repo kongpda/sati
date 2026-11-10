@@ -21,12 +21,24 @@ const KIND_WORDS: Record<string, string> = {
   feature: "feature",
   milestone: "milestone",
   lock: "file reservation",
-  context: "file summary",
+  context: "card",
   actor: "profile",
   project: "project",
 };
 
 const kindWord = (entity: string) => KIND_WORDS[entity] ?? entity;
+
+/** What each kind of record is called on a badge: search hits, recall answers. */
+const KIND_LABELS: Record<string, string> = {
+  task: "Task",
+  note: "Note",
+  decision: "Decision",
+  feature: "Feature",
+  card: "Card",
+  context: "Card",
+};
+
+export const kindLabel = (entity: string): string => KIND_LABELS[entity] ?? capital(entity);
 
 function changedTo(diff: Record<string, unknown>, key: string): unknown {
   const change = diff[key];

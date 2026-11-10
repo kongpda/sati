@@ -2,11 +2,12 @@ import { useEffect, useId, useState } from "react";
 import { ago, type Note, type Snapshot } from "./api.js";
 import { Markdown } from "./markdown.js";
 import { Avatar, personName } from "./people.js";
+import { Ago } from "./time.js";
 import { fullTime } from "./words.js";
 
 /** Kept in step with COMMENT_TAG and COMMENT_MAX in core, which validate them. */
-const COMMENT_TAG = "comment";
-const COMMENT_MAX = 10_000;
+export const COMMENT_TAG = "comment";
+export const COMMENT_MAX = 10_000;
 
 /** Comments and handoffs are notes linked to the record they are on. */
 export const isThreadNote = (n: Note) => n.tags.includes(COMMENT_TAG) || n.tags.includes("handoff");
@@ -55,7 +56,7 @@ export function Thread({
   onDelete: (id: string, title: string) => void;
   folded?: boolean;
   /** Tells the caller whether a comment is typed but not sent, so leaving can ask first. */
-  onDraft?: (typed: boolean) => void;
+  onDraft?: (typed: boolean, on: string) => void;
 }) {
   const id = useId();
   const [draft, setDraft] = useState("");
@@ -65,9 +66,9 @@ export function Thread({
   const items = threadsOf(data.notes).get(on) ?? NONE;
   const typed = draft.trim() !== "";
   useEffect(() => {
-    onDraft?.(typed);
-    return () => onDraft?.(false);
-  }, [typed, onDraft]);
+    onDraft?.(typed, on);
+    return () => onDraft?.(false, on);
+  }, [typed, on, onDraft]);
   const send = () => {
     const body = draft.trim();
     if (!body || busy) return;
@@ -92,7 +93,7 @@ export function Thread({
                   <strong>{name}</strong>
                   {c.tags.includes("handoff") ? <span className="badge">Handoff</span> : null}
                   <time dateTime={c.createdAt} title={fullTime(c.createdAt)}>
-                    {ago(c.createdAt)}
+                    <Ago iso={c.createdAt} />
                   </time>
                   {c.createdBy === data.you ? (
                     <button

@@ -96,16 +96,7 @@ function Block({ text, deep }: { text: string; deep: boolean }) {
     const text = inline(first.slice(first.indexOf(" ") + 1));
     return heading === 3 ? <h3>{text}</h3> : <h4>{text}</h4>;
   }
-  if (lines.every((line) => line.startsWith("- "))) {
-    return (
-      <ul>
-        {lines.map((line, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: lines repeat and keep their order
-          <li key={`${i}:${line}`}>{inline(line.slice(2))}</li>
-        ))}
-      </ul>
-    );
-  }
+  if (lines.every((line) => BULLET.test(line))) return <List items={listTree(lines)} />;
   if (lines.every((line) => line.startsWith(">"))) {
     return (
       <blockquote>
@@ -154,16 +145,56 @@ function Block({ text, deep }: { text: string; deep: boolean }) {
   return <p>{inline(text)}</p>;
 }
 
+/** A bullet: `- ` or `* `, indented to nest under the item above. */
+const BULLET = /^\s*[-*] /u;
+
+type Item = { text: string; children: Item[] };
+
+/** Bullet lines as a tree: a line indented past the one above nests under it. */
+function listTree(lines: string[]): Item[] {
+  const indent = (line: string) => line.length - line.trimStart().length;
+  const root = { indent: indent(lines[0] ?? ""), items: [] as Item[] };
+  const stack = [root];
+  for (const line of lines) {
+    const depth = indent(line);
+    const item = { text: line.trimStart().slice(2), children: [] };
+    while (stack.length > 1 && depth < (stack.at(-1)?.indent ?? 0)) stack.pop();
+    const top = stack.at(-1) ?? root;
+    const parent = top.items.at(-1);
+    if (depth > top.indent && parent) {
+      stack.push({ indent: depth, items: parent.children });
+      parent.children.push(item);
+    } else top.items.push(item);
+  }
+  return root.items;
+}
+
+function List({ items }: { items: Item[] }) {
+  return (
+    <ul>
+      {items.map((item, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: items repeat and keep their order
+        <li key={`${i}:${item.text}`}>
+          {inline(item.text)}
+          {item.children.length > 0 ? <List items={item.children} /> : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 const lineKind = (line: string) =>
-  line.startsWith("- ")
-    ? "ul"
-    : /^\d+\. /u.test(line)
-      ? "ol"
-      : line.startsWith(">")
-        ? "quote"
-        : line.trimStart().startsWith("|")
-          ? "table"
-          : "text";
+  /^#{1,2} /u.test(line)
+    ? "heading"
+    : BULLET.test(line)
+      ? "ul"
+      : /^\d+\. /u.test(line)
+        ? "ol"
+        : line.startsWith(">")
+          ? "quote"
+          : line.trimStart().startsWith("|")
+            ? "table"
+            : "text";
 
 /** Consecutive lines of the same kind, so a list after a paragraph line gets its own block. */
 function runsOf(lines: string[]): string[][] {

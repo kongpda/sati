@@ -18,7 +18,7 @@ import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from
 import { holderName } from "./people.js";
 import { Settings } from "./settings.js";
 import { threadOf } from "./thread.js";
-import { plainError } from "./words.js";
+import { kindLabel, plainError, statusWord } from "./words.js";
 
 const PAGES = [
   ["/", "Board"],
@@ -52,19 +52,17 @@ const HIT_PAGES: Record<string, string> = {
   feature: "/features",
   context: "/memory",
 };
-const HIT_KINDS: Record<string, string> = {
-  task: "Task",
-  note: "Note",
-  decision: "Decision",
-  feature: "Feature",
-  context: "Card",
-};
 
 /** The branch commit a person sees when approving, so a later push is not approved unseen. */
 function approvedCommit(data: Snapshot, id: string): { approvedCommit?: string } {
   const head = data.drift?.[id]?.head;
   return head ? { approvedCommit: head } : {};
 }
+
+/** The board's search returns at most this many hits (the `/api/search` limit). */
+const SEARCH_LIMIT = 20;
+
+const DISCARD_COMMENT = "Discard the comment you typed?";
 
 export function App() {
   const query = useQuery({ queryKey: ["snapshot"], queryFn: api.snapshot });
@@ -110,11 +108,19 @@ export function App() {
   const shownTask = useRef(task);
   /** The task panel has edits that are not saved yet. */
   const sheetDirty = useRef(false);
+  /** Records on the current page (Notes, Decisions) with a comment typed but not sent. */
+  const drafts = useRef(new Set<string>());
+  /** Clears the "new" highlight; a newer event restarts it, so it is kept to cancel. */
+  const freshTimer = useRef<number | undefined>(undefined);
   // The URL on screen, to put back when a Back or Forward is declined.
   const here = useRef(window.location.pathname + window.location.search);
 
   const setSheetDirty = useCallback((dirty: boolean) => {
     sheetDirty.current = dirty;
+  }, []);
+  const setDraft = useCallback((typed: boolean, on: string) => {
+    if (typed) drafts.current.add(on);
+    else drafts.current.delete(on);
   }, []);
 
   useEffect(() => {
@@ -150,6 +156,14 @@ export function App() {
         window.history.pushState(null, "", here.current);
         return;
       }
+      if (
+        drafts.current.size > 0 &&
+        window.location.pathname !== new URL(here.current, window.location.origin).pathname &&
+        !window.confirm(DISCARD_COMMENT)
+      ) {
+        window.history.pushState(null, "", here.current);
+        return;
+      }
       if (next !== shownTask.current) sheetDirty.current = false;
       shownTask.current = next;
       here.current = window.location.pathname + window.location.search;
@@ -158,7 +172,7 @@ export function App() {
     };
     // Reloading or closing the tab with unsaved edits gets the browser's own prompt.
     const onUnload = (e: BeforeUnloadEvent) => {
-      if (sheetDirty.current) e.preventDefault();
+      if (sheetDirty.current || drafts.current.size > 0) e.preventDefault();
     };
     window.addEventListener("popstate", onPop);
     window.addEventListener("beforeunload", onUnload);
@@ -190,10 +204,14 @@ export function App() {
         const changed = next.tasks.filter((t) => before.get(t.id) !== t.updatedAt).map((t) => t.id);
         if (changed.length === 0) return;
         setFresh(new Set(changed));
-        window.setTimeout(() => setFresh(new Set()), 1600);
+        window.clearTimeout(freshTimer.current);
+        freshTimer.current = window.setTimeout(() => setFresh(new Set()), 1600);
       });
     };
-    return () => source.close();
+    return () => {
+      source.close();
+      window.clearTimeout(freshTimer.current);
+    };
   }, [client]);
 
   const go = useCallback((next: string, taskId: string | null = null) => {
@@ -205,6 +223,11 @@ export function App() {
       !window.confirm("Discard your unsaved changes to this task?")
     ) {
       return false;
+    }
+    // A comment typed on Notes or Decisions is lost when the page changes.
+    if (drafts.current.size > 0 && next !== window.location.pathname) {
+      if (!window.confirm(DISCARD_COMMENT)) return false;
+      drafts.current.clear();
     }
     // Clicking the open task again keeps its edits, so it stays dirty.
     if (taskId !== shownTask.current) sheetDirty.current = false;
@@ -218,9 +241,32 @@ export function App() {
     return true;
   }, []);
 
+  /** Opens a list page scrolled to one record, with focus on it, as a link to it would. */
+  const show = useCallback(
+    (next: string, id: string) => {
+      if (!go(next)) return;
+      // After the page has rendered.
+      requestAnimationFrame(() => {
+        const row = document.getElementById(id);
+        row?.scrollIntoView({ block: "center" });
+        row?.focus();
+      });
+    },
+    [go],
+  );
+
   const fail = useCallback((err: unknown) => {
     setToastState({ message: plainError(err), error: true });
   }, []);
+
+  const copyFailed = useCallback(
+    () =>
+      setToastState({
+        message: "Could not copy. Select the text and copy it by hand.",
+        error: true,
+      }),
+    [],
+  );
 
   const saved = useCallback(
     (message: string) => {
@@ -259,6 +305,7 @@ export function App() {
           throw err;
         }),
     onDelete: (id: string, title: string) => remove("note", id, title),
+    onDraft: setDraft,
   };
 
   const closePalette = useCallback(() => setPalette(false), []);
@@ -619,7 +666,7 @@ export function App() {
               className="mobile-status"
               value={column}
               onChange={(e) => setColumn(e.target.value)}
-              aria-label="Column"
+              aria-label="Status"
             >
               <option value="all">All columns</option>
               {COLUMNS.map(([id, label]) => (
@@ -698,7 +745,7 @@ export function App() {
             onSendBack={(t, reason) =>
               api
                 .patchTask(t.id, { status: "todo", reason, expectedVersion: t.version })
-                .then(() => saved(`Sent ${t.title} back to todo.`))
+                .then(() => saved(`Sent ${t.title} back to ${statusWord("todo")}.`))
                 .catch((err: unknown) => {
                   fail(err);
                   throw err;
@@ -718,7 +765,13 @@ export function App() {
             onRelease={() =>
               void api
                 .releaseExpired()
-                .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
+                .then((freed) =>
+                  saved(
+                    freed.length === 0
+                      ? "No tasks had run out of time."
+                      : `Freed ${freed.length} task${freed.length === 1 ? "" : "s"}.`,
+                  ),
+                )
                 .catch(fail)
             }
             onReleaseTask={(id) => {
@@ -749,7 +802,11 @@ export function App() {
                     .filter(Boolean),
                   expectedVersion: version,
                 })
-                .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
+                .then((saved) => {
+                  setToast("Saved");
+                  void client.invalidateQueries({ queryKey: ["snapshot"] });
+                  return saved;
+                })
                 .catch((err: unknown) => {
                   fail(err);
                   throw err;
@@ -770,8 +827,7 @@ export function App() {
             onCreate={(title, body, hidden) =>
               api
                 .createNote({ title, body, ...(hidden ? { private: true } : {}) })
-                .then(() => client.invalidateQueries({ queryKey: ["snapshot"] }))
-                .then(() => undefined)
+                .then(() => saved(`Saved the note ${title}.`))
                 .catch((err: unknown) => {
                   fail(err);
                   throw err;
@@ -792,8 +848,10 @@ export function App() {
           <Memory
             data={data}
             onSaved={saved}
+            onCopied={(message) => setToast(message)}
+            onCopyFailed={copyFailed}
             onOpenTask={(id) => go("/", id)}
-            onGo={(next) => go(next)}
+            onGo={show}
           />
         ) : null}
         {data && path === "/decisions" ? (
@@ -808,8 +866,9 @@ export function App() {
           <Changes
             data={data}
             onOpenTask={(id) => go(path, id)}
-            onGo={(next) => go(next)}
+            onGo={show}
             onCopied={(message) => setToast(message)}
+            onCopyFailed={copyFailed}
           />
         ) : null}
         {data && path === "/activity" ? <Activity data={data} /> : null}
@@ -825,6 +884,7 @@ export function App() {
           modal={!wide}
           inert={dialog}
           onDirty={setSheetDirty}
+          onToast={setToast}
           onClose={() => go(path)}
           onSave={(id, patch) =>
             api
@@ -833,8 +893,11 @@ export function App() {
                 ...patch,
                 ...(patch.status === "done" && data ? approvedCommit(data, id) : {}),
               })
-              .then(async (saved) => {
-                await client.invalidateQueries({ queryKey: ["snapshot"] });
+              // Resolve before the refetch: the panel takes the saved task as its new baseline
+              // first, or the refetched task looks like someone else's change while it is
+              // still dirty.
+              .then((saved) => {
+                void client.invalidateQueries({ queryKey: ["snapshot"] });
                 return saved;
               })
               .catch((err: unknown) => {
@@ -877,6 +940,7 @@ export function App() {
           data={data}
           onClose={() => setPalette(false)}
           onGo={go}
+          onShow={show}
           onToast={setToast}
           onError={fail}
         />
@@ -930,12 +994,15 @@ function Palette({
   data,
   onClose,
   onGo,
+  onShow,
   onToast,
   onError,
 }: {
   data: Snapshot | undefined;
   onClose: () => void;
   onGo: (path: string, taskId?: string | null) => void;
+  /** Opens a list page at one record. */
+  onShow: (path: string, id: string) => void;
   onToast: (message: string) => void;
   onError: (err: unknown) => void;
 }) {
@@ -988,7 +1055,14 @@ function Palette({
         <input
           ref={searchRef}
           value={queryText}
-          onChange={(e) => setQueryText(e.target.value)}
+          onChange={(e) => {
+            setQueryText(e.target.value);
+            // Hits for the old text would read as answers to the new one.
+            searchRun.current++;
+            setHits([]);
+            setSearched(false);
+            setSearching(false);
+          }}
           placeholder="Search tasks, notes, decisions, features"
           aria-label="Search"
         />
@@ -999,7 +1073,9 @@ function Palette({
               ? "Press Enter to search."
               : hits.length === 0
                 ? "No results"
-                : `${hits.length} result${hits.length === 1 ? "" : "s"}`}
+                : hits.length >= SEARCH_LIMIT
+                  ? `First ${SEARCH_LIMIT} results`
+                  : `${hits.length} result${hits.length === 1 ? "" : "s"}`}
         </div>
         {hits.map((hit) => {
           const titleOf = (id: string) =>
@@ -1023,15 +1099,14 @@ function Palette({
                 else if (hit.entity === "task") onGo("/", hit.id);
                 else if (on?.startsWith("tsk_")) onGo("/", on);
                 else
-                  onGo(
+                  onShow(
                     HIT_PAGES[on ? (on.startsWith("dec_") ? "decision" : "note") : hit.entity] ??
                       "/",
+                    on ?? hit.id,
                   );
               }}
             >
-              <span className="badge">
-                {on ? "Comment" : (HIT_KINDS[hit.entity] ?? hit.entity)}
-              </span>{" "}
+              <span className="badge">{on ? "Comment" : kindLabel(hit.entity)}</span>{" "}
               {about ? `on ${about}` : hit.title}
             </button>
           );

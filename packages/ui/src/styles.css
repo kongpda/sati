@@ -224,7 +224,7 @@ textarea {
   font-weight: 600;
   margin-right: 6px;
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: 12px;
 }
 .card.ghost {
   opacity: 0.4;
@@ -870,7 +870,7 @@ button.primary:disabled {
   border-radius: 999px;
   border: 1px solid var(--moss);
   color: var(--moss);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   vertical-align: 2px;
 }
@@ -1054,7 +1054,7 @@ button.danger {
   min-width: 22px;
   height: 22px;
   padding: 0 4px;
-  font-size: 10px;
+  font-size: 12px;
   margin-right: 6px;
   vertical-align: middle;
 }
@@ -1382,7 +1382,7 @@ button.danger {
   font-weight: 700;
   margin-right: 6px;
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: 12px;
 }
 .blocked-reason {
   color: var(--clay);

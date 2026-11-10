@@ -59,7 +59,8 @@ export function Settings({
       <h1>Settings</h1>
       <section className="my-section" aria-labelledby="kind-title">
         <h2 id="kind-title">Project kind</h2>
-        <fieldset className="kind-choices" disabled={saving !== null}>
+        {/* Busy, not disabled: disabling it took focus off the radio just chosen. */}
+        <fieldset className="kind-choices" aria-busy={saving !== null}>
           <legend className="dialog-note">
             What this project is for. Agents see the matching tools the next time they start.
           </legend>
@@ -75,6 +76,8 @@ export function Settings({
                 value={value}
                 checked={(saving ?? kind) === value}
                 onChange={() => {
+                  // One change at a time; the radio stays on the choice being saved.
+                  if (saving !== null) return;
                   setSaving(value);
                   api
                     .setKind(value)

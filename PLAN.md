@@ -749,7 +749,7 @@ Added 2026-11-10 at the owner's request: the items the Phase 5g review found and
 - [x] WP3 Performance
 - [x] WP4 MCP and agent experience
 - [x] WP5 CLI
-- [ ] WP6 Board
+- [ ] WP6 Board (all done except the manual screen-reader pass, which waits on the owner)
 - [x] WP7 Test store parity
 - [x] WP8 Docs and PLAN drift
 - [ ] WP9 Release and CI

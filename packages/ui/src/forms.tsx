@@ -13,7 +13,8 @@ import {
 import { Avatar, personName } from "./people.js";
 import { capital, plainError, statusWord } from "./words.js";
 
-const PRIORITIES = ["low", "medium", "high", "urgent"] as const;
+/** Kept in step with PRIORITIES in core (test/constants.test.ts checks it). */
+export const PRIORITIES = ["low", "medium", "high", "urgent"] as const;
 
 /** Effort options; a light task can go to an agent on a small, cheaper model. */
 export function EffortSelect({
@@ -23,20 +24,27 @@ export function EffortSelect({
   className?: string;
   chosen?: string | null;
 }) {
+  const hint = useId();
   return (
-    <label className={className}>
-      Effort
-      <select name="effort" defaultValue={chosen ?? "standard"}>
-        <option value="light">Light: quick, mechanical</option>
-        <option value="standard">Standard</option>
-        <option value="deep">Deep: needs careful thought</option>
-      </select>
-    </label>
+    <>
+      <label className={className}>
+        Effort
+        <select name="effort" defaultValue={chosen ?? "standard"} aria-describedby={hint}>
+          <option value="light">Light: quick, simple</option>
+          <option value="standard">Standard</option>
+          <option value="deep">Deep: needs careful thought</option>
+        </select>
+      </label>
+      {/* Outside the label, so it describes the select without becoming part of its name. */}
+      <small id={hint} className="meta effort-hint">
+        Light tasks can go to a faster, cheaper agent.
+      </small>
+    </>
   );
 }
 
 /** Where a milestone may go next; mirrors MILESTONE_TRANSITIONS in core, which enforces it. */
-const MILESTONE_NEXT: Record<string, string[]> = {
+export const MILESTONE_NEXT: Record<string, string[]> = {
   planned: ["active"],
   active: ["planned", "done"],
   done: ["active"],
@@ -96,6 +104,12 @@ export function FormDialog({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [ready, setReady] = useState(false);
+  // Once the person types, a stray backdrop click must not throw the text away (review 6.1).
+  const dirty = useRef(false);
+  const dismiss = (via: "backdrop" | "escape") => {
+    if (!dirty.current) onClose();
+    else if (via === "escape" && window.confirm("Discard what you typed?")) onClose();
+  };
 
   useEffect(() => {
     const previous = document.activeElement;
@@ -123,16 +137,19 @@ export function FormDialog({
         className="palette-dismiss"
         aria-label={`Close ${title.toLowerCase()}`}
         tabIndex={-1}
-        onClick={onClose}
+        onClick={() => dismiss("backdrop")}
       />
       <form
         ref={formRef}
         className="dialog-form"
-        onInput={(e) => setReady(filled(e.currentTarget))}
+        onInput={(e) => {
+          dirty.current = true;
+          setReady(filled(e.currentTarget));
+        }}
         onKeyDown={(e) => {
           if (e.key !== "Escape") return;
           e.stopPropagation();
-          onClose();
+          dismiss("escape");
         }}
         onSubmit={(e) => {
           e.preventDefault();
@@ -263,7 +280,7 @@ export function NewTask({
           </select>
         </label>
         <label>
-          List
+          Status
           <select name="status" defaultValue="todo">
             <option value="todo">{statusWord("todo")}</option>
             <option value="backlog">Backlog</option>

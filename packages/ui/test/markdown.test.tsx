@@ -70,4 +70,25 @@ describe("Markdown", () => {
       "<strong>Due</strong> Friday, <em>not</em> Monday",
     );
   });
+
+  // Review WP6.4: these rendered as literal text, as people type them in task bodies and notes.
+  it("starts a heading right after paragraph text, without a blank line", () => {
+    expect(html("Intro line\n## Steps\nDo this")).toBe(
+      '<div class="prose"><p>Intro line</p><h3>Steps</h3><p>Do this</p></div>',
+    );
+  });
+
+  it("takes * as a bullet, as - is", () => {
+    expect(html("* front\n* back")).toBe(
+      '<div class="prose"><ul><li>front</li><li>back</li></ul></div>',
+    );
+    // *emphasis* at the start of a line is still a paragraph.
+    expect(html("*not* a list")).toBe('<div class="prose"><p><em>not</em> a list</p></div>');
+  });
+
+  it("nests an indented list under the item above it", () => {
+    expect(html("- Venue\n  - hall\n  - garden\n- Food")).toBe(
+      '<div class="prose"><ul><li>Venue<ul><li>hall</li><li>garden</li></ul></li><li>Food</li></ul></div>',
+    );
+  });
 });

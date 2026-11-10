@@ -497,39 +497,39 @@ Effort: `standard`. Files are in `packages/ui/src`. Run `pnpm build && pnpm test
 
 ### 6.1 Data loss and wrong state
 
-- [ ] **Form dialogs close with no dirty check.** `forms.tsx` `FormDialog`: a click on the backdrop or Esc closes New task, Edit note and the others. Track dirty on first input; when dirty, ignore the backdrop and confirm on Esc. *Certain.*
-- [ ] **Banner flash after your own Save.** `pages.tsx` task panel: `invalidateQueries` is awaited before `setDirty(false)`, so the refetched task differs from the baseline while still dirty and the "changed while you were editing" status shows; the form then remounts and focus falls to `body`. Set the new baseline and clear dirty before invalidating, return focus to Save, toast "Saved". `PathsForm` has the same pattern. *Likely.*
-- [ ] **Open task deleted elsewhere.** `TaskSheet` returns null when the task is gone and the dirty ref stays true, so the next click asks to discard edits nobody can see. Call `onDirty(false)` and show "This task was deleted." with a close button. *Likely.*
-- [ ] **Comment drafts lost.** Only the task panel registers `onDraft` for `Thread`; a comment typed on Notes or Decisions is dropped on navigation. Register it there. *Likely.*
-- [ ] **Back after declining a discard** calls `pushState` (`app.tsx`, the popstate handler), adding history entries. Use `history.go(1)` or `replaceState`. *Likely.*
-- [ ] **Highlight timer.** The 1600 ms `setTimeout` for `fresh` in `app.tsx` is not kept or cleared; overlapping events end highlights early and it can fire after unmount. Keep it in a ref. *Certain.*
+- [x] **Form dialogs close with no dirty check.** `forms.tsx` `FormDialog`: a click on the backdrop or Esc closes New task, Edit note and the others. Track dirty on first input; when dirty, ignore the backdrop and confirm on Esc. *Certain.*
+- [x] **Banner flash after your own Save.** `pages.tsx` task panel: `invalidateQueries` is awaited before `setDirty(false)`, so the refetched task differs from the baseline while still dirty and the "changed while you were editing" status shows; the form then remounts and focus falls to `body`. Set the new baseline and clear dirty before invalidating, return focus to Save, toast "Saved". `PathsForm` has the same pattern. *Likely.* Reproduced in part on the old code: focus fell to `body` after Save (confirmed); the banner did not show locally. Fixed both: the panel resolves with the saved task before the refetch, ignores the older snapshot task until the refetch lands, and refocuses Save once it is enabled.
+- [x] **Open task deleted elsewhere.** `TaskSheet` returns null when the task is gone and the dirty ref stays true, so the next click asks to discard edits nobody can see. Call `onDirty(false)` and show "This task was deleted." with a close button. *Likely.*
+- [x] **Comment drafts lost.** Only the task panel registers `onDraft` for `Thread`; a comment typed on Notes or Decisions is dropped on navigation. Register it there. *Likely.*
+- [x] **Back after declining a discard** calls `pushState` (`app.tsx`, the popstate handler), adding history entries. Use `history.go(1)` or `replaceState`. *Likely.* **Not a bug.** On the old code a declined Back left `history.length` unchanged (3 before, 3 after), so `pushState` restores the entry rather than adding one. Kept as is; the new test guards it.
+- [x] **Highlight timer.** The 1600 ms `setTimeout` for `fresh` in `app.tsx` is not kept or cleared; overlapping events end highlights early and it can fire after unmount. Keep it in a ref. *Certain.*
 
 ### 6.2 Feedback and wording
 
-- [ ] **Copy failures say "That change did not save".** `memory.tsx` and `changes.tsx` send clipboard errors through `plainError` and success through `onSaved`, which refetches the snapshot. Use "Could not copy. Select the text and copy it by hand.", as an error toast, with no refetch. *Certain.*
-- [ ] **One name for one thing.** New task says "List", the board filter says "Column", the panel says "Status". Pick "Status". A toast says "back to todo" where the board says "To do": use `statusWord`. *Certain.*
-- [ ] **Effort hint.** Under `EffortSelect` add one line: "Light tasks can go to a faster, cheaper agent." Replace "mechanical" with "quick, simple". *Certain.*
-- [ ] **No feedback** on "Free up tasks" (Agents page) and after creating a note. Add toasts. *Certain.*
-- [ ] **Checklist Remove** has no undo; task, note and decision deletes do. Add an Undo toast. *Certain.*
-- [ ] **Body shown twice** in the panel (textarea and rendered "Details"). Show the rendered text until the person chooses Edit, or drop one. **Owner decision** on which. *Likely.*
-- [ ] **Changes page links** open the list page, not the item. Link by id. *Likely.*
-- [ ] **Palette** keeps old hits while the text changes and gives no sign that results stop at 20. Clear hits on input; show "First 20 results". *Likely.*
-- [ ] **"just now" never ticks** until a snapshot arrives. Re-render relative times once a minute. *Certain.*
+- [x] **Copy failures say "That change did not save".** `memory.tsx` and `changes.tsx` send clipboard errors through `plainError` and success through `onSaved`, which refetches the snapshot. Use "Could not copy. Select the text and copy it by hand.", as an error toast, with no refetch. *Certain.*
+- [x] **One name for one thing.** New task says "List", the board filter says "Column", the panel says "Status". Pick "Status". A toast says "back to todo" where the board says "To do": use `statusWord`. *Certain.*
+- [x] **Effort hint.** Under `EffortSelect` add one line: "Light tasks can go to a faster, cheaper agent." Replace "mechanical" with "quick, simple". *Certain.*
+- [x] **No feedback** on "Free up tasks" (Agents page) and after creating a note. Add toasts. *Certain.*
+- [x] **Checklist Remove** has no undo; task, note and decision deletes do. Add an Undo toast. *Certain.*
+- [x] **Body shown twice** in the panel (textarea and rendered "Details"). Show the rendered text until the person chooses Edit, or drop one. **Owner decision** on which. *Likely.*
+- [x] **Changes page links** open the list page, not the item. Link by id. *Likely.* Done for the Changes page, the search palette and Memory: each opens the list and focuses the item by id.
+- [x] **Palette** keeps old hits while the text changes and gives no sign that results stop at 20. Clear hits on input; show "First 20 results". *Likely.*
+- [x] **"just now" never ticks** until a snapshot arrives. Re-render relative times once a minute. *Certain.*
 
 ### 6.3 Accessibility
 
-- [ ] **Settings fieldset** is `disabled` while saving, so the focused radio loses focus on every change. Use `aria-busy` and ignore input while saving. *Certain.*
-- [ ] **"Approve latest"** in `my-work.tsx` has `aria-label="Approve {title}"`, which does not contain the visible text (WCAG label in name). Make the label "Approve latest: {title}" or drop it and use `aria-describedby`. *Certain.*
-- [ ] **Small text.** Avatar, badge and "new" badge text is 10 to 11 px. Check on a phone; raise to 12 px if hard to read. *Unsure.*
+- [x] **Settings fieldset** is `disabled` while saving, so the focused radio loses focus on every change. Use `aria-busy` and ignore input while saving. *Certain.*
+- [x] **"Approve latest"** in `my-work.tsx` has `aria-label="Approve {title}"`, which does not contain the visible text (WCAG label in name). Make the label "Approve latest: {title}" or drop it and use `aria-describedby`. *Certain.*
+- [x] **Small text.** Avatar, badge and "new" badge text is 10 to 11 px. Check on a phone; raise to 12 px if hard to read. *Unsure.* Raised to 12 px without a phone check (owner may still check).
 - [ ] Manual screen-reader pass (already open with the owner).
 
 ### 6.4 Markdown
 
-- [ ] `markdown.tsx`: a heading straight after paragraph text renders as literal `## text`; `* item` and nested lists are not supported. Add the three cases with unit tests in `packages/ui/test/markdown.test.ts`, or list the limits in `docs/guide`. *Likely.*
+- [x] `markdown.tsx`: a heading straight after paragraph text renders as literal `## text`; `* item` and nested lists are not supported. Add the three cases with unit tests in `packages/ui/test/markdown.test.ts`, or list the limits in `docs/guide`. *Likely.* Added the three cases with unit tests in `packages/ui/test/markdown.test.tsx`.
 
 ### 6.5 Constants copied from core
 
-- [ ] `PRIORITIES` (`forms.tsx`), `MILESTONE_NEXT`, `COMMENT_TAG`/`COMMENT_MAX`, `COLORS` (`people.tsx`), and kind words in three places (`memory.tsx`, `words.ts`, `HIT_KINDS` in `app.tsx`) are hand copies. The UI does not import `@sati/core` at run time (check the bundle reason before changing that). Simplest safe fix: one parity test in `packages/ui/test` that imports core's constants and compares. Merge the three kind-word maps into `words.ts`. *Certain.*
+- [x] `PRIORITIES` (`forms.tsx`), `MILESTONE_NEXT`, `COMMENT_TAG`/`COMMENT_MAX`, `COLORS` (`people.tsx`), and kind words in three places (`memory.tsx`, `words.ts`, `HIT_KINDS` in `app.tsx`) are hand copies. The UI does not import `@sati/core` at run time (check the bundle reason before changing that). Simplest safe fix: one parity test in `packages/ui/test` that imports core's constants and compares. Merge the three kind-word maps into `words.ts`. *Certain.* Parity test: `packages/ui/test/constants.test.ts`. Kind words merged into `kindLabel` in `words.ts`; the context kind now reads "card", the name the board uses elsewhere.
 
 ---
 

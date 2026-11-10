@@ -305,7 +305,8 @@ function Approval({
           <button
             type="button"
             className="primary"
-            aria-label={`Approve ${task.title}`}
+            // The name starts with the visible text, so voice control finds it (WCAG 2.5.3).
+            aria-label={`${drift?.moved ? "Approve latest" : "Approve"}: ${task.title}`}
             disabled={busy}
             onClick={() => {
               setBusy(true);

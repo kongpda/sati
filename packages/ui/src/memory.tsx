@@ -1,16 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ago, api, type Card, type RecallItem, type Snapshot } from "./api.js";
+import { api, type Card, type RecallItem, type Snapshot } from "./api.js";
 import { FormDialog } from "./forms.js";
 import { nameOf } from "./people.js";
-import { plainError } from "./words.js";
-
-const KIND_WORDS: Record<RecallItem["kind"], string> = {
-  card: "Card",
-  note: "Note",
-  decision: "Decision",
-  task: "Task",
-};
+import { Ago } from "./time.js";
+import { kindLabel, plainError } from "./words.js";
 
 /** The folder a card is filed under: everything before its last `/`, or the top level. */
 function folderOf(path: string): string {
@@ -139,13 +133,19 @@ function CardForm({
 export function Memory({
   data,
   onSaved,
+  onCopied,
+  onCopyFailed,
   onOpenTask,
   onGo,
 }: {
   data: Snapshot;
   onSaved: (message: string) => void;
+  /** Copying changes no record, so it says so without refetching. */
+  onCopied: (message: string) => void;
+  onCopyFailed: () => void;
   onOpenTask: (id: string) => void;
-  onGo: (path: string) => void;
+  /** Opens a list page at one record. */
+  onGo: (path: string, id: string) => void;
 }) {
   const [draft, setDraft] = useState("");
   const [question, setQuestion] = useState("");
@@ -179,7 +179,7 @@ export function Memory({
     else if (item.kind === "card") {
       const card = data.cards.find((c) => c.id === item.id);
       if (card) setEditing(card);
-    } else onGo(item.kind === "note" ? "/notes" : "/decisions");
+    } else onGo(item.kind === "note" ? "/notes" : "/decisions", item.id);
   };
 
   return (
@@ -236,8 +236,8 @@ export function Memory({
                 onClick={() =>
                   void navigator.clipboard
                     .writeText(answer.data?.markdown ?? "")
-                    .then(() => onSaved("Copied the answer as Markdown."))
-                    .catch((err: unknown) => onSaved(`Could not copy: ${plainError(err)}`))
+                    .then(() => onCopied("Copied the answer as Markdown."))
+                    .catch(onCopyFailed)
                 }
               >
                 Copy as Markdown
@@ -251,7 +251,7 @@ export function Memory({
           ) : null}
           {answer.data.items.map((item) => (
             <article key={item.id} className="row">
-              <span className={`badge kind-${item.kind}`}>{KIND_WORDS[item.kind]}</span>
+              <span className={`badge kind-${item.kind}`}>{kindLabel(item.kind)}</span>
               <button type="button" className="row-link" onClick={() => open(item)}>
                 {item.title}
               </button>
@@ -314,7 +314,9 @@ export function Memory({
                 ) : null}
                 <div className="meta">
                   {nameOf(data, c.createdBy)} ·{" "}
-                  <time dateTime={c.updatedAt}>{ago(c.updatedAt)}</time>
+                  <time dateTime={c.updatedAt}>
+                    <Ago iso={c.updatedAt} />
+                  </time>
                   {c.sourceSeen ? ` · read at ${c.sourceSeen}` : ""}
                   {c.tags?.length ? ` · ${c.tags.join(", ")}` : ""}
                   <button type="button" aria-label={`Edit ${c.path}`} onClick={() => setEditing(c)}>

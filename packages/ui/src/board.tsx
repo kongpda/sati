@@ -13,8 +13,9 @@ import {
 } from "@dnd-kit/core";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { type Actor, ago, COLUMNS, dueLabel, type Feature, type Task, waitingOn } from "./api.js";
+import { type Actor, COLUMNS, dueLabel, type Feature, type Task, waitingOn } from "./api.js";
 import { Avatar } from "./people.js";
+import { Ago } from "./time.js";
 import { capital, fullTime, statusWord } from "./words.js";
 
 export const Board = memo(function Board({
@@ -356,7 +357,7 @@ function CardBody({
             </span>
           ) : null}
           <time dateTime={task.updatedAt} title={fullTime(task.updatedAt)}>
-            {ago(task.updatedAt)}
+            <Ago iso={task.updatedAt} />
           </time>
           {feature ? ` · ${feature}` : ""}
           {urgent ? ` · ${capital(task.priority)}` : ""}

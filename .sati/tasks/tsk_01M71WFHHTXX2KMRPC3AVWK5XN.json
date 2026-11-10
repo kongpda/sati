@@ -1,0 +1,52 @@
+{
+  "body": "docs/review-followups.md WP6. Owner: show rendered body with Edit button.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "18a0a88ca6dd04bb1301f5c3252f0a3ba91e4b13",
+    "completedAt": "2026-11-10T05:21:10.871Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/ui/src/app.tsx",
+      "packages/ui/src/pages.tsx",
+      "packages/ui/src/forms.tsx",
+      "packages/ui/src/thread.tsx",
+      "packages/ui/src/time.tsx",
+      "packages/ui/src/markdown.tsx",
+      "packages/ui/src/memory.tsx",
+      "packages/ui/src/changes.tsx",
+      "packages/ui/src/board.tsx",
+      "packages/ui/src/settings.tsx",
+      "packages/ui/src/my-work.tsx",
+      "packages/ui/src/styles.css",
+      "packages/ui/src/words.ts",
+      "packages/ui/test/constants.test.ts",
+      "packages/ui/test/markdown.test.tsx",
+      "e2e/ui/flows.spec.ts"
+    ],
+    "summary": "WP6 board: 6.1-6.5 done (popstate item not a bug; screen-reader pass stays with owner). Save keeps focus, deleted-task notice, comment drafts, toasts, checklist undo, body Edit toggle, links by id, palette, ticking times, a11y, markdown, parity test."
+  },
+  "createdAt": "2026-11-10T04:46:51.961Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "standard",
+  "id": "tsk_01M71WFHHTXX2KMRPC3AVWK5XN",
+  "labels": [
+    "review",
+    "ui"
+  ],
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T04:46:51.963Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-10T04:46:56.066Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T05:21:10.872Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T05:21:10.872Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T05:21:10.872Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-10T04:46:56.066Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "review",
+  "title": "Review follow-ups WP6: Board (6.1-6.5) and UI polish",
+  "updatedAt": "2026-11-10T05:21:10.874Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

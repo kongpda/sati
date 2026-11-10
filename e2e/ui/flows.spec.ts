@@ -55,6 +55,8 @@ test("creates, edits, filters and bulk-moves tasks", async ({ page }) => {
   await page.keyboard.press("c");
   await expect(form.getByLabel("Title")).toHaveValue("");
   await form.getByLabel("Title").fill("Not saved");
+  // Typed text is not thrown away silently: Esc asks first (review 6.1).
+  page.once("dialog", (d) => void d.accept());
   await page.keyboard.press("Escape");
   await expect(form).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Not saved", exact: true })).toHaveCount(0);
@@ -486,7 +488,7 @@ test("My work lists approvals, my tasks and this week's, and approves or sends b
   await expect(due).toContainText("Pay the deposit");
   await expect(page.getByText("Plan next year")).toHaveCount(0);
 
-  await approval.getByRole("button", { name: "Approve Proof the flyer" }).click();
+  await approval.getByRole("button", { name: "Approve: Proof the flyer" }).click();
   await expect(page.getByRole("status")).toContainText("Approved Proof the flyer.");
   await expect(approval).not.toContainText("Proof the flyer");
 
@@ -494,6 +496,8 @@ test("My work lists approvals, my tasks and this week's, and approves or sends b
   await approval.getByRole("button", { name: "Send back Check the guest list" }).click();
   await approval.getByLabel("Why Check the guest list needs more work").fill("Add the press list.");
   await approval.getByRole("button", { name: "Send back", exact: true }).click();
+  // The toast names the column as the board does (review 6.2).
+  await expect(page.getByRole("status")).toContainText("Sent Check the guest list back to To do.");
   await expect(approval).toContainText("Nothing to approve.");
   const back = ui.sati<{ status: string; reviewNote: string }>("task", "show", reviewed[1] ?? "");
   expect(back).toMatchObject({ status: "todo", reviewNote: "Add the press list." });
@@ -590,6 +594,8 @@ test("a general project hides features and the Agents page, and switches back", 
   await nav.getByRole("link", { name: "Settings", exact: true }).click();
   await page.getByRole("radio", { name: /General project/u }).check();
   await expect(page.getByRole("status")).toContainText("This is now a general project.");
+  // The choices stay usable while saving, so the chosen radio keeps focus (review 6.3).
+  await expect(page.getByRole("radio", { name: /General project/u })).toBeFocused();
   await expect(nav.getByRole("link", { name: "Features", exact: true })).toHaveCount(0);
   await expect(nav.getByRole("link", { name: "Agents", exact: true })).toHaveCount(0);
   expect(ui.sati<{ kind: string }>("settings").kind).toBe("general");
@@ -679,7 +685,7 @@ test("j and k step through the cards in board order and keep ?task= in step", as
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 
   // On a phone (the switch follows a resize, not just the first load) only the chosen column.
-  const choice = page.getByLabel("Column", { exact: true });
+  const choice = page.getByLabel("Status", { exact: true });
   await page.setViewportSize({ width: 375, height: 760 });
   // A phone opens on one column (the first of Working on it, Waiting, To do, Backlog with tasks).
   await expect(choice).not.toHaveValue("all");
@@ -1025,4 +1031,225 @@ test("Memory answers from cards, edits them, and keeps private ones off .sati/",
   expect(notes).toContain("Brand voice");
   expect(notes).not.toContain("Salary notes");
   expect(await problems()).toEqual([]);
+});
+
+// Review WP6.1: a person's own Save must not look like someone else's change, and the panel
+// must not leave focus on the page body.
+test("saving the task panel says Saved, keeps focus on Save and shows no changed-elsewhere banner", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  const t = await ui.api<{ id: string }>("POST", "/api/tasks", {
+    title: "Pack the stall",
+    body: "Bring the **tent**.",
+  });
+  // The banner may show only for a moment, so record whether it ever appeared.
+  await page.addInitScript(() => {
+    const w = window as unknown as { bannerSeen: boolean };
+    w.bannerSeen = false;
+    document.addEventListener("DOMContentLoaded", () => {
+      new MutationObserver(() => {
+        if (document.body.textContent?.includes("This task changed while you were editing")) {
+          w.bannerSeen = true;
+        }
+      }).observe(document.body, { subtree: true, childList: true, characterData: true });
+    });
+  });
+  await page.goto(ui.signIn);
+  // Earlier tests fill the board, so open the task by its link rather than hunting for the card.
+  await page.goto(`${ui.origin}/?task=${t.id}`);
+  const sheet = page.getByRole("dialog", { name: "Pack the stall" });
+  // The body shows rendered, once; Edit details swaps in the field (owner decision, 6.2).
+  await expect(sheet.locator("strong", { hasText: "tent" })).toHaveCount(1);
+  await expect(sheet.getByLabel("Body")).toHaveCount(0);
+  await sheet.getByRole("button", { name: "Edit details" }).click();
+  await expect(sheet.getByLabel("Body")).toBeFocused();
+  await sheet.getByLabel("Body").fill("Bring the **tent** and the chairs.");
+  const save = sheet.getByRole("button", { name: "Save", exact: true });
+  await save.click();
+  await expect(page.locator(".toast")).toContainText("Saved");
+  await expect(sheet.getByText("and the chairs.")).toBeVisible();
+  await expect(save).toBeFocused();
+  expect(ui.sati<{ body: string }>("task", "show", t.id).body).toBe(
+    "Bring the **tent** and the chairs.",
+  );
+  expect(await page.evaluate(() => (window as unknown as { bannerSeen: boolean }).bannerSeen)).toBe(
+    false,
+  );
+  expect(await problems()).toEqual([]);
+});
+
+// Review WP6.1: a task deleted elsewhere while its panel had edits left a prompt about edits
+// nobody could see.
+test("an open task deleted elsewhere says so and leaves without asking", async ({ page }) => {
+  const problems = await watch(page);
+  const t = await ui.api<{ id: string }>("POST", "/api/tasks", { title: "Book the van" });
+  await page.goto(ui.signIn);
+  await page.goto(`${ui.origin}/?task=${t.id}`);
+  const sheet = page.getByRole("dialog", { name: "Book the van" });
+  await sheet.getByLabel("Body").fill("Ask about the big one");
+  await ui.api("DELETE", `/api/tasks/${t.id}`);
+  const gone = page.getByRole("dialog", { name: "Task deleted" });
+  await expect(gone.getByRole("status")).toHaveText("This task was deleted.");
+  const asked: string[] = [];
+  page.on("dialog", (d) => {
+    asked.push(d.message());
+    void d.dismiss();
+  });
+  await gone.getByRole("button", { name: "Close" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("link", { name: "Notes", exact: true }).click();
+  await expect(page).toHaveURL(`${ui.origin}/notes`);
+  expect(asked).toEqual([]);
+  expect(await problems()).toEqual([]);
+});
+
+// Review WP6.1: a comment typed on Notes or Decisions was dropped without a word on navigation.
+// A declined Back must also leave the history length alone (it did already; this keeps it so).
+test("a typed comment on a list page asks before leaving, and a declined Back adds no history", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  await ui.api("POST", "/api/notes", { title: "Stall layout" });
+  await page.goto(ui.signIn);
+  await page.getByRole("link", { name: "Notes", exact: true }).click();
+  const note = page.locator("article").filter({ hasText: "Stall layout" });
+  await note.getByText("Comments", { exact: true }).click();
+  await note.getByLabel("Add a comment").fill("Tables along the wall");
+  const asked: string[] = [];
+  page.on("dialog", (d) => {
+    asked.push(d.message());
+    void d.dismiss();
+  });
+  await page.getByRole("link", { name: "Board", exact: true }).click();
+  await expect.poll(() => asked).toEqual(["Discard the comment you typed?"]);
+  await expect(page).toHaveURL(`${ui.origin}/notes`);
+  await expect(note.getByLabel("Add a comment")).toHaveValue("Tables along the wall");
+
+  // Back asks too; declining twice keeps the page and the history as they were.
+  const length = await page.evaluate(() => history.length);
+  for (const n of [2, 3]) {
+    await page.goBack();
+    await expect.poll(() => asked.length).toBe(n);
+    await expect(page).toHaveURL(`${ui.origin}/notes`);
+  }
+  expect(await page.evaluate(() => history.length)).toBe(length);
+  await expect(note.getByLabel("Add a comment")).toHaveValue("Tables along the wall");
+  expect(await problems()).toEqual([]);
+});
+
+// Review WP6.1: the "new" highlight timer was not kept, so an older event's timer cut a newer
+// highlight short.
+test("a second change keeps its highlight for the full time", async ({ page }) => {
+  const problems = await watch(page);
+  const a = await ui.api<{ id: string }>("POST", "/api/tasks", { title: "Heron fresh A" });
+  const b = await ui.api<{ id: string; version: number }>("POST", "/api/tasks", {
+    title: "Heron fresh B",
+  });
+  await page.goto(ui.signIn);
+  await page.getByLabel("Filter tasks").fill("Heron fresh");
+  const fresh = (title: string) =>
+    page.locator(".card.fresh").filter({ has: page.getByRole("button", { name: title }) });
+  await ui.api("PATCH", `/api/tasks/${a.id}`, { priority: "high" });
+  await expect(fresh("Heron fresh A")).toHaveCount(1);
+  await page.waitForTimeout(1000);
+  await ui.api("PATCH", `/api/tasks/${b.id}`, { priority: "high", expectedVersion: b.version });
+  await expect(fresh("Heron fresh B")).toHaveCount(1);
+  // A's timer ends 1.6 s after A, under 0.6 s from now; B's own runs a full 1.6 s.
+  await page.waitForTimeout(1000);
+  await expect(fresh("Heron fresh B")).toHaveCount(1, { timeout: 50 });
+  expect(await problems()).toEqual([]);
+});
+
+// Review WP6.2: actions that said nothing, or said the wrong thing, now say what happened.
+test("the board says what happened after each action, and a removed step has Undo", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  const toast = page.locator('.toast-region[role="status"]');
+  const t = await ui.api<{ id: string }>("POST", "/api/tasks", { title: "Set up the tables" });
+  // Copying fails here as it does when the browser blocks the clipboard.
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: () => Promise.reject(new Error("blocked")) },
+    });
+  });
+  await page.goto(ui.signIn);
+  await page.goto(`${ui.origin}/?task=${t.id}`);
+  const sheet = page.getByRole("dialog", { name: "Set up the tables" });
+  await sheet.getByLabel("New step").fill("Count the chairs");
+  await sheet.getByRole("button", { name: "Add", exact: true }).click();
+  await sheet.getByRole("button", { name: "Remove step Count the chairs" }).click();
+  await expect(sheet.getByRole("checkbox", { name: "Count the chairs" })).toHaveCount(0);
+  await expect(toast).toContainText("Removed the step Count the chairs.");
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(sheet.getByRole("checkbox", { name: "Count the chairs" })).toBeVisible();
+  expect(ui.sati<{ checklist: { text: string }[] }>("task", "show", t.id).checklist).toEqual([
+    expect.objectContaining({ text: "Count the chairs" }),
+  ]);
+
+  await page.getByRole("link", { name: "Agents", exact: true }).click();
+  await page.getByRole("button", { name: "Free up tasks whose time ran out" }).click();
+  await expect(toast).toContainText("No tasks had run out of time.");
+
+  await page.getByRole("link", { name: "Notes", exact: true }).click();
+  await page.getByLabel("Note title").fill("Table plan");
+  await page.getByRole("button", { name: "Save note" }).click();
+  await expect(toast).toContainText("Saved the note Table plan.");
+
+  // A clipboard failure is a copy problem, not "That change did not save".
+  await page.getByRole("link", { name: "Changes", exact: true }).click();
+  await page.getByRole("button", { name: "Copy changelog" }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Could not copy. Select the text and copy it by hand.",
+  );
+
+  // A change opens its item, not just the list it is on.
+  await page
+    .getByRole("region", { name: "Today" })
+    .getByRole("button", { name: "Table plan", exact: true })
+    .first()
+    .click();
+  await expect(page).toHaveURL(`${ui.origin}/notes`);
+  await expect(page.locator("article:focus")).toContainText("Table plan");
+
+  // The effort choice explains what light means.
+  await page.getByRole("link", { name: "Board", exact: true }).click();
+  await page.getByRole("button", { name: "New task" }).click();
+  const form = page.getByRole("dialog", { name: "New task" });
+  await expect(form.getByLabel("Effort")).toHaveAccessibleDescription(
+    "Light tasks can go to a faster, cheaper agent.",
+  );
+  await page.keyboard.press("Escape");
+  await expect(form).toHaveCount(0);
+  expect(await problems()).toEqual([]);
+});
+
+// Review WP6.2: the palette showed old hits for new text and never said it stops at 20.
+test("the palette clears hits when the text changes and says when results stop at 20", async ({
+  page,
+}) => {
+  for (let i = 1; i <= 21; i++) await ui.api("POST", "/api/tasks", { title: `Lantern ${i}` });
+  await page.goto(ui.signIn);
+  await page.keyboard.press("Control+k");
+  const palette = page.getByRole("dialog", { name: "Search" });
+  const input = palette.getByRole("textbox", { name: "Search" });
+  await input.fill("lantern");
+  await input.press("Enter");
+  await expect(palette.getByRole("status")).toHaveText("First 20 results");
+  await input.fill("lanterns and candles");
+  await expect(palette.getByRole("button", { name: /Lantern/u })).toHaveCount(0);
+  await expect(palette.getByRole("status")).toHaveText("Press Enter to search.");
+});
+
+// Review WP6.2: "just now" stayed until a write refreshed the page.
+test("relative times tick each minute without a write", async ({ page }) => {
+  await page.clock.install();
+  ui.sati("note", "create", "Hang the banner");
+  await page.goto(ui.signIn);
+  await page.getByRole("link", { name: "Notes", exact: true }).click();
+  const card = page.locator("article").filter({ hasText: "Hang the banner" });
+  await expect(card).toContainText("just now");
+  await page.clock.fastForward("01:05");
+  await expect(card).toContainText("1 min ago");
 });

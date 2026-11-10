@@ -1,15 +1,34 @@
 {
   "body": "Owner asked (2026-11-10) to update all docs from the guide to the CLI and improve them. Scope: WP8 items in docs/review-followups.md, the CLI --help sweep item from WP10, and an accuracy pass over docs/guide/*, README.md, packages/cli/README.md, CONTRIBUTING.md, SECURITY.md against the built CLI (including WP1 behaviour). History files (progress, decisions, ideas, review-followups) stay as records.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "heartbeatAt": "2026-11-10T03:04:32.668Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 98879
-    },
-    "leaseUntil": "2026-11-10T06:04:32.668Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "302d411da0e5ae959563233aca24e350927abd03",
+    "completedAt": "2026-11-10T03:11:21.216Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "AGENTS.md",
+      "AGENT_KICKOFF.md",
+      "CONTRIBUTING.md",
+      "PLAN.md",
+      "README.md",
+      "SECURITY.md",
+      "docs/decisions/0004-stack-as-built.md",
+      "docs/guide/faq.md",
+      "docs/guide/glossary.md",
+      "docs/guide/quick-start.md",
+      "docs/handoff.md",
+      "docs/progress.md",
+      "docs/review-followups.md",
+      "docs/security-review.md",
+      "docs/team-brain.md",
+      "packages/cli/src/commands/decision.ts",
+      "packages/cli/src/commands/task.ts",
+      "packages/cli/test/cli.test.ts",
+      ".changeset/help-and-docs.md"
+    ],
+    "releaseNote": "`sati decision delete` accepts a short handle, and command help states limits, defaults and exit codes.",
+    "summary": "WP8 done: deleted docs/handoff.md (decision recorded), marked AGENT_KICKOFF.md as history, ADR 0004 for the stack as built, PLAN drift fixed (packages, e2e/guard, unbuilt CI/release items, Phase 0, settled decisions), team-brain, README/quick-start/FAQ/SECURITY/security-review/CONTRIBUTING fixed; guides describe WP1 behaviour. WP10 help sweep: ~35 help strings state limits, defaults and exit codes; fixed decision delete by short handle with a CLI test. Gate: core 303, store-sqlite 53, sync 52, mcp 26, ui 21, cli 147."
   },
   "createdAt": "2026-11-10T03:04:31.132Z",
   "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
@@ -23,13 +42,14 @@
   "stamps": {
     "*": "2026-11-10T03:04:31.132Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "branch": "2026-11-10T03:04:32.668Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "claim": "2026-11-10T03:04:32.668Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-10T03:04:32.668Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T03:11:21.216Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T03:11:21.216Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T03:11:21.216Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "worktree": "2026-11-10T03:04:32.668Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Review follow-ups WP8 + CLI help sweep: docs from guide to CLI",
-  "updatedAt": "2026-11-10T03:04:32.669Z",
-  "version": 2,
+  "updatedAt": "2026-11-10T03:11:21.218Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

@@ -1,10 +1,16 @@
 {
+  "blockedReason": null,
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "heartbeatAt": "2026-11-10T06:44:15.649Z",
-    "leaseUntil": "2026-11-10T07:14:15.649Z",
-    "token": 2
+  "completion": {
+    "approvedCommit": "9ddc321b8cf5829d560985fb2ef644db6d32252b",
+    "branch": "main",
+    "commit": "9ddc321b8cf5829d560985fb2ef644db6d32252b",
+    "completedAt": "2026-11-10T06:46:07.851Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/store-sqlite/src/locate.ts"
+    ],
+    "summary": "locateDb throws INTERNAL naming git when .git exists but git rev-parse fails; standalone without git still works. Tests + patch changeset."
   },
   "createdAt": "2026-11-10T06:44:09.127Z",
   "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
@@ -12,16 +18,20 @@
   "id": "tsk_01M72369S7HHPE3QTDVV85JD66",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-10T06:44:09.129Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "blockedReason": "2026-11-10T06:46:07.999Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "branch": "2026-11-10T06:44:15.651Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "claim": "2026-11-10T06:44:15.651Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-10T06:44:15.651Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T06:46:07.852Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T06:46:07.999Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "reviewNote": "2026-11-10T06:46:07.999Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-10T06:46:07.999Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "worktree": "2026-11-10T06:44:15.651Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "in_progress",
+  "status": "done",
   "title": "init: error when .git exists but git cannot run",
-  "updatedAt": "2026-11-10T06:44:15.653Z",
-  "version": 2,
+  "updatedAt": "2026-11-10T06:46:08.002Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

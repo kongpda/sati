@@ -1,4 +1,11 @@
 {
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "heartbeatAt": "2026-11-10T06:46:08.132Z",
+    "leaseUntil": "2026-11-10T07:16:08.132Z",
+    "token": 2
+  },
   "createdAt": "2026-11-10T06:44:09.237Z",
   "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
   "effort": "standard",
@@ -6,10 +13,15 @@
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "*": "2026-11-10T06:44:09.239Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+    "*": "2026-11-10T06:44:09.239Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-10T06:46:08.133Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T06:46:08.133Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T06:46:08.133Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-10T06:46:08.133Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "todo",
+  "status": "in_progress",
   "title": "Check the doubtful Windows items on the Windows CI runner",
-  "updatedAt": "2026-11-10T06:44:09.237Z",
-  "version": 1
+  "updatedAt": "2026-11-10T06:46:08.135Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

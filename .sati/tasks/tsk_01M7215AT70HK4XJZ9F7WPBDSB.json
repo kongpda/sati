@@ -1,11 +1,15 @@
 {
   "body": "First CI run after the repo went public: Linux green; macOS 2 timeouts; Windows cli tests fail because GIT_CONFIG_GLOBAL=devNull is unreadable by git for Windows. Then fix any Windows bugs the real runs show.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "heartbeatAt": "2026-11-10T06:08:40.524Z",
-    "leaseUntil": "2026-11-10T06:38:40.524Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "3c636cc3aac400631455511af1bfbd92d0bff120",
+    "completedAt": "2026-11-10T06:42:06.586Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/cli/vitest.config.ts"
+    ],
+    "summary": "CI green on all OSes (run 42769592689): temp gitconfig, 30s timeouts in CI, named pipes in socket tests, POSIX test fixes, git kept on PATH in init tests. New finding recorded: init goes standalone when git cannot run."
   },
   "createdAt": "2026-11-10T06:08:40.263Z",
   "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
@@ -16,13 +20,14 @@
   "stamps": {
     "*": "2026-11-10T06:08:40.278Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "branch": "2026-11-10T06:08:40.527Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "claim": "2026-11-10T06:08:40.527Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-10T06:08:40.527Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T06:42:06.587Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T06:42:06.587Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T06:42:06.587Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "worktree": "2026-11-10T06:08:40.527Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Make CI green on Windows and macOS runners",
-  "updatedAt": "2026-11-10T06:08:40.529Z",
-  "version": 2,
+  "updatedAt": "2026-11-10T06:42:06.590Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

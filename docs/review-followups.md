@@ -689,3 +689,7 @@ Kept in `docs/ideas.md`; do not redo them as part of this plan: a longer minimum
 ## Open CLI recommendations from earlier sessions
 
 Not built and not in PLAN. Raise with the owner before doing any: map Zod errors to flag names; examples in `--help`; readable `activity` and `undo` output; report no-op writes; look up features and milestones by name; show comments in `note list`; whether `task update --status in_progress` should require a claim.
+
+## Found while making CI green on Windows (2026-11-10)
+
+- [ ] Inside a git repository where `git` cannot run (not on PATH, or a broken install), `locateDb` treats the folder as non-git and `sati init` sets up a standalone project with no warning and no git hooks. Seen on the Windows CI runner when a test dropped git from PATH. A fix could check for a `.git` entry when `git` fails and stop with an error that names git. Needs an owner decision: it changes how init behaves.

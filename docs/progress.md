@@ -1837,3 +1837,14 @@ Status: **done for the items a test can reach on macOS** (2026-11-10). Task `tsk
 - Rename out of a protected feature: the owner chose to keep the warning. Added to the Decisions table, explained in `docs/guide/guard.md`, decision recorded.
 - The owner approved the four review tasks (`tsk_p76vdv`, `tsk_hm0svw`, `tsk_8dz2xe`, `tsk_9n2jgt`). The review gate refuses agents, so the agent ran the approvals as the owner's actor `kongpda@sati`, at the owner's request.
 - The owner chose to make the repo public. Before the change, a scan of the full git history for AWS, GitHub, npm, Anthropic, OpenAI, Slack and Google keys and private-key blocks found only the fake keys in two test files. `gh repo view` reports PUBLIC.
+
+## 2026-11-10 — Phase 5h: CI green on Windows and macOS
+
+Status: **done** (2026-11-10). Task `tsk_wpbdsb`. The repo went public, so CI ran on Windows and macOS runners for the first time. Run 42769592689 on `3c636cc` passed every job.
+
+- Test setup: `GIT_CONFIG_GLOBAL` points at an empty temp file instead of `os.devNull`, which git on Windows cannot read as a config file. The CLI test timeout is 30 s on Windows and in CI; macOS runners hit the 5 s limit.
+- The store's socket tests use `socketPath()`, which gives a named pipe on Windows; a plain file path there failed with EACCES.
+- Six tests assumed POSIX paths or POSIX git: fixed to compare native paths, expect `process.execPath` in the Windows merge driver, and keep git on PATH when a test narrows PATH. The SIGTERM flush test is skipped on Windows, where the signal cannot be caught; the export then happens at the next start or hook.
+- New finding, added to `docs/review-followups.md`: init silently picks standalone mode inside a git repo when `git` cannot run.
+- No changeset: tests and test setup only, apart from Windows fixes already covered by the initial-release entry.
+- Not checked by CI: the Windows items that need a real client (the MCP config and the `sh` hooks), and the doubtful list.

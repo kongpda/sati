@@ -161,7 +161,8 @@ describe("daemon client", () => {
   // If the daemon dies, callers need an error they can act on, not a promise that never settles.
   it("rejects pending requests with a SatiError when the daemon drops the connection", async () => {
     const dir = mkdtempSync(join(tmpdir(), "sati-remote-"));
-    const deaf = join(dir, "deaf.sock");
+    // socketPath gives a named pipe on Windows, which cannot listen on a socket file.
+    const deaf = socketPath(join(dir, "deaf.db"));
     const silent = createServer((s) => setTimeout(() => s.destroy(), 50));
     await new Promise<void>((resolve) => silent.listen(deaf, resolve));
     const remote = connectStore(deaf);
@@ -174,7 +175,7 @@ describe("daemon client", () => {
   // An older daemon opens the transaction but does not echo a protocol: refuse, and abort it.
   it("refuses a daemon from another build and closes the transaction it opened", async () => {
     const dir = mkdtempSync(join(tmpdir(), "sati-remote-"));
-    const old = join(dir, "old.sock");
+    const old = socketPath(join(dir, "old.db"));
     const ops: string[] = [];
     const legacy = createServer((s) => {
       let buf = Buffer.alloc(0);
@@ -200,7 +201,9 @@ describe("daemon client", () => {
   });
 
   it("fails fast when no daemon is listening", async () => {
-    const remote = connectStore(join(mkdtempSync(join(tmpdir(), "sati-remote-")), "none.sock"));
+    const remote = connectStore(
+      socketPath(join(mkdtempSync(join(tmpdir(), "sati-remote-")), "none.db")),
+    );
     const err = await within(remote.read(async () => undefined)).catch((e) => e);
     expect(err).toBeInstanceOf(SatiError);
   });

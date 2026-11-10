@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "9f36b1a80bce04d0961e211d9b397144e27d43cb",
     "branch": "main",
     "commit": "609ff703ae83da494015402989d7a235bfcb8a2d",
     "completedAt": "2026-11-10T02:34:08.596Z",
@@ -48,17 +50,20 @@
   "id": "tsk_01M71KY3Q6BQ48GAFPT7T2ZDWG",
   "priority": "high",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-10T02:17:32.137Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "blockedReason": "2026-11-10T02:43:29.618Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "branch": "2026-11-10T02:17:32.248Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
     "claim": "2026-11-10T02:34:08.604Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "completion": "2026-11-10T02:34:08.604Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "status": "2026-11-10T02:34:08.604Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-10T02:43:29.618Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "reviewNote": "2026-11-10T02:43:29.618Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-10T02:43:29.618Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "worktree": "2026-11-10T02:17:32.248Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
   },
-  "status": "review",
+  "status": "done",
   "title": "Phase 5g: whole-project review, fixes and cleanup",
-  "updatedAt": "2026-11-10T02:34:08.604Z",
-  "version": 3,
+  "updatedAt": "2026-11-10T02:43:29.626Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

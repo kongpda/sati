@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "9f36b1a80bce04d0961e211d9b397144e27d43cb",
     "branch": "main",
     "commit": "abddda4dbd0534709ef01b82ec477d2333d8b459",
     "completedAt": "2026-11-10T02:38:01.388Z",
@@ -19,17 +21,20 @@
   "id": "tsk_01M71N2PQD3BXMQHG3BBMBHPBA",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-10T02:37:31.248Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "blockedReason": "2026-11-10T02:43:29.750Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "branch": "2026-11-10T02:37:31.385Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
     "claim": "2026-11-10T02:38:01.392Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "completion": "2026-11-10T02:38:01.392Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
-    "status": "2026-11-10T02:38:01.392Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-10T02:43:29.750Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "reviewNote": "2026-11-10T02:43:29.750Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-10T02:43:29.750Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "worktree": "2026-11-10T02:37:31.385Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
   },
-  "status": "review",
+  "status": "done",
   "title": "Write the review follow-up plan (docs/review-followups.md)",
-  "updatedAt": "2026-11-10T02:38:01.394Z",
-  "version": 3,
+  "updatedAt": "2026-11-10T02:43:29.752Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

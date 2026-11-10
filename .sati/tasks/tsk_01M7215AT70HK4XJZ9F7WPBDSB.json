@@ -1,0 +1,28 @@
+{
+  "body": "First CI run after the repo went public: Linux green; macOS 2 timeouts; Windows cli tests fail because GIT_CONFIG_GLOBAL=devNull is unreadable by git for Windows. Then fix any Windows bugs the real runs show.",
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "heartbeatAt": "2026-11-10T06:08:40.524Z",
+    "leaseUntil": "2026-11-10T06:38:40.524Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-10T06:08:40.263Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "standard",
+  "id": "tsk_01M7215AT70HK4XJZ9F7WPBDSB",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T06:08:40.278Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-10T06:08:40.527Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T06:08:40.527Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T06:08:40.527Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-10T06:08:40.527Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "in_progress",
+  "title": "Make CI green on Windows and macOS runners",
+  "updatedAt": "2026-11-10T06:08:40.529Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-import { compareHlc } from "@sati/core";
+import { compareHlc, LIMITS } from "@sati/core";
 import { mergeText } from "./diff3.js";
 
 /** Markdown fields, merged line by line. */
@@ -33,6 +33,62 @@ function mergeList(base: Json | undefined, ours: (string | number)[], theirs: (s
     had.has(x) ? o.has(x) && t.has(x) : true,
   );
   return keep.sort((a, b) => order(a, b));
+}
+
+/** The task schema's cap on checklist items; a merged list past it would fail the next import. */
+const MAX_CHECKLIST = 100;
+
+type Item = { text: string; done: boolean };
+
+const isChecklist = (v: unknown): v is Item[] =>
+  Array.isArray(v) &&
+  v.every((x) => isObj(x) && typeof x.text === "string" && typeof x.done === "boolean");
+
+/** Each item's `done` by its text, or undefined when two items share a text (no clean key). */
+function byText(list: readonly Item[]): Map<string, boolean> | undefined {
+  const out = new Map<string, boolean>();
+  for (const { text, done } of list) {
+    if (out.has(text)) return undefined;
+    out.set(text, done);
+  }
+  return out;
+}
+
+/**
+ * Three-way checklist merge keyed on item text, so two people ticking different items both keep
+ * their tick. An item either side removed is gone; one either side added stays. `done` takes the
+ * side that changed it, or the later side when both did. Items keep the later side's order, then
+ * the other side's additions. Undefined when the lists have no clean key or the union is too long.
+ */
+function mergeChecklist(
+  base: Json | undefined,
+  ours: Item[],
+  theirs: Item[],
+  laterIsOurs: boolean,
+): Item[] | undefined {
+  const b = isChecklist(base) ? byText(base) : new Map<string, boolean>();
+  const o = byText(ours);
+  const t = byText(theirs);
+  if (!b || !o || !t) return undefined;
+  const [first, second] = laterIsOurs ? [ours, theirs] : [theirs, ours];
+  const seen = new Set<string>();
+  const out: Item[] = [];
+  for (const { text } of [...first, ...second]) {
+    if (seen.has(text)) continue;
+    seen.add(text);
+    const od = o.get(text);
+    const td = t.get(text);
+    const bd = b.get(text);
+    // Removed by one side: gone.
+    if (bd !== undefined && (od === undefined || td === undefined)) continue;
+    let done: boolean;
+    if (od === undefined || td === undefined) done = (od ?? td) === true;
+    else if (od === td || td === bd) done = od;
+    else if (od === bd) done = td;
+    else done = laterIsOurs ? od : td;
+    out.push({ text, done });
+  }
+  return out.length > MAX_CHECKLIST ? undefined : out;
 }
 
 export interface RecordMerge {
@@ -134,6 +190,21 @@ export function mergeRecord(base: Obj | undefined, ours: Obj, theirs: Obj): Reco
       value = ov;
       stamp = fieldStamp(ours, key) ?? fieldStamp(theirs, key);
     } else if (
+      key === "checklist" &&
+      isChecklist(ov) &&
+      isChecklist(tv) &&
+      !isDeepStrictEqual(ov, bv) &&
+      !isDeepStrictEqual(tv, bv)
+    ) {
+      const side = laterSide(ours, theirs, key);
+      const laterIsOurs = side === "tie" ? order(ov, tv) >= 0 : side === "ours";
+      const merged = mergeChecklist(bv, ov, tv, laterIsOurs);
+      const winner = laterIsOurs ? ours : theirs;
+      // No clean key: the later side wins whole, and a person checks what the other side did.
+      value = merged ?? winner[key];
+      conflict ||= merged === undefined;
+      stamp = fieldStamp(winner, key);
+    } else if (
       // A side whose value matches the base may still have written it since: a claim that was
       // set and then cleared looks unchanged. With stamps on both sides, the later write wins.
       !TEXT_FIELDS.has(key) &&
@@ -153,10 +224,15 @@ export function mergeRecord(base: Obj | undefined, ours: Obj, theirs: Obj): Reco
       stamp = fieldStamp(theirs, key);
     } else if (TEXT_FIELDS.has(key) && typeof ov === "string" && typeof tv === "string") {
       const m = mergeText(typeof bv === "string" ? bv : "", ov, tv);
-      value = m.text;
-      conflict ||= m.conflict;
       const side = laterSide(ours, theirs, key);
-      stamp = fieldStamp(side === "theirs" ? theirs : ours, key);
+      const later =
+        side === "tie" ? (order(ov, tv) >= 0 ? ours : theirs) : side === "ours" ? ours : theirs;
+      // Both sides between markers can pass the field's cap, and the next import would then refuse
+      // the whole snapshot. Keep the later side whole instead; needsReview asks a person to look.
+      const fits = m.text.length <= LIMITS.body;
+      value = fits ? m.text : later[key];
+      conflict ||= m.conflict || !fits;
+      stamp = fieldStamp(fits ? (side === "theirs" ? theirs : ours) : later, key);
     } else if (isPrimitiveList(ov) && isPrimitiveList(tv)) {
       value = mergeList(bv, ov, tv);
       const side = laterSide(ours, theirs, key);
@@ -188,6 +264,27 @@ export function mergeRecord(base: Obj | undefined, ours: Obj, theirs: Obj): Reco
   const flagged = flag(ours) === flag(theirs) || flag(ours) !== flag(b) ? flag(ours) : flag(theirs);
   if (conflict || revived.review || flagged || staleClaim) record.needsReview = true;
   return { record, conflict: conflict || revived.review };
+}
+
+/**
+ * Merges two copies of a record that changed apart with no common copy to merge from: the DB and
+ * a file at the same version. For each field the side with the older stamp stands in for the base,
+ * so the side that wrote the field later wins it, and text is not split into conflict markers. A
+ * field with the same stamp on both sides, or a stamp missing on one, has no base and follows the
+ * rules for a field both sides changed.
+ */
+export function mergeByStamps(ours: Obj, theirs: Obj): RecordMerge {
+  const base: Obj = {};
+  for (const key of new Set([...Object.keys(ours), ...Object.keys(theirs)])) {
+    if (META_FIELDS.has(key) || key === "__proto__") continue;
+    const os = fieldStamp(ours, key);
+    const ts = fieldStamp(theirs, key);
+    if (!os || !ts) continue;
+    const cmp = compareHlc(os, ts);
+    const older = cmp > 0 ? theirs[key] : cmp < 0 ? ours[key] : undefined;
+    if (older !== undefined) base[key] = older;
+  }
+  return mergeRecord(base, ours, theirs);
 }
 
 /** Parses one side of a merge. Only JSON parsing happens; nothing in the content is run. */

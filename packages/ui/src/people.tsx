@@ -38,6 +38,14 @@ export function colorOf(actor: Pick<Actor, "name" | "kind" | "displayName" | "co
 }
 
 /**
+ * Who holds a claim. Claims travel in `.sati/` but actors do not, so a teammate's claim names
+ * an actor this clone does not know.
+ */
+export function holderName(data: Snapshot, actorId: string | null | undefined): string {
+  return knownName(data, actorId) ?? "another machine";
+}
+
+/**
  * The shown name of an actor this clone knows, or null. Actors are not in the `.sati/` snapshot,
  * so work from a teammate's clone names someone unknown here; leave the name out, not "someone".
  */

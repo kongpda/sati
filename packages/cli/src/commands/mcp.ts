@@ -1,9 +1,24 @@
 import { join } from "node:path";
-import { adoptClaims, CONFIG_DIR, readSettings } from "@sati/core";
+import { adoptClaims, CONFIG_DIR, readSettings, type ServiceContext } from "@sati/core";
 import { defineCommand } from "citty";
 import pkg from "../../package.json" with { type: "json" };
-import { openRuntime, printError, processProbe } from "../runtime.js";
+import { exportWritten, openRuntime, printError, processProbe } from "../runtime.js";
 import { readTemplateFiles } from "../templates.js";
+
+/**
+ * Each write exports only what it touched, so one full export before serving repairs anything an
+ * earlier process could not write (a crash inside the debounce window, a failed export). It runs
+ * before any write can race it, and imports first: a teammate's edit that no git hook loaded
+ * (stash pop, cherry-pick, `git apply`) reaches the database now, not at the next hook. A refused
+ * import skips the export, so a snapshot that cannot be read is not built on.
+ */
+async function syncAtStart(ctx: ServiceContext, dir: string): Promise<void> {
+  const { exportSnapshot, importSnapshot, refusedError } = await import("@sati/sync");
+  const { problems } = await importSnapshot(ctx, dir);
+  for (const p of problems) process.stderr.write(`warning: ${p}\n`);
+  const { refused } = await exportSnapshot(ctx, dir);
+  if (refused.length > 0) printError(refusedError(refused), false);
+}
 
 /** Agents write in bursts; export once the burst is over. */
 const EXPORT_DEBOUNCE_MS = 2000;
@@ -33,20 +48,16 @@ export default defineCommand({
         return;
       }
       // Git mode keeps .sati/ current while the agent works; pre-commit exports again anyway.
-      const { afterWrites, exportSnapshot } = await import("@sati/sync");
+      const { afterWrites } = await import("@sati/sync");
       const dir = join(location.root, CONFIG_DIR);
+      const report = (err: unknown) => printError(err, false);
       const synced = afterWrites(
         ctx.store,
         EXPORT_DEBOUNCE_MS,
-        async (written) => {
-          await exportSnapshot(ctx, dir, { only: written });
-        },
-        (err) => printError(err, false),
+        (written) => exportWritten(ctx, dir, written, report),
+        report,
       );
-      // Each write exports only what it touched, so one full export before serving repairs anything
-      // an earlier process could not write (a crash inside the debounce window, a failed export).
-      // It rewrites only changed files, and runs before any write can race it.
-      await exportSnapshot(ctx, dir).catch((err: unknown) => printError(err, false));
+      await syncAtStart(ctx, dir).catch(report);
       try {
         await adopt({ ...ctx, store: synced.store });
         await serveStdio(

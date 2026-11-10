@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Actor } from "../src/api.js";
-import { COLORS, colorOf, initialsOf, personName } from "../src/people.js";
+import type { Actor, Snapshot } from "../src/api.js";
+import { COLORS, colorOf, holderName, initialsOf, personName } from "../src/people.js";
 
 const actor = (fields: Partial<Actor>): Actor => ({
   id: "actr_1",
@@ -34,5 +34,12 @@ describe("people", () => {
     expect(colorOf(actor({ id: "actr_2", name: "kong@feature-a" }))).toBe(main);
     expect(COLORS).toContain(main);
     expect(colorOf(actor({ color: "plum" }))).toBe("plum");
+  });
+
+  // Claims travel in .sati/ but actors do not, so a teammate's claim names nobody known here.
+  it("names a claim holder this clone does not know 'another machine'", () => {
+    const data = { actors: [actor({})] } as unknown as Snapshot;
+    expect(holderName(data, "actr_1")).toBe("kong");
+    expect(holderName(data, "actr_elsewhere")).toBe("another machine");
   });
 });

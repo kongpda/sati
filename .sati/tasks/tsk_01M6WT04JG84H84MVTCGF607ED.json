@@ -35,6 +35,6 @@
   "status": "done",
   "title": "Phase 5b: init hooks (global core.hooksPath, non-sh hooks, settings key order)",
   "updatedAt": "2026-11-08T16:44:38.393Z",
-  "version": 4,
+  "version": 5,
   "worktree": "/home/user/workspace/repo"
 }

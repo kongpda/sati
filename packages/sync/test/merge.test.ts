@@ -289,3 +289,67 @@ describe("mergeRecord with hostile keys", () => {
     expect(({} as { polluted?: number }).polluted).toBeUndefined();
   });
 });
+
+describe("mergeRecord limits and checklists", () => {
+  const stamp = (at: string, node: string) => `${at}#000000#${node}`;
+
+  // A merge whose result the next import refuses would block the whole snapshot on every clone.
+  it("keeps a conflicted body within the body cap, taking the later side", () => {
+    const base = { ...task, body: "x" };
+    const ours = {
+      ...task,
+      body: "o".repeat(60_000),
+      version: 3,
+      updatedAt: T2,
+      stamps: { body: stamp(T2, "a") },
+    };
+    const theirs = {
+      ...task,
+      body: "t".repeat(60_000),
+      version: 3,
+      updatedAt: T3,
+      stamps: { body: stamp(T3, "b") },
+    };
+    const { record, conflict } = mergeRecord(base, ours, theirs);
+    expect(conflict).toBe(true);
+    expect(record.needsReview).toBe(true);
+    expect(record.body).toBe(theirs.body);
+    expect(String(record.body).length).toBeLessThanOrEqual(100_000);
+  });
+
+  // Two people ticking different steps at once must both keep their tick.
+  it("merges checklist ticks item by item", () => {
+    const base = {
+      ...task,
+      checklist: [
+        { text: "write", done: false },
+        { text: "test", done: false },
+      ],
+    };
+    const ours = {
+      ...base,
+      checklist: [
+        { text: "write", done: true },
+        { text: "test", done: false },
+      ],
+      version: 3,
+      updatedAt: T2,
+      stamps: { checklist: stamp(T2, "a") },
+    };
+    const theirs = {
+      ...base,
+      checklist: [
+        { text: "write", done: false },
+        { text: "test", done: true },
+      ],
+      version: 3,
+      updatedAt: T3,
+      stamps: { checklist: stamp(T3, "b") },
+    };
+    const { record } = mergeRecord(base, ours, theirs);
+    expect(record.checklist).toEqual([
+      { text: "write", done: true },
+      { text: "test", done: true },
+    ]);
+  });
+});

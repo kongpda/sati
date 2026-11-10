@@ -6,6 +6,7 @@ import {
   readFileSync,
   rmSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -15,6 +16,7 @@ import {
   createNote,
   createTask,
   fixedClock,
+  getRecord,
   importRecords,
   initProject,
   listTasks,
@@ -114,6 +116,7 @@ describe("exportSnapshot / importSnapshot", () => {
       written: [`tasks/${t2.id}.json`],
       unchanged: 1,
       newer: [],
+      refused: [],
     });
     expect(existsSync(join(dir, `tasks/${t1.id}.json`))).toBe(true);
     expect(readFileSync(join(dir, "tasks/tsk_teammate.json"), "utf8")).toBe("{}\n");
@@ -137,6 +140,7 @@ describe("exportSnapshot / importSnapshot", () => {
       written: [],
       unchanged: 0,
       newer: [`tasks/${t.id}.json`],
+      refused: [],
     });
     expect(readFileSync(file, "utf8")).toBe(theirs);
   });
@@ -154,7 +158,12 @@ describe("exportSnapshot / importSnapshot", () => {
         { entity: "actor", id: a.actorId },
       ],
     });
-    expect(out).toEqual({ written: [`tasks/${t2.id}.json`], unchanged: 0, newer: [] });
+    expect(out).toEqual({
+      written: [`tasks/${t2.id}.json`],
+      unchanged: 0,
+      newer: [],
+      refused: [],
+    });
     expect(existsSync(join(dir, `tasks/${t1.id}.json`))).toBe(false);
     expect((await exportSnapshot(a, dir)).written).toEqual([`tasks/${t1.id}.json`]);
 
@@ -164,6 +173,7 @@ describe("exportSnapshot / importSnapshot", () => {
       written: [],
       unchanged: 0,
       newer: [],
+      refused: [],
     });
     expect(existsSync(join(dir, `notes/${secret.id}.json`))).toBe(false);
   });
@@ -208,6 +218,46 @@ describe("exportSnapshot / importSnapshot", () => {
     }
     expect(message).toContain("not valid JSON");
     expect(message).not.toContain("hunter2");
+  });
+
+  // WP1 1.4: a committed `.sati/tasks` symlink must not make import read, or export write, files
+  // outside the repository. Checking files alone misses a linked folder.
+  it("refuses a symlinked record folder for import and for export", async () => {
+    const a = await clone();
+    await createTask(a, { title: "Lands outside?" });
+    const dir = tempDir();
+    const outside = tempDir();
+    symlinkSync(outside, join(dir, "tasks"));
+    expect(() => readSnapshot(dir)).toThrow(/tasks\/ is not a folder/);
+    await expect(exportSnapshot(a, dir)).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(readdirSync(outside)).toEqual([]);
+
+    // A dangling link is refused too, not taken for a missing folder that export would create.
+    rmSync(join(dir, "tasks"));
+    symlinkSync(join(outside, "gone"), join(dir, "tasks"));
+    await expect(exportSnapshot(a, dir)).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(existsSync(join(outside, "gone"))).toBe(false);
+  });
+
+  // WP1 1.5: a killed export leaves `<id>.json.<pid>.tmp`, and pre-commit's `git add -A` would
+  // commit it. A full export removes old ones; a young one may belong to a live export.
+  it("removes stale temp files on a full export, and import never reads them", async () => {
+    const a = await clone();
+    const dir = tempDir();
+    await createTask(a, { title: "One" });
+    await exportSnapshot(a, dir);
+    const stale = join(dir, "tasks/tsk_x.json.123.tmp");
+    const young = join(dir, "tasks/tsk_y.json.456.tmp");
+    writeFileSync(stale, "{ half");
+    writeFileSync(young, "{ half");
+    const old = new Date(Date.now() - 5 * 60_000);
+    utimesSync(stale, old, old);
+    expect(readSnapshot(dir)).toHaveLength(1);
+    await exportSnapshot(a, dir, { only: [] });
+    expect(existsSync(stale)).toBe(true);
+    await exportSnapshot(a, dir);
+    expect(existsSync(stale)).toBe(false);
+    expect(existsSync(young)).toBe(true);
   });
 
   it("reads an empty snapshot folder as no records", () => {
@@ -321,5 +371,52 @@ describe("afterWrites", () => {
     await done;
     expect(runs).toHaveLength(1);
     expect(runs[0]).toContain(t.id);
+  });
+});
+
+// Review 1.8: import keeps whole records. A local edit not yet exported (inside the 2 s debounce,
+// or kept back by a crash) and a teammate's file at the same version used to lose the teammate's
+// edit, and the next export wrote over their file.
+describe("a file and the DB that changed apart at the same version", () => {
+  it("keep both sides' fields, each from the side that wrote it later", async () => {
+    const a = await clone();
+    const b = await clone(a.projectId);
+    const dir = tempDir();
+    const t = await createTask(a, { title: "One" });
+    await exportSnapshot(a, dir);
+    await importSnapshot(b, dir);
+    await updateTask(b, t.id, { body: "theirs" });
+    await exportSnapshot(b, dir);
+    await updateTask(a, t.id, { title: "ours" });
+
+    await importSnapshot(a, dir);
+    const merged = (await getRecord(a, "task", t.id)) as { title: string; body: string };
+    expect(merged).toMatchObject({ title: "ours", body: "theirs", version: 3 });
+    // The next export carries both edits back to the file the teammate will pull.
+    await exportSnapshot(a, dir);
+    await importSnapshot(b, dir);
+    expect(await getRecord(b, "task", t.id)).toMatchObject({ title: "ours", body: "theirs" });
+  });
+
+  it("leave a file the DB already holds alone", async () => {
+    const a = await clone();
+    const dir = tempDir();
+    await createTask(a, { title: "One" });
+    await exportSnapshot(a, dir);
+    expect((await importSnapshot(a, dir)).imported).toEqual([]);
+  });
+
+  // The file of a task saved before `effort` reads back with an effort stamp the DB lacks; that
+  // alone is no change, and once bumped the version of every such task.
+  it("leave a task saved before effort alone", async () => {
+    const a = await clone();
+    const dir = tempDir();
+    const made = await createTask(a, { title: "Old" });
+    const { effort: _key, ...rest } = made;
+    const { effort: _stamp, ...stamps } = made.stamps ?? {};
+    await a.store.write((w) => w.update("task", { ...rest, stamps }, made.version));
+    await exportSnapshot(a, dir);
+    expect((await importSnapshot(a, dir)).imported).toEqual([]);
+    expect(await getRecord(a, "task", made.id)).toMatchObject({ version: made.version });
   });
 });

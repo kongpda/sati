@@ -81,10 +81,10 @@ export function scanRecord<T extends { id: string }>(entity: string, record: T):
 }
 
 /**
- * Refuses a write whose text holds a secret, before it reaches the database. Notes and cards are
- * free text an agent may paste a file's contents into; the export check alone would let a key sit
- * in the local database and in every brief until the next commit. The message names the field,
- * never the secret.
+ * Refuses a write whose text holds a secret, before it reaches the database. Every record that
+ * goes to `.sati/` is checked at write time: the export check alone would let a key sit in the
+ * local database and in every brief, and then fail every later export. The message names the
+ * field and the kind of secret, never the secret.
  */
 export function refuseSecrets(entity: string, value: Record<string, unknown>): void {
   const found = scanRecord(entity, { ...value, id: "" }).filter((f) => f.field !== "id");
@@ -95,7 +95,7 @@ export function refuseSecrets(entity: string, value: Record<string, unknown>): v
     "VALIDATION",
     `This looks like it contains a secret (${first.kind}) in ${fields}.`,
     {
-      hint: "Remove the secret and save again; keep keys in your password manager or .env, not in notes. Nothing was saved.",
+      hint: "Remove the secret and save again; keep keys in your password manager or .env, not in sati records. Nothing was saved.",
       details: found.map(({ field, kind }) => ({ field, kind })),
     },
   );

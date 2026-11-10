@@ -16,6 +16,7 @@ import {
   utf8Bytes,
   WAITING_KINDS,
 } from "../domain/schemas.js";
+import { refuseSecrets } from "../domain/secrets.js";
 import { TASK_TRANSITIONS } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
 import type { StorageReader, StorageWriter } from "../ports/storage.js";
@@ -174,6 +175,8 @@ export async function createTaskIn(
   ctx: ServiceContext,
   parsed: z.output<typeof CreateTaskInput>,
 ): Promise<Task> {
+  // Here, not in createTask: plan import and templates create tasks through this too.
+  refuseSecrets("task", parsed);
   const { subtasks = [], ...data } = parsed;
   {
     const base = baseFields(ctx, "task");
@@ -191,6 +194,7 @@ export async function createTaskIn(
       worktree: null,
       claim: null,
       completion: null,
+      effort: null,
       ...data,
     });
     const childIds = subtasks.map(() => ctx.ids("task"));
@@ -231,6 +235,7 @@ export async function createTaskIn(
         worktree: null,
         claim: null,
         completion: null,
+        effort: null,
       });
     }
     return parent;
@@ -241,6 +246,7 @@ export async function createTaskIn(
 export async function updateTask(ctx: ServiceContext, id: string, input: unknown): Promise<Task> {
   const { expectedVersion, token, reviewed, reason, needsInput, approvedCommit, ...patch } =
     parseInput(UpdateTaskInput, input);
+  refuseSecrets("task", { ...patch, reason, needsInput });
   // Git is read outside the transaction: the approval compares with the branch as it is now.
   const approving = patch.status === "done" ? await branchHeadOf(ctx, id) : undefined;
   // Read before the transaction: git is not called while the write lock is held.
@@ -351,6 +357,7 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
 /** Marks a task done with a summary and the files touched, and releases its claim and locks. */
 export async function completeTask(ctx: ServiceContext, id: string, input: unknown): Promise<Task> {
   const { expectedVersion, token, ...data } = parseInput(CompleteTaskInput, input);
+  refuseSecrets("task", { completion: data });
   // The commit the work was finished at, so a reviewer can see what moved after it.
   const commit = (await ctx.repo?.head()) ?? null;
   return ctx.store.write(async (w) => {
@@ -758,6 +765,7 @@ async function lease(
  */
 export async function markWaiting(ctx: ServiceContext, input: unknown): Promise<Task[]> {
   const { taskId, waiting } = parseInput(WaitingInput, input);
+  refuseSecrets("task", { waiting });
   return ctx.store.write(async (w) => {
     const now = nowIso(ctx);
     const caller = await w.get("actor", ctx.actorId);

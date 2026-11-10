@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { detectSecret, refuseSecrets, scanRecord } from "../src/index.js";
+import {
+  claimTask,
+  completeTask,
+  createFeature,
+  createMilestone,
+  createTask,
+  detectSecret,
+  markWaiting,
+  recordDecision,
+  refuseSecrets,
+  type ServiceContext,
+  scanRecord,
+  updateFeature,
+  updateMilestone,
+  updateTask,
+} from "../src/index.js";
+import { setup } from "./support/setup.js";
 
 // Fake secrets are built from pieces so this file itself never trips a secret scanner.
 const fake = {
@@ -70,5 +86,84 @@ describe("refuseSecrets", () => {
     }
     expect(err).toMatchObject({ code: "VALIDATION", message: expect.stringContaining("in body") });
     expect(JSON.stringify(err) + String(err)).not.toContain(fake.stripe);
+  });
+});
+
+// Review 1.1: a key in a task body used to be saved, shown in every brief, and then fail every
+// later export. Every record that goes to .sati/ is refused at write time, as notes are.
+describe("write-time refusal", () => {
+  const key = fake.aws;
+  const refused = { code: "VALIDATION" };
+
+  async function count(ctx: ServiceContext) {
+    const [tasks, decisions, features, milestones] = await Promise.all([
+      ctx.store.read((r) => r.list("task", ctx.projectId, { limit: 500 })),
+      ctx.store.read((r) => r.list("decision", ctx.projectId, { limit: 500 })),
+      ctx.store.read((r) => r.list("feature", ctx.projectId, { limit: 500 })),
+      ctx.store.read((r) => r.list("milestone", ctx.projectId, { limit: 500 })),
+    ]);
+    return {
+      tasks: tasks.length,
+      decisions: decisions.length,
+      features: features.length,
+      milestones: milestones.length,
+    };
+  }
+
+  it("refuses a new record with a key in any free-text field, and saves nothing", async () => {
+    const { ctx } = await setup();
+    const before = await count(ctx);
+    await expect(createTask(ctx, { title: "Deploy", body: `use ${key}` })).rejects.toMatchObject(
+      refused,
+    );
+    // One bad subtask refuses the whole batch, parent included.
+    await expect(
+      createTask(ctx, { title: "Parent", subtasks: [{ title: "ok" }, { title: "x", body: key }] }),
+    ).rejects.toMatchObject(refused);
+    await expect(
+      createTask(ctx, { title: "List", checklist: [{ text: `token ${key}`, done: false }] }),
+    ).rejects.toMatchObject(refused);
+    await expect(
+      recordDecision(ctx, { title: "Auth", decision: "x", context: key }),
+    ).rejects.toMatchObject(refused);
+    await expect(createFeature(ctx, { title: "Login", acceptance: [key] })).rejects.toMatchObject(
+      refused,
+    );
+    await expect(createMilestone(ctx, { title: "M1", goal: key })).rejects.toMatchObject(refused);
+    expect(await count(ctx)).toEqual(before);
+  });
+
+  it("names the field and the kind, never the key", async () => {
+    const { ctx } = await setup();
+    const err = await createTask(ctx, { title: "Deploy", body: `use ${key}` }).catch((e) => e);
+    expect(err.message).toContain("body");
+    expect(JSON.stringify({ m: err.message, h: err.hint, d: err.details })).not.toContain(key);
+  });
+
+  it("refuses an update, a completion and a question, and leaves the record as it was", async () => {
+    const { ctx } = await setup();
+    const t = await createTask(ctx, { title: "Deploy" });
+    await expect(updateTask(ctx, t.id, { body: key })).rejects.toMatchObject(refused);
+    const held = await claimTask(ctx, t.id);
+    const token = held.claim?.token;
+    await expect(
+      updateTask(ctx, t.id, { status: "blocked", reason: key, token }),
+    ).rejects.toMatchObject(refused);
+    await expect(
+      markWaiting(ctx, { taskId: t.id, waiting: { text: `paste ${key}?` } }),
+    ).rejects.toMatchObject(refused);
+    await expect(
+      completeTask(ctx, t.id, { summary: `done with ${key}`, token }),
+    ).rejects.toMatchObject(refused);
+    const now = await ctx.store.read((r) => r.get("task", t.id));
+    expect(now?.version).toBe(held.version);
+    expect(now?.status).toBe("in_progress");
+
+    const f = await createFeature(ctx, { title: "Login" });
+    await expect(updateFeature(ctx, f.id, { description: key })).rejects.toMatchObject(refused);
+    const m = await createMilestone(ctx, { title: "M1" });
+    await expect(updateMilestone(ctx, m.id, { title: key })).rejects.toMatchObject(refused);
+    expect((await ctx.store.read((r) => r.get("feature", f.id)))?.version).toBe(f.version);
+    expect((await ctx.store.read((r) => r.get("milestone", m.id)))?.version).toBe(m.version);
   });
 });

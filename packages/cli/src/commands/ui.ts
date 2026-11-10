@@ -4,7 +4,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CLI_NAME, CONFIG_DIR, type ProjectKind, SatiError } from "@sati/core";
 import { defineCommand } from "citty";
-import { closeRuntime, int, openRuntime, printError, writeConfigKind } from "../runtime.js";
+import {
+  closeRuntime,
+  exportWritten,
+  int,
+  openRuntime,
+  printError,
+  writeConfigKind,
+} from "../runtime.js";
 import { readTemplateFiles } from "../templates.js";
 import { createUiApp, listenUi, sessionToken, type UiRuntime } from "../ui/server.js";
 
@@ -63,15 +70,14 @@ export default defineCommand({
       const templates = () => readTemplateFiles(rt.location.root);
       let ui: UiRuntime = { ctx: rt.ctx, onKind, templates };
       if (rt.project.mode === "git") {
-        const { afterWrites, exportSnapshot } = await import("@sati/sync");
+        const { afterWrites } = await import("@sati/sync");
         const dir = join(rt.location.root, CONFIG_DIR);
+        const report = (err: unknown) => printError(err, false);
         const synced = afterWrites(
           rt.ctx.store,
           EXPORT_DEBOUNCE_MS,
-          async (written) => {
-            await exportSnapshot(rt.ctx, dir, { only: written });
-          },
-          (err) => printError(err, false),
+          (written) => exportWritten(rt.ctx, dir, written, report),
+          report,
         );
         flush = synced.flush;
         ui = {

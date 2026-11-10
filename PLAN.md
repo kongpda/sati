@@ -743,7 +743,7 @@ Added 2026-11-10 at the owner's request: read the whole project, fix what is cer
 
 Added 2026-11-10 at the owner's request: the items the Phase 5g review found and did not fix, for another agent to continue. `docs/review-followups.md` has the problem, plan, tests and checklist for each work package (WP). Tick a box here when every box of its package is ticked there.
 
-- [ ] WP1 Sync and snapshot safety
+- [x] WP1 Sync and snapshot safety
 - [ ] WP2 Core correctness
 - [ ] WP3 Performance
 - [ ] WP4 MCP and agent experience

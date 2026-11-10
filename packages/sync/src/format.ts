@@ -61,6 +61,8 @@ export const EMPTY_FIELDS: Readonly<Record<SnapshotEntity, Readonly<Record<strin
     worktree: null,
     claim: null,
     completion: null,
+    // Added in Phase 5h: a cleared effort was written as `null`, which a sati older than 5f refuses.
+    effort: null,
   },
   decision: {
     deletedAt: null,
@@ -138,9 +140,28 @@ function compactStamps(record: Obj, stamps: Obj): Obj | undefined {
 }
 
 /**
+ * True when `decoded` is `record`, give or take empty fields `record` does not have. A task saved
+ * before `effort` was in EMPTY_FIELDS has no key; it reads back as `effort: null` (with the shared
+ * stamp, as every filled-in field gets), and every reader treats the two the same. Without this,
+ * every such task would be written in the full form.
+ */
+function readsBackAs(entity: SnapshotEntity, decoded: Obj, record: Obj): boolean {
+  const out: Obj = { ...decoded };
+  const stamps = isObj(out.stamps) ? { ...out.stamps } : undefined;
+  const own = isObj(record.stamps) ? record.stamps : {};
+  for (const [key, blank] of EMPTY[entity]) {
+    if (key in record || !isDeepStrictEqual(out[key], blank)) continue;
+    delete out[key];
+    if (stamps && !(key in own)) delete stamps[key];
+  }
+  if (stamps) out.stamps = stamps;
+  return isDeepStrictEqual(out, record);
+}
+
+/**
  * The compact form of a record for `.sati/`. Every record is decoded again before it is written,
  * and one that would not come back exactly is written in the full form instead, so the compact
- * form can never lose a field or a stamp.
+ * form can never lose a field or a stamp (see `readsBackAs`).
  */
 export function encodeRecord(record: unknown): unknown {
   const entity = snapshotEntityOf(record);
@@ -155,5 +176,5 @@ export function encodeRecord(record: unknown): unknown {
   const stamps = isObj(record.stamps) ? compactStamps(record, record.stamps) : undefined;
   // Smallest first: both rules, then empty fields only, then the record as it is.
   const forms = stamps ? [{ ...lean, stamps }, lean] : [lean];
-  return forms.find((form) => isDeepStrictEqual(decodeRecord(form), record)) ?? record;
+  return forms.find((form) => readsBackAs(entity, decodeRecord(form) as Obj, record)) ?? record;
 }

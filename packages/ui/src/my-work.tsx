@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from "react";
 import { dueLabel, type Snapshot, type Task, today, waitingOn } from "./api.js";
-import { knownName, nameOf } from "./people.js";
+import { holderName, knownName } from "./people.js";
 import { capital, statusWord } from "./words.js";
 
 const CLOSED = new Set(["done", "cancelled"]);
@@ -201,7 +201,7 @@ function Needs({
   onAnswered: (task: Task) => Promise<unknown>;
 }) {
   const waiting = waitingOn(task);
-  const who = nameOf(data, task.claim?.actorId);
+  const who = holderName(data, task.claim?.actorId);
   // One click at a time: a second request would be refused and shown as an error.
   const [busy, setBusy] = useState(false);
   return (

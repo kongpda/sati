@@ -133,6 +133,37 @@ describe("compact snapshot records", () => {
     expect(await b.store.read((r) => r.get("task", task.id))).toEqual(task);
   });
 
+  // WP1 1.3: a sati older than Phase 5f validates strictly and refuses a whole snapshot that holds
+  // an unknown `effort` key, even as null. A cleared effort must leave no key in the file.
+  it("leaves a cleared effort out of the file and reads it back as null", async () => {
+    const a = await clone();
+    const t = await createTask(a, { title: "Sized", effort: "light" });
+    const cleared = await updateTask(a, t.id, { effort: null });
+    expect(cleared.effort).toBeNull();
+    const compact = encodeRecord(cleared) as Rec;
+    expect(compact).not.toHaveProperty("effort");
+    expect(decodeRecord(JSON.parse(stableJson(compact)))).toEqual(cleared);
+  });
+
+  // Files written before effort existed have no key; they read back as null, which every reader
+  // treats as "standard", and a record without the key still gets the compact form.
+  it("reads a task file from before effort, and still compacts a record without the key", async () => {
+    const a = await clone();
+    const { effort: _gone, ...made } = await createTask(a, { title: "Old" });
+    const { effort: _stamp, ...stamps } = made.stamps ?? {};
+    const old = { ...made, stamps };
+    const compact = encodeRecord(old) as Rec;
+    expect(Object.keys(compact.stamps)).toEqual(["*"]);
+    // The filled-in field takes the shared stamp, like every field the file leaves out.
+    const back = decodeRecord(compact) as Rec;
+    expect(back).toEqual({
+      ...old,
+      effort: null,
+      stamps: { ...stamps, effort: compact.stamps["*"] },
+    });
+    expect(ENTITY_SCHEMAS.task.safeParse(decodeRecord(compact)).success).toBe(true);
+  });
+
   // What the merge driver does: decode each side, merge, encode. Merged raw, the shared stamp
   // would hide theirs' title stamp, and `updatedAt` would pick the older title.
   it("merges compact sides by their per-field clocks", async () => {

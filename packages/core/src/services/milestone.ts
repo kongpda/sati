@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import { Milestone } from "../domain/schemas.js";
+import { refuseSecrets } from "../domain/secrets.js";
 import { MILESTONE_TRANSITIONS } from "../domain/status.js";
 import type { StorageWriter } from "../ports/storage.js";
 import {
@@ -40,6 +41,8 @@ export async function createMilestoneIn(
   ctx: ServiceContext,
   data: z.output<typeof CreateMilestoneInput>,
 ): Promise<Milestone> {
+  // Here, not in createMilestone: plan import and templates create milestones through this too.
+  refuseSecrets("milestone", data);
   {
     // max+1, not a count: gaps would otherwise hand out a duplicate order.
     const all = await listAll(w, ctx, "milestone");
@@ -61,6 +64,7 @@ export async function updateMilestone(
   input: unknown,
 ): Promise<Milestone> {
   const { expectedVersion, ...patch } = parseInput(UpdateMilestoneInput, input);
+  refuseSecrets("milestone", patch);
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "milestone", id);
     if (patch.status)

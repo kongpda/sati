@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, join } from "node:path";
 import { locateDb, SqliteStore } from "@sati/store-sqlite";
+import { stableJson } from "@sati/sync";
 import { describe, expect, it } from "vitest";
 import { bin, sati, satiJson, tempRepo } from "./helpers.js";
 
@@ -42,7 +43,12 @@ describe("sati sync", () => {
     const task = satiJson<Rec>(a, "task", "create", "Shared").data;
     // PLAN: every CLI write exports in git mode, so the record is on disk before any commit.
     expect(existsSync(join(a, ".sati", "tasks", `${task.id}.json`))).toBe(true);
-    expect(satiJson(a, "sync", "export").data).toEqual({ written: [], unchanged: 1, newer: [] });
+    expect(satiJson(a, "sync", "export").data).toEqual({
+      written: [],
+      unchanged: 1,
+      newer: [],
+      refused: [],
+    });
 
     // Copy the snapshot by hand. Clones of one repo share the project id, so give b's id to the record.
     const file = readFileSync(join(a, ".sati", "tasks", `${task.id}.json`), "utf8");
@@ -69,6 +75,40 @@ describe("sati sync", () => {
 });
 
 // PLAN: pre-commit exports and stages .sati/; post-merge imports a teammate's records.
+/** Puts a teammate's newer copy of a record in `.sati/` by hand, as a stash pop or `git apply` would. */
+function placeNewer(dir: string, rel: string, title: string): string {
+  const file = join(dir, ".sati", rel);
+  const rec = JSON.parse(readFileSync(file, "utf8")) as { version: number };
+  const text = stableJson({ ...rec, title, version: rec.version + 1 });
+  writeFileSync(file, text);
+  return text;
+}
+
+// Review 1.2: hooks do not fire on a stash pop, a cherry-pick or `git apply`, so a teammate's
+// newer file can sit in .sati/ unimported. The full exports load it first instead of skipping it.
+describe("import before the full exports", () => {
+  it("pre-commit loads a newer file and commits it unchanged", async () => {
+    const dir = await tempRepo();
+    sati(dir, "init", "--yes", "--tools", "");
+    const task = satiJson<Rec>(dir, "task", "create", "Mine").data;
+    const text = placeNewer(dir, `tasks/${task.id}.json`, "Theirs");
+    writeFileSync(join(dir, "README.md"), "hi\n");
+    gitWithSati(dir, "add", "README.md");
+    gitWithSati(dir, "commit", "-qm", "work");
+    expect(satiJson<Rec>(dir, "task", "show", task.id).data.title).toBe("Theirs");
+    expect(gitWithSati(dir, "show", `HEAD:.sati/tasks/${task.id}.json`)).toBe(text);
+  });
+
+  it("`sati mcp` loads a newer file when it starts", async () => {
+    const dir = await tempRepo();
+    sati(dir, "init", "--yes", "--tools", "");
+    const task = satiJson<Rec>(dir, "task", "create", "Mine").data;
+    placeNewer(dir, `tasks/${task.id}.json`, "Theirs");
+    expect(sati(dir, "mcp").code).toBe(0);
+    expect(satiJson<Rec>(dir, "task", "show", task.id).data.title).toBe("Theirs");
+  });
+});
+
 describe("git hooks", () => {
   it("a commit carries the snapshot, and a pull brings it into the other clone's DB", async () => {
     const a = await tempRepo();
@@ -134,8 +174,14 @@ describe("secret scanner", () => {
         throw err;
       }
     }).toThrow();
-    expect(stderr).toContain(`note ${note.id}, field body: GitHub token`);
+    expect(stderr).toContain(`notes/${note.id}.json, field body: GitHub token`);
     expect(stderr).not.toContain(secret);
+    // Review 1.1: the export skips the bad record but writes the others, and still fails.
+    const other = satiJson<Rec>(dir, "task", "create", "Fine").data;
+    const exported = sati(dir, "sync", "export");
+    expect(exported.code).toBe(5);
+    expect(exported.stderr).toContain(`notes/${note.id}.json, field body: GitHub token`);
+    expect(existsSync(join(dir, ".sati", "tasks", `${other.id}.json`))).toBe(true);
     expect(readFileSync(join(dir, ".sati", "notes", `${note.id}.json`), "utf8")).not.toContain(
       secret,
     );

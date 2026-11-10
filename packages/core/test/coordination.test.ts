@@ -8,6 +8,7 @@ import {
   claimTask,
   completeTask,
   createTask,
+  deleteRecord,
   doctorChecks,
   ensureActor,
   getRecord,
@@ -406,5 +407,29 @@ describe("worktree overlaps", () => {
         command: "git worktree remove '/w/old it'\\''s'",
       },
     ]);
+  });
+});
+
+// Review 1.7: claims travel in .sati/ so teammates see a task is taken, but actors stay on their
+// machine. A claim imported from a teammate's clone used to show a raw actor id.
+describe("a claim from a teammate's clone", () => {
+  it("is named 'another machine' and still guards the task", async () => {
+    const mine = await setup();
+    const t = await claimTask(mine.ctx, (await createTask(mine.ctx, { title: "Migrate" })).id);
+    const theirs = await setup();
+    await importRecords(theirs.ctx, [
+      {
+        entity: "task",
+        source: `tasks/${t.id}.json`,
+        record: { ...t, projectId: theirs.ctx.projectId },
+      },
+    ]);
+    const agent = await as(theirs.ctx, "codex@b", "agent");
+    const lock = await acquireLock(agent, { paths: ["src/**"], taskId: t.id }).catch((e) => e);
+    expect(lock).toMatchObject({ code: "CONFLICT" });
+    expect(lock.message).toBe(`Task ${t.id} is claimed by another machine.`);
+    const removal = await deleteRecord(agent, "task", t.id).catch((e) => e);
+    expect(removal.message).toBe(`Task ${t.id} is claimed by another machine.`);
+    expect(removal.message).not.toContain(t.claim?.actorId);
   });
 });

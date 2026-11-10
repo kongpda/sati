@@ -51,6 +51,7 @@ import {
   socketPath as socketPathFor,
   standaloneDbPath,
 } from "@sati/store-sqlite";
+import type { WrittenRecord } from "@sati/sync";
 import { writeFileAtomic } from "./atomic.js";
 import { defaultBase } from "./git.js";
 import { runHint } from "./install.js";
@@ -643,25 +644,40 @@ export async function execute<T>(
  */
 export async function withExport<T>(rt: Runtime, fn: (rt: Runtime) => Promise<T>): Promise<T> {
   if (rt.project.mode !== "git") return fn(rt);
-  const { afterWrites, exportSnapshot } = await import("@sati/sync");
+  const { afterWrites } = await import("@sati/sync");
   const dir = join(rt.location.root, CONFIG_DIR);
+  const warn = (err: unknown) => {
+    process.stderr.write("warning: the .sati/ snapshot was not updated.\n");
+    printError(err, false);
+  };
   const synced = afterWrites(
     rt.ctx.store,
     // Never fires: flush() below runs the export when the command ends.
     2 ** 31 - 1,
-    async (written) => {
-      await exportSnapshot(rt.ctx, dir, { only: written });
-    },
-    (err) => {
-      process.stderr.write("warning: the .sati/ snapshot was not updated.\n");
-      printError(err, false);
-    },
+    (written) => exportWritten(rt.ctx, dir, written, warn),
+    warn,
   );
   try {
     return await fn({ ...rt, ctx: { ...rt.ctx, store: synced.store } });
   } finally {
     await synced.flush();
   }
+}
+
+/**
+ * Exports the records a debounced batch wrote. Refused records (a secret in a field) are reported,
+ * not thrown: a throw puts the whole batch back in the queue, so one bad record would fail every
+ * later export and nothing would reach `.sati/` again.
+ */
+export async function exportWritten(
+  ctx: ServiceContext,
+  dir: string,
+  written: WrittenRecord[],
+  report: (err: unknown) => void,
+): Promise<void> {
+  const { exportSnapshot, refusedError } = await import("@sati/sync");
+  const result = await exportSnapshot(ctx, dir, { only: written });
+  if (result.refused.length > 0) report(refusedError(result.refused));
 }
 
 /** Like `execute`, for commands that run before a project exists (`init`). */

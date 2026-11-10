@@ -35,10 +35,12 @@ describe("task effort", () => {
     });
   });
 
-  it("is written only once set, and null clears it", async () => {
+  // A new task carries `effort: null` like every other empty field; the `.sati/` file leaves it
+  // out (EMPTY_FIELDS), so an older sati never sees the key.
+  it("is shown only once set, and null clears it", async () => {
     const { ctx } = await setup();
     const t = await createTask(ctx, { title: "x" });
-    expect("effort" in t).toBe(false);
+    expect(t.effort).toBeNull();
     expect("effort" in taskRow(t)).toBe(false);
     const light = await updateTask(ctx, t.id, { effort: "light" });
     expect(taskRow(light).effort).toBe("light");
@@ -125,7 +127,13 @@ describe("task locks follow the claim", () => {
   // reported success.
   it("undo removes a field the change first set", async () => {
     const { ctx, store } = await setup();
-    const t = await createTask(ctx, { title: "x" });
+    // A task saved before `effort` existed has no key, so the log has no `from` for it.
+    const made = await createTask(ctx, { title: "x" });
+    const t = await ctx.store.write(async (w) => {
+      const { effort: _none, ...old } = made;
+      await w.update("task", old, made.version);
+      return old;
+    });
     await updateTask(ctx, t.id, { effort: "deep", title: "y" });
     const write = store.activity.find((row) => row.verb === "update" && row.entityId === t.id);
     const back = await undoActivity(ctx, write?.id ?? "");

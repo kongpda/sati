@@ -32,6 +32,6 @@
   "status": "done",
   "title": "Search splits terms on punctuation, as the FTS index does",
   "updatedAt": "2026-11-08T16:44:37.691Z",
-  "version": 4,
+  "version": 5,
   "worktree": "/home/user/workspace/repo"
 }

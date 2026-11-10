@@ -100,9 +100,15 @@ export async function listAll<E extends StoredEntity>(
   }
 }
 
-/** An actor's display name, falling back to its id. */
+/**
+ * How an actor this machine does not know is named. Actors stay on their machine, but a task's
+ * claim travels in `.sati/`, so a teammate's claim names an actor that is not here.
+ */
+export const UNKNOWN_ACTOR = "another machine";
+
+/** An actor's display name, or UNKNOWN_ACTOR. */
 export async function actorName(r: StorageReader, actorId: string): Promise<string> {
-  return (await r.get("actor", actorId))?.name ?? actorId;
+  return (await r.get("actor", actorId))?.name ?? UNKNOWN_ACTOR;
 }
 
 /** A live (not deleted) record of this project, or NOT_FOUND. */

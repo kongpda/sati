@@ -1,0 +1,15 @@
+{
+  "consequences": "Pre-commit still blocks a commit with a secret. Clean records keep flowing to .sati/ meanwhile.",
+  "context": "Review follow-up 1.1. The all-or-nothing export failed every later debounced batch once one record held a secret, so nothing was exported again and the only message was on MCP stderr. Write-time refusal now covers tasks, decisions, features and milestones, so the export check is a backstop for records that reached the DB another way.",
+  "createdAt": "2026-11-10T02:57:52.521Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "decision": "exportSnapshot scans each changed record, writes the clean ones and returns the rest in `refused`. `sati sync export` (pre-commit) still exits 5 when anything is refused; the debounced export reports once and does not re-queue the record. Replaces the all-or-nothing throw in snapshot.ts.",
+  "id": "dec_01M71P7ZC9KT90M069K0E0XPWD",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T02:57:52.522Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "title": "Export skips a record with a secret instead of refusing the whole export",
+  "updatedAt": "2026-11-10T02:57:52.521Z",
+  "version": 1
+}

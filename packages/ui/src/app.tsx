@@ -15,7 +15,7 @@ import { NewTask } from "./forms.js";
 import { Memory } from "./memory.js";
 import { MyWork } from "./my-work.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
-import { nameOf } from "./people.js";
+import { holderName } from "./people.js";
 import { Settings } from "./settings.js";
 import { threadOf } from "./thread.js";
 import { plainError } from "./words.js";
@@ -603,7 +603,7 @@ export function App() {
                   .filter((t) => t.claim)
                   .map((t) => (
                     <span className="pill" key={t.id}>
-                      <strong>{data ? nameOf(data, t.claim?.actorId) : ""}</strong> · {t.title}
+                      <strong>{data ? holderName(data, t.claim?.actorId) : ""}</strong> · {t.title}
                     </span>
                   ))}
               </div>
@@ -716,7 +716,7 @@ export function App() {
             }
             onReleaseTask={(id) => {
               const t = data.tasks.find((x) => x.id === id);
-              const name = nameOf(data, t?.claim?.actorId);
+              const name = holderName(data, t?.claim?.actorId);
               const ok =
                 t?.claim?.actorId === data.you ||
                 window.confirm(

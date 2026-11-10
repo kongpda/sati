@@ -51,6 +51,12 @@ version. For a global install, run `npm install -g @kongpda/sati@latest`, then
 rules block and agent configs. A newer sati upgrades the database on first use and backs it up
 first.
 
+## Can teammates run different sati versions?
+
+Upgrade sati on every clone together. A newer sati may write a field an older one does not know,
+and the older one then refuses the whole `.sati/` snapshot on import ("A newer sati wrote these
+files"). Nothing is lost: update sati on that machine and import again.
+
 ## I switched from a global to a project install. What do I rerun?
 
 `npx sati init --upgrade` moves the git hooks and merge driver to `node_modules/.bin/sati`, and

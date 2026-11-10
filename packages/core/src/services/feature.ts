@@ -2,6 +2,7 @@ import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { globBraceError } from "../domain/locks.js";
 import { BodyText, DecisionId, Feature, LIMITS } from "../domain/schemas.js";
+import { refuseSecrets } from "../domain/secrets.js";
 import { FEATURE_TRANSITIONS, featureRemovalNeedsDecision } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
 import {
@@ -58,6 +59,7 @@ export type UpdateFeatureInput = z.input<typeof UpdateFeatureInput>;
 
 export async function createFeature(ctx: ServiceContext, input: unknown): Promise<Feature> {
   const data = parseInput(CreateFeatureInput, input);
+  refuseSecrets("feature", data);
   return ctx.store.write(async (w) => {
     if (data.milestoneId) await mustGet(w, ctx, "milestone", data.milestoneId);
     return insertWithLog(w, ctx, "feature", {
@@ -84,6 +86,7 @@ export async function updateFeature(
   input: unknown,
 ): Promise<Feature> {
   const { expectedVersion, decisionId, reviewed, ...patch } = parseInput(UpdateFeatureInput, input);
+  refuseSecrets("feature", patch);
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "feature", id);
     if (patch.milestoneId) await mustGet(w, ctx, "milestone", patch.milestoneId);

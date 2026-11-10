@@ -34,6 +34,6 @@
   "status": "done",
   "title": "Bundle the CLI's dependencies; CI checks the packed install and Node 24.15",
   "updatedAt": "2026-11-08T16:44:37.975Z",
-  "version": 4,
+  "version": 5,
   "worktree": "/home/user/workspace/repo"
 }

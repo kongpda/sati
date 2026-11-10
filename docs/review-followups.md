@@ -91,11 +91,11 @@ Effort: `deep`. Highest priority: these can lose or leak a team's data.
   2. In `exportSnapshot`, scan per record. Skip a record with a finding, write the others, and return the skipped paths in a new `refused: { path, field, kind }[]` on `ExportResult`. `sati export` exits non-zero when `refused` is not empty, so pre-commit still stops the commit; the debounced export logs once and drops the bad record from the retry queue.
 - **Tests:** a task create with an AWS-style key in the body is VALIDATION and writes nothing; an export with one bad record still writes the good ones and reports the bad one; the debounce queue does not re-queue a refused record.
 
-- [ ] Owner decision recorded
-- [ ] Write-time refusal for task, decision, feature, milestone
-- [ ] Export skips and reports a bad record
-- [ ] Debounce stops retrying refused records
-- [ ] Tests, changeset
+- [x] Owner decision recorded
+- [x] Write-time refusal for task, decision, feature, milestone
+- [x] Export skips and reports a bad record
+- [x] Debounce stops retrying refused records
+- [x] Tests, changeset
 
 ### 1.2 Import before the full exports
 
@@ -105,10 +105,10 @@ Effort: `deep`. Highest priority: these can lose or leak a team's data.
 - **Plan:** run `importSnapshot` before both full exports. If the import is refused, print its hint and skip the export; for pre-commit, follow the owner's decision on blocking. Keep the comment in `commands/sync.ts` in mind: `import` must not trigger an export of its own.
 - **Tests:** a newer file placed in `.sati/` by hand is in the database after `sati mcp` starts; a pre-commit with a newer file imports it and commits it unchanged.
 
-- [ ] Owner decision recorded
-- [ ] Import before the MCP-start export
-- [ ] Import before the pre-commit export
-- [ ] Tests, changeset
+- [x] Owner decision recorded
+- [x] Import before the MCP-start export
+- [x] Import before the pre-commit export
+- [x] Tests, changeset
 
 ### 1.3 A cleared `effort` stays in the file as `null`
 
@@ -118,10 +118,10 @@ Effort: `deep`. Highest priority: these can lose or leak a team's data.
 - **Plan:** add `effort: null` to `EMPTY_FIELDS.task` (a new entry, which the comment permits). Check that `decodeRecord` then yields `effort: null` for old files and that `Task` accepts it (`Effort.nullable().optional()` does). Add "upgrade sati on every clone together" to `docs/guide/faq.md` under sync.
 - **Tests:** a task with `effort: null` encodes with no `effort` key and decodes to an equal record; a file written before Phase 5f still decodes.
 
-- [ ] Owner decision recorded
-- [ ] `effort` in `EMPTY_FIELDS`
-- [ ] FAQ note on mixed versions
-- [ ] Tests, changeset
+- [x] Owner decision recorded
+- [x] `effort` in `EMPTY_FIELDS`
+- [x] FAQ note on mixed versions
+- [x] Tests, changeset
 
 ### 1.4 Symlinked record folder
 
@@ -131,8 +131,8 @@ Effort: `deep`. Highest priority: these can lose or leak a team's data.
 - **Plan:** before reading or writing, `lstatSync` the snapshot root and each `SNAPSHOT_DIRS` folder that exists; throw VALIDATION if one is a symlink. Put the check in one helper used by both paths.
 - **Tests:** extend "refuses symlinked record files" in `packages/sync/test/sync.test.ts` with a symlinked folder for import and for export.
 
-- [ ] Folder check in read and export
-- [ ] Tests
+- [x] Folder check in read and export
+- [x] Tests
 
 ### 1.5 Stray temp files get committed
 
@@ -142,8 +142,8 @@ Effort: `deep`. Highest priority: these can lose or leak a team's data.
 - **Plan:** at the start of a full export, delete `*.tmp` files in the record folders that are older than a minute. Also make `readSnapshot` ignore names that do not end in `.json` (check: it may already).
 - **Tests:** a stale `x.json.123.tmp` is gone after a full export and is never read by import.
 
-- [ ] Stale temp files removed on export
-- [ ] Tests
+- [x] Stale temp files removed on export
+- [x] Tests
 
 ### 1.6 Merge driver output can exceed limits; checklists merge whole
 
@@ -156,10 +156,10 @@ Effort: `deep`. Highest priority: these can lose or leak a team's data.
 - **Tests:** two 60 KB bodies with a conflict give a record that passes `checkRecord`; two concurrent ticks on different items both survive.
 - **Note:** `docs/ideas.md` already defers "order-independent conflict markers". Do not fold that in.
 
-- [ ] Reproduce both cases
-- [ ] Cap after conflict merge
-- [ ] Item-level checklist merge, or `needsReview`
-- [ ] Tests, changeset
+- [x] Reproduce both cases
+- [x] Cap after conflict merge
+- [x] Item-level checklist merge, or `needsReview`
+- [x] Tests, changeset
 
 ### 1.7 Imported claims that name an unknown actor
 
@@ -169,9 +169,9 @@ Effort: `deep`. Highest priority: these can lose or leak a team's data.
 - **Plan:** read how export handles `claim` first (`EMPTY_FIELDS.task.claim` is `null`, so claims are written when set). If claims are meant to travel (so teammates see who holds a task), make the brief and the board show an unknown holder by its stored name or "another machine" and leave the rest. If they are not meant to travel, strip them at export.
 - **Tests:** per the decision.
 
-- [ ] Find the intent (PLAN, `docs/team-brain.md`); ask if unclear
-- [ ] Fix or document
-- [ ] Tests
+- [x] Find the intent (PLAN, `docs/team-brain.md`); ask if unclear
+- [x] Fix or document
+- [x] Tests
 
 ### 1.8 Whole-record import versus field stamps
 
@@ -180,8 +180,8 @@ Effort: `deep`. Highest priority: these can lose or leak a team's data.
 - **Problem:** `importRecords` in `packages/core/src/services/sync.ts` replaces a record when the incoming one is newer by `version` then `updatedAt`. Per-field HLC stamps are used only by the git merge driver. Two clones that edit different fields at the same version, exchanged without a git merge (a file copy, a cherry-pick of one file), resolve whole-record.
 - **Plan:** confirm that every path that brings two divergent copies together goes through the merge driver. If one does not, call `mergeRecord` from import when versions tie and content differs.
 
-- [ ] Confirm or reproduce
-- [ ] Fix or record as not a bug
+- [x] Confirm or reproduce
+- [x] Fix or record as not a bug
 
 ---
 

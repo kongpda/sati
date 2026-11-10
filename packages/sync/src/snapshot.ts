@@ -9,13 +9,13 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, posix } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import {
   type ImportRecordsInput,
   type ImportResult,
   importRecords,
   isPrivate,
   SatiError,
-  type SecretFinding,
   type ServiceContext,
   SNAPSHOT_DIRS,
   SNAPSHOT_ENTITIES,
@@ -26,6 +26,10 @@ import {
 } from "@sati/core";
 import type { WrittenRecord } from "./debounce.js";
 import { decodeRecord, encodeRecord, snapshotEntityOf } from "./format.js";
+import { mergeByStamps } from "./merge.js";
+
+type Obj = Parameters<typeof mergeByStamps>[0];
+const isObj = (v: unknown): v is Obj => v !== null && typeof v === "object" && !Array.isArray(v);
 
 /** A record file larger than this cannot be valid (bodies are capped at 100 KB). */
 const MAX_FILE_BYTES = 1024 * 1024;
@@ -56,6 +60,52 @@ export function stableJson(value: unknown): string {
   return `${JSON.stringify(sort(value), null, 2)}\n`;
 }
 
+/** How old a leftover temp file must be before a full export removes it. */
+const STALE_TMP_MS = 60_000;
+
+/**
+ * Refuses a snapshot folder or record folder that is a symlink. A committed `.sati/tasks` link
+ * would make import read, and export write, files outside the repository.
+ */
+function refuseLinkedFolders(dir: string): void {
+  for (const rel of [".", ...Object.values(SNAPSHOT_DIRS)]) {
+    // lstat, not existsSync: a dangling link must be refused too, not taken as missing.
+    let info: ReturnType<typeof lstatSync>;
+    try {
+      info = lstatSync(join(dir, rel));
+    } catch {
+      continue;
+    }
+    if (!info.isDirectory()) {
+      const shown = rel === "." ? "the snapshot folder" : `${rel}/`;
+      throw new SatiError(
+        "VALIDATION",
+        `Invalid snapshot: ${shown} is not a folder (symlinks are refused).`,
+        {
+          hint: "Replace it with a real folder, or restore it from git. Nothing was read or written.",
+        },
+      );
+    }
+  }
+}
+
+/**
+ * Removes temp files a killed export left behind (`<id>.json.<pid>.tmp`), so pre-commit's
+ * `git add -A` does not commit them. Only old ones: a younger file may belong to a live export.
+ */
+function removeStaleTemps(dir: string, now: number): void {
+  for (const rel of Object.values(SNAPSHOT_DIRS)) {
+    const folder = join(dir, rel);
+    if (!existsSync(folder)) continue;
+    for (const name of readdirSync(folder)) {
+      if (!name.endsWith(".tmp")) continue;
+      const file = join(folder, name);
+      const info = lstatSync(file);
+      if (info.isFile() && now - info.mtimeMs > STALE_TMP_MS) rmSync(file, { force: true });
+    }
+  }
+}
+
 /** Writes through a temp file and a rename, so readers never see a half-written file. */
 function writeAtomic(file: string, content: string): void {
   const tmp = `${file}.${process.pid}.tmp`;
@@ -74,6 +124,18 @@ export interface ExportResult {
   unchanged: number;
   /** Files left alone because they hold a newer version than the database: import them first. */
   newer: string[];
+  /**
+   * Records not written because a field looks like a secret. The rest of the export still runs,
+   * so one bad record cannot stop every later export. Never carries the secret itself.
+   */
+  refused: RefusedRecord[];
+}
+
+/** A record the export refused to write; `field` and `kind` as in a secret finding. */
+export interface RefusedRecord {
+  path: string;
+  field: string;
+  kind: string;
 }
 
 /** The `version` a record file holds, or 0 when it cannot be read. */
@@ -130,9 +192,10 @@ export async function exportSnapshot(
   dir: string,
   opts: ExportOptions = {},
 ): Promise<ExportResult> {
+  refuseLinkedFolders(dir);
+  if (!opts.only) removeStaleTemps(dir, Date.now());
   const records = opts.only ? await readRecords(ctx, opts.only) : await snapshotRecords(ctx);
-  const result: ExportResult = { written: [], unchanged: 0, newer: [] };
-  const changed: { rec: SnapshotRecord; rel: string; file: string; content: string }[] = [];
+  const result: ExportResult = { written: [], unchanged: 0, newer: [], refused: [] };
   for (const rec of records) {
     // Reported paths use `/` on every OS, like git does.
     const rel = posix.join(SNAPSHOT_DIRS[rec.entity], `${rec.record.id}.json`);
@@ -147,11 +210,13 @@ export async function exportSnapshot(
       result.newer.push(rel);
       continue;
     }
-    changed.push({ rec, rel, file, content });
-  }
-  // Only files about to change are scanned: an unchanged file was scanned when it was written.
-  refuseSecrets(changed.flatMap(({ rec }) => scanRecord(rec.entity, rec.record)));
-  for (const { rec, rel, file, content } of changed) {
+    // Only files about to change are scanned: an unchanged file was scanned when it was written.
+    // Writes refuse secrets already; this catches records saved by an older version or by hand.
+    const found = scanRecord(rec.entity, rec.record);
+    if (found.length > 0) {
+      for (const { field, kind } of found) result.refused.push({ path: rel, field, kind });
+      continue;
+    }
     mkdirSync(join(dir, SNAPSHOT_DIRS[rec.entity]), { recursive: true });
     writeAtomic(file, content);
     result.written.push(rel);
@@ -163,27 +228,25 @@ export async function exportSnapshot(
 const MAX_LISTED = 10;
 
 /**
- * Fails the whole export when any record holds a secret, before any file is written, so a
- * commit never carries one. The message names the record and field, never the secret.
+ * The error for records an export refused, so `sati export` (and with it pre-commit) fails while
+ * a secret is waiting to be committed. The message names the file and field, never the secret.
  */
-function refuseSecrets(found: SecretFinding[]): void {
-  if (found.length === 0) return;
-  const lines = found
-    .slice(0, MAX_LISTED)
-    .map((f) => `  ${f.entity} ${f.id}, field ${f.field}: ${f.kind}`);
-  if (found.length > MAX_LISTED) lines.push(`  and ${found.length - MAX_LISTED} more`);
-  throw new SatiError(
+export function refusedError(refused: readonly RefusedRecord[]): SatiError {
+  const lines = refused.slice(0, MAX_LISTED).map((f) => `  ${f.path}, field ${f.field}: ${f.kind}`);
+  if (refused.length > MAX_LISTED) lines.push(`  and ${refused.length - MAX_LISTED} more`);
+  return new SatiError(
     "VALIDATION",
-    `Export refused: ${found.length} record field(s) look like they contain a secret.\n${lines.join("\n")}`,
+    `Export refused ${refused.length} record field(s) that look like they contain a secret.\n${lines.join("\n")}`,
     {
-      hint: "Remove the secret from each field listed (rotate it if it was real), then export again. Nothing was written to .sati/.",
-      details: found,
+      hint: "Remove the secret from each field listed (rotate it if it was real), then export again. The other records were exported.",
+      details: refused,
     },
   );
 }
 
 /** Reads every record file under `dir`. Unparseable files fail the whole read. */
 export function readSnapshot(dir: string): ImportRecordsInput {
+  refuseLinkedFolders(dir);
   const out: ImportRecordsInput = [];
   let count = 0;
   let total = 0;
@@ -226,5 +289,36 @@ export function readSnapshot(dir: string): ImportRecordsInput {
 
 /** Imports the snapshot in `dir` into the DB; see `importRecords` for the rules. */
 export async function importSnapshot(ctx: ServiceContext, dir: string): Promise<ImportResult> {
-  return importRecords(ctx, readSnapshot(dir));
+  return importRecords(ctx, await joinTies(ctx, readSnapshot(dir)));
+}
+
+/**
+ * A file and the DB at the same version with different stamps changed apart without a git merge:
+ * a local edit still inside the export debounce, or kept from export by a crash, when a pull
+ * brings a teammate's file. Import keeps whole records, so one side's edit would be lost; merge
+ * the two field by field instead. The merged record is one version past both, so it is imported
+ * and then exported over the file.
+ */
+async function joinTies(ctx: ServiceContext, records: ImportRecordsInput) {
+  return ctx.store.read(async (r) => {
+    const out: ImportRecordsInput = [];
+    for (const item of records) {
+      const file = item.record;
+      const id = isObj(file) ? file.id : undefined;
+      const stored = typeof id === "string" ? await r.get(item.entity, id) : undefined;
+      const tie =
+        isObj(file) &&
+        stored !== undefined &&
+        stored.version === file.version &&
+        isObj(file.stamps) &&
+        !isDeepStrictEqual(stored.stamps, file.stamps) &&
+        // Compared as files: a task saved before `effort` has no effort stamp in the DB, and its
+        // file reads back with the shared one. That is not a change.
+        !isDeepStrictEqual(encodeRecord(stored), encodeRecord(file));
+      out.push(
+        tie ? { ...item, record: mergeByStamps(stored as unknown as Obj, file).record } : item,
+      );
+    }
+    return out;
+  });
 }

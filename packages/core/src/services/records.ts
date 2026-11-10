@@ -2,7 +2,7 @@ import { SatiError } from "../domain/errors.js";
 import type { EntityMap, StoredEntity } from "../domain/schemas.js";
 import { featureRemovalNeedsDecision } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
-import { nowIso, type ServiceContext, updateWithLog } from "./context.js";
+import { actorName, nowIso, type ServiceContext, updateWithLog } from "./context.js";
 import { releaseTaskLocks } from "./lock.js";
 
 const SOFT = ["task", "note", "decision", "feature"] as const;
@@ -50,10 +50,9 @@ export async function deleteRecord(
         if (claim.actorId !== ctx.actorId && claim.leaseUntil > nowIso(ctx)) {
           const caller = await w.get("actor", ctx.actorId);
           if (caller?.kind !== "human") {
-            const holder = await w.get("actor", claim.actorId);
             throw new SatiError(
               "CONFLICT",
-              `Task ${id} is claimed by ${holder?.name ?? claim.actorId}.`,
+              `Task ${id} is claimed by ${await actorName(w, claim.actorId)}.`,
               {
                 hint: "Only the holder or a person can delete a claimed task; wait for the claim to expire or ask the holder to release it.",
                 details: { holder: claim.actorId, leaseUntil: claim.leaseUntil },

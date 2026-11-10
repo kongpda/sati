@@ -18,7 +18,7 @@ import {
   PlanSelect,
 } from "./forms.js";
 import { Markdown } from "./markdown.js";
-import { Avatar, nameOf, personName } from "./people.js";
+import { Avatar, holderName, nameOf, personName } from "./people.js";
 import { isThreadNote, Thread, threadOf } from "./thread.js";
 
 /** Adds and deletes comments; the board passes one to every page with a thread. */
@@ -889,7 +889,7 @@ const nameOr = (data: Snapshot, id: string, fallback: string | undefined) =>
 
 function TaskSignals({ data, task }: { data: Snapshot; task: Task }) {
   const waiting = waitingOn(task);
-  const who = nameOf(data, task.claim?.actorId);
+  const who = holderName(data, task.claim?.actorId);
   const handoff = data.notes.find((n) => n.tags.includes("handoff") && n.links.includes(task.id));
   const drift = data.drift?.[task.id];
   if (!waiting && !(task.status === "blocked") && !handoff && !drift?.moved) return null;
@@ -1068,7 +1068,7 @@ function ClaimBox({
   onTakeOver: () => void;
 }) {
   const mine = claim.actorId === data.you;
-  const name = nameOf(data, claim.actorId);
+  const name = holderName(data, claim.actorId);
   const live = Date.parse(claim.leaseUntil) > Date.now();
   const until = (
     <time dateTime={claim.leaseUntil} title={fullTime(claim.leaseUntil)}>

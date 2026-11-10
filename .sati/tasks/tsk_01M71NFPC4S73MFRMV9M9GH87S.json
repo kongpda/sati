@@ -1,0 +1,35 @@
+{
+  "body": "PLAN Phase 5h, WP1 in docs/review-followups.md (items 1.1 to 1.8). Decisions are in that file's Decisions table.",
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "heartbeatAt": "2026-11-10T02:44:57.679Z",
+    "holder": {
+      "host": "h:001065b26af48df5",
+      "pid": 98879
+    },
+    "leaseUntil": "2026-11-10T06:44:57.679Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-10T02:44:36.868Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "deep",
+  "id": "tsk_01M71NFPC4S73MFRMV9M9GH87S",
+  "labels": [
+    "review-followups"
+  ],
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T02:44:36.868Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-10T02:44:57.680Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T02:44:57.680Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T02:44:57.680Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-10T02:44:57.680Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "in_progress",
+  "title": "Review follow-ups WP1: sync and snapshot safety",
+  "updatedAt": "2026-11-10T02:44:57.682Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

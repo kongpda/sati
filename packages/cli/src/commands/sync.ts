@@ -1,19 +1,35 @@
 import { CLI_NAME, type ImportResult, readSettings, updateSettings } from "@sati/core";
-import { type ExportResult, exportSnapshot, importSnapshot } from "@sati/sync";
+import { type ExportResult, exportSnapshot, importSnapshot, refusedError } from "@sati/sync";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { execute, openRuntime, output, readProjectConfig, snapshotDir } from "../runtime.js";
+import { openRuntime, output, readProjectConfig, snapshotDir } from "../runtime.js";
 
 /** Also the top-level `sati export`. */
 export const exportCmd = defineCommand({
-  meta: { name: "export", description: "Write changed records to .sati/ (run by pre-commit)" },
+  meta: {
+    name: "export",
+    description: "Load newer records from .sati/, then write changed ones (run by pre-commit)",
+  },
   args: {
     ...json,
   },
   run: ({ args }) =>
-    execute(
+    // Not `execute`: its export after writes would only repeat the full export below.
+    output(
       args.json,
-      (rt) => exportSnapshot(rt.ctx, snapshotDir(rt)),
+      async () => {
+        const rt = await openRuntime();
+        const dir = snapshotDir(rt);
+        // A teammate's edit that no hook imported (stash pop, cherry-pick, `git apply`) is loaded
+        // first, so the commit carries it as it is. A refused import throws here and stops the
+        // commit: committing over a snapshot that cannot be read spreads it to every clone.
+        const { problems } = await importSnapshot(rt.ctx, dir);
+        for (const p of problems) process.stderr.write(`warning: ${p}\n`);
+        const result = await exportSnapshot(rt.ctx, dir);
+        // The other records are written; a refused one fails the command, and so the commit.
+        if (result.refused.length > 0) throw refusedError(result.refused);
+        return result;
+      },
       (r: ExportResult) =>
         `Exported ${r.written.length} changed, ${r.unchanged} unchanged.${
           r.newer.length > 0

@@ -43,6 +43,6 @@
   "status": "done",
   "title": "Faster large projects: cursor paging, incremental export, narrower guard and context lookups",
   "updatedAt": "2026-11-08T16:44:37.554Z",
-  "version": 4,
+  "version": 5,
   "worktree": "/home/user/workspace/repo"
 }

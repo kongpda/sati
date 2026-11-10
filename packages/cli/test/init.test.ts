@@ -27,6 +27,13 @@ interface Err {
 
 const HOOKS = ["pre-commit", "post-merge", "post-checkout", "post-rewrite", "pre-push"];
 
+// A PATH without sati that still finds node and git. Without git, init cannot see the repo
+// and falls back to standalone mode (on Windows git is not in /usr/bin).
+const gitBin = execFileSync(process.platform === "win32" ? "where" : "which", ["git"], {
+  encoding: "utf8",
+}).split(/\r?\n/u)[0];
+const base = [dirname(process.execPath), dirname(gitBin ?? ""), "/usr/bin", "/bin"].join(delimiter);
+
 const tempDir = () => realpathSync.native(mkdtempSync(join(tmpdir(), "sati-init-")));
 
 // `sati init` decides where the memory lives and what gets committed, so these tests pin
@@ -104,13 +111,6 @@ describe("sati init", () => {
   // The MCP config and hooks start `sati` by name; without it on PATH they fail silently,
   // so init must say so (on stderr, keeping --json output clean).
   it("warns when sati is not on PATH, and stays quiet when it is", async () => {
-    // git must stay on PATH, or init cannot install the hooks (on Windows it is not in /usr/bin).
-    const git = execFileSync(process.platform === "win32" ? "where" : "which", ["git"], {
-      encoding: "utf8",
-    }).split(/\r?\n/u)[0];
-    const base = [dirname(process.execPath), dirname(git ?? ""), "/usr/bin", "/bin"].join(
-      delimiter,
-    );
     const dir = await tempRepo();
     const missing = run(dir, ["init", "--yes", "--tools", "claude-code"], { PATH: base });
     expect(missing.code).toBe(0);
@@ -142,7 +142,6 @@ describe("sati init", () => {
     chmodSync(entry, 0o755);
     mkdirSync(join(dir, "node_modules", ".bin"));
     symlinkSync(entry, join(dir, "node_modules", ".bin", "sati"));
-    const base = [dirname(process.execPath), "/usr/bin", "/bin"].join(delimiter);
     const r = spawnSync(
       process.execPath,
       [entry, "init", "--yes", "--tools", "claude-code,codex"],

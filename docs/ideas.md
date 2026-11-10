@@ -27,7 +27,7 @@ Not fixed from the 2026-11-09 pre-cloud review (PLAN Phase 5e), each with the re
 - **Keep the dragged card mounted**: during an auto-scroll drag on the virtualised board the dragged card can leave the 8-row overscan and unmount. Not reproduced; revisit if a drag ever cancels.
 - **Drop Tailwind and add type and spacing tokens**: the UI uses no Tailwind utilities, only its preflight, and has 13 font sizes with no scale. Deferred: removing preflight changes every page's base styles and needs a full visual pass.
 
-Found by the 2026-11-10 whole-project review (PLAN Phase 5g) and left for the owner, each with the reason. Nothing here was verified beyond a code read unless it says so.
+Found by the 2026-11-10 whole-project review (PLAN Phase 5g) and left for the owner, each with the reason. These are now planned as PLAN Phase 5h; `docs/review-followups.md` has the plan and checklist for each. Nothing here was verified beyond a code read unless it says so.
 
 Behaviour and data:
 

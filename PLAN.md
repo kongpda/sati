@@ -739,6 +739,21 @@ Added 2026-11-10 at the owner's request: read the whole project, fix what is cer
 - [x] Docs: `note update --pinned|--private` in `knowledge-brain.md`, `sati export` in this plan, the layout and rules-block line in `AGENTS.md`
 - [x] The rest is listed for the owner in `docs/ideas.md`
 
+### Phase 5h — Review follow-ups (added 2026-11-10)
+
+Added 2026-11-10 at the owner's request: the items the Phase 5g review found and did not fix, for another agent to continue. `docs/review-followups.md` has the problem, plan, tests and checklist for each work package (WP). Tick a box here when every box of its package is ticked there.
+
+- [ ] WP1 Sync and snapshot safety
+- [ ] WP2 Core correctness
+- [ ] WP3 Performance
+- [ ] WP4 MCP and agent experience
+- [ ] WP5 CLI
+- [ ] WP6 Board
+- [ ] WP7 Test store parity
+- [ ] WP8 Docs and PLAN drift
+- [ ] WP9 Release and CI
+- [ ] WP10 Finish the review
+
 ### Phase 6 — Hosted mode (deferred to v2)
 
 Deferred by the owner on 2026-11-07: v1 stays local-first. See `docs/progress.md`.

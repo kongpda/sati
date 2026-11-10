@@ -249,6 +249,35 @@ export function storeContract(name: string, open: () => Promise<StorageAdapter>)
       await store.close();
     });
 
+    // The brief finds your last session across every session actor in one query.
+    it("filters activity by any of several actors", async () => {
+      const store = await seeded();
+      const row = (actorId: string, at: string) => ({
+        id: id("act"),
+        projectId: PROJECT,
+        actorId,
+        verb: "update" as const,
+        entity: "task" as const,
+        entityId: "tsk_01JD0000000000000000000000",
+        diff: {},
+        branch: null,
+        at,
+      });
+      const [a, b, c] = ["actr_01JDA", "actr_01JDB", "actr_01JDC"];
+      await store.write(async (w) => {
+        await w.appendActivity(row(a, "2026-11-03T12:00:01.000Z"));
+        await w.appendActivity(row(b, "2026-11-03T12:00:02.000Z"));
+        await w.appendActivity(row(c, "2026-11-03T12:00:03.000Z"));
+      });
+      const actors = (actorIds: string[]) =>
+        store
+          .read((r) => r.listActivity(PROJECT, { actorIds }))
+          .then((rs) => rs.map((x) => x.actorId));
+      expect(await actors([a, b])).toEqual([b, a]);
+      expect(await actors([])).toEqual([]);
+      await store.close();
+    });
+
     it("lists activity newest first, and caps a page at 500", async () => {
       const store = await seeded();
       await store.write(async (w) => {

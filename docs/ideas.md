@@ -101,3 +101,4 @@ From the 2026-11-10 review (WP10), features rather than bugs:
 - **`milestone update --date none`** to clear a target date, as `task update --due none` does.
 - **CLI parity with MCP**: `task create --checklist`, similar tasks in `task create` output, `roadmap_upsert` `dryRun`, `brief --max-tokens`, `"me"` as an MCP assignee, listing deleted tasks and filtering by parent in `task list`.
 - **A per-file removal ratio** in the guard, or a check for stub files, so replacing a protected file with one line is blocked like emptying it. Needs an owner decision on the threshold.
+- **"Today" in the user's time zone**: due dates and `--since` count days in UTC. Using local time needs a time-zone setting per person, and teammates in different zones would then disagree on what is overdue; records synced through git need one shared clock. Kept as UTC for now (review WP10).

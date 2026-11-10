@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
-import { globBraceError } from "../domain/locks.js";
-import { BodyText, DecisionId, Feature, LIMITS } from "../domain/schemas.js";
+import { BodyText, DecisionId, Feature, LIMITS, RepoPath } from "../domain/schemas.js";
 import { refuseSecrets } from "../domain/secrets.js";
 import { FEATURE_TRANSITIONS, featureRemovalNeedsDecision } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
@@ -16,16 +15,6 @@ import {
   updateWithLog,
 } from "./context.js";
 
-/** A path or glob whose braces stay within the expansion cap, so a guard run cannot blow up on it. */
-const BoundedGlob = z
-  .string()
-  .min(1)
-  .max(LIMITS.path)
-  .superRefine((g, c) => {
-    const message = globBraceError(g);
-    if (message) c.addIssue({ code: "custom", message });
-  });
-
 const fields = Feature.pick({
   title: true,
   description: true,
@@ -37,8 +26,8 @@ const fields = Feature.pick({
   milestoneId: true,
 }).extend({
   description: BodyText,
-  paths: z.array(BoundedGlob).max(LIMITS.array),
-  tests: z.array(BoundedGlob).max(LIMITS.array),
+  paths: z.array(RepoPath).max(LIMITS.array),
+  tests: z.array(RepoPath).max(LIMITS.array),
 });
 export const CreateFeatureInput = fields.partial({
   description: true,

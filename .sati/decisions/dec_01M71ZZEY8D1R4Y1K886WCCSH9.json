@@ -1,0 +1,13 @@
+{
+  "createdAt": "2026-11-10T05:47:59.304Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "decision": "Replace the identical LockPath (lock.ts) and ModulePath (context-cache.ts) schemas and feature.ts BoundedGlob with RepoPath in domain/schemas.ts, and use it for filesTouched and feature paths/tests too. Behaviour of locks and cards is unchanged; features and completions now refuse absolute and .. paths.",
+  "id": "dec_01M71ZZEY8D1R4Y1K886WCCSH9",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T05:47:59.305Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "title": "One RepoPath schema for repo-relative input paths",
+  "updatedAt": "2026-11-10T05:47:59.304Z",
+  "version": 1
+}

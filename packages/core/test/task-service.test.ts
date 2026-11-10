@@ -164,6 +164,26 @@ describe("completeTask", () => {
     });
   });
 
+  // Why: an absolute path was stored as written, so the guard, reviews and `changes` never
+  // matched it to a repo file; context cards already refused one.
+  it("refuses absolute paths in filesTouched and feature paths, and tidies ./", async () => {
+    const { ctx } = await setup();
+    const t = await createTask(ctx, { title: "x" });
+    const { claim } = await updateTask(ctx, t.id, { status: "in_progress" });
+    const token = claim?.token;
+    await expect(
+      completeTask(ctx, t.id, { summary: "ok", filesTouched: ["/Users/me/repo/a.ts"], token }),
+    ).rejects.toMatchObject({ code: "VALIDATION" });
+    await expect(createFeature(ctx, { title: "F", paths: ["/abs/src/**"] })).rejects.toMatchObject({
+      code: "VALIDATION",
+    });
+    await expect(createFeature(ctx, { title: "F", tests: ["../x.test.ts"] })).rejects.toMatchObject(
+      { code: "VALIDATION" },
+    );
+    const done = await completeTask(ctx, t.id, { summary: "ok", filesTouched: ["./a.ts"], token });
+    expect(done.completion?.filesTouched).toEqual(["a.ts"]);
+  });
+
   it("needs no files in a general project, where work is often not in files", async () => {
     const { ctx } = await setup();
     await updateSettings(ctx, { kind: "general" });

@@ -144,6 +144,27 @@ describe("buildBrief", () => {
   }, 60_000);
 
   // PLAN: a feature glob that matches zero tracked files is reported. doctor repeats this in Phase 5.
+  // Why: the brief read at most 500 active tasks and 20 decisions and never said so. Past 500
+  // active tasks, the agent's own claimed task could vanish from its brief.
+  it("finds my claimed task past 500 active tasks, and every decision of the last 7 days", async () => {
+    const { ctx } = await setup();
+    const mine = await createTask(ctx, { title: "My low task", priority: "low" });
+    await claimTask(ctx, mine.id);
+    const template = await createTask(ctx, { title: "Busy", priority: "urgent" });
+    await ctx.store.write(async (w) => {
+      for (let i = 0; i < 501; i++) {
+        const id = `tsk_01JZ${String(i).padStart(22, "0")}`;
+        await w.insert("task", { ...template, id, status: "blocked" });
+      }
+    });
+    for (let i = 1; i <= 25; i++)
+      await recordDecision(ctx, { title: `Choice ${i}`, decision: "x" });
+    const md = (await buildBrief(ctx, { maxTokens: BRIEF_TOKEN_CAP })).markdown;
+    expect(md).toContain(`${shortHandle(mine.id)} [in_progress, low] My low task`);
+    const decisions = md.split("## Decisions, last 7 days")[1]?.split("\n## ")[0] ?? "";
+    expect(decisions.match(/Choice \d+/gu)).toHaveLength(25);
+  });
+
   it("names feature globs that match no tracked file", async () => {
     const { ctx } = await setup();
     const missing = await createFeature(ctx, {

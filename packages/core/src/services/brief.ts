@@ -3,8 +3,9 @@ import { z } from "zod";
 import { shortHandle } from "../domain/ids.js";
 import { pathsOverlap } from "../domain/locks.js";
 import { isGuardedFeature } from "../domain/rules.js";
-import type { Feature, Note, Task } from "../domain/schemas.js";
+import type { Decision, Feature, Note, Task } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
+import type { StorageReader } from "../ports/storage.js";
 import { type ChangeItem, lastSession, readChanges } from "./changes.js";
 import { COMMENT_TAG, isThreadNote } from "./comment.js";
 import { actorName, listAll, nowIso, parseInput, type ServiceContext } from "./context.js";
@@ -48,13 +49,18 @@ export type BriefInput = z.input<typeof BriefInput>;
 
 export interface Brief {
   markdown: string;
-  /** Estimated as characters / 4, which overestimates for English Markdown. */
+  /** Estimated as characters / 4, and one token for each character outside ASCII. */
   tokens: number;
   /** Lines left out to stay under the cap. */
   omitted: number;
 }
 
-export const estimateTokens = (text: string): number => Math.ceil(text.length / 4);
+export const estimateTokens = (text: string): number => {
+  // About four characters per token holds for English. Thai, Khmer, Chinese and other scripts
+  // outside ASCII take a token or more per character, so chars / 4 let them run far over a cap.
+  const other = text.match(/[^\t\n\r\x20-\x7e]/gu)?.length ?? 0;
+  return Math.ceil((text.length - other) / 4 + other);
+};
 
 interface Section {
   title: string;
@@ -82,10 +88,9 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
   const data = await ctx.store.read(async (r) => {
     const project = await r.getProject();
     const actor = await r.get("actor", ctx.actorId);
-    const active = await r.list("task", ctx.projectId, {
-      status: ["in_progress", "review", "blocked"],
-      limit: 500,
-    });
+    // Every list here is read in full: a cap of 500 cut lists without saying so, and past 500
+    // active tasks your own claimed task could drop out of your brief.
+    const active = await listAll(r, ctx, "task", { status: ["in_progress", "review", "blocked"] });
     const mine = active.filter((t) => t.claim?.actorId === ctx.actorId && t.claim.leaseUntil > now);
     const ready = await r.readyTasks(ctx.projectId, now, short ? 3 : 5);
     const featureIds = [...new Set(mine.map((t) => t.featureId).filter((id) => id !== null))];
@@ -94,18 +99,14 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       const f = await r.get("feature", id);
       if (f && f.deletedAt === null) features.set(id, f);
     }
-    const decisions = short
-      ? []
-      : (await r.list("decision", ctx.projectId, { newestFirst: true, limit: 20 })).filter(
-          (d) => d.createdAt >= since,
-        );
-    const allFeatures = short ? [] : await r.list("feature", ctx.projectId, { limit: 500 });
+    const decisions = short ? [] : await decisionsSince(r, ctx, since);
+    const allFeatures = short ? [] : await listAll(r, ctx, "feature");
     const guarded = allFeatures.filter((f) => f.protected && isGuardedFeature(f));
     // Features tied to my tasks come first: those are the ones I am most likely to touch.
     guarded.sort((a, b) => Number(features.has(b.id)) - Number(features.has(a.id)));
     const locks = short
       ? []
-      : (await r.list("lock", ctx.projectId, { limit: 500 })).filter(
+      : (await listAll(r, ctx, "lock")).filter(
           (l) => l.actorId !== ctx.actorId && l.leaseUntil > now,
         );
     const held = [];
@@ -162,7 +163,7 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       .slice(0, LINKED_CARDS);
     const person = actor?.kind === "human";
     const waiting = person
-      ? (await r.list("task", ctx.projectId, { status: ["review"], limit: 500 })).filter(
+      ? (await listAll(r, ctx, "task", { status: ["review"] })).filter(
           (t) => t.claim === null || t.claim.leaseUntil <= now,
         )
       : [];
@@ -413,6 +414,25 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
     },
   ];
   return fit(header, sections, maxTokens);
+}
+
+/**
+ * Decisions made at or after `since`, newest first. They list by id, which follows creation
+ * time, so paging stops at the first older one; one more than a section shows is enough for
+ * `fit` to say how many were left out.
+ */
+async function decisionsSince(r: StorageReader, ctx: ServiceContext, since: string) {
+  const out: Decision[] = [];
+  for (let after: string | undefined; out.length <= SECTION_LINES; ) {
+    const page = await r.list("decision", ctx.projectId, { newestFirst: true, limit: 50, after });
+    for (const d of page) {
+      if (d.createdAt < since) return out;
+      out.push(d);
+    }
+    after = page.at(-1)?.id;
+    if (page.length < 50 || after === undefined) return out;
+  }
+  return out;
 }
 
 /**

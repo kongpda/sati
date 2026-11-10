@@ -221,6 +221,7 @@ export class MemoryStore implements StorageAdapter {
           .slice(q.after === undefined ? 0 : start + 1)
           .filter((a) => a.projectId === projectId)
           .filter((a) => (q.actorId ? a.actorId === q.actorId : true))
+          .filter((a) => (q.actorIds ? q.actorIds.includes(a.actorId) : true))
           .filter((a) => (q.entityId ? a.entityId === q.entityId : true))
           .filter((a) => (q.since ? a.at >= q.since : true));
         // Without a cursor, newest `at` first (then id), as SQL orders it; with one, commit order.

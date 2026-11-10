@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { globBraceError, normalizeLockPath } from "./locks.js";
 import { FEATURE_STATUSES, MILESTONE_STATUSES, TASK_STATUSES } from "./status.js";
 
 /** Limits from the Security section: bodies up to 100 KB, arrays up to 500 items. */
@@ -58,6 +59,28 @@ const shortText = z.string().max(LIMITS.shortText);
 const list = <T extends z.ZodType>(item: T) => z.array(item).max(LIMITS.array);
 const pathGlob = z.string().min(1).max(LIMITS.path);
 const label = z.string().trim().min(1).max(100);
+/**
+ * A repo-relative path or glob from input, normalised (no `./`, no trailing `/`). Absolute paths
+ * and `..` are refused: they never match a repo file, so the guard and reviews would miss them.
+ */
+export const RepoPath = z
+  .string()
+  .min(1)
+  .max(LIMITS.path)
+  .transform((raw, c) => {
+    const tooMany = globBraceError(raw);
+    if (tooMany) {
+      c.addIssue({ code: "custom", message: tooMany });
+      return z.NEVER;
+    }
+    const p = normalizeLockPath(raw);
+    if (p === undefined) {
+      c.addIssue({ code: "custom", message: `"${raw}" is not a repo-relative path or glob` });
+      return z.NEVER;
+    }
+    return p;
+  });
+
 /**
  * A calendar day, YYYY-MM-DD. Not `z.iso.date()`: its leap-year regex is 330 characters in the
  * JSON Schema every agent loads with the tools; the short pattern plus this check is the same rule.

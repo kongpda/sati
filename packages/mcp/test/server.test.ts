@@ -193,8 +193,47 @@ describe("MCP server", () => {
     const create = await call(client, "feature_upsert", { title: "Billing", expectedVersion: 1 });
     expect(create.body.error).toMatchObject({
       code: "VALIDATION",
-      message: "expectedVersion apply only when updating a feature.",
+      message: "expectedVersion applies only when updating a feature.",
     });
+    // Why: notes and milestones gave a bare "Unrecognized key" for the same mistake, which does
+    // not tell an agent that it forgot the id.
+    const note = await call(client, "note_upsert", {
+      title: "N",
+      reviewed: true,
+      acknowledge: true,
+    });
+    expect(note.body.error).toMatchObject({
+      code: "VALIDATION",
+      message: "reviewed, acknowledge apply only when updating a note.",
+      hint: "Pass id to update an existing note, or leave them out to create one.",
+    });
+    const plan = await call(client, "roadmap_upsert", { title: "M", expectedVersion: 1 });
+    expect(plan.body.error).toMatchObject({
+      code: "VALIDATION",
+      message: "expectedVersion applies only when updating a milestone.",
+    });
+    // Why: the SDK's own schema check answered in bare text, so an agent could not branch on a
+    // code; and feature paths kept an absolute path as written, which never matches a repo file.
+    const bad = await call(client, "task_list", { limit: "ten" });
+    expect(bad.body.error).toMatchObject({ code: "VALIDATION" });
+    const feature = await call(client, "feature_upsert", {
+      title: "Login",
+      paths: [join(dir, "src", "login", "**")],
+      tests: ["./test/login.test.ts"],
+    });
+    expect(feature.body).toMatchObject({ paths: ["src/login/**"], tests: ["test/login.test.ts"] });
+    const outsideFeature = await call(client, "feature_upsert", { title: "X", paths: ["/etc/**"] });
+    expect(outsideFeature.body.error).toMatchObject({ code: "VALIDATION" });
+    const t = await createTask(ctx, { title: "Form" });
+    const { body: claimed } = await call(client, "task_claim", { id: t.id });
+    await call(client, "task_complete", {
+      id: t.id,
+      summary: "Form",
+      filesTouched: [join(dir, "src", "login", "form.ts")],
+      token: claimed.claim.token,
+    });
+    const stored = await store.read((r) => r.get("task", t.id));
+    expect(stored?.completion?.filesTouched).toEqual(["src/login/form.ts"]);
   });
 
   // PLAN Phase 7a: agents write and read notes, not only search them.

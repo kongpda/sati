@@ -611,9 +611,15 @@ export async function actorRef(
   ctx: ServiceContext,
   value: string | undefined,
 ): Promise<string | undefined> {
-  if (!value || value.startsWith("actr_")) return value;
+  if (!value) return value;
+  if (value.startsWith("actr_")) return resolveId(ctx, "actor", value);
   const actors = await ctx.store.read((r) => listAll(r, ctx, "actor"));
-  return actors.find((a) => a.name === value || a.displayName === value)?.id ?? value;
+  const found = actors.find((a) => a.name === value || a.displayName === value);
+  if (found) return found.id;
+  // An unknown name used to filter by itself and quietly return nothing.
+  throw new SatiError("NOT_FOUND", `No actor is named ${value}.`, {
+    hint: "Check the spelling, or pass the actor's id or handle (actr_8f3k2a).",
+  });
 }
 
 export async function refs(

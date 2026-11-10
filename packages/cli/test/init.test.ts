@@ -55,7 +55,7 @@ describe("sati init", () => {
     // PLAN: the merge driver is registered through .gitattributes and local git config.
     // PLAN: linguist-generated collapses the snapshot in PR diffs.
     expect(readFileSync(join(dir, ".gitattributes"), "utf8")).toBe(
-      ".sati/*/*.json merge=sati linguist-generated\n",
+      ".sati/*/*.json merge=sati linguist-generated text eol=lf\n",
     );
     const driver = execFileSync("git", ["config", "--get", "merge.sati.driver"], {
       cwd: dir,
@@ -385,7 +385,7 @@ describe("sati init", () => {
     expect(r.data.files).toContainEqual({ path: ".gitattributes", action: "update" });
     expect(r.data.files).toContainEqual({ path: ".git/config", action: "update" });
     expect(readFileSync(join(dir, ".gitattributes"), "utf8")).toBe(
-      "*.png binary\n.sati/*/*.json merge=sati linguist-generated\n",
+      "*.png binary\n.sati/*/*.json merge=sati linguist-generated text eol=lf\n",
     );
     // The user's own text stays; the managed rules block is added after it.
     expect(r.data.files).toContainEqual({ path: "AGENTS.md", action: "update" });

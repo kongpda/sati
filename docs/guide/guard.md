@@ -63,6 +63,26 @@ For a lock, ask the holder, or wait for the lease to end. To take another agent'
 
 To skip the guard once, set `SATI_GUARD=off`. The override is logged in the activity log.
 
+## Known limits
+
+The guard is a check on the usual paths, not a sandbox. The `pre-commit` guard on the staged diff
+is the backstop for anything the editor hook cannot see.
+
+- **Binary files** have no line counts, so `protected-gutted` never applies to them. Deleting one
+  still counts as `protected-delete`.
+- **Truncating a file** with the Write tool or `> file` only warns in the editor hook. The staged
+  check sees the removed lines: an emptied file is blocked like a delete, and a cut over the
+  ratio is blocked as `protected-gutted`.
+- **Shell commands the hook does not parse**: `xargs rm`, `find -delete`, `eval`, scripts run by
+  other interpreters, paths held in variables, `git -c alias.x=...` and `git commit-tree`. The
+  staged check still sees what they change.
+- **`SATI_GUARD=off git commit`** is allowed on purpose. It is the documented override, and it is
+  logged.
+- **Accepted gaps**: removing a feature over many small commits that each stay under the ratio,
+  moving files out through a symlink, and `git commit -m "--no-verify"` being blocked as if it
+  were the flag.
+- **A rename out of a protected feature** only warns (`renamed-out`).
+
 ## Locks
 
 ```bash

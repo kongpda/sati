@@ -211,9 +211,15 @@ export default defineCommand({
         ? stagedChanges(rt.location.root)
         : args.range
           ? rangeChanges(rt.location.root, args.range)
-          : (list(args.paths) ?? []).flatMap((p) => {
+          : (list(args.paths) ?? []).map((p) => {
               const path = inRepo(rt.location.root, cwd, p);
-              return path === undefined ? [] : [{ path, kind: "modified" as const }];
+              // Dropping it would print "allowed" for a path that was never checked.
+              if (path === undefined) {
+                throw new SatiError("USAGE", `${p} is outside this repository.`, {
+                  hint: "Pass paths inside the repository, relative to it or to this folder.",
+                });
+              }
+              return { path, kind: "modified" as const };
             });
       const result = await check(rt, changes, args.staged ?? false);
       process.stdout.write(asJson ? `${JSON.stringify(result, null, 2)}\n` : `${render(result)}\n`);

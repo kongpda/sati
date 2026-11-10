@@ -21,6 +21,7 @@ import {
   removableWorktrees,
   reviewDrift,
   type ServiceContext,
+  shortHandle,
   updateNote,
   updateTask,
   worktreeWarnings,
@@ -189,8 +190,28 @@ describe("claims of stopped agents", () => {
     clock.advance(5 * 60_000);
     expect(claimHealth({ ...ctx, processes: probe(null) }, [held]).gone).toHaveLength(0);
 
-    const checks = await doctorChecks(dead);
-    expect(checks.find((c) => c.name === "claims")).toMatchObject({ ok: false });
+    // Count the task reads: doctor read every task three times (claims, review, links).
+    let taskReads = 0;
+    const store = ctx.store;
+    const counted: typeof store = Object.create(store);
+    counted.read = (fn) =>
+      store.read((r) =>
+        fn(
+          Object.assign(Object.create(r), {
+            list: (...args: Parameters<typeof r.list>) => {
+              if (args[0] === "task") taskReads++;
+              return r.list(...args);
+            },
+          }),
+        ),
+      );
+    const checks = await doctorChecks({ ...dead, store: counted });
+    expect(taskReads).toBe(1);
+    const claims = checks.find((c) => c.name === "claims");
+    expect(claims).toMatchObject({ ok: false });
+    // Short handles, like every other line doctor prints.
+    expect(claims?.detail).toContain(`(${shortHandle(t.id)})`);
+    expect(claims?.detail).not.toContain(t.id);
     const released = await releaseExpiredClaims(dead);
     expect(released.map((r) => r.id)).toEqual([t.id]);
     expect((await getRecord(ctx, "task", t.id)).status).toBe("todo");
@@ -352,6 +373,10 @@ describe("worktree overlaps", () => {
     expect(brief).toContain("Your branch conflicts with origin/main in src/q.ts");
     // Checking given paths only looks at those.
     expect((await worktreeWarnings(a, { paths: ["README.md"] })).overlaps).toEqual([]);
+    // Why: a glob, as lock paths are written, matched no changed file, so it found nothing.
+    // The locked src/y.ts stays out.
+    const area = (await worktreeWarnings(a, { paths: ["src/**"] })).overlaps.map((o) => o.path);
+    expect(area.sort()).toEqual(["src/x.ts", "src/z.ts"]);
   });
 
   it("skips expired and placeless holders, says nothing without git, and caps the list", async () => {

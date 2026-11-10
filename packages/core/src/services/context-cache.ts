@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import micromatch from "micromatch";
 import { z } from "zod";
-import { globBraceError, normalizeLockPath, pathsOverlap } from "../domain/locks.js";
-import { ContextEntry, LIMITS } from "../domain/schemas.js";
+import { pathsOverlap } from "../domain/locks.js";
+import { ContextEntry, LIMITS, RepoPath } from "../domain/schemas.js";
 import { refuseSecrets } from "../domain/secrets.js";
 import type { RepoFile } from "../ports/repo.js";
 import {
@@ -15,29 +15,11 @@ import {
 } from "./context.js";
 import { alreadyShared } from "./note.js";
 
-const ModulePath = z
-  .string()
-  .min(1)
-  .max(LIMITS.path)
-  .transform((raw, c) => {
-    const tooMany = globBraceError(raw);
-    if (tooMany) {
-      c.addIssue({ code: "custom", message: tooMany });
-      return z.NEVER;
-    }
-    const p = normalizeLockPath(raw);
-    if (p === undefined) {
-      c.addIssue({ code: "custom", message: `"${raw}" is not a repo-relative path or glob` });
-      return z.NEVER;
-    }
-    return p;
-  });
-
 const card = ContextEntry.shape;
 export const PutContextInput = z.strictObject({
-  path: ModulePath,
+  path: RepoPath,
   summary: card.summary.min(1),
-  keyFiles: z.array(ModulePath).max(LIMITS.array).optional(),
+  keyFiles: z.array(RepoPath).max(LIMITS.array).optional(),
   facts: card.facts,
   tags: card.tags,
   sourceSeen: card.sourceSeen,
@@ -49,7 +31,7 @@ export type PutContextInput = z.input<typeof PutContextInput>;
 
 export const GetContextInput = z.strictObject({
   /** Only entries whose path overlaps this one. All entries when absent. */
-  path: ModulePath.optional(),
+  path: RepoPath.optional(),
 });
 export type GetContextInput = z.input<typeof GetContextInput>;
 

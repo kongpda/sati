@@ -37,8 +37,13 @@ const render = (e: ContextView) => {
   return lines.join("\n");
 };
 
+const getMeta = {
+  name: "get",
+  description: "Show cards, flagging STALE those whose files changed since",
+};
+
 const get = defineCommand({
-  meta: { name: "get", description: "Show cards, flagging STALE those whose files changed since" },
+  meta: getMeta,
   args: {
     path: {
       type: "positional",
@@ -108,5 +113,5 @@ export default defineCommand({
     description: "Cards: what agents learned about files and modules (also `sati context`)",
   },
   // `show` reads better for a person; `get` matches the MCP tool.
-  subCommands: { show: get, get, put },
+  subCommands: { show: { ...get, meta: { ...getMeta, name: "show" } }, get, put },
 });

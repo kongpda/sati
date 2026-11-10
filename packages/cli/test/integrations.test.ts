@@ -23,6 +23,18 @@ describe("agent file planning", () => {
     expect(upsertBlock(once)).toBe(once);
   });
 
+  // Why: in a CRLF checkout (core.autocrlf), init wrote the block in LF and left a stray `\r`
+  // line after it, so every fresh clone showed AGENTS.md as changed.
+  it("writes the block with the file's CRLF line endings, and keeps it on the next run", () => {
+    const crlf = (t: string) => t.replaceAll("\n", "\r\n");
+    const user = crlf("# Team rules\n\nUse tabs.\n");
+    const once = upsertBlock(user);
+    expect(once).toBe(crlf(`# Team rules\n\nUse tabs.\n\n${RULES_BLOCK}`));
+    expect(upsertBlock(once)).toBe(once);
+    const old = crlf(`${RULES_BLOCK.replace("start v1", "start v0")}After.\n`);
+    expect(upsertBlock(old)).toBe(crlf(`${RULES_BLOCK}After.\n`));
+  });
+
   it("keeps the block under 30 lines so it costs little context", () => {
     expect(RULES_BLOCK.trimEnd().split("\n").length).toBeLessThan(30);
     // Review 4.6 added words and kept both blocks within their 2026-11-10 size.

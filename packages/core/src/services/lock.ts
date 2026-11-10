@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
-import { globBraceError, normalizeLockPath, overlappingPaths } from "../domain/locks.js";
-import { LIMITS, LOCK_MODES, type Lock, TaskId } from "../domain/schemas.js";
+import { overlappingPaths } from "../domain/locks.js";
+import { LIMITS, LOCK_MODES, type Lock, RepoPath, TaskId } from "../domain/schemas.js";
 import type { StorageReader, StorageWriter } from "../ports/storage.js";
 import {
   actorName,
@@ -16,26 +16,8 @@ import {
 } from "./context.js";
 import { DEFAULT_LEASE_MINUTES } from "./project.js";
 
-const LockPath = z
-  .string()
-  .min(1)
-  .max(LIMITS.path)
-  .transform((raw, c) => {
-    const tooMany = globBraceError(raw);
-    if (tooMany) {
-      c.addIssue({ code: "custom", message: tooMany });
-      return z.NEVER;
-    }
-    const p = normalizeLockPath(raw);
-    if (p === undefined) {
-      c.addIssue({ code: "custom", message: `"${raw}" is not a repo-relative path or glob` });
-      return z.NEVER;
-    }
-    return p;
-  });
-
 export const AcquireLockInput = z.strictObject({
-  paths: z.array(LockPath).min(1).max(LIMITS.array),
+  paths: z.array(RepoPath).min(1).max(LIMITS.array),
   mode: z.enum(LOCK_MODES).default("exclusive"),
   taskId: TaskId.optional(),
   reason: z.string().max(LIMITS.shortText).default(""),
@@ -191,7 +173,7 @@ export async function releaseLock(
     if (lock.actorId !== ctx.actorId && isLive(lock, nowIso(ctx)) && !force) {
       const name = await actorName(w, lock.actorId);
       throw new SatiError("CONFLICT", `Lock ${id} is held by ${name} until ${lock.leaseUntil}.`, {
-        hint: "Only the holder releases a lock. Use --force to override; it is logged.",
+        hint: "Only the holder releases a lock. Pass force to override (`--force` on the command line); it is logged.",
         details: { holder: lock.actorId, holderName: name, leaseUntil: lock.leaseUntil },
       });
     }

@@ -2,7 +2,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createIdFactory, initProject, systemClock } from "@sati/core";
+import { createIdFactory, initProject, SEARCHABLE, systemClock } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
 import { describe, expect, it } from "vitest";
 import pkg from "../package.json" with { type: "json" };
@@ -78,6 +78,66 @@ describe("task flags", () => {
       "none",
     ).data;
     expect(cleared).toMatchObject({ featureId: null, parentId: null, dependsOn: [] });
+  });
+});
+
+describe("actor filters", () => {
+  // Why: `changes --actor` with a misspelt name filtered by the name itself and printed
+  // "nothing changed", which reads as a true answer; MCP `changes` took only a full actor id.
+  it("changes and activity refuse an unknown actor name, and take a handle", async () => {
+    const dir = await tempRepo({ init: true });
+    sati(dir, "task", "create", "A");
+    const bad = run(dir, ["changes", "--actor", "nobody", "--json"]);
+    expect(bad.code).not.toBe(0);
+    expect(bad.stdout + bad.stderr).toContain("NOT_FOUND");
+    expect(run(dir, ["activity", "--actor", "nobody"]).code).not.toBe(0);
+    const rows = satiJson<{ actorId: string }[]>(dir, "activity").data;
+    const actorId = rows[0]?.actorId ?? "";
+    const handle = `actr_${actorId.slice(-6).toLowerCase()}`;
+    const byHandle = satiJson<{ actorId: string }[]>(dir, "activity", "--actor", handle).data;
+    expect(byHandle.length).toBe(rows.filter((r) => r.actorId === actorId).length);
+    expect(byHandle.length).toBeGreaterThan(0);
+    expect(sati(dir, "changes", "--actor", handle).code).toBe(0);
+  });
+});
+
+describe("help", () => {
+  // Why: `search --entities` accepted `context`, but the help listed only four kinds, so card
+  // search could not be found from the CLI. `card show --help` printed `sati card get`.
+  it("search help lists every searchable kind, and card show names itself", async () => {
+    const dir = await tempRepo({ init: true });
+    const help = run(dir, ["search", "--help"]);
+    for (const kind of SEARCHABLE) expect(help.stdout).toContain(kind);
+    expect(run(dir, ["card", "show", "--help"]).stdout).toContain("card show");
+  });
+});
+
+describe("guard paths", () => {
+  // Why: a path outside the repo was dropped without a word, and guard printed "allowed" for a
+  // change it never checked.
+  it("refuses a path outside the repository", async () => {
+    const dir = await tempRepo({ init: true });
+    const r = run(dir, ["guard", "--paths", "../elsewhere.ts"]);
+    expect(r.code).toBe(2);
+    expect(r.stderr).toContain("outside this repository");
+  });
+});
+
+describe("line endings", () => {
+  // Why: a clone with core.autocrlf=true (the Windows default) checked .sati/ files out with
+  // CRLF, and the first `sync export` rewrote every unchanged record.
+  it("a clone with core.autocrlf keeps .sati/ records unchanged", async () => {
+    const dir = await tempRepo();
+    expect(sati(dir, "init", "--yes", "--tools", "").code).toBe(0);
+    sati(dir, "task", "create", "Hello");
+    git(dir, "add", "-A");
+    git(dir, "commit", "-qm", "init");
+    const clone = `${dir}-clone`;
+    git(dir, "clone", "-q", "-c", "core.autocrlf=true", dir, clone);
+    const task = git(clone, "ls-files", ".sati/tasks").trim();
+    expect(readFileSync(join(clone, task), "utf8")).not.toContain("\r");
+    expect(sati(clone, "init", "--yes", "--tools", "").code).toBe(0);
+    expect(sati(clone, "sync", "export").stdout).toContain("Exported 0 changed");
   });
 });
 

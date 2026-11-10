@@ -363,16 +363,18 @@ export function planHooks(
  * One folder deep: the record folders only. `**` also matched the config file, and the record
  * merge driver would bump its `version` past the one value the config schema accepts.
  */
-const ATTRIBUTE = `${CONFIG_DIR}/*/*.json merge=${CLI_NAME} linguist-generated`;
+const ATTRIBUTE = `${CONFIG_DIR}/*/*.json merge=${CLI_NAME} linguist-generated text eol=lf`;
 /** The lines older versions wrote; they are replaced, not duplicated. */
 const OLD_ATTRIBUTES = [
+  `${CONFIG_DIR}/*/*.json merge=${CLI_NAME} linguist-generated`,
   `${CONFIG_DIR}/**/*.json merge=${CLI_NAME} linguist-generated`,
   `${CONFIG_DIR}/**/*.json merge=${CLI_NAME}`,
 ];
 
 /**
  * `.gitattributes` routes the snapshot files to the merge driver and marks them generated, so PR
- * diffs collapse them. Other lines are kept.
+ * diffs collapse them. `eol=lf` keeps them as sati writes them: with `core.autocrlf` a clone got
+ * CRLF files, and the next export rewrote every record. Other lines are kept.
  */
 export function planGitAttributes(read: ReadFile): PlannedFile {
   const path = ".gitattributes";

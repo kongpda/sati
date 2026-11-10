@@ -75,13 +75,16 @@ export async function worktreeWarnings(
       : [];
   if (mine.length === 0) return { overlaps: [], conflicts };
   const mineSet = new Set(mine.filter((p) => !ignored(p)));
+  // Given paths can be globs, as lock paths are; changed files are plain paths.
+  const touches = (path: string) =>
+    mineSet.has(path) || (opts.paths !== undefined && mine.some((p) => pathsOverlap(p, path)));
   const locks = await listLocks(ctx);
   const locked = (path: string) => locks.some((l) => l.paths.some((g) => pathsOverlap(g, path)));
   const overlaps: Overlap[] = [];
   for (const [worktree, other] of [...others].slice(0, MAX_WORKTREES)) {
     const theirs = await repo.changedFiles(worktree);
     for (const path of theirs ?? []) {
-      if (!mineSet.has(path) || locked(path)) continue;
+      if (ignored(path) || !touches(path) || locked(path)) continue;
       overlaps.push({ path, worktree, ...other });
       if (overlaps.length >= MAX_OVERLAPS) return { overlaps, conflicts };
     }

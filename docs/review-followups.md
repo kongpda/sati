@@ -609,11 +609,11 @@ Effort: `deep`. Read-only first; fixes go through the same rule as Phase 5g: fix
 ### Found by the WP10 `--help` sweep (2026-11-10)
 
 - [x] `sati decision delete <handle>` looked the handle up among deleted decisions, so a live decision failed with NOT_FOUND (exit 3); a full id worked. Fixed, with a CLI test that deletes and restores a task, note and decision by handle.
-- [ ] Hook-mode exit codes differ from the README table on purpose: `guard --hook` exits 2 to block an edit (Claude Code's contract), and `nudge`, `wait --hook` and `merge-driver` exit 1 on any error. Now stated in their help; the README table could note it too.
-- [ ] `milestone update --date` cannot clear a date (`task --due none` can). Left as is; an idea, not a bug.
+- [x] Hook-mode exit codes differ from the README table on purpose: `guard --hook` exits 2 to block an edit (Claude Code's contract), and `nudge`, `wait --hook` and `merge-driver` exit 1 on any error. Now stated in their help; the README table could note it too. Duplicate of the item below, which is done.
+- [x] `milestone update --date` cannot clear a date (`task --due none` can). Left as is; an idea, not a bug. Duplicate of the item below, which is done.
 - [x] Hook-mode exit codes are now noted under the exit code table in `docs/guide/quick-start.md`.
 - [x] `milestone update --date` cannot clear a date: moved to `docs/ideas.md`.
-- [ ] `card show --help` prints `USAGE sati card get`, and the `context` alias prints `(sati card)`: the aliases share one command definition. Cosmetic.
+- [x] `card show --help` prints `USAGE sati card get`, and the `context` alias prints `(sati card)`: the aliases share one command definition. Cosmetic. `card show` now names itself; `context` is a documented alias of `card`, so `(sati card)` stays.
 
 ### Found by the WP10 review (2026-11-10)
 
@@ -636,45 +636,45 @@ Not fixed. Each needs a decision, is a known limit, or is small:
 
 Core services:
 
-- [ ] `lastSession` runs one query per sibling actor in the brief (N+1).
-- [ ] The brief reads every note and card with `listAll` at each session start (overlaps WP3.2).
-- [ ] Silent caps in the brief: 500 tasks, features and locks, and only the 20 newest decisions. Say when a list is cut.
-- [ ] "Today" for due dates and `--since` is UTC, not the user's day.
-- [ ] `sati changes` prints titles unclipped.
-- [ ] `recall` drops a first item bigger than the budget instead of clipping it.
-- [ ] The chars/4 token estimate is low for CJK and Khmer text.
-- [ ] Overlap is keyed by worktree, and glob lock paths are not matched against changed files.
-- [ ] `doctor` reads the task list three times and prints full ids.
-- [ ] One-line text outside fences (stale card summaries, feature paths) is clipped but not fenced. Accepted design; listed in case it changes.
+- [x] `lastSession` runs one query per sibling actor in the brief (N+1). Done (2026-11-10, WP10 leftovers): one activity query across all the actor ids.
+- [x] The brief reads every note and card with `listAll` at each session start (overlaps WP3.2). Already handled in WP3.2: measured at 56 ms with 18,000 records, inside the brief budget.
+- [x] Silent caps in the brief: 500 tasks, features and locks, and only the 20 newest decisions. Say when a list is cut. Done (2026-11-10, WP10 leftovers): the brief reads every active task, feature and lock, and pages decisions back to the 7-day window.
+- [x] "Today" for due dates and `--since` is UTC, not the user's day. Kept as UTC: moved to `docs/ideas.md` with the reason (teammates in other zones would disagree on what is overdue).
+- [x] `sati changes` prints titles unclipped. Done (2026-11-10, WP10 leftovers): milestone titles are clipped to 120 characters in the summary, headings and digest.
+- [x] `recall` drops a first item bigger than the budget instead of clipping it. Done (2026-11-10, WP10 leftovers).
+- [x] The chars/4 token estimate is low for CJK and Khmer text. Done (2026-11-10, WP10 leftovers): characters outside ASCII count as one token each.
+- [x] Overlap is keyed by worktree, and glob lock paths are not matched against changed files. Globs: done (2026-11-10). Keyed by worktree: not a bug; worktrees share one store, and each agent's changed files come from its own worktree's diff.
+- [x] `doctor` reads the task list three times and prints full ids. Done (2026-11-10, WP10 leftovers): one read, short handles.
+- [x] One-line text outside fences (stale card summaries, feature paths) is clipped but not fenced. Accepted design; listed in case it changes. No change (2026-11-10).
 
 MCP and CLI parity (see also WP4.4 and WP5.2):
 
-- [ ] `note_upsert` and `roadmap_upsert` give a bare "Unrecognized key" for `expectedVersion`, `reviewed` or `acknowledge` on create.
-- [ ] `changes` takes a full actor id only, and the CLI `--actor` with an unknown name returns nothing instead of NOT_FOUND.
-- [ ] `search --help` does not mention `context` as a kind.
-- [ ] `guard --paths` silently drops paths outside the repo.
-- [ ] Absolute paths are stored as written in `filesTouched`, feature paths and tests, while context paths refuse them.
-- [ ] MCP schema errors have no `code`, and some core hints name CLI flags (`--force`, `--files`).
+- [x] `note_upsert` and `roadmap_upsert` give a bare "Unrecognized key" for `expectedVersion`, `reviewed` or `acknowledge` on create. Done (2026-11-10, WP10 leftovers): they say the field applies only when updating, and to pass id.
+- [x] `changes` takes a full actor id only, and the CLI `--actor` with an unknown name returns nothing instead of NOT_FOUND. Done (2026-11-10, WP10 leftovers): handles work in MCP and the CLI, and an unknown name is NOT_FOUND in `changes` and `activity`.
+- [x] `search --help` does not mention `context` as a kind. Done (2026-11-10, WP10 leftovers): the help lists the kinds core searches.
+- [x] `guard --paths` silently drops paths outside the repo. Done (2026-11-10, WP10 leftovers): refused with exit 2.
+- [x] Absolute paths are stored as written in `filesTouched`, feature paths and tests, while context paths refuse them. Done (2026-11-10, WP10 leftovers): core refuses them as it does for locks and cards; MCP first makes one inside the repo relative.
+- [x] MCP schema errors have no `code`, and some core hints name CLI flags (`--force`, `--files`). Done (2026-11-10, WP10 leftovers): schema errors come back as VALIDATION in the usual shape; the hints name the field first and the flag second.
 
 Guard and shell hook (known limits, the pre-commit guard is the backstop):
 
 - [ ] A rename out of a protected feature only warns. Owner decision: block it like a delete?
-- [ ] Binary files have no line counts, so they are never ratio-checked. Document it in `docs/guide/guard.md`.
-- [ ] The Write tool and `> file` truncation only warn in the hook; the staged check catches them. The hook could compare with the file on disk.
-- [ ] Not parsed: `xargs rm`, `find -delete`, `eval`, scripts in other interpreters, paths in variables, `git -c alias.x=...`, `git commit-tree`.
-- [ ] `SATI_GUARD=off git commit` is allowed on purpose: it is the documented, logged override.
-- [ ] Accepted: removal spread over many small commits, a move out through a symlink, and `git commit -m "--no-verify"` being blocked.
+- [x] Binary files have no line counts, so they are never ratio-checked. Document it in `docs/guide/guard.md`. Documented under "Known limits".
+- [x] The Write tool and `> file` truncation only warn in the hook; the staged check catches them. The hook could compare with the file on disk. Documented as a known limit; the staged check is the backstop.
+- [x] Not parsed: `xargs rm`, `find -delete`, `eval`, scripts in other interpreters, paths in variables, `git -c alias.x=...`, `git commit-tree`. Documented as a known limit.
+- [x] `SATI_GUARD=off git commit` is allowed on purpose: it is the documented, logged override. Stated under "Known limits".
+- [x] Accepted: removal spread over many small commits, a move out through a symlink, and `git commit -m "--no-verify"` being blocked. Documented as accepted gaps.
 
-Windows (read only, not run):
+Windows (read only, not run). The open items below need a Windows machine to reproduce; they stay open until someone can run them there.
 
 - [ ] `hooks.ts` compares paths with `/` where Windows gives `\` (likely).
 - [ ] `runtime.ts` `changedFiles` compares worktree paths the same way (likely).
 - [ ] `selfCommand` checks `X_OK`, which means nothing on Windows; use `process.execPath` (likely).
 - [ ] The MCP config runs `node_modules/.bin/sati` and the Claude Code hooks use `sh` syntax (likely).
-- [ ] `sati serve` has no `error` handler, so EADDRINUSE crashes instead of exiting 4. This can happen on macOS and Linux too (likely).
-- [ ] The `.gitattributes` line should add `text eol=lf` so autocrlf does not rewrite `.sati/` files (likely).
+- [x] `sati serve` has no `error` handler, so EADDRINUSE crashes instead of exiting 4. This can happen on macOS and Linux too (likely). Already fixed in WP5.6 (test: "of two serves started at once, one runs and the other exits 4").
+- [x] The `.gitattributes` line should add `text eol=lf` so autocrlf does not rewrite `.sati/` files (likely). Reproduced on macOS with `core.autocrlf=true`: the clone got CRLF records and the first export rewrote them. Done (2026-11-10, WP10 leftovers); `init --upgrade` replaces the old line.
 - [ ] Renaming over an open file gives EPERM with no retry and leaves the `.tmp` file.
-- [ ] Doubtful: `existsSync` on a pipe, `isLocalInstall` case, the installed-self regex and CRLF, mixed line endings in rules blocks, `repoRelative` with `..foo` and no realpath, UNC paths never "network", `readFileSync(0)` on stdin.
+- [ ] Doubtful: `existsSync` on a pipe, `isLocalInstall` case, the installed-self regex and CRLF, mixed line endings in rules blocks (reproduced with `core.autocrlf` on macOS and fixed 2026-11-10: the block now follows the file's line endings), `repoRelative` with `..foo` and no realpath, UNC paths never "network", `readFileSync(0)` on stdin.
 - Checked and fine: pipe naming, socket cleanup, `kill(0)`, display paths, `sh` quoting, JSON escaping, `-z` git parsing.
 
 

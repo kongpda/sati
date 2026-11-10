@@ -21,8 +21,10 @@ export async function linkProblems(
   r: StorageReader,
   ctx: ServiceContext,
   ids?: readonly string[],
+  /** Every task, deleted ones too, when the caller has read them already. */
+  all?: readonly Task[],
 ): Promise<string[]> {
-  const all = await listAll(r, ctx, "task", { includeDeleted: true });
+  all ??= await listAll(r, ctx, "task", { includeDeleted: true });
   const tasks = new Map(all.map((t) => [t.id, t]));
   const live = async (entity: "feature" | "milestone", id: string) => {
     const rec = await r.get(entity, id);
@@ -68,17 +70,22 @@ export async function linkProblems(
  */
 export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> {
   const now = nowIso(ctx);
-  const data = await ctx.store.read(async (r) => ({
-    tasks: await listAll(r, ctx, "task", { status: ["in_progress", "review", "blocked"] }),
-    locks: await listAll(r, ctx, "lock"),
-    review: (await listAll(r, ctx, "task")).filter((t) => t.needsReview === true),
-    links: await linkProblems(r, ctx),
-    mode: (await r.getProject())?.mode ?? "git",
-    private: [
-      ...(await listAll(r, ctx, "note")).filter((n) => n.private).map((n) => `note "${n.title}"`),
-      ...(await listAll(r, ctx, "context")).filter((c) => c.private).map((c) => `card ${c.path}`),
-    ],
-  }));
+  const data = await ctx.store.read(async (r) => {
+    // One read of every task: the claims, review and link checks each used to read them again.
+    const all = await listAll(r, ctx, "task", { includeDeleted: true });
+    const live = all.filter((t) => t.deletedAt === null);
+    return {
+      tasks: live.filter((t) => ["in_progress", "review", "blocked"].includes(t.status)),
+      locks: await listAll(r, ctx, "lock"),
+      review: live.filter((t) => t.needsReview === true),
+      links: await linkProblems(r, ctx, undefined, all),
+      mode: (await r.getProject())?.mode ?? "git",
+      private: [
+        ...(await listAll(r, ctx, "note")).filter((n) => n.private).map((n) => `note "${n.title}"`),
+        ...(await listAll(r, ctx, "context")).filter((c) => c.private).map((c) => `card ${c.path}`),
+      ],
+    };
+  });
   const stale = data.tasks.filter((t) => t.claim && t.claim.leaseUntil <= now);
   const health = claimHealth(ctx, data.tasks);
   const expiredLocks = data.locks.filter((l) => l.leaseUntil <= now);
@@ -86,7 +93,7 @@ export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> 
   const claimProblems = [
     stale.length > 0 ? `${stale.length} expired claim(s)` : "",
     health.gone.length > 0
-      ? `${health.gone.length} claim(s) whose agent has stopped (${health.gone.map((t) => t.id).join(", ")})`
+      ? `${health.gone.length} claim(s) whose agent has stopped (${health.gone.map((t) => shortHandle(t.id)).join(", ")})`
       : "",
   ].filter(Boolean);
   const checks: DoctorCheck[] = [

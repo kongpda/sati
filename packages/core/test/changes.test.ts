@@ -307,6 +307,25 @@ describe("formatChanges", () => {
   });
 });
 
+// Why: milestone titles take 300 characters and went into the heading and summary uncut, while
+// every other title in `sati changes` is clipped.
+it("clips long milestone titles like every other title", async () => {
+  const { ctx } = await setup();
+  await updateSettings(ctx, { review: "none" });
+  const long = "M".repeat(300);
+  const plan = await createMilestone(ctx, { title: long });
+  const t = await createTask(ctx, { title: "Ship it", milestoneId: plan.id });
+  await finish(ctx, t.id);
+  await createTask(ctx, { title: "Loose" }).then((x) => finish(ctx, x.id));
+  const c = await listChanges(ctx, { since: "1d" });
+  expect(formatChanges(c)).toContain(`## ${"M".repeat(100)}`);
+  expect(formatChanges(c)).not.toContain(long);
+  const scoped = await listChanges(ctx, { since: "1d", milestoneId: plan.id });
+  for (const format of ["plain", "digest", "changelog"] as const) {
+    expect(formatChanges(scoped, format)).not.toContain(long);
+  }
+});
+
 describe("since your last session", () => {
   it("shows a new session what others did after the previous session's last write", async () => {
     const { ctx, clock } = await setup();
@@ -336,6 +355,45 @@ describe("since your last session", () => {
     const c = await listChanges(asTwo, { since: "last-session" });
     expect(c.since).toBe("2026-11-03T12:00:00.000Z");
     expect(c.basis).toBe("your last session (2026-11-03 12:00 UTC)");
+  });
+
+  // Why: agents get a new actor per session, and the brief ran one activity query per earlier
+  // session, so every session start got slower as the project aged.
+  it("finds the last session with one activity read, however many sessions there were", async () => {
+    const { ctx, clock } = await setup();
+    for (let i = 1; i <= 30; i++) {
+      const s = await ensureActor(ctx, {
+        name: `claude-code@main#${i}`,
+        kind: "agent",
+        tool: null,
+      });
+      await createTask({ ...ctx, actorId: s.id }, { title: `Session ${i} work` });
+      clock.advance(60_000);
+    }
+    const now = await ensureActor(ctx, { name: "claude-code@main#31", kind: "agent", tool: null });
+    let reads = 0;
+    const store = ctx.store;
+    const counted: typeof store = Object.create(store);
+    counted.read = (fn) =>
+      store.read((r) =>
+        fn(
+          Object.assign(Object.create(r), {
+            listActivity: (...args: Parameters<typeof r.listActivity>) => {
+              reads++;
+              return r.listActivity(...args);
+            },
+          }),
+        ),
+      );
+    const c = await listChanges(
+      { ...ctx, store: counted, actorId: now.id },
+      { since: "last-session" },
+    );
+    expect(reads).toBe(1);
+    // The newest earlier session wins, not the first one found.
+    expect(c.since).toBe(
+      new Date(Date.parse("2026-11-03T12:00:00.000Z") + 29 * 60_000).toISOString(),
+    );
   });
 
   it("is not moved by the expired claims the brief releases in your name", async () => {

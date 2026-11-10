@@ -60,6 +60,8 @@ export interface SearchOptions {
 export interface ActivityQuery {
   entityId?: string | undefined;
   actorId?: string | undefined;
+  /** Rows by any of these actors; an empty list matches none. */
+  actorIds?: readonly string[] | undefined;
   /** Inclusive lower bound on `at` (UTC ISO). */
   since?: string | undefined;
   /**

@@ -422,6 +422,10 @@ export class SqliteStore implements StorageAdapter {
       const where: SQL[] = [eq(a.projectId, projectId)];
       if (q.entityId) where.push(eq(a.entityId, q.entityId));
       if (q.actorId) where.push(eq(a.actorId, q.actorId));
+      if (q.actorIds) {
+        if (q.actorIds.length === 0) return [];
+        where.push(inArray(a.actorId, [...q.actorIds]));
+      }
       if (q.since) where.push(sql`${a.at} >= ${q.since}`);
       if (q.after !== undefined) {
         // Rows are appended inside the write transaction and writers queue, so rowid order is

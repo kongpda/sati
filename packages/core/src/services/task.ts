@@ -11,6 +11,7 @@ import {
   IsoDay,
   LIMITS,
   type Note,
+  RepoPath,
   type Task,
   TaskShape,
   utf8Bytes,
@@ -127,6 +128,7 @@ export const CompleteTaskInput = Completion.pick({
   filesTouched: true,
 })
   .partial({ filesTouched: true })
+  .extend({ filesTouched: z.array(RepoPath).max(LIMITS.array).optional() })
   .extend(ExpectedVersion)
   .extend(ClaimToken);
 export const ClaimTaskInput = z.strictObject({
@@ -276,7 +278,7 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
       if (patch.status === "done") {
         if (before.status !== "review" || completion === null) {
           throw new SatiError("INVALID_TRANSITION", "Use complete to mark a task done.", {
-            hint: `Run \`${CLI_NAME} task complete ${id} --summary … --files …\`.`,
+            hint: `Complete it with a summary and the files touched: task_complete, or \`${CLI_NAME} task complete ${id} --summary … --files …\`.`,
           });
         }
         const actor = await w.get("actor", ctx.actorId);
@@ -303,7 +305,7 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
       assertTransition(TASK_TRANSITIONS, "task", before.status, patch.status);
       if (patch.status === "review") {
         throw new SatiError("INVALID_TRANSITION", "Use complete to send a task to review.", {
-          hint: `Run \`${CLI_NAME} task complete ${id} --summary … --files …\`.`,
+          hint: `Complete it with a summary and the files touched: task_complete, or \`${CLI_NAME} task complete ${id} --summary … --files …\`.`,
         });
       }
       if (before.status === "done") completion = null;
@@ -535,7 +537,7 @@ async function applyRelease(
     const details = { holder: held.actorId, holderName: name, leaseUntil: held.leaseUntil };
     if (!force) {
       throw new SatiError("CONFLICT", `Task ${before.id} is claimed by ${name}.`, {
-        hint: "Only the holder releases a live claim. A person can override with --force; it is logged.",
+        hint: "Only the holder releases a live claim. A person can override with force (`--force` on the command line); it is logged.",
         details,
       });
     }

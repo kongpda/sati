@@ -216,7 +216,17 @@ function fit(question: string, items: RecallItem[], maxTokens: number): Recall {
     const next = inert(line(item));
     const more = items.length - kept.length - 1;
     const note = more > 0 ? [`… ${more} more matched; ask a narrower question.`] : [];
-    if (estimateTokens(render([next, ...note])) > maxTokens) break;
+    if (estimateTokens(render([next, ...note])) > maxTokens) {
+      if (kept.length > 0) break;
+      // The best match alone is over the cap: clip it to fit rather than answer with nothing.
+      let cut = next;
+      while (cut.length > 40 && estimateTokens(render([cut, ...note])) > maxTokens) {
+        cut = clip(next, Math.floor(cut.length * 0.8));
+      }
+      lines.push(cut);
+      kept.push(item);
+      break;
+    }
     lines.push(next);
     kept.push(item);
   }

@@ -32,7 +32,7 @@ export type ReadFile = (path: string) => string | undefined;
 const START = `<!-- ${CLI_NAME}:start v1 -->`;
 const END = `<!-- ${CLI_NAME}:end -->`;
 const BLOCK_RE = new RegExp(
-  `<!-- ${CLI_NAME}:start v\\d+ -->[\\s\\S]*?<!-- ${CLI_NAME}:end -->\\n?`,
+  `<!-- ${CLI_NAME}:start v\\d+ -->[\\s\\S]*?<!-- ${CLI_NAME}:end -->(?:\\r?\\n)?`,
 );
 
 /** The managed rules block, word for word from the plan. */
@@ -70,11 +70,17 @@ ${END}
 
 const blockFor = (kind: ProjectKind) => (kind === "general" ? GENERAL_RULES_BLOCK : RULES_BLOCK);
 
-/** Replaces the managed block (any version), or appends it after the user's own text. */
+/**
+ * Replaces the managed block (any version), or appends it after the user's own text. A file with
+ * CRLF line endings (a Windows or `core.autocrlf` checkout) gets the block in CRLF too, so the
+ * file does not end up with mixed endings and a stray line.
+ */
 export function upsertBlock(existing: string | undefined, block: string = RULES_BLOCK): string {
   if (existing === undefined || existing.trim() === "") return block;
-  if (BLOCK_RE.test(existing)) return existing.replace(BLOCK_RE, block);
-  return `${existing.trimEnd()}\n\n${block}`;
+  const eol = existing.includes("\r\n") ? "\r\n" : "\n";
+  const own = block.replaceAll("\n", eol);
+  if (BLOCK_RE.test(existing)) return existing.replace(BLOCK_RE, () => own);
+  return `${existing.trimEnd()}${eol}${eol}${own}`;
 }
 
 /** A whole file we own: optional front matter, then the block. */

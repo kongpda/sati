@@ -8,6 +8,7 @@ import {
   createTask,
   deleteRecord,
   doctorChecks,
+  estimateTokens,
   getContext,
   importRecords,
   putContext,
@@ -171,6 +172,31 @@ describe("private memory", () => {
 });
 
 describe("recall", () => {
+  // Why: with a small budget, a best match longer than the cap was dropped and the agent got
+  // "1 more matched" and nothing else.
+  it("clips a best match that is over the cap instead of dropping it", async () => {
+    const { ctx } = await setup();
+    const fact = (n: number) => `Venue fact ${n}: ${"long detail ".repeat(15)}`;
+    await putContext(ctx, {
+      path: "venue/hall-b-quote.pdf",
+      summary: `Venue quote. ${"words ".repeat(50)}`,
+      facts: [1, 2, 3, 4, 5].map(fact),
+    });
+    const r = await recall(ctx, { question: "venue quote", maxTokens: 200 });
+    expect(r.items).toHaveLength(1);
+    expect(r.omitted).toBe(0);
+    expect(r.markdown).toContain("venue/hall-b-quote.pdf");
+    expect(r.tokens).toBeLessThanOrEqual(200);
+  });
+
+  // Why: chars / 4 is fair for English, but Khmer and Chinese take about a token a character,
+  // so a brief or recall in those scripts ran up to four times over its cap.
+  it("counts characters outside ASCII as a token each", () => {
+    expect(estimateTokens("abcd")).toBe(1);
+    expect(estimateTokens("សួស្តី")).toBe(6);
+    expect(estimateTokens("会议室")).toBe(3);
+  });
+
   it("finds the card for a question, best facts first, and only open tasks", async () => {
     const { ctx } = await setup();
     await putContext(ctx, {

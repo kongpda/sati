@@ -42,7 +42,13 @@ export const ChangesInput = z.strictObject({
     .max(60)
     .optional()
     .describe("Only what belongs to this milestone (id or handle)"),
-  actorId: ActorId.optional().describe("Only what this person or agent did"),
+  actorId: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .optional()
+    .describe("Only what this person or agent did (id or handle)"),
 });
 export type ChangesInput = z.input<typeof ChangesInput>;
 
@@ -125,13 +131,11 @@ export async function lastSession(
   ctx: ServiceContext,
 ): Promise<{ at: string | null; selves: Set<string> }> {
   const me = await selves(r, ctx);
-  let at: string | null = null;
-  for (const actorId of me.ids) {
-    if (me.perSession && actorId === ctx.actorId) continue;
-    const rows = await r.listActivity(ctx.projectId, { actorId, limit: 50 });
-    const last = rows.find((row) => !AUTOMATIC_VERBS.has(row.verb));
-    if (last && (at === null || last.at > at)) at = last.at;
-  }
+  // One query for every session: an agent gets a new actor per session, so a loop with one
+  // query each grew with every session the project had seen.
+  const actorIds = [...me.ids].filter((id) => !(me.perSession && id === ctx.actorId));
+  const rows = await r.listActivity(ctx.projectId, { actorIds, limit: 200 });
+  const at = rows.find((row) => !AUTOMATIC_VERBS.has(row.verb))?.at ?? null;
   return { at, selves: me.ids };
 }
 
@@ -321,9 +325,10 @@ export async function listChanges(ctx: ServiceContext, input: unknown = {}): Pro
   const milestoneId = data.milestoneId
     ? await resolveId(ctx, "milestone", data.milestoneId)
     : undefined;
+  const actorId = data.actorId ? await resolveId(ctx, "actor", data.actorId) : undefined;
   return ctx.store.read(async (r) => {
     const project = await r.getProject();
-    const changes = await readChanges(r, ctx, { since, milestoneId, actorId: data.actorId });
+    const changes = await readChanges(r, ctx, { since, milestoneId, actorId });
     return { project: project?.name ?? "this project", basis, ...changes };
   });
 }
@@ -359,12 +364,13 @@ const isPublic = (i: ChangeItem) => i.kind !== "done" || !i.labels.includes(INTE
 function plain(c: Changes): string {
   const out = [
     `# Changes since ${c.since.slice(0, 16).replace("T", " ")} UTC`,
-    `${capital(c.basis)}${c.milestone ? `, in ${c.milestone.title}` : ""}: ${plural(c.items.length, "change")}.`,
+    `${capital(c.basis)}${c.milestone ? `, in ${clip(c.milestone.title, 120)}` : ""}: ${plural(c.items.length, "change")}.`,
   ];
   let shown = 0;
   const groups = byMilestone(c);
   for (const g of groups) {
-    if (groups.length > 1 || g.title) out.push("", `## ${g.title ?? "No milestone"}`);
+    if (groups.length > 1 || g.title)
+      out.push("", `## ${g.title === null ? "No milestone" : clip(g.title, 120)}`);
     const sections: [string, ChangeItem["kind"]][] = [
       ["Done", "done"],
       ["Features", "feature"],
@@ -460,7 +466,7 @@ function digest(c: Changes): string {
   const shipped = visible.filter((i) => i.kind === "feature" && i.status === "shipped");
   const decisions = visible.filter((i) => i.kind === "decision");
   const notes = visible.filter((i) => i.kind === "note");
-  const scope = c.milestone ? ` in ${c.milestone.title}` : "";
+  const scope = c.milestone ? ` in ${clip(c.milestone.title, 120)}` : "";
   const out = [`${c.project}${scope}: ${c.basis} (since ${isoDay(c.since)})`, ""];
   const counts = [
     `${plural(done.length, "task")} done`,

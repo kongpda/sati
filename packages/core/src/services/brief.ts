@@ -13,7 +13,7 @@ import { handoffFor, handoffNext, unreadHandoff } from "./handoff.js";
 import { warningLines, worktreeWarnings } from "./overlap.js";
 import { readSettings } from "./project.js";
 import { releaseExpiredClaims, reviewDrift } from "./task.js";
-import { clip } from "./text.js";
+import { clip, inert } from "./text.js";
 
 /** PLAN: the brief stays under 1,500 tokens so it is cheap to inject at every session start. */
 export const BRIEF_TOKEN_CAP = 1_500;
@@ -255,10 +255,10 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
 
   const taskLine = (t: Task, extra = "") => {
     const note = t.reviewNote
-      ? `\n  \`\`\`data\n  review: ${clip(t.reviewNote, 200)}\n  \`\`\``
+      ? `\n  \`\`\`data\n  review: ${inert(clip(t.reviewNote, 200))}\n  \`\`\``
       : "";
     const hand = data.handoffs.get(t.id);
-    const stopped = hand ? `\n  \`\`\`data\n  handoff: ${clip(hand, 200)}\n  \`\`\`` : "";
+    const stopped = hand ? `\n  \`\`\`data\n  handoff: ${inert(clip(hand, 200))}\n  \`\`\`` : "";
     return `- ${shortHandle(t.id)} [${t.status === "todo" ? "" : `${t.status}, `}${t.priority}${t.effort && t.effort !== "standard" ? `, ${t.effort}` : ""}] ${clip(t.title, LINE_CHARS)}${extra}${note}${stopped}`;
   };
 
@@ -267,9 +267,7 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
     mine.push(taskLine(t, ` (lease until ${t.claim?.leaseUntil.slice(11, 16)}Z)`));
     const said = data.comments.get(t.id);
     if (said) {
-      mine.push(
-        `  \`\`\`data\n  latest comment: ${clip(said.body.replace(/\s+/gu, " "), 200)}\n  \`\`\``,
-      );
+      mine.push(`  \`\`\`data\n  latest comment: ${inert(clip(said.body, 200))}\n  \`\`\``);
     }
     const f = t.featureId ? data.features.get(t.featureId) : undefined;
     if (f && f.acceptance.length > 0) {
@@ -291,7 +289,7 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
         const what = asking
           ? `${clip(who, 60)} ${asking.kind === "permission" ? "needs a permission" : "asks"}: ${clip(asking.text, 200)}`
           : `blocked: ${clip(task.blockedReason ?? "no reason given", 200)}`;
-        return `${taskLine(task)}\n  \`\`\`data\n  ${what}\n  \`\`\``;
+        return `${taskLine(task)}\n  \`\`\`data\n  ${inert(what)}\n  \`\`\``;
       }),
     },
     {
@@ -299,7 +297,7 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       empty: null,
       items: data.forMe.map(
         ({ note, from }) =>
-          `- ${shortHandle(note.id)} from ${clip(from, 60)} on ${note.links.map(shortHandle).join(", ")}\n  \`\`\`data\n  ${clip(handoffNext(note.body) || note.title, 200)}\n  \`\`\``,
+          `- ${shortHandle(note.id)} from ${clip(from, 60)} on ${note.links.map(shortHandle).join(", ")}\n  \`\`\`data\n  ${inert(clip(handoffNext(note.body) || note.title, 200))}\n  \`\`\``,
       ),
     },
     {
@@ -328,12 +326,12 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       items: [
         ...data.pinned.map(
           (n) =>
-            `- ${shortHandle(n.id)} ${clip(n.title, 80)}\n  \`\`\`data\n  ${clip(n.body, 200)}\n  \`\`\``,
+            `- ${shortHandle(n.id)} ${clip(n.title, 80)}\n  \`\`\`data\n  ${inert(clip(n.body, 200))}\n  \`\`\``,
         ),
         ...data.linkedCards.map((c) => {
           const facts = (c.facts ?? []).slice(0, 3).map((f) => clip(f, 100));
           const text = [clip(c.summary, 160), ...facts].join(" · ");
-          return `- card ${shortHandle(c.id)} ${clip(c.path, 80)}\n  \`\`\`data\n  ${text}\n  \`\`\``;
+          return `- card ${shortHandle(c.id)} ${clip(c.path, 80)}\n  \`\`\`data\n  ${inert(text)}\n  \`\`\``;
         }),
       ],
     },

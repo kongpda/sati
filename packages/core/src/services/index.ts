@@ -23,5 +23,6 @@ export * from "./similar.js";
 export * from "./sync.js";
 export * from "./task.js";
 export * from "./template.js";
+export { DATA_NOTICE, fenceData, inert } from "./text.js";
 export * from "./undo.js";
 export * from "./worktree.js";

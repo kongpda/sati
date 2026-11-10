@@ -22,8 +22,8 @@ Only the latest minor release of `@kongpda/sati` gets security fixes.
   commit an API key, token, private key or `.env` line is refused as a whole.
 - **Imported files** from `.sati/` are parsed as JSON only, validated with strict schemas and size
   limits, and imported all or nothing. The importer is fuzzed in CI.
-- **Prompt injection**: notes and task bodies are data. The brief marks them as such, and MCP
-  tools cannot run shell commands or write files outside `.sati/`.
+- **Prompt injection**: notes and task bodies are data. The brief, recall and every MCP result
+  put that text in a `data` fence its own backticks cannot close, and MCP tools cannot run shell commands or write files outside `.sati/`.
 - **Hooks** call the `sati` binary by the absolute path recorded at `sati init`, so a repository
   cannot swap it through `PATH`. A project install records `node_modules/.bin/sati` instead, so
   the hooks follow the version in the lockfile.

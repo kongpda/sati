@@ -1,0 +1,35 @@
+{
+  "body": "docs/review-followups.md WP4.2: prompt injection through committed .sati/ text. Shared fencing helper, apply to every read path (task_claim, task_list full, task_create/update results, note_get, context_get, search, changes, feature resource), changes header, workflow sentence, tests, changeset.",
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "heartbeatAt": "2026-11-10T03:31:54.521Z",
+    "holder": {
+      "host": "h:001065b26af48df5",
+      "pid": 98879
+    },
+    "leaseUntil": "2026-11-10T04:01:54.521Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-10T03:31:51.378Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "deep",
+  "id": "tsk_01M71R66EJD5ZHKMAAYV0HE67H",
+  "labels": [
+    "review-followups"
+  ],
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T03:31:51.380Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-10T03:31:54.522Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T03:31:54.522Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T03:31:54.522Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-10T03:31:54.522Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "in_progress",
+  "title": "Review follow-ups WP4.2: fence teammate text in MCP results",
+  "updatedAt": "2026-11-10T03:31:54.522Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

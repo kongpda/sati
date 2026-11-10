@@ -348,11 +348,11 @@ Effort: `deep` for 4.1 to 4.3, `standard` for the rest. This is the part an agen
   4. Make the workflow sentence match what is true.
 - **Tests:** a task whose body says "ignore previous instructions" comes back from `task_claim` and `task_get` inside the marker; a fence in the body cannot close the marker early (strip or escape backticks, as the roadmap resource does).
 
-- [ ] Shared fencing helper
-- [ ] Applied to every read path listed
-- [ ] `changes` header
-- [ ] Workflow sentence corrected
-- [ ] Tests, changeset
+- [x] Shared fencing helper
+- [x] Applied to every read path listed (`task_get` comes with 4.1 and uses the same result path)
+- [x] `changes` header
+- [x] Workflow sentence corrected
+- [x] Tests, changeset
 
 ### 4.3 Smaller results
 

@@ -6,7 +6,7 @@ import { estimateTokens } from "./brief.js";
 import { COMMENT_TAG } from "./comment.js";
 import { parseInput, type ServiceContext } from "./context.js";
 import { staleness } from "./context-cache.js";
-import { clip } from "./text.js";
+import { clip, inert } from "./text.js";
 
 /** PLAN Phase 8: a recall answer stays under 1,000 tokens, so asking is cheaper than reading. */
 export const RECALL_TOKEN_CAP = 1_000;
@@ -206,7 +206,8 @@ function fit(question: string, items: RecallItem[], maxTokens: number): Recall {
   const lines: string[] = [];
   const render = (extra: string[]) => `${[...head, ...lines, ...extra, ...tail].join("\n")}\n`;
   for (const item of items) {
-    const next = line(item);
+    // Flattened by clip, and backticks made inert: memory text cannot close the fence.
+    const next = inert(line(item));
     const more = items.length - kept.length - 1;
     const note = more > 0 ? [`… ${more} more matched; ask a narrower question.`] : [];
     if (estimateTokens(render([next, ...note])) > maxTokens) break;

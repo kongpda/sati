@@ -41,7 +41,8 @@ Cursor rules, per tool). The block points to the full workflow, served over MCP 
 
 ## Is text in tasks and notes safe to show an agent?
 
-sati treats it as data. The brief fences it in `data` blocks, and the rules tell agents not to
+sati treats it as data. The brief, recall and every MCP tool result put it in a `data` fence,
+with its backticks escaped so it cannot close the fence early. The rules tell agents not to
 follow instructions inside it. A write that looks like it holds a secret (an API key, a
 private key, a `.env`-style line) is refused with exit code 5; the message names the field and
 the kind of secret, never the value. A record saved before that check, by an older sati, is

@@ -75,7 +75,13 @@ const Subtask = z.strictObject({
   title: z.string().trim().min(1).max(LIMITS.title),
   body: BodyText.optional(),
   /** Indexes into this same `subtasks` array. Resolved to ids in the one write. */
-  dependsOn: z.array(z.number().int().nonnegative()).max(LIMITS.array).optional(),
+  dependsOn: z
+    .array(z.number().int().nonnegative())
+    .max(LIMITS.array)
+    .optional()
+    .describe("Zero-based indexes of other entries in this subtasks array"),
+  /** So a planned batch can mark its mechanical steps `light` (review 4.4). */
+  effort: fields.shape.effort,
 });
 
 /** New tasks start in `backlog` or `todo`; later states need the update and complete flows. */
@@ -84,6 +90,7 @@ export const CreateTaskInput = fields.partial(optional).extend({
   subtasks: z
     .array(Subtask)
     .max(LIMITS.array)
+    .describe("Child tasks created in the same write, each with this task as parent")
     // 500 subtasks of 100 KB each would be a 50 MB write; the whole batch stays under 1 MB.
     .refine(
       (subs) =>
@@ -128,7 +135,8 @@ export const ClaimTaskInput = z.strictObject({
     .int()
     .min(1)
     .max(24 * 60)
-    .optional(),
+    .optional()
+    .describe("Lease length; default from the project's settings (30)"),
 });
 export const WaitingInput = z.strictObject({
   /** The task; without it, every task the caller holds. */
@@ -235,7 +243,7 @@ export async function createTaskIn(
         worktree: null,
         claim: null,
         completion: null,
-        effort: null,
+        effort: sub.effort ?? null,
       });
     }
     return parent;

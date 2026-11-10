@@ -18,8 +18,9 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
 - `task_create` may include `subtasks[]`. `dependsOn` entries are indexes into that array.
 - `task_claim` returns `claim.token`. Pass it to every `task_update` and `task_complete` on
   that task. If a write fails with a stale token, your lease ran out and another agent took the
-  task: stop work on it and re-read it before doing anything else.
-- New work: `task_create`. It returns likely duplicates; reuse one instead of adding another.
+  task: stop work on it and re-read it with `task_get` before doing anything else.
+- New work: `task_create` with `ifSimilar: "return"`. If a strong match exists, it creates
+  nothing and returns the matches: use one. Otherwise it creates the task and lists weaker matches.
   Set `effort`: `light` for mechanical work (a rename, a typo, a one-file edit, a doc tweak),
   `deep` for design or cross-cutting work; leave it unset for the rest (`standard`).
 - A `light` task you claimed can go to a subagent on a small, cheaper model (in Claude Code, the

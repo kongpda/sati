@@ -1,0 +1,22 @@
+{
+  "blockedReason": null,
+  "body": "docs/review-followups.md WP4: task_get, slim results, descriptions and schema gaps, ifSimilar, rules block wording.",
+  "createdAt": "2026-11-10T04:23:59.798Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "deep",
+  "id": "tsk_01M71V5NHPYRHF726SHDSGVWDA",
+  "labels": [
+    "review"
+  ],
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T04:23:59.802Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "blockedReason": "2026-11-10T04:24:13.904Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T04:24:13.904Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "cancelled",
+  "title": "Review follow-ups WP4: MCP and agent experience (4.1, 4.3-4.6)",
+  "updatedAt": "2026-11-10T04:24:13.906Z",
+  "version": 2
+}

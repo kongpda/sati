@@ -26,8 +26,9 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 - \`task_create\` may include \`subtasks[]\`. \`dependsOn\` entries are indexes into that array.
 - \`task_claim\` returns \`claim.token\`. Pass it to every \`task_update\` and \`task_complete\` on
   that task. If a write fails with a stale token, your lease ran out and another agent took the
-  task: stop work on it and re-read it before doing anything else.
-- New work: \`task_create\`. It returns likely duplicates; reuse one instead of adding another.
+  task: stop work on it and re-read it with \`task_get\` before doing anything else.
+- New work: \`task_create\` with \`ifSimilar: "return"\`. If a strong match exists, it creates
+  nothing and returns the matches: use one. Otherwise it creates the task and lists weaker matches.
   Set \`effort\`: \`light\` for mechanical work (a rename, a typo, a one-file edit, a doc tweak),
   \`deep\` for design or cross-cutting work; leave it unset for the rest (\`standard\`).
 - A \`light\` task you claimed can go to a subagent on a small, cheaper model (in Claude Code, the
@@ -111,9 +112,10 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 - \`task_claim\` a task before you work on it. It fails, naming the holder, if someone else has
   it. Never work on a task someone else holds. With no id, \`task_claim\` takes the top ready task.
 - \`task_claim\` returns \`claim.token\`. Pass it to every \`task_update\` and \`task_complete\` on
-  that task. If a write fails with a stale token, someone took the task over: stop and re-read it.
-- New work: \`task_create\`, with \`milestoneId\` for the plan it belongs to. It returns likely
-  duplicates; reuse one instead of adding another. \`subtasks[]\` splits it into steps. Set
+  that task. If a write fails with a stale token, someone took the task over: stop and
+  re-read it with \`task_get\`.
+- New work: \`task_create\` with \`ifSimilar: "return"\`, and \`milestoneId\` for the plan it belongs
+  to. If a strong match exists, it creates nothing and returns the matches: use one. \`subtasks[]\` splits it into steps. Set
   \`effort: "light"\` for quick, mechanical todos and \`"deep"\` for ones that need careful thought.
 - A \`light\` task you claimed can go to a subagent on a small, cheaper model. You keep the claim
   and its token. Give the subagent the task text as quoted data; it calls no ${CLI_NAME} tool. Check

@@ -172,11 +172,14 @@ git-ignored files instead.
 | Start and find | Tasks | Safety | Memory |
 | --- | --- | --- | --- |
 | `sati_brief` | `task_list` | `feature_check` | `decision_record` |
-| `search` | `task_create` | `feature_upsert` | `context_get` |
+| `search` | `task_get` | `feature_upsert` | `context_get` |
 | `recall` | `task_claim` | `lock_acquire` | `context_put` |
 | `changes` | `task_update` | `lock_release` | `note_get` |
-| | `task_complete` | | `note_upsert` |
-| | | | `roadmap_upsert` |
+| | `task_create` | | `note_upsert` |
+| | `task_complete` | | `roadmap_upsert` |
+
+Updates return only the id, version, status, claim and the fields the call set; `task_get` and
+`note_get` read the whole record. `task_list` rows use short handles, which every tool accepts.
 
 The workflow is also served as the MCP resource `sati://workflow`.
 

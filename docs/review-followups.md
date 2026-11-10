@@ -340,9 +340,9 @@ Effort: `deep` for 4.1 to 4.3, `standard` for the rest. This is the part an agen
 - **Problem:** no tool reads one task. Notes have `note_get`; features have a resource. The workflow says "re-read it" after a stale token and names no tool.
 - **Plan:** register `task_get` in `packages/mcp/src/server.ts` (`id`: full id or handle; returns the full record, fenced as in 4.2; `readOnlyHint: true`). Add it to the workflow docs, regenerate `workflow.ts`, add it to the README tool list (it says 19 tools) and to the MCP test that lists tools.
 
-- [ ] Tool, annotation, description
-- [ ] Workflow text and README
-- [ ] Tests
+- [x] Tool, annotation, description
+- [x] Workflow text and README (and the PLAN tool table)
+- [x] Tests: listed with the tools; returns the fenced full record by handle
 
 ### 4.2 Teammate text is not fenced
 
@@ -374,25 +374,27 @@ Effort: `deep` for 4.1 to 4.3, `standard` for the rest. This is the part an agen
 - **Compatibility:** the UI server and the CLI do not use these projections; check `packages/mcp/test` and `packages/cli/test` for assertions on result shape. This changes the MCP result shape, so write a changeset and note it in the README.
 - **Measure:** record the character count of a typical session's results before and after in `docs/progress.md` (the Phase 7a entry did this for `task_list`).
 
-- [ ] Slim write results
-- [ ] Handles in rows
-- [ ] `context_get` list form
-- [ ] Before and after numbers
-- [ ] Tests, changeset
+- [x] Slim write results: `{ id, version, status, claim }` plus the fields set. `task_complete` returns no `completion` (the agent sent it). `context_put` returns `{ id, version, path }`. Creates and claims keep the full record
+- [x] Handles in rows: id, featureId, milestoneId, parentId, dependsOn, assigneeIds and claim.actorId. The CLI's `task list --json` keeps full ids for scripts
+- [x] `context_get` list form: `{ total, cards: [{ path, stale }] }`, 50 at most. Cards have no title, so the list gives path and staleness
+- [x] Before and after numbers: a session of task_list, task_claim, context_get, 3 task_update, 3 context_put and task_complete over 20 tasks and 30 cards went from 29,643 to 13,042 characters
+- [x] Tests, changeset (`.changeset/wp4-mcp-results.md`)
 
 ### 4.4 Descriptions, schema gaps, annotations
 
 *Certain.*
 
-- [ ] `task_create`: describe `subtasks[]` and the rule that a subtask's `dependsOn` takes indexes into the same array (now only in a code comment); `.describe()` it on the schema
-- [ ] Allow `effort` on subtasks (the subtask schema has none, so a batch cannot mark steps `light`)
-- [ ] `sati_brief`: mention `format: "short"` and `maxTokens`; `recall`: `maxTokens`; `task_claim`: `leaseMinutes`; `feature_check`: `change`
-- [ ] Trim `note_upsert` (about 150 words) and `task_update` (about 120)
-- [ ] Add annotations to `task_update`, `task_complete`, `lock_release`, `note_upsert`, `feature_upsert`, `roadmap_upsert` (`destructiveHint: false` where true, `idempotentHint` where true) and `openWorldHint: false` on all tools
-- [ ] Move the orphaned JSDoc ("Builds the MCP server…") from above `repoRelative` to `createServer`
-- [ ] Remove the no-op `title: UpdateMilestoneInput.shape.title` in `roadmap_upsert`'s `extend`
-- [ ] `roadmap_upsert` description lists template names computed once at registration, while the code comment says "read on each use": make one true
-- [ ] `repoRelative` rejects a path whose first segment starts with `..` (such as `..foo/x`) and does not realpath the root as `guard.ts` does: align them, with a test
+- [x] `task_create`: describe `subtasks[]` and the rule that a subtask's `dependsOn` takes indexes into the same array (now only in a code comment); `.describe()` it on the schema
+- [x] Allow `effort` on subtasks (the subtask schema has none, so a batch cannot mark steps `light`)
+- [x] `sati_brief`: mention `format: "short"` and `maxTokens`; `recall`: `maxTokens`; `task_claim`: `leaseMinutes`; `feature_check`: `change`
+- [x] Trim `note_upsert` (about 150 words) and `task_update` (about 120)
+- [x] Add annotations to `task_update`, `task_complete`, `lock_release`, `note_upsert`, `feature_upsert`, `roadmap_upsert` (`destructiveHint: false` where true, `idempotentHint` where true) and `openWorldHint: false` on all tools
+- [x] Move the orphaned JSDoc ("Builds the MCP server…") from above `repoRelative` to `createServer`
+- [x] Remove the no-op `title: UpdateMilestoneInput.shape.title` in `roadmap_upsert`'s `extend`
+- [x] `roadmap_upsert` description lists template names computed once at registration, while the code comment says "read on each use": make one true
+- [x] `repoRelative` rejects a path whose first segment starts with `..` (such as `..foo/x`) and does not realpath the root as `guard.ts` does: align them, with a test
+
+Notes: the brief, recall and claim options are described on the schema fields (`.describe()`), which every MCP client shows. `context_put` is also marked `destructiveHint: false`, so every write tool is. The template names stay computed at startup; the comment now says so, and applying a template reads the files again. `repoRelative` keeps a copy of the guard's `realish`: the CLI loads `@sati/mcp` lazily, and importing it from the guard would load the MCP SDK on every commit.
 
 ### 4.5 `task_create` always creates
 
@@ -401,9 +403,9 @@ Effort: `deep` for 4.1 to 4.3, `standard` for the rest. This is the part an agen
 - **Problem:** the tool creates the task, returns `similar`, and tells the agent to cancel a duplicate. Each cancelled duplicate stays in git as a file.
 - **Plan:** add `ifSimilar: "create" | "return"` (default `"create"`). With `"return"` and at least one strong match, return the matches and create nothing. Document it in the workflow as the default for agents.
 
-- [ ] Owner decision recorded
-- [ ] Field, service path, description, workflow text
-- [ ] Tests, changeset
+- [x] Owner decision recorded (decision record, see progress)
+- [x] Field, service path, description, workflow text. A strong match is a score of 0.8 or more (`STRONG_SIMILARITY`); weaker matches are still listed after the create
+- [x] Tests, changeset
 
 ### 4.6 Rules block wording
 
@@ -412,10 +414,10 @@ Effort: `deep` for 4.1 to 4.3, `standard` for the rest. This is the part an agen
 - **Problem:** code block step 7 does not say `task_complete` needs the claim token, so a first attempt fails. The code block never names `recall`, while the workflow says "ask first: recall". The `start-task` prompt always says "Call sati_brief", against the brief-once rule. The blocks do not say where `light` shows (the brief).
 - **Plan:** one edit that covers all four, mirrored in `PLAN.md`, then `sati init --upgrade --yes` here. Keep the block the same length or shorter.
 
-- [ ] Owner decision recorded
-- [ ] Blocks, PLAN mirror, prompt
-- [ ] `init --upgrade --yes` in this repo
-- [ ] Tests in `packages/cli/test/integrations.test.ts`
+- [x] Owner decision recorded (decision record, see progress)
+- [x] Blocks, PLAN mirror, prompt. Both blocks are shorter than before (1,345 to 1,339 and 1,219 to 1,215 characters)
+- [x] `init --upgrade --yes` in this repo
+- [x] Tests in `packages/cli/test/integrations.test.ts`
 
 ---
 

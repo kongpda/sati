@@ -1,0 +1,15 @@
+{
+  "consequences": "Each project must run sati init --upgrade to get the new text; the changeset says so. Both blocks stayed under their size caps.",
+  "context": "Review WP4.6, owner decision: agents missed the claim token and called the brief twice.",
+  "createdAt": "2026-11-10T04:32:47.039Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "decision": "The managed rules block now says task_complete needs the claim token, names recall, says the brief marks light tasks, and skips sati_brief when the session opened with it.",
+  "id": "dec_01M71VNRE0XNT7BF5ABSXXT1QN",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T04:32:47.042Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "title": "Rules block wording change needs init --upgrade in every project",
+  "updatedAt": "2026-11-10T04:32:47.039Z",
+  "version": 1
+}

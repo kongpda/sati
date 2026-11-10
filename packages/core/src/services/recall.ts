@@ -31,7 +31,13 @@ const STOP = new Set(
 
 export const RecallInput = z.strictObject({
   question: z.string().trim().min(1).max(500),
-  maxTokens: z.number().int().min(200).max(RECALL_TOKEN_CAP).optional(),
+  maxTokens: z
+    .number()
+    .int()
+    .min(200)
+    .max(RECALL_TOKEN_CAP)
+    .optional()
+    .describe("Cap on the answer's size in tokens, at most 1,000"),
 });
 export type RecallInput = z.input<typeof RecallInput>;
 

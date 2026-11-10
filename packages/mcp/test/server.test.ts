@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -98,6 +98,7 @@ describe("MCP server", () => {
       "task_claim",
       "task_complete",
       "task_create",
+      "task_get",
       "task_list",
       "task_update",
     ]);
@@ -107,6 +108,39 @@ describe("MCP server", () => {
     expect(templates.map((t) => t.uriTemplate)).toEqual(["sati://feature/{id}"]);
     const prompts = (await client.listPrompts()).prompts.map((p) => p.name).sort();
     expect(prompts).toEqual(["finish-task", "plan-feature", "start-task"]);
+  });
+
+  // Clients use the hints to decide what to confirm with the person (review 4.4): no tool reaches
+  // outside the project, and no write here loses data, since every write is logged and undoable.
+  it("annotates every tool: closed world, and no write marked destructive", async () => {
+    const client = await connect();
+    const { tools } = await client.listTools();
+    for (const t of tools) {
+      expect(t.annotations?.openWorldHint, t.name).toBe(false);
+      if (!t.annotations?.readOnlyHint) expect(t.annotations?.destructiveHint, t.name).toBe(false);
+    }
+    const create = tools.find((t) => t.name === "task_create");
+    const subtasks = JSON.stringify(create?.inputSchema.properties?.subtasks);
+    expect(subtasks).toContain("Zero-based indexes");
+    expect(subtasks).toContain("effort");
+  });
+
+  // A batch plan marks its mechanical steps light, so they can go to a small-model subagent.
+  it("creates subtasks with their own effort and index dependencies", async () => {
+    const client = await connect();
+    const parent = await call(client, "task_create", {
+      title: "Rename the API",
+      subtasks: [
+        { title: "Rename in code", effort: "light" },
+        { title: "Review", dependsOn: [0] },
+      ],
+    });
+    expect(parent.isError).toBe(false);
+    const kids = await call(client, "task_list", { parentId: parent.body.id, detail: "full" });
+    const byTitle = Object.fromEntries(kids.body.map((t: { title: string }) => [t.title, t]));
+    expect(byTitle["Rename in code"].effort).toBe("light");
+    expect(byTitle.Review.effort).toBeNull();
+    expect(byTitle.Review.dependsOn).toEqual([byTitle["Rename in code"].id]);
   });
 
   it("leaves the feature and lock tools out of a general project", async () => {
@@ -149,6 +183,13 @@ describe("MCP server", () => {
     expect(outside).toMatchObject({ isError: true, body: { error: { code: "VALIDATION" } } });
     const lock = await call(client, "lock_acquire", { paths: [join(dir, "src", "login")] });
     expect(lock.body.lock.paths).toEqual(["src/login"]);
+    // Review 4.4, as in the CLI guard: the root's real path (macOS tmp is /private/var/...) still
+    // counts as inside, and a name that only starts with ".." is a file in the repo.
+    const real = realpathSync(dir);
+    const viaReal = await call(client, "lock_acquire", {
+      paths: [join(real, "docs"), join(dir, "..notes", "a.md")],
+    });
+    expect(viaReal.body.lock.paths).toEqual(["docs", "..notes/a.md"]);
     const create = await call(client, "feature_upsert", { title: "Billing", expectedVersion: 1 });
     expect(create.body.error).toMatchObject({
       code: "VALIDATION",
@@ -172,7 +213,13 @@ describe("MCP server", () => {
       body: "Warm, short sentences. No jargon.",
       expectedVersion: 1,
     });
-    expect(updated.body).toMatchObject({ version: 2, pinned: true, title: "Brand voice" });
+    // An update returns only what it set (review 4.3): the agent has the rest; note_get reads it.
+    expect(updated.body).toEqual({
+      id: created.body.id,
+      version: 2,
+      pinned: true,
+      body: "Warm, short sentences. No jargon.",
+    });
     const stale = await call(client, "note_upsert", { id: handle, body: "x", expectedVersion: 1 });
     expect(stale).toMatchObject({ isError: true, body: { error: { code: "CONFLICT" } } });
     const read = await call(client, "note_get", { id: handle });
@@ -215,7 +262,8 @@ describe("MCP server", () => {
     const handle = shortHandle(created.body.id);
 
     const ready = await call(client, "task_list", { ready: true });
-    expect(ready.body.map((t: { id: string }) => t.id)).toEqual([created.body.id]);
+    // Rows carry short handles, as the brief does; every tool takes them back (review 4.3).
+    expect(ready.body.map((t: { id: string }) => t.id)).toEqual([handle]);
     // Rows are short by default so a long list stays cheap; detail "full" returns whole tasks.
     expect(ready.body[0]).toMatchObject({ title: "Add login", priority: "high", version: 1 });
     expect(ready.body[0]).not.toHaveProperty("body");
@@ -240,6 +288,8 @@ describe("MCP server", () => {
     const noToken = await call(client, "task_update", { id: handle, body: "halfway" });
     expect(noToken).toMatchObject({ isError: true, body: { error: { code: "CONFLICT" } } });
     const updated = await call(client, "task_update", { id: handle, body: "halfway", token });
+    // Writes echo only id, version, status, claim and the fields set, not the whole record.
+    expect(Object.keys(updated.body).sort()).toEqual(["body", "claim", "id", "status", "version"]);
     expect(updated.body.body).toBe("halfway");
 
     const done = await call(client, "task_complete", {
@@ -248,7 +298,12 @@ describe("MCP server", () => {
       filesTouched: ["src/login.ts"],
       token,
     });
-    expect(done.body).toMatchObject({ status: "review", claim: null });
+    expect(done.body).toEqual({
+      id: created.body.id,
+      version: updated.body.version + 1,
+      status: "review",
+      claim: null,
+    });
 
     const activity = await store.read((r) => r.listActivity(ctx.projectId));
     const verbs = activity.filter((a) => a.entityId === created.body.id).map((a) => a.verb);
@@ -273,6 +328,10 @@ describe("MCP server", () => {
     expect(inside).not.toContain("`");
     // The escape is lossless: the agent still reads the body exactly as written.
     expect(JSON.parse(inside).body).toBe(attack);
+    // task_get is how an agent re-reads a task after a stale token (review 4.1): same fence.
+    const got = fenced(await raw("task_get", { id: shortHandle(t.id) }));
+    expect(got).not.toContain("`");
+    expect(JSON.parse(got)).toMatchObject({ id: t.id, body: attack, status: "in_progress" });
 
     for (const [name, args] of [
       ["task_list", { detail: "full" }],
@@ -352,7 +411,14 @@ describe("MCP server", () => {
       sourceSeen: "mtime 2026-11-03T09:15Z",
       sourceTokens: 4200,
     });
-    expect(put.body).toMatchObject({
+    // context_put answers with the card's id, version and path, not the facts it was just sent.
+    expect(put.body).toEqual({
+      id: expect.any(String),
+      version: 1,
+      path: "venue/hall-b-quote.pdf",
+    });
+    const card = await call(client, "context_get", { path: "venue/hall-b-quote.pdf" });
+    expect(card.body[0]).toMatchObject({
       facts: ["Price: $2,400 for the day", "Valid until 1 December"],
     });
     const hits = await call(client, "search", { query: "december" });
@@ -480,6 +546,29 @@ describe("MCP server", () => {
     ]);
   });
 
+  // Review 4.5: a duplicate made and then cancelled still lands in git. With ifSimilar "return"
+  // a strong match stops the create; a weak one (shown above) does not.
+  it("creates nothing when asked to return a strong match instead", async () => {
+    const client = await connect();
+    const first = await call(client, "task_create", { title: "Fix login redirect loop" });
+    const again = await call(client, "task_create", {
+      title: "Login redirect loop fix",
+      ifSimilar: "return",
+    });
+    expect(again.body).toEqual({
+      created: false,
+      similar: [expect.objectContaining({ id: shortHandle(first.body.id), score: 1 })],
+    });
+    const weak = await call(client, "task_create", {
+      title: "Login redirect loop after OAuth",
+      ifSimilar: "return",
+    });
+    expect(weak.body).toMatchObject({ title: "Login redirect loop after OAuth", version: 1 });
+    expect(weak.body.similar).toHaveLength(1);
+    const all = await call(client, "task_list", {});
+    expect(all.body).toHaveLength(2);
+  });
+
   it("returns a CONFLICT tool error naming the holder when another agent claims", async () => {
     const first = await connect();
     const task = await call(first, "task_create", { title: "x" });
@@ -542,8 +631,10 @@ describe("MCP server", () => {
       status: "building",
       protected: true,
     });
-    expect(updated.body).toMatchObject({
+    // A create returns the whole record; an update only what it set (review 4.3).
+    expect(updated.body).toEqual({
       id: created.body.id,
+      version: 2,
       status: "building",
       protected: true,
     });
@@ -620,10 +711,16 @@ describe("MCP server", () => {
     };
     const client = await connect({ ...ctx, repo });
     const put = await call(client, "context_put", { path: "src/auth", summary: "Login flow" });
-    expect(put).toMatchObject({ isError: false, body: { path: "src/auth", gitCommit: "c0ffee" } });
-    expect((await call(client, "context_get", {})).body).toEqual([
-      expect.objectContaining({ path: "src/auth", stale: false }),
+    expect(put).toMatchObject({ isError: false, body: { path: "src/auth" } });
+    expect((await call(client, "context_get", { path: "src/auth" })).body).toEqual([
+      expect.objectContaining({ path: "src/auth", gitCommit: "c0ffee", stale: false }),
     ]);
+    // With no path, only paths and staleness, capped, with a total (review 4.3).
+    for (let i = 0; i < 51; i++) await call(client, "context_put", { path: `m${i}`, summary: "x" });
+    const list = (await call(client, "context_get", {})).body;
+    expect(list.total).toBe(52);
+    expect(list.cards).toHaveLength(50);
+    expect(list.cards[0]).toEqual({ path: "m0", stale: false });
     blob = "a2";
     expect((await call(client, "context_get", { path: "src/auth/login.ts" })).body).toEqual([
       expect.objectContaining({ stale: true }),
@@ -635,6 +732,8 @@ describe("MCP server", () => {
     const res = await client.getPrompt({ name: "start-task", arguments: { taskId: "tsk_abc123" } });
     const msg = res.messages[0]?.content as { text: string };
     expect(msg.text).toContain("task_claim with id tsk_abc123");
+    // The brief is read once per session (review 4.6), so the prompt must not force a second one.
+    expect(msg.text).toContain("unless this session already opened with the brief");
   });
 
   it("fences roadmap text and bounds prompt and feature_check arguments", async () => {

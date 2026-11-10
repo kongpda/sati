@@ -10,6 +10,11 @@ const STOPWORDS = new Set(
 );
 /** Dice similarity of significant title words at or above which a task counts as a likely duplicate. */
 export const SIMILARITY_THRESHOLD = 0.5;
+/**
+ * A score at or above which `task_create` with `ifSimilar: "return"` creates nothing and returns
+ * the matches (review 4.5): most significant words in common, as in a reworded title.
+ */
+export const STRONG_SIMILARITY = 0.8;
 const CANDIDATES = 20;
 const MAX_MATCHES = 3;
 

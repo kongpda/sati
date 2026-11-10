@@ -127,7 +127,7 @@ const create = defineCommand({
     subtasks: {
       type: "string",
       description:
-        "JSON array of {title, body?, dependsOn?: number[]}; dependsOn holds zero-based positions in this array",
+        "JSON array of {title, body?, dependsOn?: number[], effort?}; dependsOn holds zero-based positions in this array",
     },
     ...json,
   },

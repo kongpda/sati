@@ -1,0 +1,54 @@
+{
+  "body": "docs/review-followups.md WP4: task_get, slim results, descriptions and schema gaps, ifSimilar, rules block wording.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "65d0a88f48d3c45aef3abb7a812f0cdea6d82815",
+    "completedAt": "2026-11-10T04:35:22.823Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      ".claude/skills/sati/SKILL.md",
+      "AGENTS.md",
+      "PLAN.md",
+      "README.md",
+      "docs/guide/agent-workflow-general.md",
+      "docs/guide/agent-workflow.md",
+      "docs/progress.md",
+      "docs/review-followups.md",
+      "packages/cli/src/commands/task.ts",
+      "packages/cli/src/integrations.ts",
+      "packages/cli/test/integrations.test.ts",
+      "packages/core/src/services/brief.ts",
+      "packages/core/src/services/recall.ts",
+      "packages/core/src/services/similar.ts",
+      "packages/core/src/services/task.ts",
+      "packages/core/src/workflow.ts",
+      "packages/mcp/src/server.ts",
+      "packages/mcp/test/server.test.ts",
+      ".changeset/wp4-mcp-results.md"
+    ],
+    "summary": "WP4 done: task_get, slim update results, short handles in task_list, context_get list form, ifSimilar on task_create, subtask effort, annotations, repoRelative realpath, rules wording. Session output 29,643 to 13,042 chars."
+  },
+  "createdAt": "2026-11-10T04:24:04.634Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "deep",
+  "id": "tsk_01M71V5T8TCQVHG674T0HQQ3NH",
+  "labels": [
+    "review"
+  ],
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T04:24:04.636Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-10T04:24:11.003Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T04:35:22.825Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T04:35:22.825Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T04:35:22.825Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-10T04:24:11.003Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "review",
+  "title": "Review follow-ups WP4: MCP and agent experience (4.1, 4.3-4.6)",
+  "updatedAt": "2026-11-10T04:35:22.827Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

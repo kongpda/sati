@@ -1,0 +1,15 @@
+{
+  "consequences": "The default stays create, so scripts and old agents behave as before. Weaker matches are still listed after a create.",
+  "context": "Review WP4.5, owner decision: agents created duplicates and then had to clean up.",
+  "createdAt": "2026-11-10T04:32:46.920Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "decision": "task_create takes ifSimilar: create (default) or return. With return, a match scoring 0.8 or more (STRONG_SIMILARITY) creates nothing and returns { created: false, similar }. The agent workflow tells agents to pass return.",
+  "id": "dec_01M71VNRA9B6PTMDSN3EXB8BPT",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T04:32:46.923Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "title": "task_create: ifSimilar returns strong matches instead of creating",
+  "updatedAt": "2026-11-10T04:32:46.920Z",
+  "version": 1
+}

@@ -1740,3 +1740,14 @@ Status: **done** (2026-11-10). Task `tsk_01M71TDRG4N8SFA3SWKYRGZF2P`.
 - 3.5: the board's query client retries once, does not refetch on focus and treats data as fresh for 5 s; a general project's data is memoised.
 - Verified locally: lint (the 12 old CSS warnings), typecheck, core 327, store-sqlite 68, sync 52, mcp 27, ui 21, cli 150, `pnpm test:ui` 79 passed.
 - Found while verifying: the six `e2e/ui/parity.spec.ts` flows had failed since WP4.2 fenced MCP results; their helper parsed the raw text as JSON. It now parses the JSON inside the fence.
+
+## 2026-11-10 — Phase 5h WP4: MCP and agent experience
+
+Status: **done** (2026-11-10). Task `tsk_01M71V5T8TCQVHG674T0HQQ3NH`.
+
+- 4.1: new `task_get` tool returns one task in full, fenced like every result. Listed in the workflow text, the README and the PLAN tool table.
+- 4.3: updates return `{ id, version, status, claim }` plus the fields the call set; creates and claims keep the full record. `task_list` rows use short handles for every id. `context_get` with no path returns `{ total, cards: [{ path, stale }] }`, 50 at most. Choice: cards have no title, so the list gives path and staleness. Measured with a throwaway test (not kept): a session of task_list, task_claim, context_get, three task_update, three context_put and task_complete over 20 tasks and 30 cards went from 29,643 to 13,042 characters.
+- 4.4: descriptions for subtasks, `ifSimilar`, the brief and recall caps and the claim lease; `effort` on subtasks; annotations on all 20 tools (`openWorldHint: false`, `destructiveHint: false` on every write that only updates); the no-op `title` override and the orphaned JSDoc fixed. `repoRelative` realpaths both sides and rejects only `..` and `../x`. Choice: it keeps a copy of the guard's `realish`, because the CLI loads `@sati/mcp` lazily and sharing it would load the MCP SDK on every guard run.
+- 4.5 (owner decision, `dec_xb8bpt`): `ifSimilar: "return"` creates nothing when a match scores 0.8 or more (`STRONG_SIMILARITY`). Choice: 0.8, because the tests' near-identical titles score 1 and a reworded title about 0.75.
+- 4.6 (owner decision, `dec_xxt1qn`): the rules block names the claim token, `recall` and `light`, and skips the brief when the session opened with it. Both blocks got shorter. This repo ran `sati init --upgrade --yes`.
+- Verified locally: lint (the 12 old CSS warnings), typecheck, knip clean, core 327, store-sqlite 68, sync 52, mcp 30, ui 21, cli 151, `pnpm test:ui` 79 passed. Core branch coverage 90.9%.

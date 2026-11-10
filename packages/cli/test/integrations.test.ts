@@ -25,6 +25,23 @@ describe("agent file planning", () => {
 
   it("keeps the block under 30 lines so it costs little context", () => {
     expect(RULES_BLOCK.trimEnd().split("\n").length).toBeLessThan(30);
+    // Review 4.6 added words and kept both blocks within their 2026-11-10 size.
+    expect(RULES_BLOCK.length).toBeLessThanOrEqual(1345);
+    expect(GENERAL_RULES_BLOCK.length).toBeLessThanOrEqual(1219);
+  });
+
+  // Review 4.6: each gap made an agent's first try fail or skip a step.
+  it("tells agents what the first attempt otherwise gets wrong", () => {
+    for (const block of [RULES_BLOCK, GENERAL_RULES_BLOCK]) {
+      // task_complete without the token fails on a claimed task.
+      expect(block).toContain("`task_complete` with the claim token");
+      // recall answers "what do we know" before any file is opened.
+      expect(block).toContain("`recall` what is known");
+      // `light` is only visible in the brief; the agent must know where to look.
+      expect(block).toContain("A task the brief marks `light`");
+      // The brief is read once; a hook may already have opened the session with it.
+      expect(block).toContain("unless the session opened with it");
+    }
   });
 
   it("a general project gets its own rules block and skill, without code steps", () => {

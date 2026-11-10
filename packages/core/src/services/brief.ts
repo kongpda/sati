@@ -32,8 +32,17 @@ export const BriefInput = z.strictObject({
    * `short` is for resumed or compacted sessions: your tasks with their latest comment, and the
    * top 3 ready tasks.
    */
-  format: z.enum(["agent", "short"]).optional(),
-  maxTokens: z.number().int().min(200).max(BRIEF_TOKEN_CAP).optional(),
+  format: z
+    .enum(["agent", "short"])
+    .optional()
+    .describe("short after a resume or compaction: your tasks and the top 3 ready"),
+  maxTokens: z
+    .number()
+    .int()
+    .min(200)
+    .max(BRIEF_TOKEN_CAP)
+    .optional()
+    .describe("Cap on the brief's size in tokens, at most 1,500"),
 });
 export type BriefInput = z.input<typeof BriefInput>;
 

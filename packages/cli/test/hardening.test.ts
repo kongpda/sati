@@ -357,51 +357,57 @@ describe("gitRepoIndex", () => {
 
 describe("mcp process", () => {
   // Why: SIGTERM killed the server inside the 2 s export debounce, leaving `.sati/` stale.
-  it("flushes the .sati/ export on SIGTERM", async () => {
-    const dir = await tempRepo();
-    git(dir, "commit", "-q", "--allow-empty", "-m", "root");
-    expect(sati(dir, "init", "--yes", "--tools", "").code).toBe(0);
-    const child = spawn(process.execPath, [bin, "mcp"], {
-      cwd: dir,
-      env: { ...process.env, SATI_ACTOR: "tester" },
-      stdio: ["pipe", "pipe", "inherit"],
-    });
-    const send = (m: object) => child.stdin.write(`${JSON.stringify(m)}\n`);
-    let buf = "";
-    const seen = (id: number) =>
-      new Promise<void>((resolve) => {
-        const check = () => {
-          if (buf.split("\n").some((l) => l.includes(`"id":${id}`))) resolve();
-        };
-        child.stdout.on("data", (d: Buffer) => {
-          buf += d.toString();
+  // Windows has no catchable SIGTERM: kill() ends the process at once. The records stay in the
+  // database, and the next start or pre-commit hook exports them.
+  it.skipIf(process.platform === "win32")(
+    "flushes the .sati/ export on SIGTERM",
+    async () => {
+      const dir = await tempRepo();
+      git(dir, "commit", "-q", "--allow-empty", "-m", "root");
+      expect(sati(dir, "init", "--yes", "--tools", "").code).toBe(0);
+      const child = spawn(process.execPath, [bin, "mcp"], {
+        cwd: dir,
+        env: { ...process.env, SATI_ACTOR: "tester" },
+        stdio: ["pipe", "pipe", "inherit"],
+      });
+      const send = (m: object) => child.stdin.write(`${JSON.stringify(m)}\n`);
+      let buf = "";
+      const seen = (id: number) =>
+        new Promise<void>((resolve) => {
+          const check = () => {
+            if (buf.split("\n").some((l) => l.includes(`"id":${id}`))) resolve();
+          };
+          child.stdout.on("data", (d: Buffer) => {
+            buf += d.toString();
+            check();
+          });
           check();
         });
-        check();
+      send({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: {
+          protocolVersion: "2025-06-18",
+          capabilities: {},
+          clientInfo: { name: "t", version: "0" },
+        },
       });
-    send({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "initialize",
-      params: {
-        protocolVersion: "2025-06-18",
-        capabilities: {},
-        clientInfo: { name: "t", version: "0" },
-      },
-    });
-    await seen(1);
-    send({ jsonrpc: "2.0", method: "notifications/initialized" });
-    send({
-      jsonrpc: "2.0",
-      id: 2,
-      method: "tools/call",
-      params: { name: "task_create", arguments: { title: "Exported on exit" } },
-    });
-    await seen(2);
-    const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
-    child.kill("SIGTERM");
-    await exited;
-    const tasks = join(dir, ".sati", "tasks");
-    expect(existsSync(tasks) && readdirSync(tasks).length).toBeGreaterThan(0);
-  }, 20_000);
+      await seen(1);
+      send({ jsonrpc: "2.0", method: "notifications/initialized" });
+      send({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/call",
+        params: { name: "task_create", arguments: { title: "Exported on exit" } },
+      });
+      await seen(2);
+      const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
+      child.kill("SIGTERM");
+      await exited;
+      const tasks = join(dir, ".sati", "tasks");
+      expect(existsSync(tasks) ? readdirSync(tasks).length : 0).toBeGreaterThan(0);
+    },
+    20_000,
+  );
 });

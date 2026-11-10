@@ -213,7 +213,9 @@ describe("sati guard --paths and --hook", () => {
     const { dir } = await billingRepo();
     const bash = (command: string, cwd = dir) =>
       run(dir, ["guard", "--hook"], {}, JSON.stringify({ cwd, tool_input: { command } }));
-    for (const command of ["rm -rf .", `rm -rf ${dir}`, "cd src && rm -rf .."]) {
+    // In sh a backslash is an escape, so a Windows path is written with `/` (C:/Users/...).
+    const abs = dir.replaceAll("\\", "/");
+    for (const command of ["rm -rf .", `rm -rf ${abs}`, "cd src && rm -rf .."]) {
       const r = bash(command);
       expect(r.code, command).toBe(2);
       expect(r.stderr, command).toContain("deletes src");

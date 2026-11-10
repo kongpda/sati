@@ -324,6 +324,9 @@ describe("small", () => {
     const dir = await tempRepo();
     expect(sati(dir, "init", "--yes", "--tools", "").code).toBe(0);
     expect(existsSync(registry)).toBe(true);
-    expect(readFileSync(registry, "utf8")).toContain(dir.split("/").at(-1));
+    const roots = (JSON.parse(readFileSync(registry, "utf8")) as { root: string }[]).map(
+      (p) => p.root,
+    );
+    expect(roots).toContain(dir);
   });
 });

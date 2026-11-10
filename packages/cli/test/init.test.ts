@@ -62,7 +62,9 @@ describe("sati init", () => {
       encoding: "utf8",
     });
     // PLAN Security: the driver starts sati by the absolute path recorded at init, not PATH.
-    expect(driver).toBe(`'${bin}' merge-driver %O %A %B\n`);
+    // On Windows a .js file cannot run by itself, so node is recorded too.
+    const self = process.platform === "win32" ? `'${process.execPath}' '${bin}'` : `'${bin}'`;
+    expect(driver).toBe(`${self} merge-driver %O %A %B\n`);
     expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).toContain("<!-- sati:start v1 -->");
     expect(r.data.tools).toContain("claude-code");
     const config = JSON.parse(readFileSync(join(dir, ".sati", "sati.config.json"), "utf8"));
@@ -102,7 +104,13 @@ describe("sati init", () => {
   // The MCP config and hooks start `sati` by name; without it on PATH they fail silently,
   // so init must say so (on stderr, keeping --json output clean).
   it("warns when sati is not on PATH, and stays quiet when it is", async () => {
-    const base = [dirname(process.execPath), "/usr/bin", "/bin"].join(delimiter);
+    // git must stay on PATH, or init cannot install the hooks (on Windows it is not in /usr/bin).
+    const git = execFileSync(process.platform === "win32" ? "where" : "which", ["git"], {
+      encoding: "utf8",
+    }).split(/\r?\n/u)[0];
+    const base = [dirname(process.execPath), dirname(git ?? ""), "/usr/bin", "/bin"].join(
+      delimiter,
+    );
     const dir = await tempRepo();
     const missing = run(dir, ["init", "--yes", "--tools", "claude-code"], { PATH: base });
     expect(missing.code).toBe(0);

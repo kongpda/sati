@@ -271,6 +271,7 @@ describe("selfCommand", () => {
     const { argv, platform } = process;
     process.argv = [argv[0] ?? "", script];
     try {
+      Object.defineProperty(process, "platform", { value: "linux" });
       expect(selfCommand(dir)).toEqual([script]);
       Object.defineProperty(process, "platform", { value: "win32" });
       expect(selfCommand(dir)).toEqual([process.execPath, script]);

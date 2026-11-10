@@ -1692,3 +1692,12 @@ Status: **done** (2026-11-10). Task `tsk_01M71R66EJD5ZHKMAAYV0HE67H`.
 - The server instructions and the workflow say every MCP result fences record text. `SECURITY.md` and the FAQ say the same.
 - Tests: MCP, a task body that says "ignore previous instructions" and holds fences comes back from `task_claim` inside the fence, with no backtick inside and the body unchanged after parsing; `task_list`, `search` and `changes` have no backtick inside the fence. Every other MCP test now checks the fence through the shared `call` helper. Core, a pinned note with fences cannot close the fence in recall or the brief. Both tests failed with the escape removed.
 - Not done here: `task_get` is WP4.1; it will use the same `run` path.
+
+## 2026-11-10 — Phase 5h WP7: test store parity
+
+Status: **done** (2026-11-10). Task `tsk_01M71RY1KT78KK8VMMHVHGR60F`.
+
+- Contract suite: `packages/core/test/support/store-contract.ts`, a function that takes a store factory. It imports only types from core, so `packages/store-sqlite/test/contract.test.ts` runs it against `SqliteStore` with its own build of core; `packages/core/test/store-contract.test.ts` runs it against `MemoryStore`. Nine cases: (rank, id) order for tasks and milestones and its reverse, the `parentId` filter, the 50 default and 500 cap, cursors (a filtered-out cursor still marks the place, an unknown one is NOT_FOUND), ready-task order, `getByKey` finding deleted actors, unique actor names on insert and on update, `getProject` hiding a deleted project, and activity order and cap.
+- Memory store fixed: every case failed on it before. It now orders, clamps, seeks and checks keys as SQL does; `search` and `readyTasks` are clamped too.
+- Found in `SqliteStore`: an update that gave an actor a name another actor holds threw a raw SQLite error (exit 1, "internal"). It now throws CONFLICT. No command renames an actor's `name` today, so this is a store fix with no changeset.
+- No core test depended on the old memory store behaviour.

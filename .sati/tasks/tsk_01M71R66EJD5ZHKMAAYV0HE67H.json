@@ -1,15 +1,30 @@
 {
   "body": "docs/review-followups.md WP4.2: prompt injection through committed .sati/ text. Shared fencing helper, apply to every read path (task_claim, task_list full, task_create/update results, note_get, context_get, search, changes, feature resource), changes header, workflow sentence, tests, changeset.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "heartbeatAt": "2026-11-10T03:31:54.521Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 98879
-    },
-    "leaseUntil": "2026-11-10T04:01:54.521Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "ddeb25ff9246ef54b74f87630b2ab729edec98d1",
+    "completedAt": "2026-11-10T03:37:48.919Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/core/src/services/text.ts",
+      "packages/core/src/services/index.ts",
+      "packages/core/src/services/brief.ts",
+      "packages/core/src/services/recall.ts",
+      "packages/core/src/workflow.ts",
+      "packages/core/test/knowledge.test.ts",
+      "packages/mcp/src/server.ts",
+      "packages/mcp/test/server.test.ts",
+      "docs/guide/agent-workflow.md",
+      "docs/guide/agent-workflow-general.md",
+      "docs/guide/faq.md",
+      "SECURITY.md",
+      "docs/progress.md",
+      "docs/review-followups.md",
+      ".changeset/fence-mcp-results.md"
+    ],
+    "releaseNote": "MCP results now put record text in a data fence that text from teammates cannot close.",
+    "summary": "Review WP4.2 done (commit ddeb25f). Shared fenceData/inert helper in core text.ts with one notice line. Every MCP JSON result, the changes text and the feature resource are fenced; backticks in JSON become ` so values parse the same and text cannot close the fence. Brief and recall fenced text made inert. Workflow, server instructions, SECURITY.md and FAQ updated. Tests: MCP injection test (task_claim, task_list, search, changes) plus fence check in every MCP call; core test for recall and brief. Both fail with the escape removed."
   },
   "createdAt": "2026-11-10T03:31:51.378Z",
   "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
@@ -23,13 +38,14 @@
   "stamps": {
     "*": "2026-11-10T03:31:51.380Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "branch": "2026-11-10T03:31:54.522Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "claim": "2026-11-10T03:31:54.522Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-10T03:31:54.522Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T03:37:48.920Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T03:37:48.920Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T03:37:48.920Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "worktree": "2026-11-10T03:31:54.522Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Review follow-ups WP4.2: fence teammate text in MCP results",
-  "updatedAt": "2026-11-10T03:31:54.522Z",
-  "version": 2,
+  "updatedAt": "2026-11-10T03:37:48.920Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

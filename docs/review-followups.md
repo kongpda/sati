@@ -539,10 +539,10 @@ So core tests can pass on behaviour the real store does not have.
 
 - **Plan:** write one contract test suite (a function that takes a store factory) covering list filters, order, cursors, the clamp, `getByKey`, uniqueness. Run it against both stores. Fix the memory store until both pass. Put the suite where both packages can import it without a dependency cycle (core's test support is the natural home; `store-sqlite` already depends on core).
 
-- [ ] Contract suite
-- [ ] Runs against `MemoryStore` and `SqliteStore`
-- [ ] Memory store fixed
-- [ ] Any core test that only passed on the old behaviour is fixed
+- [x] Contract suite
+- [x] Runs against `MemoryStore` and `SqliteStore`
+- [x] Memory store fixed
+- [x] Any core test that only passed on the old behaviour is fixed (none did: all core tests pass on the fixed store)
 
 ---
 

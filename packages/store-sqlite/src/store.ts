@@ -466,12 +466,21 @@ export class SqliteStore implements StorageAdapter {
     update: async (entity, record, expectedVersion) => {
       const t: s.EntityTable = TABLES[entity];
       const { id: _id, ...row } = toRow(entity, record);
-      const changed = await this.orm
-        .update(t)
-        .set(row)
-        .where(and(eq(t.id, record.id), eq(t.version, expectedVersion)))
-        .returning({ id: t.id })
-        .all();
+      let changed: { id: string }[];
+      try {
+        changed = await this.orm
+          .update(t)
+          .set(row)
+          .where(and(eq(t.id, record.id), eq(t.version, expectedVersion)))
+          .returning({ id: t.id })
+          .all();
+      } catch (err) {
+        // Renaming an actor (or a project slug) to a key another record holds.
+        if (sqliteErrcode(err) === SQLITE_CONSTRAINT_UNIQUE) {
+          throw new SatiError("CONFLICT", `Another ${entity} already uses that name.`);
+        }
+        throw err;
+      }
       if (changed.length !== 1) {
         throw new SatiError(
           "CONFLICT",

@@ -2,6 +2,7 @@ import {
   type Activity,
   type EntityMap,
   HANDOFF_TAG,
+  PRIORITY_RANK,
   type Project,
   SatiError,
   SEARCHABLE,
@@ -25,6 +26,24 @@ interface State {
 }
 
 type AnyRecord = EntityMap[StoredEntity] & Record<string, unknown>;
+
+/** Like SQL's DEFAULT_LIMIT and MAX_LIMIT: 50 rows unless asked, never more than 500. */
+const clampLimit = (n: number | undefined) => Math.min(Math.max(n ?? 50, 1), 500);
+
+/** The SQL store's `rank` column: priority for tasks, `order` for milestones, 0 otherwise. */
+function rankOf(e: StoredEntity, r: AnyRecord): number {
+  if (e === "task") return PRIORITY_RANK[(r as unknown as Task).priority];
+  if (e === "milestone") return Number(r.order);
+  return 0;
+}
+
+/** The unique `key` column: actor name or project slug. */
+const keyOf = (e: StoredEntity, r: AnyRecord): unknown =>
+  e === "actor" ? r.name : e === "project" ? r.slug : undefined;
+
+/** Orders by (rank, id), as the SQL store's index does. */
+const byRankThenId = (e: StoredEntity) => (a: AnyRecord, b: AnyRecord) =>
+  rankOf(e, a) - rankOf(e, b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 /**
  * In-memory StorageAdapter for core tests. Writes run on a copy that replaces the state only
@@ -78,8 +97,24 @@ export class MemoryStore implements StorageAdapter {
         (r) => (r.projectId ?? r.id) === projectId && r.deletedAt === null,
       );
     const clone = <T>(v: T): T => structuredClone(v);
+    /** The SQL unique index on (project, key): another record holding the key is a conflict. */
+    const uniqueKey = (e: StoredEntity, rec: AnyRecord) => {
+      const key = keyOf(e, rec);
+      if (key === undefined) return;
+      const pid = rec.projectId ?? rec.id;
+      for (const r of table(e).values()) {
+        if (r.id !== rec.id && (r.projectId ?? r.id) === pid && keyOf(e, r) === key) {
+          throw new SatiError("CONFLICT", `${e} ${String(key)} already exists`);
+        }
+      }
+    };
     return {
-      getProject: async () => clone([...table("project").values()][0] as Project | undefined),
+      getProject: async () =>
+        clone(
+          [...table("project").values()]
+            .filter((p) => p.deletedAt === null)
+            .sort(byRankThenId("project"))[0] as Project | undefined,
+        ),
       get: async (e, id) => clone(table(e).get(id)) as never,
       findBySuffix: async (e, suffix) =>
         [...table(e).values()]
@@ -91,6 +126,7 @@ export class MemoryStore implements StorageAdapter {
           : live(e, projectId);
         if (q.status) rows = rows.filter((r) => q.status?.includes(String(r.status)));
         if (q.featureId) rows = rows.filter((r) => r.featureId === q.featureId);
+        if (q.parentId) rows = rows.filter((r) => r.parentId === q.parentId);
         if (q.inMilestone) {
           const { milestoneId, featureIds } = q.inMilestone;
           rows = rows.filter(
@@ -116,10 +152,19 @@ export class MemoryStore implements StorageAdapter {
           );
         }
         if (q.path !== undefined) rows = rows.filter((r) => r.path === q.path);
-        if (q.newestFirst) rows = rows.reverse();
-        if (q.after !== undefined) rows = rows.slice(rows.findIndex((r) => r.id === q.after) + 1);
+        const order = byRankThenId(e);
+        rows.sort(q.newestFirst ? (a, b) => order(b, a) : order);
+        if (q.after !== undefined) {
+          // The cursor is found among all the project's rows, so a filtered-out one still marks
+          // the place; an unknown one is an error, as in SQL.
+          const cursor = table(e).get(q.after);
+          if (!cursor || (cursor.projectId ?? cursor.id) !== projectId) {
+            throw new SatiError("NOT_FOUND", `No ${e} with id ${q.after}.`);
+          }
+          rows = rows.filter((r) => (q.newestFirst ? order(r, cursor) < 0 : order(r, cursor) > 0));
+        }
         const start = q.offset ?? 0;
-        return rows.slice(start, start + (q.limit ?? 50)).map(clone) as never;
+        return rows.slice(start, start + clampLimit(q.limit)).map(clone) as never;
       },
       readyTasks: async (projectId, now, limit) => {
         const tasks = live("task", projectId) as unknown as Task[];
@@ -130,11 +175,17 @@ export class MemoryStore implements StorageAdapter {
         };
         return tasks
           .filter((t) => ready(t, status, now))
-          .slice(0, limit)
+          .sort(byRankThenId("task") as never)
+          .slice(0, clampLimit(limit))
           .map(clone);
       },
+      // Deleted records keep their key, as the SQL unique index does.
       getByKey: async (e, projectId, key) =>
-        clone(live(e, projectId).find((r) => (e === "project" ? r.slug : r.name) === key)) as never,
+        clone(
+          [...table(e).values()].find(
+            (r) => (r.projectId ?? r.id) === projectId && keyOf(e, r) === key,
+          ),
+        ) as never,
       search: async (projectId, query, opts = {}) => {
         const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
         const hits: SearchHit[] = [];
@@ -148,7 +199,7 @@ export class MemoryStore implements StorageAdapter {
             }
           }
         }
-        return hits;
+        return hits.slice(0, clampLimit(opts.limit));
       },
       listActivity: async (projectId, q = {}) => {
         const start = q.after === undefined ? 0 : s.activity.findIndex((a) => a.id === q.after);
@@ -159,19 +210,24 @@ export class MemoryStore implements StorageAdapter {
           .filter((a) => (q.actorId ? a.actorId === q.actorId : true))
           .filter((a) => (q.entityId ? a.entityId === q.entityId : true))
           .filter((a) => (q.since ? a.at >= q.since : true));
-        return (q.after === undefined ? rows.reverse() : rows)
-          .slice(0, q.limit ?? Number.POSITIVE_INFINITY)
+        // Without a cursor, newest `at` first (then id), as SQL orders it; with one, commit order.
+        const newest = (a: Activity, b: Activity) =>
+          a.at < b.at ? 1 : a.at > b.at ? -1 : a.id < b.id ? 1 : -1;
+        return (q.after === undefined ? rows.sort(newest) : rows)
+          .slice(0, clampLimit(q.limit))
           .map(clone);
       },
       getActivity: async (id) => clone(s.activity.find((a) => a.id === id)),
       insert: async (e, rec) => {
         if (table(e).has(rec.id)) throw new SatiError("CONFLICT", `duplicate ${rec.id}`);
+        uniqueKey(e, rec as AnyRecord);
         table(e).set(rec.id, clone(rec) as AnyRecord);
       },
       update: async (e, rec, expected) => {
         if (table(e).get(rec.id)?.version !== expected) {
           throw new SatiError("CONFLICT", `stale ${rec.id}`);
         }
+        uniqueKey(e, rec as AnyRecord);
         table(e).set(rec.id, clone(rec) as AnyRecord);
       },
       appendActivity: async (a) => {

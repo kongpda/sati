@@ -1,10 +1,14 @@
 {
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "heartbeatAt": "2026-11-10T06:46:08.132Z",
-    "leaseUntil": "2026-11-10T07:16:08.132Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "8af7073e550f1267fb78136c26e6004782cfab09",
+    "completedAt": "2026-11-10T06:56:40.523Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/cli/src/install.ts"
+    ],
+    "summary": "Windows-only CI tests: existsSync on pipe OK, readFileSync(0) OK, isLocalInstall drive-letter case bug reproduced and fixed (case-insensitive compare on win32)."
   },
   "createdAt": "2026-11-10T06:44:09.237Z",
   "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
@@ -15,13 +19,14 @@
   "stamps": {
     "*": "2026-11-10T06:44:09.239Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "branch": "2026-11-10T06:46:08.133Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "claim": "2026-11-10T06:46:08.133Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-10T06:46:08.133Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T06:56:40.524Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T06:56:40.524Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T06:56:40.524Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "worktree": "2026-11-10T06:46:08.133Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Check the doubtful Windows items on the Windows CI runner",
-  "updatedAt": "2026-11-10T06:46:08.135Z",
-  "version": 2,
+  "updatedAt": "2026-11-10T06:56:40.525Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

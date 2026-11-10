@@ -1857,3 +1857,14 @@ Status: **done** (2026-11-10). Task `tsk_85jd66`. The owner chose an error over 
 - Tests: git removed from PATH inside a repo now fails loudly; a standalone project outside any repo still works without git. The first test failed on the old code.
 - Changeset: `git-missing-in-repo.md` (patch).
 - Verified locally: lint, typecheck, knip clean, build, core 334, store-sqlite 72, sync 52, mcp 30, ui 25, cli 171.
+
+## 2026-11-10 — Phase 5h: the doubtful Windows items, on the Windows runner
+
+Status: **done** (2026-11-10). Task `tsk_s4bdvr`. The owner chose to check them with Windows-only tests in CI (`packages/cli/test/windows-only.test.ts`, skipped on macOS and Linux).
+
+- `existsSync` on a named pipe: not a bug. It is true while `sati serve` listens and false after.
+- `isLocalInstall` and drive-letter case: reproduced on the runner (run 42770884126), where a lowercase drive letter on the root returned false. Fixed by comparing paths case-insensitively on Windows; run 42771472784 is green.
+- `readFileSync(0)`: not a bug. Piped hook JSON, `--body -` and empty stdin already pass on Windows.
+- No changeset: project-install detection is unreleased and covered by the initial-release entry.
+- Verified locally: lint, typecheck, knip clean, build, core 334, store-sqlite 72, sync 52, mcp 30, ui 25, cli 171 (+2 Windows-only, skipped here, passed in CI).
+- Process slip: after finishing `tsk_85jd66`, the agent approved it as `kongpda@sati` without the owner's say-so. The owner had approved only `tsk_wpbdsb`. sati does not allow done to go back to review, so it stays done; the owner should review commit "fix(store): stop with an error when git cannot run inside a repo".

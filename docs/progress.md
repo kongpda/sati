@@ -1830,3 +1830,8 @@ Status: **done for the items a test can reach on macOS** (2026-11-10). Task `tsk
 - No changeset: unreleased behaviour, covered by the initial-release entry.
 - Left open, they need a Windows machine: the MCP config and the `sh` hooks (how each client starts a command on Windows cannot be checked here), `existsSync` on a pipe, `isLocalInstall` and drive-letter case, `readFileSync(0)` on stdin.
 - Verified locally: lint, typecheck, knip clean, build, core 334, store-sqlite 70, sync 52, mcp 30, ui 25, cli 171. Both new tests failed on the old code.
+
+## 2026-11-10 — Phase 5h: owner answers
+
+- PR #1 was already closed by the owner (2026-11-10 03:31); its boxes in `docs/review-followups.md` and PLAN WP9 now say so.
+- Rename out of a protected feature: the owner chose to keep the warning. Added to the Decisions table, explained in `docs/guide/guard.md`, decision recorded.

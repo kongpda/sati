@@ -1,0 +1,15 @@
+{
+  "consequences": "Refactors are not stopped; the file still exists. Agents update feature paths with feature_upsert after a move.",
+  "context": "Review WP10 asked whether to block it like a delete; the owner chose on 2026-11-10.",
+  "createdAt": "2026-11-10T06:00:35.333Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "decision": "A rename or move out of a protected feature's paths stays a warning (renamed-out), not a block.",
+  "id": "dec_01M720PH859D2RG7A2NAQ94ESX",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T06:00:35.335Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "title": "Guard keeps warning on a rename out of a protected feature",
+  "updatedAt": "2026-11-10T06:00:35.333Z",
+  "version": 1
+}

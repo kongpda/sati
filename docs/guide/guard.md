@@ -81,7 +81,7 @@ is the backstop for anything the editor hook cannot see.
 - **Accepted gaps**: removing a feature over many small commits that each stay under the ratio,
   moving files out through a symlink, and `git commit -m "--no-verify"` being blocked as if it
   were the flag.
-- **A rename out of a protected feature** only warns (`renamed-out`).
+- **A rename out of a protected feature** only warns (`renamed-out`). This is on purpose: the file still exists, and blocking would stop normal refactors. Update the feature's paths with `feature_upsert` after the move.
 
 ## Locks
 

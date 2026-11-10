@@ -43,6 +43,7 @@ Made 2026-11-10: the owner asked the reviewing agent to choose, aiming for a sec
 | WP9 changesets | Replace the set with one "initial release" entry for 0.1.0. Record a decision for the removed files. |
 | WP9 release checks | Add the packed-install step. Build the guard job from the base ref. One e2e shard on pull requests, ten on `main` and nightly. |
 | WP10 knip | Add it as a dev dependency, with a short ADR. |
+| WP10 rename out of a protected feature | Keep the warning; do not block it like a delete (owner, 2026-11-10). |
 
 ### Only the owner can do these
 
@@ -579,7 +580,7 @@ Effort: `light` for each item; the whole package suits a small model with a chec
 
 Effort: `standard`. Almost every item needs the owner: publishing and GitHub settings are theirs.
 
-- [ ] **PR #1 is stale.** Built from `ebc564c` with 14 changesets for 0.0.1; `main` holds 57 for 0.1.0. Merging it as it stands would publish 0.0.1 with a changelog missing about 40 entries. **Owner:** do not merge; once Actions runs, the release workflow rebuilds it, or close it and let the action open a new one.
+- [x] **PR #1 is stale.** Built from `ebc564c` with 14 changesets for 0.0.1; `main` holds 57 for 0.1.0. Merging it as it stands would publish 0.0.1 with a changelog missing about 40 entries. **Owner:** do not merge; once Actions runs, the release workflow rebuilds it, or close it and let the action open a new one. Closed by the owner on 2026-11-10.
 - [x] **Changesets read badly as a first release.** `initial-release.md` says "First publish: `sati --version`"; dozens of entries fix behaviour nobody installed; two compare against `better-sqlite3` and a 29 MB install that never shipped. **Owner decision:** replace the set with one "initial release" entry that describes the product (the per-change history stays in `docs/progress.md`). If yes, record a decision for the removed files.
 - [ ] **Provenance needs a public repo.** `packages/cli/package.json` has `publishConfig.provenance: true` and the workflow sets `NPM_CONFIG_PROVENANCE`. npm refuses that from a private repo. The READMEs also use `raw.githubusercontent.com` images, which need a public repo. **Owner:** confirm visibility before the first release.
 - [x] **Actions pinned to tags.** Every `uses:` in `.github/workflows/*.yml` is a floating tag, and `release.yml` gives `changesets/action@v1` both `NPM_TOKEN` and `id-token: write`. Pin to commit SHAs (with the tag in a comment) and add `helpers:pinGitHubActionDigests` to `renovate.json`. Code change; safe to do without the owner, but it cannot be checked until Actions runs.
@@ -658,7 +659,7 @@ MCP and CLI parity (see also WP4.4 and WP5.2):
 
 Guard and shell hook (known limits, the pre-commit guard is the backstop):
 
-- [ ] A rename out of a protected feature only warns. Owner decision: block it like a delete?
+- [x] A rename out of a protected feature only warns. Owner decision: block it like a delete? Owner decided 2026-11-10: keep the warning. The file still exists, so nothing is lost, and blocking would stop normal refactors; agents update the feature with `feature_upsert`.
 - [x] Binary files have no line counts, so they are never ratio-checked. Document it in `docs/guide/guard.md`. Documented under "Known limits".
 - [x] The Write tool and `> file` truncation only warn in the hook; the staged check catches them. The hook could compare with the file on disk. Documented as a known limit; the staged check is the backstop.
 - [x] Not parsed: `xargs rm`, `find -delete`, `eval`, scripts in other interpreters, paths in variables, `git -c alias.x=...`, `git commit-tree`. Documented as a known limit.

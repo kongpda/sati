@@ -673,8 +673,9 @@ Windows (read only, not run). The open items below need a Windows machine to rep
 - [ ] The MCP config runs `node_modules/.bin/sati` and the Claude Code hooks use `sh` syntax (likely).
 - [x] `sati serve` has no `error` handler, so EADDRINUSE crashes instead of exiting 4. This can happen on macOS and Linux too (likely). Already fixed in WP5.6 (test: "of two serves started at once, one runs and the other exits 4").
 - [x] The `.gitattributes` line should add `text eol=lf` so autocrlf does not rewrite `.sati/` files (likely). Reproduced on macOS with `core.autocrlf=true`: the clone got CRLF records and the first export rewrote them. Done (2026-11-10, WP10 leftovers); `init --upgrade` replaces the old line.
-- [ ] Renaming over an open file gives EPERM with no retry and leaves the `.tmp` file.
-- [ ] Doubtful: `existsSync` on a pipe, `isLocalInstall` case, the installed-self regex and CRLF, mixed line endings in rules blocks (reproduced with `core.autocrlf` on macOS and fixed 2026-11-10: the block now follows the file's line endings), `repoRelative` with `..foo` and no realpath, UNC paths never "network", `readFileSync(0)` on stdin.
+- [x] Renaming over an open file gives EPERM with no retry and leaves the `.tmp` file. Reproduced by making `renameSync` throw EPERM: `writeFileAtomic` now retries EPERM, EACCES and EBUSY for about a second, then removes the `.tmp` file and throws (2026-11-10).
+- [x] Doubtful, settled without Windows (2026-11-10): mixed line endings in rules blocks (reproduced with `core.autocrlf` on macOS and fixed: the block follows the file's line endings); `repoRelative` with `..foo` and no realpath (already fixed in review 4.4: both sides go through realpath and `..foo` stays inside); UNC paths never "network" (confirmed: Windows has no `stat`, so every path read as local; a UNC path is now "network", tested with the platform passed in; a mapped drive letter is still not detected); the installed-self regex and CRLF (not a bug: sati writes that hook file itself, with LF, inside `.git`, which git never checks out, so `core.autocrlf` cannot touch it).
+- [ ] Doubtful, needs a Windows machine: `existsSync` on a pipe, `isLocalInstall` and drive-letter case, `readFileSync(0)` on stdin.
 - Checked and fine: pipe naming, socket cleanup, `kill(0)`, display paths, `sh` quoting, JSON escaping, `-z` git parsing.
 
 

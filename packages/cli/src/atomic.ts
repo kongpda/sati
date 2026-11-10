@@ -1,4 +1,4 @@
-import { chmodSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 
 /**
  * Writes `text` to a temp file beside `path`, then renames it over `path`, so a crash or a
@@ -15,5 +15,26 @@ export function writeFileAtomic(path: string, text: string, mode?: number): void
   const tmp = `${path}.${process.pid}.tmp`;
   writeFileSync(tmp, text);
   if (keep !== undefined) chmodSync(tmp, keep);
-  renameSync(tmp, path);
+  rename(tmp, path);
+}
+
+/** Codes Windows gives for a rename over a file another process has open for a moment. */
+const BUSY = new Set(["EPERM", "EACCES", "EBUSY"]);
+const RETRIES = 10;
+
+/** Renames, retrying for about a second while the target is busy; removes `tmp` if it fails. */
+function rename(tmp: string, path: string): void {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      renameSync(tmp, path);
+      return;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code ?? "";
+      if (!BUSY.has(code) || attempt >= RETRIES) {
+        rmSync(tmp, { force: true });
+        throw err;
+      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20 * (attempt + 1));
+    }
+  }
 }

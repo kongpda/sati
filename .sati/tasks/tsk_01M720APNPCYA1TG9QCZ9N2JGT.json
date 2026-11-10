@@ -1,0 +1,33 @@
+{
+  "body": "Windows items that can be reproduced with a stubbed rename or a platform argument.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "4655d8af179b31f48af2ed512a9cdbd869d6e14f",
+    "completedAt": "2026-11-10T05:54:42.555Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/cli/src/atomic.ts"
+    ],
+    "summary": "EPERM rename retry with tmp cleanup; UNC paths are network on Windows; doubtful list settled except 3 Windows-only entries."
+  },
+  "createdAt": "2026-11-10T05:54:07.670Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "standard",
+  "id": "tsk_01M720APNPCYA1TG9QCZ9N2JGT",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T05:54:07.672Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-10T05:54:07.786Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T05:54:42.557Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T05:54:42.557Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T05:54:42.557Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-10T05:54:07.786Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "review",
+  "title": "Review follow-ups: EPERM retry, UNC paths, doubtful list",
+  "updatedAt": "2026-11-10T05:54:42.558Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

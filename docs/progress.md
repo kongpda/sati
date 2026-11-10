@@ -1819,3 +1819,14 @@ Status: **done for the items a test can reach on macOS** (2026-11-10). Task `tsk
 - Verified locally: lint, typecheck, knip clean, build, core 334, store-sqlite 69, sync 52, mcp 30, ui 25, cli 170. Each new test failed on the old code.
 - Left open, they need a Windows machine: the MCP config running `node_modules/.bin/sati` and the `sh` syntax in the Claude Code hooks, EPERM on rename over an open file, and the doubtful list.
 
+
+## 2026-11-10 — Phase 5h: EPERM retry, UNC paths, the doubtful list
+
+Status: **done for the items a test can reach on macOS** (2026-11-10). Task `tsk_01M720APNPCYA1TG9QCZ9N2JGT`.
+
+- `writeFileAtomic` retries a rename that fails with EPERM, EACCES or EBUSY for about a second, then removes the `.tmp` file and throws. Test: `renameSync` mocked to throw EPERM.
+- `filesystemKind` takes the platform. On Windows, which has no `stat` command, a UNC path is "network" and anything else "local"; before, every Windows path read as local. A mapped drive letter is still not detected.
+- Doubtful list: mixed line endings and `repoRelative` with `..foo` were already fixed; the installed-self regex and CRLF is not a bug, since sati writes that hook file with LF inside `.git`, where `core.autocrlf` does not apply.
+- No changeset: unreleased behaviour, covered by the initial-release entry.
+- Left open, they need a Windows machine: the MCP config and the `sh` hooks (how each client starts a command on Windows cannot be checked here), `existsSync` on a pipe, `isLocalInstall` and drive-letter case, `readFileSync(0)` on stdin.
+- Verified locally: lint, typecheck, knip clean, build, core 334, store-sqlite 70, sync 52, mcp 30, ui 25, cli 171. Both new tests failed on the old code.

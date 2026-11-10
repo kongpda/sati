@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createIdFactory, createTask, initProject, systemClock } from "@sati/core";
 import { describe, expect, it } from "vitest";
-import { classifyFilesystem } from "../src/fs-kind.js";
+import { classifyFilesystem, filesystemKind } from "../src/fs-kind.js";
 import { connectStore, listenStore, socketPath } from "../src/remote.js";
 import { SqliteStore } from "../src/store.js";
 
@@ -14,6 +14,15 @@ describe("filesystem class", () => {
     expect(classifyFilesystem("nfs")).toBe("network");
     expect(classifyFilesystem("smbfs")).toBe("network");
     expect(classifyFilesystem("9p")).toBe("bind");
+  });
+
+  // Windows has no `stat` command, so every path read as local, and a database on a share
+  // (\\server\share) ran SQLite WAL over the network without a warning.
+  it("treats a UNC path on Windows as network", () => {
+    expect(filesystemKind("\\\\server\\share\\repo\\.git\\sati", "win32")).toBe("network");
+    expect(filesystemKind("\\\\?\\UNC\\server\\share\\repo", "win32")).toBe("network");
+    expect(filesystemKind("C:\\repo\\.git\\sati", "win32")).toBe("local");
+    expect(filesystemKind("\\\\?\\C:\\repo\\.git\\sati", "win32")).toBe("local");
   });
 });
 

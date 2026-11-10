@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { chmodSync } from "node:fs";
 import { createConnection, createServer, type Server, type Socket } from "node:net";
 import { dirname, join } from "node:path";
 import {
@@ -31,28 +32,48 @@ interface Message {
   error?: { code: string; message: string; hint?: string | null; details?: unknown };
 }
 
+/** Largest frame either side accepts. A bigger length prefix is treated as garbage. */
+const MAX_FRAME = 16 * 1024 * 1024;
+
+/**
+ * Frames a message. A frame over the limit throws here, before it is sent: the reader would
+ * only drop the connection, and the caller would see "connection closed" instead of the reason.
+ */
 function encode(value: unknown): Buffer {
   const body = Buffer.from(JSON.stringify(value));
+  if (body.length > MAX_FRAME) {
+    const mb = (n: number) => `${Math.ceil(n / (1024 * 1024))} MB`;
+    throw new SatiError(
+      "INTERNAL",
+      `A message to or from \`${CLI_NAME} serve\` is ${mb(body.length)}; the limit is ${mb(MAX_FRAME)}.`,
+      { hint: "Ask for fewer records at a time, for example with a smaller limit." },
+    );
+  }
   const head = Buffer.alloc(4);
   head.writeUInt32BE(body.length);
   return Buffer.concat([head, body]);
 }
 
-/** Largest frame either side accepts. A bigger length prefix is treated as garbage. */
-const MAX_FRAME = 16 * 1024 * 1024;
-
-/** Splits the stream into frames. Bad input destroys the socket instead of throwing. */
+/**
+ * Splits the stream into frames. Chunks are kept in a list and joined once per frame, so a large
+ * frame sent in many small chunks costs one copy, not one per chunk. Bad input destroys the
+ * socket instead of throwing.
+ */
 function decode(socket: Socket, onMessage: (msg: Message) => void): void {
-  let buf = Buffer.alloc(0);
+  let chunks: Buffer[] = [];
+  let size = 0;
   socket.on("data", (chunk: Buffer) => {
-    buf = Buffer.concat([buf, chunk]);
-    while (buf.length >= 4) {
-      const len = buf.readUInt32BE(0);
+    chunks.push(chunk);
+    size += chunk.length;
+    while (size >= 4) {
+      if ((chunks[0]?.length ?? 0) < 4) chunks = [Buffer.concat(chunks, size)];
+      const len = chunks[0]?.readUInt32BE(0) ?? 0;
       if (len > MAX_FRAME) {
         socket.destroy();
         return;
       }
-      if (buf.length < 4 + len) return;
+      if (size < 4 + len) return;
+      const buf = chunks.length === 1 && chunks[0] ? chunks[0] : Buffer.concat(chunks, size);
       let msg: Message;
       try {
         msg = JSON.parse(buf.subarray(4, 4 + len).toString("utf8")) as Message;
@@ -60,7 +81,9 @@ function decode(socket: Socket, onMessage: (msg: Message) => void): void {
         socket.destroy();
         return;
       }
-      buf = buf.subarray(4 + len);
+      const rest = buf.subarray(4 + len);
+      chunks = rest.length > 0 ? [rest] : [];
+      size = rest.length;
       if (msg === null || typeof msg !== "object") {
         socket.destroy();
         return;
@@ -126,8 +149,22 @@ export function listenStore(
       number,
       { resolve: () => void; reject: (err: Error) => void; endId: number }
     >();
-    const send = (msg: unknown) => {
-      if (!socket.destroyed) socket.write(encode(msg));
+    const send = (msg: Pick<Message, "id" | "ok" | "result" | "error">) => {
+      if (socket.destroyed) return;
+      let frame: Buffer;
+      try {
+        frame = encode(msg);
+      } catch (err) {
+        // A result over the frame limit: send the reason instead, so the caller is not left
+        // waiting on a reply the reader would refuse.
+        const e = err as SatiError;
+        frame = encode({
+          id: msg.id,
+          ok: false,
+          error: { code: e.code, message: e.message, hint: e.hint ?? null },
+        });
+      }
+      socket.write(frame);
     };
     let closed = false;
     // A client that begins and then goes quiet would hold the write lock for everyone. Each
@@ -251,6 +288,8 @@ export function listenStore(
       else gate.resolve();
     });
   });
+  // Only the owner may connect: anyone who can reach the socket can read and write every record.
+  if (process.platform !== "win32") server.once("listening", () => chmodSync(socketPath, 0o600));
   server.listen(socketPath);
   return server;
 }

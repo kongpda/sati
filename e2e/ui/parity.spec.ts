@@ -31,12 +31,17 @@ test.afterAll(async () => {
   await ui?.stop();
 });
 
-/** Calls an MCP tool and returns its parsed JSON result. */
+/**
+ * Calls an MCP tool and returns its parsed JSON result. Results come in a ```data fence under a
+ * notice line (review 4.2), so teammate text is never read as instructions; the JSON is inside.
+ */
 async function call<T = Rec>(name: string, args: Record<string, unknown>): Promise<T> {
   const res = await mcp.callTool({ name, arguments: args });
   const [first] = res.content as { type: string; text?: string }[];
   if (res.isError || first?.type !== "text") throw new Error(`${name}: ${first?.text}`);
-  return JSON.parse(first.text ?? "") as T;
+  const fenced = /\n```data\n([\s\S]*)\n```\n$/u.exec(first.text ?? "");
+  if (!fenced?.[1]) throw new Error(`${name}: result is not fenced: ${first.text}`);
+  return JSON.parse(fenced[1]) as T;
 }
 
 // Distinct titles per run and side, so each side's records are found by title.

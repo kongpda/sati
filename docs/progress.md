@@ -1727,3 +1727,16 @@ Status: **done** (2026-11-10). Task `tsk_01M71T2QT8MKG5VX24KQNP6MSC`.
 - 2.5: already done in WP7.
 - 2.6: `Math.max(-1, ...)` replaced with `reduce`. Expired locks stay logged as `release` by the caller; a decision records why.
 - Verified locally: lint (12 old CSS warnings), typecheck, knip clean, core 324, store-sqlite 63, sync 52, mcp 27, ui 21, cli 150. Core branch coverage 90.91%.
+
+## 2026-11-10 — Phase 5h WP3: performance
+
+Status: **done** (2026-11-10). Task `tsk_01M71TDRG4N8SFA3SWKYRGZF2P`.
+
+- Measured with throwaway scripts against the built packages (not kept in the repo; `pnpm bench` stays the budget suite).
+- 3.1: released locks stay as tombstones, and every lock check read all of them inside the write lock. Migration `0006_live_locks.sql` adds two partial indexes over live locks, one by task id; `ListQuery.taskId` uses it. With 20,000 released locks: holder update 11.57 ms to 0.68 ms, `acquireLock` 10.91 ms to 0.58 ms. Owner decision followed: a renewal that moves the lease by under a minute is skipped, and every write still logs (decision `dec_01M71TW37BCP1QTRZWJ32BC89R`). Ten quick holder updates: 20 activity rows to 10.
+- 3.2: the call-site list with frequency is in `docs/review-followups.md`. Besides the lock scans, only `importPlan` read every record inside the write lock; a new `anyLabel` filter narrows it (10,000 tasks: 46.5 ms to 23.5 ms). The brief takes 56 ms on 18,000 records, inside its budget.
+- 3.3: at 5,000 records a full export with nothing changed takes 233 to 262 ms, under the owner's 500 ms bar, so no incremental export was built.
+- 3.4: the daemon joins chunks once per frame, refuses an over-limit frame on send with an error naming the 16 MB limit (the daemon returns it in place of the result), and sets the socket to `0600` on POSIX.
+- 3.5: the board's query client retries once, does not refetch on focus and treats data as fresh for 5 s; a general project's data is memoised.
+- Verified locally: lint (the 12 old CSS warnings), typecheck, core 327, store-sqlite 68, sync 52, mcp 27, ui 21, cli 150, `pnpm test:ui` 79 passed.
+- Found while verifying: the six `e2e/ui/parity.spec.ts` flows had failed since WP4.2 fenced MCP results; their helper parsed the raw text as JSON. It now parses the JSON inside the fence.

@@ -43,6 +43,13 @@
       "when": 1794200000000,
       "tag": "0005_note_handoff_status",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794283929580,
+      "tag": "0006_live_locks",
+      "breakpoints": true
     }
   ]
 }

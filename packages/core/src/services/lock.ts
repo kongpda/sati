@@ -68,6 +68,16 @@ export interface AcquireLockResult {
 }
 
 const allLocks = (r: StorageReader, ctx: ServiceContext) => listAll(r, ctx, "lock");
+/** The live (not released) locks tagged with a task, found by index. */
+const taskLocks = (r: StorageReader, ctx: ServiceContext, taskId: string) =>
+  listAll(r, ctx, "lock", { taskId });
+
+/**
+ * A renewal that would move a lease by less than this is skipped. Every holder write renews, and
+ * each renewal is a logged write, so a burst of updates would otherwise log one row per lock per
+ * update (review WP3.1).
+ */
+export const LOCK_RENEW_STEP_MS = 60_000;
 
 export const isLive = (l: Pick<Lock, "leaseUntil">, now: string) => l.leaseUntil > now;
 
@@ -199,7 +209,7 @@ export async function releaseTaskLocks(
   taskId: string,
   holder: string = ctx.actorId,
 ): Promise<Lock[]> {
-  const mine = (await allLocks(w, ctx)).filter((l) => l.taskId === taskId && l.actorId === holder);
+  const mine = (await taskLocks(w, ctx, taskId)).filter((l) => l.actorId === holder);
   const out: Lock[] = [];
   for (const l of mine) out.push(await softDelete(w, ctx, l));
   return out;
@@ -208,7 +218,7 @@ export async function releaseTaskLocks(
 /**
  * Moves the lease of the caller's live locks for a task out to `leaseUntil`, so a lock does not
  * lapse while the claim it serves is renewed. Call inside `store.write`. Expired locks are left
- * alone: another agent may already hold those paths.
+ * alone: another agent may already hold those paths. A move of under a minute is skipped.
  */
 export async function renewTaskLocks(
   w: StorageWriter,
@@ -217,9 +227,10 @@ export async function renewTaskLocks(
   leaseUntil: string,
 ): Promise<void> {
   const now = nowIso(ctx);
-  for (const l of await allLocks(w, ctx)) {
-    if (l.taskId !== taskId || l.actorId !== ctx.actorId) continue;
-    if (!isLive(l, now) || l.leaseUntil >= leaseUntil) continue;
+  const target = Date.parse(leaseUntil);
+  for (const l of await taskLocks(w, ctx, taskId)) {
+    if (l.actorId !== ctx.actorId || !isLive(l, now)) continue;
+    if (target - Date.parse(l.leaseUntil) < LOCK_RENEW_STEP_MS) continue;
     await updateWithLog(w, ctx, "lock", l, { leaseUntil });
   }
 }

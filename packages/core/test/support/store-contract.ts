@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Actor, Milestone, Project, StorageAdapter, Task } from "../../src/index.js";
+import type { Actor, Lock, Milestone, Project, StorageAdapter, Task } from "../../src/index.js";
 
 /**
  * What every StorageAdapter must do, run against the in-memory test store and SqliteStore.
@@ -180,6 +180,47 @@ export function storeContract(name: string, open: () => Promise<StorageAdapter>)
       expect(await after(urgent.id)).toEqual([a.id, b.id]);
       expect(await after(b.id)).toEqual([]);
       expect(await errorCode(() => after("tsk_01JDUNKNOWNUNKNOWNUNKNOWNUN"))).toBe("NOT_FOUND");
+      await store.close();
+    });
+
+    // Plan import looks up only the tasks it may already have made (review WP3.2).
+    it("filters by any of several labels", async () => {
+      const a = task({ labels: ["plan:a", "x"] });
+      const b = task({ labels: ["plan:b"], deletedAt: NOW });
+      const store = await seeded(a, b, task({ labels: ["plan:c"] }), task());
+      const ids = (anyLabel: string[], includeDeleted = false) =>
+        store
+          .read((r) => r.list("task", PROJECT, { anyLabel, includeDeleted }))
+          .then((ts) => ts.map((t) => t.id));
+      expect(await ids(["plan:a", "plan:b"])).toEqual([a.id]);
+      expect(await ids(["plan:a", "plan:b"], true)).toEqual([a.id, b.id]);
+      expect(await ids([])).toEqual([]);
+      await store.close();
+    });
+
+    // Lock checks find a task's locks by index instead of reading every lock (review WP3.1).
+    it("filters locks by task, skipping released ones", async () => {
+      const lock = (taskId: string | null, over: Partial<Lock> = {}): Lock => ({
+        id: id("lock"),
+        ...base(),
+        paths: ["src"],
+        actorId: ACTOR,
+        taskId,
+        reason: "",
+        leaseUntil: NOW,
+        mode: "exclusive",
+        ...over,
+      });
+      const mine = task();
+      const held = lock(mine.id);
+      const released = lock(mine.id, { deletedAt: NOW });
+      const other = lock(task().id);
+      const store = await seeded(mine);
+      await store.write(async (w) => {
+        for (const l of [held, released, other, lock(null)]) await w.insert("lock", l);
+      });
+      const rows = await store.read((r) => r.list("lock", PROJECT, { taskId: mine.id }));
+      expect(rows.map((l) => l.id)).toEqual([held.id]);
       await store.close();
     });
 

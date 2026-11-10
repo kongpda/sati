@@ -8,6 +8,8 @@ export interface ListQuery {
   inMilestone?: { milestoneId: string; featureIds: readonly string[] } | undefined;
   parentId?: string | undefined;
   label?: string | undefined;
+  /** Records with at least one of these labels. */
+  anyLabel?: readonly string[] | undefined;
   /** Tasks due on or before this ISO date. */
   dueBy?: string | undefined;
   /** Tasks with this actor in `assigneeIds`. */
@@ -18,6 +20,8 @@ export interface ListQuery {
   updatedSince?: string | undefined;
   /** Notes tagged as handoffs: only those not yet acknowledged, or all of them. */
   handoff?: "unread" | "any" | undefined;
+  /** Locks tagged with this task. */
+  taskId?: string | undefined;
   /** Context entries for exactly this path. */
   path?: string | undefined;
   includeDeleted?: boolean | undefined;

@@ -34,6 +34,9 @@ const PAGES = [
   ["/settings", "Settings"],
 ] as const;
 
+/** One empty list, so a general project's data keeps the same identity between renders. */
+const NONE: never[] = [];
+
 /** Pages a general project does without: it has no features, file reservations or guard. */
 const CODE_ONLY = new Set<string>(["/agents", "/features"]);
 
@@ -409,7 +412,11 @@ export function App() {
   const general = query.data?.project?.kind === "general";
   // A general project shows no features or file reservations anywhere, even ones left over
   // from when it was a code project; they stay in the store and come back if it switches back.
-  const data = query.data && general ? { ...query.data, features: [], locks: [] } : query.data;
+  // Memoised: a new object each render would re-render the memoised board on every keystroke.
+  const data = useMemo(
+    () => (query.data && general ? { ...query.data, features: NONE, locks: NONE } : query.data),
+    [query.data, general],
+  );
   const pages = PAGES.filter(([href]) => !(general && CODE_ONLY.has(href)));
   // The feature filter is hidden in a general project, so it must not keep narrowing the board.
   useEffect(() => {

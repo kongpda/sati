@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   type IndexBuilder,
   index,
@@ -51,7 +52,14 @@ export const tasks = entityTable("tasks", (t) => [
   index("tasks_claim_lease").on(t.claimLeaseUntil),
   index("tasks_parent").on(t.parentId),
 ]);
-export const locks = entityTable("locks");
+export const locks = entityTable("locks", (t) => [
+  // Released locks stay as tombstones. Lock checks run inside the write lock and read only live
+  // rows, so these partial indexes skip the tombstones (review WP3.1).
+  index("locks_live").on(t.projectId, t.rank, t.id).where(sql`${t.deletedAt} is null`),
+  index("locks_live_task")
+    .on(t.projectId, sql`json_extract(${t.data}, '$.taskId')`)
+    .where(sql`${t.deletedAt} is null`),
+]);
 export const decisions = entityTable("decisions");
 export const notes = entityTable("notes");
 export const contextEntries = entityTable("context_entries");

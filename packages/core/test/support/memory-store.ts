@@ -151,6 +151,13 @@ export class MemoryStore implements StorageAdapter {
               (q.handoff === "any" || r.acknowledged === undefined),
           );
         }
+        if (q.anyLabel) {
+          const wanted = new Set(q.anyLabel);
+          rows = rows.filter((r) =>
+            ((r.labels as string[] | undefined) ?? []).some((l) => wanted.has(l)),
+          );
+        }
+        if (q.taskId) rows = rows.filter((r) => r.taskId === q.taskId);
         if (q.path !== undefined) rows = rows.filter((r) => r.path === q.path);
         const order = byRankThenId(e);
         rows.sort(q.newestFirst ? (a, b) => order(b, a) : order);

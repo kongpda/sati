@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, statSync } from "node:fs";
 import { createConnection, createServer, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -203,5 +203,49 @@ describe("daemon client", () => {
     const remote = connectStore(join(mkdtempSync(join(tmpdir(), "sati-remote-")), "none.sock"));
     const err = await within(remote.read(async () => undefined)).catch((e) => e);
     expect(err).toBeInstanceOf(SatiError);
+  });
+});
+
+describe("daemon framing", () => {
+  // A large frame that arrives in many small chunks used to be re-copied once per chunk.
+  it("receives a 2 MB frame sent in 1 KB chunks intact", async () => {
+    const client = await connect();
+    client.write(frame({ id: 1, op: "begin", mode: "write", txn: 1, protocol: PROTOCOL }));
+    expect((await nextFrame(client)).ok).toBe(true);
+    const big = task({ body: "x".repeat(2 * 1024 * 1024) });
+    const whole = frame({ id: 2, op: "call", txn: 1, method: "insert", args: ["task", big] });
+    const reply = nextFrame(client);
+    for (let at = 0; at < whole.length; at += 1024) {
+      client.write(whole.subarray(at, at + 1024));
+      if (at % (64 * 1024) === 0) await new Promise((r) => setImmediate(r));
+    }
+    expect(await within(reply)).toMatchObject({ id: 2, ok: true });
+    client.write(frame({ id: 3, op: "end", txn: 1 }));
+    expect(await within(nextFrame(client))).toMatchObject({ id: 3, ok: true });
+    expect((await owner.read((r) => r.get("task", big.id)))?.body).toBe(big.body);
+    client.destroy();
+  });
+
+  // The reader drops an over-limit frame, so the sender must refuse it and say why; otherwise
+  // the caller sees only "connection closed".
+  it("refuses an over-limit message on either side with an error that names the limit", async () => {
+    const huge = task({ body: "x".repeat(17 * 1024 * 1024) });
+    await owner.write((w) => w.insert("task", huge));
+    const remote = connectStore(sock);
+    const fromDaemon = await within(remote.read((r) => r.get("task", huge.id))).catch((e) => e);
+    expect(fromDaemon).toBeInstanceOf(SatiError);
+    expect(fromDaemon.message).toMatch(/limit is 16 MB/);
+    const toDaemon = await within(
+      remote.write((w) => w.insert("task", { ...huge, id: task().id })),
+    ).catch((e) => e);
+    expect(toDaemon.message).toMatch(/limit is 16 MB/);
+    // The connection survives both refusals.
+    expect(await within(remote.read((r) => r.getProject()))).toMatchObject({ id: project().id });
+    await remote.close();
+  });
+
+  // Anyone who can open the socket can read and write every record.
+  it.skipIf(process.platform === "win32")("creates the socket readable only by its owner", () => {
+    expect(statSync(sock).mode & 0o777).toBe(0o600);
   });
 });

@@ -94,7 +94,12 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
   const run = async (w: StorageReader | StorageWriter, write: StorageWriter | undefined) => {
     const existing = {
       milestones: await listAll(w, ctx, "milestone", { includeDeleted: true }),
-      tasks: await listAll(w, ctx, "task", { includeDeleted: true }),
+      // Only the tasks this plan may already have made, found in SQL rather than by reading every
+      // task inside the write lock (review WP3.2).
+      tasks: await listAll(w, ctx, "task", {
+        includeDeleted: true,
+        anyLabel: items.map((i) => `plan:${i.key}`),
+      }),
     };
     const result: PlanImport = { added: [], skipped: [] };
     // Live milestones only: a task must not land in a deleted one.

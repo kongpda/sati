@@ -1,0 +1,15 @@
+{
+  "consequences": "Ten quick holder updates log 10 rows instead of 20. A lock's lease may trail its claim's lease by up to a minute; the next holder write after that renews it.",
+  "context": "Review WP3.1: every holder write renewed each task lock and logged one activity row per lock, so a burst of updates doubled the log and held the write lock longer. The review asked whether a lease-only renewal needs an activity row.",
+  "createdAt": "2026-11-10T04:18:46.123Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "decision": "Owner decision: keep the rule that every write logs. No quiet write path and no ADR. renewTaskLocks skips the write when the lease would move by less than LOCK_RENEW_STEP_MS (one minute).",
+  "id": "dec_01M71TW37BCP1QTRZWJ32BC89R",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T04:18:46.125Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "title": "Lock lease renewals stay logged; renewals under a minute are skipped",
+  "updatedAt": "2026-11-10T04:18:46.123Z",
+  "version": 1
+}

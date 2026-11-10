@@ -1,0 +1,46 @@
+{
+  "body": "docs/review-followups.md WP3 (3.1-3.5). Decisions: 3.1 skip renewal write when lease moves < 1 min; 3.3 measure at 5,000 records first, incremental export only if full export > 500 ms.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "f10357173065123a14518f84c85b5a842e09ec83",
+    "completedAt": "2026-11-10T04:23:37.823Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/core/src/ports/storage.ts",
+      "packages/core/src/services/lock.ts",
+      "packages/core/src/services/plan.ts",
+      "packages/core/src/services/context.ts",
+      "packages/store-sqlite/src/store.ts",
+      "packages/store-sqlite/src/schema.ts",
+      "packages/store-sqlite/src/remote.ts",
+      "packages/store-sqlite/drizzle/0006_live_locks.sql",
+      "packages/ui/src/main.tsx",
+      "packages/ui/src/app.tsx",
+      "e2e/ui/parity.spec.ts"
+    ],
+    "summary": "WP3 performance: live-lock indexes and task-id lock lookup, lease renewals under a minute skipped, plan import narrowed by labels, daemon framing (join once, 16 MB error, socket 0600), board query defaults and memoised general data; parity spec reads fenced MCP results."
+  },
+  "createdAt": "2026-11-10T04:10:56.388Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "standard",
+  "id": "tsk_01M71TDRG4N8SFA3SWKYRGZF2P",
+  "labels": [
+    "review-2026-11-10"
+  ],
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T04:10:56.389Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-10T04:10:57.917Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T04:23:37.824Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T04:23:37.824Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T04:23:37.824Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-10T04:10:57.917Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "review",
+  "title": "Review follow-ups WP3: performance",
+  "updatedAt": "2026-11-10T04:23:37.826Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -745,7 +745,7 @@ Added 2026-11-10 at the owner's request: the items the Phase 5g review found and
 
 - [x] WP1 Sync and snapshot safety
 - [x] WP2 Core correctness
-- [ ] WP3 Performance
+- [x] WP3 Performance
 - [ ] WP4 MCP and agent experience
 - [ ] WP5 CLI
 - [ ] WP6 Board

@@ -5,6 +5,7 @@ import {
   claimTask,
   createTask,
   ensureActor,
+  LOCK_RENEW_STEP_MS,
   listLocks,
   listTasks,
   markWaiting,
@@ -90,6 +91,29 @@ describe("task locks follow the claim", () => {
     expect((await listLocks(ctx)).find((l) => l.id === lock.id)?.leaseUntil).toBe(
       "2026-11-03T13:10:00.000Z",
     );
+  });
+
+  // Every holder write renews; logging a lock row for each would double the log in a burst of
+  // updates and hold the write lock longer (review WP3.1).
+  it("skips a lock renewal that would move the lease by less than a minute", async () => {
+    const { ctx, clock } = await setup();
+    const t = await createTask(ctx, { title: "x" });
+    const claimed = await claimTask(ctx, t.id);
+    const { lock } = await acquireLock(ctx, { paths: ["src/a.ts"], taskId: t.id });
+    const rows = () => ctx.store.read((r) => r.listActivity(ctx.projectId, { limit: 500 }));
+    const before = (await rows()).length;
+    for (let i = 0; i < 10; i++) {
+      clock.advance(1_000);
+      await updateTask(ctx, t.id, { body: `step ${i}`, token: claimed.claim?.token });
+    }
+    const logged = (await rows()).slice(0, (await rows()).length - before);
+    expect(logged.map((a) => a.entity)).toEqual(Array(10).fill("task"));
+    expect((await listLocks(ctx))[0]?.leaseUntil).toBe(lock.leaseUntil);
+
+    // Once the lease would move by a minute or more, the lock is renewed again.
+    clock.advance(LOCK_RENEW_STEP_MS);
+    await updateTask(ctx, t.id, { body: "later", token: claimed.claim?.token });
+    expect((await listLocks(ctx))[0]?.leaseUntil).toBe("2026-11-03T12:31:10.000Z");
   });
 
   it("does not revive an expired lock", async () => {

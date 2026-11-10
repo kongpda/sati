@@ -82,7 +82,10 @@ export async function listAll<E extends StoredEntity>(
   r: StorageReader,
   ctx: ServiceContext,
   entity: E,
-  opts: Pick<ListQuery, "includeDeleted" | "handoff" | "status" | "path"> = {},
+  opts: Pick<
+    ListQuery,
+    "includeDeleted" | "handoff" | "status" | "path" | "taskId" | "anyLabel"
+  > = {},
 ): Promise<EntityMap[E][]> {
   const out: EntityMap[E][] = [];
   for (let after: string | undefined; ; ) {

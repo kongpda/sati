@@ -316,6 +316,14 @@ export class SqliteStore implements StorageAdapter {
           sql`exists (select 1 from json_each(${t.data}, '$.labels') where value = ${q.label})`,
         );
       }
+      // Matches the `locks_live_task` expression index (migration 0006).
+      if (q.taskId) where.push(sql`json_extract(${t.data}, '$.taskId') = ${q.taskId}`);
+      if (q.anyLabel) {
+        const labels = q.anyLabel.length ? [...q.anyLabel] : [""];
+        where.push(
+          sql`exists (select 1 from json_each(${t.data}, '$.labels') where value in ${labels})`,
+        );
+      }
       if (q.path !== undefined) where.push(sql`json_extract(${t.data}, '$.path') = ${q.path}`);
       if (q.dueBy) where.push(sql`json_extract(${t.data}, '$.dueDate') <= ${q.dueBy}`);
       if (q.effort) {

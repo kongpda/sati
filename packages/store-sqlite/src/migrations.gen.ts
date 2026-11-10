@@ -30,4 +30,9 @@ export const MIGRATIONS: readonly { version: number; name: string; sql: string }
     name: "0005_note_handoff_status.sql",
     sql: "-- Notes have no status, so the column now marks handoff notes: 'handoff' while unread and\n\n-- 'handoff_read' once acknowledged. A claim then finds its task's handoff by index.\n\nUPDATE `notes` SET `status` = CASE WHEN json_extract(`data`, '$.acknowledged') IS NULL THEN 'handoff' ELSE 'handoff_read' END WHERE EXISTS (SELECT 1 FROM json_each(`notes`.`data`, '$.tags') WHERE `value` = 'handoff');\n",
   },
+  {
+    version: 7,
+    name: "0006_live_locks.sql",
+    sql: "-- Released locks stay as tombstones, and every lock check reads only live rows inside the write\n-- lock. These partial indexes skip the tombstones; the second finds a task's locks by its id.\n\n-- Written by hand: drizzle-kit splits the json_extract expression at its comma.\n\nCREATE INDEX `locks_live` ON `locks` (`project_id`,`rank`,`id`) WHERE `deleted_at` IS NULL;\nCREATE INDEX `locks_live_task` ON `locks` (`project_id`,json_extract(`data`, '$.taskId')) WHERE `deleted_at` IS NULL;\n",
+  },
 ];

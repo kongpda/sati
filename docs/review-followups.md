@@ -268,11 +268,11 @@ Effort: `standard`. Measure first: `packages/core` and the e2e `perf.spec.ts` ha
   3. Decide whether a lease-only renewal needs an activity row. If not, add a quiet path next to `updateWithLog`; AGENTS.md says every write logs, so this needs the owner's word or an ADR.
 - **Tests:** existing lock tests stay green; a test counts store reads or activity rows for ten quick updates.
 
-- [ ] Benchmark before
-- [ ] `taskId` filter in the port, store, memory store, migration
-- [ ] Renewal threshold
-- [ ] Activity-row decision recorded
-- [ ] Benchmark after, in `docs/progress.md`
+- [x] Benchmark before: with 20,000 released locks, a holder update took 11.57 ms and `acquireLock` 10.91 ms (1.20 ms and 0.61 ms with none); ten quick holder updates wrote 20 activity rows.
+- [x] `taskId` filter in the port, store, memory store, migration (`0006_live_locks.sql`: partial indexes `locks_live` and `locks_live_task` that skip released locks; written by hand because drizzle-kit splits the `json_extract` expression). Store contract case added.
+- [x] Renewal threshold: `LOCK_RENEW_STEP_MS`, one minute. Test: ten updates a second apart log ten task rows and no lock row; a minute later the lock renews.
+- [x] Activity-row decision recorded (`dec_01M71TW37BCP1QTRZWJ32BC89R`): every write still logs, per the owner decision.
+- [x] Benchmark after, in `docs/progress.md`: 0.68 ms per holder update and 0.58 ms per `acquireLock` with 20,000 released locks; ten updates write 10 rows.
 
 ### 3.2 `listAll` in write paths
 
@@ -281,9 +281,17 @@ Effort: `standard`. Measure first: `packages/core` and the e2e `perf.spec.ts` ha
 - **Problem:** 34 call sites of `listAll` in `packages/core/src/services`, many inside transactions. `importPlan` loads every milestone and task, deleted ones too, to read titles and `plan:` labels.
 - **Plan:** list the call sites, sort by how often they run, and replace the hot ones with filtered queries. For `importPlan`, read outside the write lock or query by label.
 
-- [ ] Call-site list with frequency
-- [ ] Hot paths replaced
-- [ ] `importPlan` read narrowed
+- [x] Call-site list with frequency (measured with 10,000 tasks, 5,000 notes, 2,000 cards, 1,000 decisions):
+  - Every holder write, claim, release and lock: `lock.ts` (all locks). Replaced, see 3.1.
+  - Every claim: `task.ts` unread handoffs, by the `status` index. Kept.
+  - Every commit and shell hook: `guard.ts` shipped features by status; decisions only when a change touches one. Kept.
+  - Claim, overlap and waiting checks: `task.ts` and `overlap.ts` active tasks by status. Kept.
+  - Every session start: `brief.ts` all notes and cards, 56 ms, inside the 100 ms budget and outside the write lock. Kept.
+  - Every card write: `context-cache.ts` cards by path, 2.7 ms. Kept.
+  - `listComments` (all notes, 10 ms), `changes.ts`, `doctor.ts`, `sync.ts`, `milestone.ts`, `template.ts`, `handoff.ts`: on demand, read-only or small tables. Kept.
+  - `plan.ts` `importPlan`: every task, deleted ones too, inside the write lock. Narrowed.
+- [x] Hot paths replaced: the lock scans (3.1) and `importPlan`. The others are filtered by index already or run outside the write lock.
+- [x] `importPlan` read narrowed: a new `anyLabel` list filter returns only the tasks with one of the plan's `plan:` labels. Five new items on 10,000 tasks: 46.5 ms to 23.5 ms. Store contract case added.
 
 ### 3.3 Full export on every MCP start and commit
 
@@ -292,8 +300,8 @@ Effort: `standard`. Measure first: `packages/core` and the e2e `perf.spec.ts` ha
 - **Problem:** `exportSnapshot` with no `only` encodes every record and reads every file. Tombstones are never pruned.
 - **Plan:** keep the database's last-exported marker (highest `lastHlc`, or a per-record version map in the machine-local folder) and export only records changed since, falling back to a full pass when the marker is missing or `.sati/` changed. Measure with 5,000 records before building this.
 
-- [ ] Measure at 5,000 records
-- [ ] Incremental export, if the number justifies it
+- [x] Measure at 5,000 records (3,000 tasks, 1,000 notes, 500 cards, 500 decisions): a full export with nothing changed, as on each MCP start, takes 233 to 262 ms. The first export into an empty folder takes 1.1 s, but every file is new then, so an incremental export would not help.
+- [x] Incremental export, if the number justifies it: not built. 262 ms is under the 500 ms bar in the owner decision.
 
 ### 3.4 Daemon framing
 
@@ -303,10 +311,10 @@ Effort: `standard`. Measure first: `packages/core` and the e2e `perf.spec.ts` ha
 - **Plan:** collect chunks in an array and concat once per frame; check the size in `encode` and throw a clear error; `chmodSync(path, 0o600)` after `listen` on POSIX.
 - **Tests:** a 2 MB result arrives intact in 1 KB chunks; an over-limit result fails with a message that names the limit; the socket mode is `0600`.
 
-- [ ] Single concat
-- [ ] Size check on send
-- [ ] Socket mode
-- [ ] Tests
+- [x] Single concat: chunks are kept in a list and joined once per frame.
+- [x] Size check on send: `encode` throws a SatiError naming the 16 MB limit; the daemon sends that error in place of an over-limit result.
+- [x] Socket mode: `0600` after `listen` on POSIX.
+- [x] Tests: a 2 MB frame in 1 KB chunks arrives intact (it passed on the old code too, since 2 MB is quick to re-copy; it guards the new chunk handling); over-limit in both directions names the limit and the connection survives; the socket mode is `0600`. The last two failed on the old code.
 
 ### 3.5 Board
 
@@ -315,9 +323,9 @@ Effort: `standard`. Measure first: `packages/core` and the e2e `perf.spec.ts` ha
 - **Problem:** `packages/ui/src/main.tsx` uses the default `QueryClient`: three retries (about 7 s of "Loading…" when the server is gone), refetch on every window focus, `staleTime` 0. The SSE stream already invalidates the snapshot. In a `general` project, `app.tsx` builds `data` and `features: []` anew on each render, so the memoised board re-renders on every filter keystroke.
 - **Plan:** `new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 5_000 } } })`. Memoise the general-project `data` and use a module-level empty array. Check the Playwright perf spec still passes.
 
-- [ ] Query defaults
-- [ ] Stable `data` and empty list
-- [ ] `pnpm test:ui` green
+- [x] Query defaults: `retry: 1`, `refetchOnWindowFocus: false`, `staleTime: 5_000`.
+- [x] Stable `data` and empty list: `useMemo` and a module-level `NONE`.
+- [x] `pnpm test:ui` green (79 passed). The six `parity.spec.ts` flows had failed since WP4.2: their MCP helper parsed raw JSON, not the fenced result. The helper now reads the JSON inside the fence.
 
 ---
 

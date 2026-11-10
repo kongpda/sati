@@ -49,8 +49,8 @@ async function claimToken(
 /** `none` clears a planning field from the command line. */
 const NONE = "none";
 
-/** `--due`: a YYYY-MM-DD day, or `none` to clear it. Core checks the date. */
-function due(value: string | undefined): string | null | undefined {
+/** `--due` and `--effort`: a value, or `none` to clear the field. Core checks the value. */
+function orNone(value: string | undefined): string | null | undefined {
   if (value === undefined) return undefined;
   return value === NONE ? null : value;
 }
@@ -139,14 +139,14 @@ const create = defineCommand({
           body: bodyText(args.body),
           status: args.status,
           priority: args.priority,
-          effort: due(args.effort),
+          effort: orNone(args.effort),
           featureId: await ref(ctx, "feature", args.feature),
           parentId: await ref(ctx, "task", args.parent),
           dependsOn: await refs(ctx, "task", args.depends),
           labels: list(args.labels),
           branch: args.branch,
           worktree: args.worktree,
-          dueDate: due(args.due),
+          dueDate: orNone(args.due),
           milestoneId: await milestone(ctx, args.milestone),
           assigneeIds: await assignees(ctx, args.assign),
           subtasks: args.subtasks ? parseJson(args.subtasks, "--subtasks", "USAGE") : undefined,
@@ -247,14 +247,14 @@ const update = defineCommand({
           body: bodyText(args.body),
           status: args.status,
           priority: args.priority,
-          effort: due(args.effort),
+          effort: orNone(args.effort),
           featureId: await ref(ctx, "feature", args.feature),
           parentId: await ref(ctx, "task", args.parent),
           dependsOn: await refs(ctx, "task", args.depends),
           labels: list(args.labels),
           branch: args.branch,
           worktree: args.worktree,
-          dueDate: due(args.due),
+          dueDate: orNone(args.due),
           milestoneId: await milestone(ctx, args.milestone),
           assigneeIds: await assignees(ctx, args.assign),
           expectedVersion: int(args["expected-version"], "expected-version"),

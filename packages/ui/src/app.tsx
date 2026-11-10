@@ -201,7 +201,7 @@ export function App() {
       taskId !== shownTask.current &&
       !window.confirm("Discard your unsaved changes to this task?")
     ) {
-      return;
+      return false;
     }
     // Clicking the open task again keeps its edits, so it stays dirty.
     if (taskId !== shownTask.current) sheetDirty.current = false;
@@ -212,6 +212,7 @@ export function App() {
     here.current = url;
     setPath(next);
     setTask(taskId);
+    return true;
   }, []);
 
   const fail = useCallback((err: unknown) => {
@@ -553,7 +554,11 @@ export function App() {
             left out. Search finds them.
           </p>
         ) : null}
-        {query.isLoading ? <p className="empty page">Loading…</p> : null}
+        {query.isLoading ? (
+          <p className="empty page" role="status">
+            Loading…
+          </p>
+        ) : null}
         {query.isError && !data ? (
           <div className="empty page" role="alert">
             <p>
@@ -816,7 +821,11 @@ export function App() {
           onClose={() => go(path)}
           onSave={(id, patch) =>
             api
-              .patchTask(id, patch)
+              // Approving from the panel names the commit on screen, as a drag to Done does.
+              .patchTask(id, {
+                ...patch,
+                ...(patch.status === "done" && data ? approvedCommit(data, id) : {}),
+              })
               .then(async (saved) => {
                 await client.invalidateQueries({ queryKey: ["snapshot"] });
                 return saved;
@@ -839,8 +848,8 @@ export function App() {
               .catch(fail)
           }
           onDelete={(id, title) => {
-            go(path);
-            remove("task", id, title);
+            // Keeping unsaved edits means keeping the task.
+            if (go(path)) remove("task", id, title);
           }}
           thread={thread}
         />

@@ -113,11 +113,32 @@ describe("exportSnapshot / importSnapshot", () => {
     expect(await exportSnapshot(a, dir)).toEqual({
       written: [`tasks/${t2.id}.json`],
       unchanged: 1,
+      newer: [],
     });
     expect(existsSync(join(dir, `tasks/${t1.id}.json`))).toBe(true);
     expect(readFileSync(join(dir, "tasks/tsk_teammate.json"), "utf8")).toBe("{}\n");
     // Atomic writes leave no temp files behind.
     expect(readdirSync(join(dir, "tasks")).filter((f) => !f.endsWith(".json"))).toEqual([]);
+  });
+
+  // A file ahead of the database is a teammate's edit that is not imported yet (the import did
+  // not run, or was refused). Exporting over it would commit the older copy and lose their edit.
+  it("leaves a file alone when it holds a newer version than the database", async () => {
+    const a = await clone();
+    const dir = tempDir();
+    const t = await createTask(a, { title: "Mine" });
+    await exportSnapshot(a, dir);
+    const file = join(dir, `tasks/${t.id}.json`);
+    const theirs = readFileSync(file, "utf8")
+      .replace('"Mine"', '"Theirs"')
+      .replace('"version": 1', '"version": 2');
+    writeFileSync(file, theirs);
+    expect(await exportSnapshot(a, dir)).toEqual({
+      written: [],
+      unchanged: 0,
+      newer: [`tasks/${t.id}.json`],
+    });
+    expect(readFileSync(file, "utf8")).toBe(theirs);
   });
 
   // After a write, only that write's records are exported; other changes wait for a full export.
@@ -133,7 +154,7 @@ describe("exportSnapshot / importSnapshot", () => {
         { entity: "actor", id: a.actorId },
       ],
     });
-    expect(out).toEqual({ written: [`tasks/${t2.id}.json`], unchanged: 0 });
+    expect(out).toEqual({ written: [`tasks/${t2.id}.json`], unchanged: 0, newer: [] });
     expect(existsSync(join(dir, `tasks/${t1.id}.json`))).toBe(false);
     expect((await exportSnapshot(a, dir)).written).toEqual([`tasks/${t1.id}.json`]);
 
@@ -142,6 +163,7 @@ describe("exportSnapshot / importSnapshot", () => {
     expect(await exportSnapshot(a, dir, { only: [{ entity: "note", id: secret.id }] })).toEqual({
       written: [],
       unchanged: 0,
+      newer: [],
     });
     expect(existsSync(join(dir, `notes/${secret.id}.json`))).toBe(false);
   });

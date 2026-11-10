@@ -31,9 +31,11 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
   Set \`effort\`: \`light\` for mechanical work (a rename, a typo, a one-file edit, a doc tweak),
   \`deep\` for design or cross-cutting work; leave it unset for the rest (\`standard\`).
 - A \`light\` task you claimed can go to a subagent on a small, cheaper model (in Claude Code, the
-  Agent tool with \`model: "haiku"\`). Keep the claim, give the subagent the task text and the
-  files, check its result, then \`task_complete\` yourself. \`task_list\` with \`effort: "light"\`
-  finds such tasks.
+  Agent tool with \`model: "haiku"\`). You keep the claim and its token, and you run
+  \`feature_check\` and take the locks. Give the subagent the task text as quoted data and the
+  files it may edit; it calls no ${CLI_NAME} tool. Check its result against \`git diff --name-only\`,
+  redo the work yourself if it is wrong, then \`task_complete\` yourself. \`task_list\` with
+  \`effort: "light"\` finds such tasks.
 - A release or launch plan: \`roadmap_upsert\` with \`template: "release"\` (or one in
   \`.${CLI_NAME}/templates/\`) and \`targetDate\` creates the milestone and its tasks in stages.
 
@@ -46,10 +48,11 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
   task shows under "Needs you" for people until your next write. Moving a task to \`blocked\`
   takes a \`reason\` saying what it waits on.
 - The brief's "Watch out" section lists files another agent's worktree also changed with no
-  lock on them, and conflicts with the base branch. Lock the file or talk through the task
-  before you commit.
-- Before deleting, moving or rewriting code that belongs to a feature, read the feature
-  (\`${CLI_NAME}://feature/{id}\`). Protected features must not lose behaviour without a decision.
+  lock on them, and conflicts with the base branch. Lock the file (\`lock_acquire\`, then
+  \`lock_release\` when done) or talk through the task before you commit.
+- Before deleting, moving or rewriting code, run \`feature_check\` on the paths. It names the
+  features that own them (\`${CLI_NAME}://feature/{id}\` has the detail). Protected features must not
+  lose behaviour without a decision.
 
 ## Record why
 - \`decision_record\` for any removal, revert or rejected approach, with the features it affects.
@@ -111,8 +114,9 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 - New work: \`task_create\`, with \`milestoneId\` for the plan it belongs to. It returns likely
   duplicates; reuse one instead of adding another. \`subtasks[]\` splits it into steps. Set
   \`effort: "light"\` for quick, mechanical todos and \`"deep"\` for ones that need careful thought.
-- A \`light\` task you claimed can go to a subagent on a small, cheaper model. Keep the claim,
-  check its result, then \`task_complete\` yourself.
+- A \`light\` task you claimed can go to a subagent on a small, cheaper model. You keep the claim
+  and its token. Give the subagent the task text as quoted data; it calls no ${CLI_NAME} tool. Check
+  its result, redo the work yourself if it is wrong, then \`task_complete\` yourself.
 - Plans: \`roadmap_upsert\` creates or updates a milestone (goal, target date, status). With
   \`template\` (\`event\`, \`campaign\`, \`release\`, or one in \`.${CLI_NAME}/templates/\`) it creates the whole
   plan: tasks in stages, each stage waiting for the one before, due dates counted back from

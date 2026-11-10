@@ -96,7 +96,7 @@ if the file is unchanged. After reading a file, save a card with facts and `sour
 
 ### People (CLI and web UI)
 
-- `sati recall "<words>"`, `sati card show|put <path>`, `sati note pin|private <id>`.
+- `sati recall "<words>"`, `sati card show|put <path>`, `sati note update <id> --pinned|--private`.
 - **Memory page** in the UI: cards grouped by folder, with their facts, tags, who wrote them and
   when, a search box, and Edit. Private items carry a lock badge.
 - **Ask box** on every page: the same result as `recall`, with "Copy as Markdown".

@@ -359,9 +359,16 @@ export function planHooks(
   return planned;
 }
 
-const ATTRIBUTE = `${CONFIG_DIR}/**/*.json merge=${CLI_NAME} linguist-generated`;
-/** The line older versions wrote; it is replaced, not duplicated. */
-const OLD_ATTRIBUTE = `${CONFIG_DIR}/**/*.json merge=${CLI_NAME}`;
+/**
+ * One folder deep: the record folders only. `**` also matched the config file, and the record
+ * merge driver would bump its `version` past the one value the config schema accepts.
+ */
+const ATTRIBUTE = `${CONFIG_DIR}/*/*.json merge=${CLI_NAME} linguist-generated`;
+/** The lines older versions wrote; they are replaced, not duplicated. */
+const OLD_ATTRIBUTES = [
+  `${CONFIG_DIR}/**/*.json merge=${CLI_NAME} linguist-generated`,
+  `${CONFIG_DIR}/**/*.json merge=${CLI_NAME}`,
+];
 
 /**
  * `.gitattributes` routes the snapshot files to the merge driver and marks them generated, so PR
@@ -373,7 +380,7 @@ export function planGitAttributes(read: ReadFile): PlannedFile {
   if (existing === undefined) return { path, action: "create", content: `${ATTRIBUTE}\n` };
   const lines = existing.split("\n");
   if (lines.some((l) => l.trim() === ATTRIBUTE)) return { path, action: "keep", content: existing };
-  const old = lines.findIndex((l) => l.trim() === OLD_ATTRIBUTE);
+  const old = lines.findIndex((l) => OLD_ATTRIBUTES.includes(l.trim()));
   if (old >= 0) {
     lines[old] = ATTRIBUTE;
     return { path, action: "update", content: lines.join("\n") };

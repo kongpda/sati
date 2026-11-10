@@ -109,6 +109,11 @@ describe("MCP server", () => {
     expect((await client.listResourceTemplates()).resourceTemplates).toEqual([]);
     const prompts = (await client.listPrompts()).prompts.map((p) => p.name).sort();
     expect(prompts).toEqual(["finish-task", "start-task"]);
+    // A prompt must not name a tool this project does not have.
+    const finish = await client.getPrompt({ name: "finish-task" });
+    const text = (finish.messages[0]?.content as { text: string } | undefined)?.text;
+    expect(text).not.toContain("feature_upsert");
+    expect(text).toContain("2. Call task_complete with the claim token");
     const workflow = await client.readResource({ uri: "sati://workflow" });
     expect(workflow.contents[0]).toMatchObject({ text: GENERAL_WORKFLOW });
   });

@@ -16,7 +16,12 @@ This repo builds **Sati** (`sati`). The full spec is in `PLAN.md`; how to work i
 ## Layout
 
 - `packages/core` — domain, services, ports. No I/O.
+- `packages/store-sqlite` — the SQLite store and the `sati serve` socket client.
+- `packages/sync` — the `.sati/` snapshot files and the git merge driver.
+- `packages/mcp` — the MCP server.
+- `packages/ui` — the React board served by `sati ui`.
 - `packages/cli` — the `sati` binary, published as `@kongpda/sati`.
+- `e2e/ui` — Playwright tests for the board.
 - `docs/progress.md` — gate results and choices made on ambiguous items.
 - `docs/decisions/` — architecture decision records.
 
@@ -29,7 +34,7 @@ pnpm lint && pnpm typecheck && pnpm test
 pnpm changeset   # describe a user-facing change
 ```
 
-From Phase 2 onward this repo is tracked in sati itself; a managed rules block will be added below.
+This repo is tracked in sati itself; the managed rules block is below.
 
 <!-- sati:start v1 -->
 ## Project memory: sati (required)

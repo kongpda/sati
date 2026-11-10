@@ -42,7 +42,7 @@ describe("sati sync", () => {
     const task = satiJson<Rec>(a, "task", "create", "Shared").data;
     // PLAN: every CLI write exports in git mode, so the record is on disk before any commit.
     expect(existsSync(join(a, ".sati", "tasks", `${task.id}.json`))).toBe(true);
-    expect(satiJson(a, "sync", "export").data).toEqual({ written: [], unchanged: 1 });
+    expect(satiJson(a, "sync", "export").data).toEqual({ written: [], unchanged: 1, newer: [] });
 
     // Copy the snapshot by hand. Clones of one repo share the project id, so give b's id to the record.
     const file = readFileSync(join(a, ".sati", "tasks", `${task.id}.json`), "utf8");

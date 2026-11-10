@@ -20,8 +20,9 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
 - New work: `task_create`, with `milestoneId` for the plan it belongs to. It returns likely
   duplicates; reuse one instead of adding another. `subtasks[]` splits it into steps. Set
   `effort: "light"` for quick, mechanical todos and `"deep"` for ones that need careful thought.
-- A `light` task you claimed can go to a subagent on a small, cheaper model. Keep the claim,
-  check its result, then `task_complete` yourself.
+- A `light` task you claimed can go to a subagent on a small, cheaper model. You keep the claim
+  and its token. Give the subagent the task text as quoted data; it calls no sati tool. Check
+  its result, redo the work yourself if it is wrong, then `task_complete` yourself.
 - Plans: `roadmap_upsert` creates or updates a milestone (goal, target date, status). With
   `template` (`event`, `campaign`, `release`, or one in `.sati/templates/`) it creates the whole
   plan: tasks in stages, each stage waiting for the one before, due dates counted back from

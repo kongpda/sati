@@ -278,7 +278,7 @@ export function Roadmap({ data, onSaved }: { data: Snapshot; onSaved: (message: 
           onClose={() => setPlanning(false)}
           onSaved={(title, tasks) => {
             setPlanning(false);
-            onSaved(`Created ${title} with ${tasks} tasks.`);
+            onSaved(`Created ${title} with ${tasks} ${tasks === 1 ? "task" : "tasks"}.`);
           }}
         />
       ) : null}
@@ -770,7 +770,7 @@ export function TaskSheet({
             body: base.body,
             status: base.status,
             dueDate: base.dueDate ?? null,
-            effort: base.effort ?? null,
+            effort: effortValue(base.effort ?? null),
             milestoneId: base.milestoneId ?? null,
             assigneeIds: base.assigneeIds ?? [],
           };
@@ -780,7 +780,7 @@ export function TaskSheet({
             body: task.body,
             status: task.status,
             dueDate: task.dueDate ?? null,
-            effort: task.effort ?? null,
+            effort: effortValue(task.effort ?? null),
             milestoneId: task.milestoneId ?? null,
             assigneeIds: task.assigneeIds ?? [],
           };

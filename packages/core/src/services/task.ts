@@ -316,8 +316,11 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
         },
       );
     }
-    if (patch.status && UNCLAIMED_STATUSES.includes(patch.status)) claim = null;
-    else if (claim?.actorId === ctx.actorId) {
+    if (patch.status && UNCLAIMED_STATUSES.includes(patch.status)) {
+      // The claim ends here, so its locks end too, as on release and complete.
+      if (claim) await releaseTaskLocks(w, ctx, before.id, claim.actorId);
+      claim = null;
+    } else if (claim?.actorId === ctx.actorId) {
       // Any write by the holder renews its lease and means it is no longer waiting, unless this
       // write is the question.
       claim = { ...(await lease(w, ctx, undefined, claim)), token: claim.token };

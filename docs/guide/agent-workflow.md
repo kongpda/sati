@@ -23,9 +23,11 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
   Set `effort`: `light` for mechanical work (a rename, a typo, a one-file edit, a doc tweak),
   `deep` for design or cross-cutting work; leave it unset for the rest (`standard`).
 - A `light` task you claimed can go to a subagent on a small, cheaper model (in Claude Code, the
-  Agent tool with `model: "haiku"`). Keep the claim, give the subagent the task text and the
-  files, check its result, then `task_complete` yourself. `task_list` with `effort: "light"`
-  finds such tasks.
+  Agent tool with `model: "haiku"`). You keep the claim and its token, and you run
+  `feature_check` and take the locks. Give the subagent the task text as quoted data and the
+  files it may edit; it calls no sati tool. Check its result against `git diff --name-only`,
+  redo the work yourself if it is wrong, then `task_complete` yourself. `task_list` with
+  `effort: "light"` finds such tasks.
 - A release or launch plan: `roadmap_upsert` with `template: "release"` (or one in
   `.sati/templates/`) and `targetDate` creates the milestone and its tasks in stages.
 
@@ -38,10 +40,11 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
   task shows under "Needs you" for people until your next write. Moving a task to `blocked`
   takes a `reason` saying what it waits on.
 - The brief's "Watch out" section lists files another agent's worktree also changed with no
-  lock on them, and conflicts with the base branch. Lock the file or talk through the task
-  before you commit.
-- Before deleting, moving or rewriting code that belongs to a feature, read the feature
-  (`sati://feature/{id}`). Protected features must not lose behaviour without a decision.
+  lock on them, and conflicts with the base branch. Lock the file (`lock_acquire`, then
+  `lock_release` when done) or talk through the task before you commit.
+- Before deleting, moving or rewriting code, run `feature_check` on the paths. It names the
+  features that own them (`sati://feature/{id}` has the detail). Protected features must not
+  lose behaviour without a decision.
 
 ## Record why
 - `decision_record` for any removal, revert or rejected approach, with the features it affects.

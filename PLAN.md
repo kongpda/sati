@@ -559,7 +559,7 @@ Verify: an e2e test for the loop and a concurrency test for `sati next`.
 ### Phase 5 — Hardening and v1.0 (weeks 10–11)
 
 - [x] `sati doctor` (stale leases, orphan locks, DB integrity check, hook health, VACUUM)
-- [x] Backup and restore (`sati export --all`, `sati import`)
+- [x] Backup and restore (`sati export`, `sati import`)
 - [x] Migration safety: automatic DB backup before each schema migration
 - [x] Docs site: quick start, agent workflow, guard rules, FAQ; `sati://workflow` resource generated from it
 - [x] Security review against the Security checklist; fuzz the JSON importer
@@ -722,6 +722,22 @@ Added 2026-11-10 at the owner's request: mark easy tasks so an agent can hand th
 - [x] The rules call `sati_brief` only when the session-start hook has not already given the brief
 
 **Gate:** each item has a test where it can be tested; `pnpm lint && pnpm typecheck && pnpm test` and `pnpm test:ui` pass.
+
+### Phase 5g — Whole-project review (2026-11-10)
+
+Added 2026-11-10 at the owner's request: read the whole project, fix what is certainly wrong, and list the rest for review in `docs/ideas.md`.
+
+- [x] `.gitattributes` routes only the record folders (`.sati/*/*.json`) to the merge driver, and the driver refuses a file with no record id; the old `**` line sent the config file through it, which bumped its `version` and broke every command
+- [x] An export never overwrites a `.sati/` file that holds a newer version than the database; `sati export` counts them and names `sati import`
+- [x] `undo` removes a field the change first set, instead of skipping it
+- [x] A status change that drops a claim (`backlog`, `todo`, `cancelled`) releases the task's locks
+- [x] Errors that cross the `sati serve` socket keep their `details`
+- [x] MCP prompts for a `general` project name no feature tool; `finish-task` names the claim token
+- [x] Workflow text: handing a `light` task to a subagent keeps the token, checks and locks with the claimer, passes task text as data, and checks the result against `git diff --name-only`; it names `feature_check`, `lock_acquire` and `lock_release`
+- [x] Claude Code settings also deny `git push --no-verify`
+- [x] Board: Delete on a panel with unsaved edits keeps the task when the person keeps the edits; approving from the panel sends the commit on screen; an explicit `standard` effort is not rewritten on save; cards say "Light effort"; "1 task"; My work capitalises priority; the loading line is a status
+- [x] Docs: `note update --pinned|--private` in `knowledge-brain.md`, `sati export` in this plan, the layout and rules-block line in `AGENTS.md`
+- [x] The rest is listed for the owner in `docs/ideas.md`
 
 ### Phase 6 — Hosted mode (deferred to v2)
 

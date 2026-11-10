@@ -14,7 +14,12 @@ export const exportCmd = defineCommand({
     execute(
       args.json,
       (rt) => exportSnapshot(rt.ctx, snapshotDir(rt)),
-      (r: ExportResult) => `Exported ${r.written.length} changed, ${r.unchanged} unchanged.`,
+      (r: ExportResult) =>
+        `Exported ${r.written.length} changed, ${r.unchanged} unchanged.${
+          r.newer.length > 0
+            ? `\n${r.newer.length} newer in .sati/ left as they are. Run \`${CLI_NAME} import\` to load them.`
+            : ""
+        }`,
     ),
 });
 

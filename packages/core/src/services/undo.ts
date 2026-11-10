@@ -21,11 +21,15 @@ function isEntity(value: string): value is StoredEntity {
   return ENTITIES.has(value as StoredEntity);
 }
 
-function pair(value: unknown): { from: unknown; to: unknown } | undefined {
-  if (value === null || typeof value !== "object" || !("from" in value) || !("to" in value)) {
+/**
+ * One field of a logged diff. JSON drops `undefined`, so a field that was first set has no `from`
+ * and a field that was removed has no `to`.
+ */
+function pair(value: unknown): { from?: unknown; to?: unknown } | undefined {
+  if (value === null || typeof value !== "object" || !("from" in value || "to" in value)) {
     return undefined;
   }
-  return value as { from: unknown; to: unknown };
+  return value as { from?: unknown; to?: unknown };
 }
 
 /**
@@ -87,6 +91,8 @@ export async function undoActivity(ctx: ServiceContext, activityId: string) {
       );
     }
     const patch: Record<string, unknown> = {};
+    // Fields the change first set: undoing removes the key again.
+    const clear: string[] = [];
     for (const [key, raw] of Object.entries(act.diff)) {
       const change = pair(raw);
       if (!change) continue;
@@ -106,11 +112,12 @@ export async function undoActivity(ctx: ServiceContext, activityId: string) {
           { hint: "Undo only the latest write, or edit the record by hand." },
         );
       }
-      patch[key] = change.from;
+      if (change.from === undefined) clear.push(key);
+      else patch[key] = change.from;
     }
-    if (Object.keys(patch).length === 0) {
+    if (Object.keys(patch).length === 0 && clear.length === 0) {
       throw new SatiError("VALIDATION", `Activity ${activityId} has no field change to revert.`);
     }
-    return updateWithLog(w, ctx, act.entity, current, patch, { verb: "update" });
+    return updateWithLog(w, ctx, act.entity, current, patch, { verb: "update", clear });
   });
 }

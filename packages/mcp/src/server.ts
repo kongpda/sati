@@ -680,7 +680,10 @@ function registerPrompts(server: McpServer, kind: ProjectKind): void {
             ? `Then call task_claim with id ${taskId}.`
             : "Then pick the top ready task and call task_claim on it.",
           "If the claim fails because another agent holds the task, pick a different ready task.",
-          "Read the linked feature's acceptance criteria before you change code, then plan the work.",
+          // A general project has no features.
+          kind === "code"
+            ? "Read the linked feature's acceptance criteria before you change code, then plan the work."
+            : "Then plan the work.",
         ].join("\n"),
       ),
   );
@@ -696,10 +699,15 @@ function registerPrompts(server: McpServer, kind: ProjectKind): void {
       user(
         [
           `Finish ${taskId ? `task ${taskId}` : "your claimed task"}.`,
-          "1. If you removed, reverted or rejected anything, call decision_record with the reason.",
-          "2. If a feature's paths or acceptance criteria changed, call feature_upsert.",
-          "3. Call task_complete with a short summary and every file you touched.",
-        ].join("\n"),
+          "If you removed, reverted or rejected anything, call decision_record with the reason.",
+          // feature_upsert is not registered in a general project.
+          ...(kind === "code"
+            ? ["If a feature's paths or acceptance criteria changed, call feature_upsert."]
+            : []),
+          "Call task_complete with the claim token, a short summary and every file you touched.",
+        ]
+          .map((step, i) => (i === 0 ? step : `${i}. ${step}`))
+          .join("\n"),
       ),
   );
 

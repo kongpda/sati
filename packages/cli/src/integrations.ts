@@ -253,7 +253,11 @@ const claudeSettings = (path: string, local: boolean) => (existing: string | und
 };
 
 /** Blocks the bypass the pre-push hook and CI guard exist to catch. */
-const DENY_NO_VERIFY = [`Bash(git commit --no-verify:*)`, `Bash(git commit -n:*)`];
+const DENY_NO_VERIFY = [
+  `Bash(git commit --no-verify:*)`,
+  `Bash(git commit -n:*)`,
+  `Bash(git push --no-verify:*)`,
+];
 
 const SKILL = `---
 name: ${CLI_NAME}

@@ -28,7 +28,7 @@ interface Message {
   args?: unknown[];
   ok?: boolean;
   result?: unknown;
-  error?: { code: string; message: string; hint?: string | null };
+  error?: { code: string; message: string; hint?: string | null; details?: unknown };
 }
 
 function encode(value: unknown): Buffer {
@@ -75,6 +75,7 @@ function fail(error: Message["error"]): Error {
   if (code && code in ERROR_EXIT_CODES) {
     return new SatiError(code as ErrorCode, error?.message ?? code, {
       ...(error?.hint ? { hint: error.hint } : {}),
+      ...(error?.details !== undefined ? { details: error.details } : {}),
     });
   }
   return new Error(error?.message ?? "The database daemon failed.");
@@ -192,7 +193,12 @@ export function listenStore(
             const gate = gates.get(msg.txn ?? 0);
             const error =
               err instanceof SatiError
-                ? { code: err.code, message: err.message, hint: err.hint ?? null }
+                ? {
+                    code: err.code,
+                    message: err.message,
+                    hint: err.hint ?? null,
+                    details: err.details,
+                  }
                 : { code: "INTERNAL", message: err instanceof Error ? err.message : String(err) };
             // Failed before `fn` ran (schema too new, busy): the client is still waiting on `begin`.
             if (!started) send({ id: msg.id, ok: false, error });
@@ -227,7 +233,12 @@ export function listenStore(
               ok: false,
               error:
                 err instanceof SatiError
-                  ? { code: err.code, message: err.message, hint: err.hint ?? null }
+                  ? {
+                      code: err.code,
+                      message: err.message,
+                      hint: err.hint ?? null,
+                      details: err.details,
+                    }
                   : { code: "INTERNAL", message: err instanceof Error ? err.message : String(err) },
             }),
         );

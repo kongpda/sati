@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { shortHandle } from "@sati/core";
@@ -94,6 +94,18 @@ describe("command audit fixes", () => {
     const driver = sati(dir, "merge-driver", "a");
     expect(driver.code).toBe(2);
     expect(driver.stderr).toContain("Run `sati merge-driver --help`");
+  });
+
+  // The config file has no id and one allowed `version`. Merged as a record its version would be
+  // bumped, and every later command in the repo would refuse the config.
+  it("the merge driver leaves a file that is not a record to git", () => {
+    const dir = tempDir();
+    const config = `${JSON.stringify({ version: 1, mode: "git" })}\n`;
+    for (const name of ["base", "ours", "theirs"]) writeFileSync(join(dir, name), config);
+    const r = sati(dir, "merge-driver", "base", "ours", "theirs");
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("not a record file");
+    expect(readFileSync(join(dir, "ours"), "utf8")).toBe(config);
   });
 
   it("guard says when more than one thing to check was given", async () => {

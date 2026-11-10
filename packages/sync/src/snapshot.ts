@@ -72,6 +72,19 @@ export interface ExportResult {
   /** Files written, relative to the snapshot folder. */
   written: string[];
   unchanged: number;
+  /** Files left alone because they hold a newer version than the database: import them first. */
+  newer: string[];
+}
+
+/** The `version` a record file holds, or 0 when it cannot be read. */
+function fileVersion(text: string): number {
+  try {
+    const value: unknown = JSON.parse(text);
+    const version = (value as { version?: unknown } | null)?.version;
+    return typeof version === "number" ? version : 0;
+  } catch {
+    return 0;
+  }
 }
 
 export interface ExportOptions {
@@ -108,7 +121,9 @@ function readRecords(
 /**
  * Writes one file per record to `dir` (the `.sati/` folder), tombstones included. Only files
  * whose content changed are rewritten. Files with no matching record are left alone: they may be
- * a teammate's records that are not imported yet.
+ * a teammate's records that are not imported yet. For the same reason a file at a higher version
+ * than the database is never overwritten: an import that did not run, or was refused, must not
+ * turn into the older copy being committed over a teammate's edit.
  */
 export async function exportSnapshot(
   ctx: ServiceContext,
@@ -116,15 +131,20 @@ export async function exportSnapshot(
   opts: ExportOptions = {},
 ): Promise<ExportResult> {
   const records = opts.only ? await readRecords(ctx, opts.only) : await snapshotRecords(ctx);
-  const result: ExportResult = { written: [], unchanged: 0 };
+  const result: ExportResult = { written: [], unchanged: 0, newer: [] };
   const changed: { rec: SnapshotRecord; rel: string; file: string; content: string }[] = [];
   for (const rec of records) {
     // Reported paths use `/` on every OS, like git does.
     const rel = posix.join(SNAPSHOT_DIRS[rec.entity], `${rec.record.id}.json`);
     const file = join(dir, rel);
     const content = stableJson(encodeRecord(rec.record));
-    if (existsSync(file) && readFileSync(file, "utf8") === content) {
+    const onDisk = existsSync(file) ? readFileSync(file, "utf8") : undefined;
+    if (onDisk === content) {
       result.unchanged++;
+      continue;
+    }
+    if (onDisk !== undefined && fileVersion(onDisk) > rec.record.version) {
+      result.newer.push(rel);
       continue;
     }
     changed.push({ rec, rel, file, content });

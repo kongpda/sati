@@ -112,7 +112,11 @@ describe("agent file planning", () => {
     const settings = JSON.parse(plan[".claude/settings.json"]?.content ?? "");
     expect(settings.permissions).toEqual({
       ...mine.permissions,
-      deny: ["Bash(git commit --no-verify:*)", "Bash(git commit -n:*)"],
+      deny: [
+        "Bash(git commit --no-verify:*)",
+        "Bash(git commit -n:*)",
+        "Bash(git push --no-verify:*)",
+      ],
     });
     expect(
       settings.hooks.Stop.map((g: { hooks: { command: string }[] }) => g.hooks[0]?.command),
@@ -165,7 +169,13 @@ describe("agent file planning", () => {
         UserPromptSubmit: [{ hooks: run("wait --hook") }],
       },
       env: theirs.env,
-      permissions: { deny: ["Bash(git commit --no-verify:*)", "Bash(git commit -n:*)"] },
+      permissions: {
+        deny: [
+          "Bash(git commit --no-verify:*)",
+          "Bash(git commit -n:*)",
+          "Bash(git push --no-verify:*)",
+        ],
+      },
     };
     const plan = byPath(
       planIntegrations(

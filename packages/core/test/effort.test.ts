@@ -10,6 +10,7 @@ import {
   markWaiting,
   shortHandle,
   taskRow,
+  undoActivity,
   updateTask,
 } from "../src/index.js";
 import { setup } from "./support/setup.js";
@@ -107,5 +108,28 @@ describe("task locks follow the claim", () => {
     // Unclaimed, or the caller's own: allowed.
     const free = await createTask(ctx, { title: "free" });
     await expect(acquireLock(ctx, { paths: ["src/b.ts"], taskId: free.id })).resolves.toBeDefined();
+  });
+
+  // A status change that ends the claim ends its locks, as release and complete do; otherwise
+  // the paths stay closed to everyone until the lease runs out.
+  it("frees the task's locks when a status change drops the claim", async () => {
+    const { ctx } = await setup();
+    const t = await createTask(ctx, { title: "x" });
+    const claimed = await claimTask(ctx, t.id);
+    const { lock } = await acquireLock(ctx, { paths: ["src/a.ts"], taskId: t.id });
+    await updateTask(ctx, t.id, { status: "todo", token: claimed.claim?.token });
+    expect((await listLocks(ctx)).some((l) => l.id === lock.id)).toBe(false);
+  });
+
+  // The log drops `from` for a field that was first set, so undo once skipped it and still
+  // reported success.
+  it("undo removes a field the change first set", async () => {
+    const { ctx, store } = await setup();
+    const t = await createTask(ctx, { title: "x" });
+    await updateTask(ctx, t.id, { effort: "deep", title: "y" });
+    const write = store.activity.find((row) => row.verb === "update" && row.entityId === t.id);
+    const back = await undoActivity(ctx, write?.id ?? "");
+    expect(back).toMatchObject({ title: "x" });
+    expect("effort" in back).toBe(false);
   });
 });

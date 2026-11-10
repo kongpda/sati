@@ -4,9 +4,10 @@ import { decodeRecord, encodeRecord, mergeRecord, parseRecord, stableJson } from
 import { defineCommand } from "citty";
 
 /**
- * Git merge driver for `.sati/**\/*.json` (`<cli> merge-driver %O %A %B`). Writes the merged
- * record over `%A`. Conflicts never fail the merge: they flag the record `needsReview`. Only a
- * file that is not JSON exits 1, which leaves git's normal conflict in place.
+ * Git merge driver for the record files in `.sati/` (`<cli> merge-driver %O %A %B`). Writes the
+ * merged record over `%A`. Conflicts never fail the merge: they flag the record `needsReview`. A
+ * file that is not JSON, or is not a record (the config file under an older `.gitattributes`
+ * line), exits 1, which leaves git's normal conflict in place.
  */
 export default defineCommand({
   meta: {
@@ -28,6 +29,9 @@ export default defineCommand({
       const base = baseText.trim() === "" ? undefined : side(baseText, "base");
       const ours = side(read(args.ours), "ours");
       const theirs = side(read(args.theirs), "theirs");
+      if (typeof ours.id !== "string" || typeof theirs.id !== "string") {
+        throw new Error("not a record file, so git merges it as text");
+      }
       const { record, conflict } = mergeRecord(base, ours, theirs);
       const tmp = `${args.ours}.${process.pid}.tmp`;
       writeFileSync(tmp, stableJson(encodeRecord(record)));

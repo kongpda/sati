@@ -1654,3 +1654,4 @@ Status: **gate passed** (2026-11-10).
 - Choices on ambiguous items: `git push -n` is a dry run, not `--no-verify`, so it is not denied. The rules block was left as it is: changing it means every project runs `init --upgrade`, so the token and `recall` wording wait for the owner. Secret refusal on task writes was not added, to avoid blocking writes on a false positive without a decision on which fields to scan.
 - Not fixed: about 60 items in `docs/ideas.md` under "Found by the 2026-11-10 whole-project review", grouped by area.
 - Follow-up plan: `docs/review-followups.md` turns the unfixed items into ten work packages with a problem, plan, tests and checklist each, tracked as PLAN Phase 5h, so another agent can continue.
+- Decisions: `docs/review-followups.md` now has a "Decisions" section that answers every owner-decision item and sets the order of work, chosen by the reviewing agent at the owner's request.

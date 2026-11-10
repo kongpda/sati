@@ -1,0 +1,33 @@
+{
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "faf9c311c487685ac210346a59788ef83ba027a3",
+    "completedAt": "2026-11-10T02:41:15.321Z",
+    "completedBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "filesTouched": [
+      "docs/review-followups.md",
+      "docs/progress.md"
+    ],
+    "summary": "Added a Decisions section to docs/review-followups.md: answers for every owner-decision item, order of work, and the owner-only actions."
+  },
+  "createdAt": "2026-11-10T02:41:13.848Z",
+  "createdBy": "actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+  "effort": "light",
+  "id": "tsk_01M71N9G3R7QSTKQHQA9Z8E2QT",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T02:41:13.852Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "branch": "2026-11-10T02:41:13.964Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "claim": "2026-11-10T02:41:15.322Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "completion": "2026-11-10T02:41:15.322Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "status": "2026-11-10T02:41:15.322Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9",
+    "worktree": "2026-11-10T02:41:13.964Z#000000#actr_01M6Y0V3E1JN82H3YQPN0TX3A9"
+  },
+  "status": "review",
+  "title": "Record owner decisions in docs/review-followups.md",
+  "updatedAt": "2026-11-10T02:41:15.324Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

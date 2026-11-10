@@ -7,9 +7,52 @@ Hand-off for the agent that continues the 2026-11-10 whole-project review (PLAN 
 1. Read `AGENTS.md` first. Its rules apply to every package here.
 2. Take one work package (WP) at a time, in the order below unless the owner says otherwise. Create a sati task for it (`task_create`, with the `effort` given in the package), claim it, and tick the boxes here and the matching box in PLAN Phase 5h in the same commit as the work.
 3. **Verify before you fix.** Each item has a confidence: *certain* (reproduced or plain from the code), *likely* (read from the code, not run), *unsure* (may be intended). For *likely* and *unsure*, first write the failing test or reproduce it. If it does not fail, tick the box with "not a bug" and one line of why in `docs/progress.md`.
-4. Items marked **Owner decision** need an answer before code. Ask; do not guess.
+4. Items marked **Owner decision** are answered in "Decisions" below. Follow the answer there. Ask only for a decision that is not in that table.
 5. Every fix gets a test that says why the behaviour matters. Every user-facing change gets a changeset. Every removal gets a `decision_record`.
 6. Line numbers are from commit `abddda4` and will drift. Search for the named symbol.
+
+## Decisions
+
+Made 2026-11-10: the owner asked the reviewing agent to choose, aiming for a secure, complete, production-ready release. Nothing is published yet, so breaking changes to result shapes and the rules block cost nothing now and will cost more after the first release. That is why they are taken now.
+
+### Order of work
+
+1. WP1 (data loss and leaks)
+2. WP4 item 4.2 (prompt injection through unfenced text)
+3. WP7 (so later core tests run against real store behaviour)
+4. WP10, reading only (the guard code is the safety check and has not been reviewed)
+5. WP2, WP3, the rest of WP4, WP5, WP6
+6. WP8, WP9
+
+### Answers
+
+| Item | Decision |
+| --- | --- |
+| 1.1 Secrets at write time | Yes. Scan every free-text field: title, body, checklist text, completion summary, `needsInput`, block reason, release note; decision title, context, choice and options; feature name, description and acceptance criteria; milestone title and goal. A finding refuses the write with VALIDATION, as notes do. The hint names the field and the kind of secret, never the value. A false positive is accepted as the cost. |
+| 1.2 Import before export | Yes. A refused import blocks the commit, with the import's hint. Committing over a snapshot that cannot be read spreads the problem to every clone. |
+| 1.3 `effort` in `EMPTY_FIELDS` | Yes, add it. A new key is allowed by the frozen-format rule. |
+| 1.7 Claims in the snapshot | Claims keep travelling, so teammates see who holds a task. Show a holder this machine does not know as "another machine". |
+| 2.1 Lock refusal and status | Refuse only when the other actor's task is `in_progress`. |
+| 3.1 Activity row on lease renewal | Keep the rule that every write logs. Skip the renewal write when the lease would move by less than a minute. No quiet path and no ADR. |
+| 3.3 Incremental export | Measure at 5,000 records first. Build it only if a full export takes more than 500 ms. |
+| 4.3 Smaller MCP results | Yes, change the shapes now. |
+| 4.5 `ifSimilar` on `task_create` | Add it. The default stays `"create"`. The workflow text tells agents to pass `"return"`. |
+| 4.6 Rules block wording | Change it now, in one edit, before the first publish. |
+| 6.2 Body shown twice | Show the rendered body. An Edit button swaps it for the textarea. |
+| WP8 `docs/handoff.md` | Delete it and record a decision. `docs/progress.md` and this file replace it. Mark `AGENT_KICKOFF.md` as history at the top. |
+| WP9 changesets | Replace the set with one "initial release" entry for 0.1.0. Record a decision for the removed files. |
+| WP9 release checks | Add the packed-install step. Build the guard job from the base ref. One e2e shard on pull requests, ten on `main` and nightly. |
+| WP10 knip | Add it as a dev dependency, with a short ADR. |
+
+### Only the owner can do these
+
+The agent prepares the code and stops. It does not do these itself.
+
+- Fix GitHub billing so Actions runs.
+- Make the repo public before the first release (provenance and README images need it).
+- Close PR #1. The release workflow opens a new one.
+- Turn on required CI checks for `main`, once Actions runs.
+- Approve the npm publish.
 
 ## Environment notes
 

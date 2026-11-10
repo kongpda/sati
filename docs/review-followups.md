@@ -692,4 +692,4 @@ Not built and not in PLAN. Raise with the owner before doing any: map Zod errors
 
 ## Found while making CI green on Windows (2026-11-10)
 
-- [ ] Inside a git repository where `git` cannot run (not on PATH, or a broken install), `locateDb` treats the folder as non-git and `sati init` sets up a standalone project with no warning and no git hooks. Seen on the Windows CI runner when a test dropped git from PATH. A fix could check for a `.git` entry when `git` fails and stop with an error that names git. Needs an owner decision: it changes how init behaves.
+- [x] Inside a git repository where `git` cannot run (not on PATH, or a broken install), `locateDb` treats the folder as non-git and `sati init` sets up a standalone project with no warning and no git hooks. Seen on the Windows CI runner when a test dropped git from PATH. Fixed on the owner's choice (2026-11-10): when `git rev-parse` fails and a `.git` entry exists at or above the folder, `locateDb` stops with an error that names git. Outside any repo, standalone projects still work without git.

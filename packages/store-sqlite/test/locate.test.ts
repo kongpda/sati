@@ -76,6 +76,40 @@ describe("locateDb", () => {
     );
   });
 
+  // Without this check, a repo where git cannot run looked like a plain folder: init set up a
+  // standalone project with no git hooks, and other commands said "no git repository".
+  it("fails loudly inside a repo when git cannot run", () => {
+    const repo = tmp();
+    git(repo, "init", "-q");
+    const nested = join(repo, "src");
+    mkdirSync(nested);
+    const path = process.env.PATH;
+    process.env.PATH = "";
+    try {
+      expect(() => locateDb(nested, { home: tmp() })).toThrow(
+        expect.objectContaining({
+          code: "INTERNAL",
+          details: expect.objectContaining({ gitDir: join(repo, ".git") }),
+        }),
+      );
+    } finally {
+      process.env.PATH = path;
+    }
+  });
+
+  // Standalone projects must keep working on machines without git.
+  it("finds a standalone project when git cannot run outside any repo", () => {
+    const dir = tmp();
+    writeConfig(dir, "standalone");
+    const path = process.env.PATH;
+    process.env.PATH = "";
+    try {
+      expect(locateDb(dir, { home: tmp() }).mode).toBe("standalone");
+    } finally {
+      process.env.PATH = path;
+    }
+  });
+
   it("rejects a malformed config with VALIDATION", () => {
     const dir = tmp();
     mkdirSync(join(dir, ".sati"));

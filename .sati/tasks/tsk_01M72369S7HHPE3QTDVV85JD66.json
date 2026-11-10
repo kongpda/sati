@@ -1,0 +1,27 @@
+{
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "heartbeatAt": "2026-11-10T06:44:15.649Z",
+    "leaseUntil": "2026-11-10T07:14:15.649Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-10T06:44:09.127Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "standard",
+  "id": "tsk_01M72369S7HHPE3QTDVV85JD66",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T06:44:09.129Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-10T06:44:15.651Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T06:44:15.651Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T06:44:15.651Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-10T06:44:15.651Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "in_progress",
+  "title": "init: error when .git exists but git cannot run",
+  "updatedAt": "2026-11-10T06:44:15.653Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -1848,3 +1848,12 @@ Status: **done** (2026-11-10). Task `tsk_wpbdsb`. The repo went public, so CI ra
 - New finding, added to `docs/review-followups.md`: init silently picks standalone mode inside a git repo when `git` cannot run.
 - No changeset: tests and test setup only, apart from Windows fixes already covered by the initial-release entry.
 - Not checked by CI: the Windows items that need a real client (the MCP config and the `sh` hooks), and the doubtful list.
+
+## 2026-11-10 — Phase 5h: init stops when git cannot run in a repo
+
+Status: **done** (2026-11-10). Task `tsk_85jd66`. The owner chose an error over a warning.
+
+- `locateDb` now looks for a `.git` entry when `git rev-parse` fails. If one exists at or above the folder, it throws `INTERNAL` with the `.git` path and a hint to check git. Every command, not only `init`, gets the error.
+- Tests: git removed from PATH inside a repo now fails loudly; a standalone project outside any repo still works without git. The first test failed on the old code.
+- Changeset: `git-missing-in-repo.md` (patch).
+- Verified locally: lint, typecheck, knip clean, build, core 334, store-sqlite 72, sync 52, mcp 30, ui 25, cli 171.

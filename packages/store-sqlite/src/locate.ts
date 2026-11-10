@@ -56,13 +56,32 @@ function fromGit(cwd: string): DbLocation | undefined {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     });
-  } catch {
-    return undefined;
+  } catch (err) {
+    // Not a repo is fine. A `.git` here that git cannot read means git is missing or broken;
+    // falling back to standalone would hide that and skip the git hooks.
+    const gitDir = findGitDir(cwd);
+    if (!gitDir) return undefined;
+    throw new SatiError("INTERNAL", `Found ${gitDir}, but \`git rev-parse\` failed.`, {
+      hint: "Check that git is installed and on PATH, and that `git status` works here.",
+      details: { gitDir, cause: err instanceof Error ? err.message : String(err) },
+    });
   }
   const [top, common] = out.trim().split(/\r?\n/);
   if (!top || !common) return undefined;
   // `--git-common-dir` may be relative to cwd. git prints `/` on Windows; resolve() gives native paths.
   return { path: join(resolve(cwd, common), "sati", "sati.db"), mode: "git", root: resolve(top) };
+}
+
+/** The nearest `.git` folder or file at or above `cwd`, if any. */
+function findGitDir(cwd: string): string | undefined {
+  let dir = resolve(cwd);
+  for (;;) {
+    const candidate = join(dir, ".git");
+    if (existsSync(candidate)) return candidate;
+    const up = dirname(dir);
+    if (up === dir) return undefined;
+    dir = up;
+  }
 }
 
 function fromStandalone(cwd: string, home: string): DbLocation | undefined {

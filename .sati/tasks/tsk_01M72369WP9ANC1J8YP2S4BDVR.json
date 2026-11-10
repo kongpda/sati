@@ -1,0 +1,15 @@
+{
+  "createdAt": "2026-11-10T06:44:09.237Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "standard",
+  "id": "tsk_01M72369WP9ANC1J8YP2S4BDVR",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T06:44:09.239Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "todo",
+  "title": "Check the doubtful Windows items on the Windows CI runner",
+  "updatedAt": "2026-11-10T06:44:09.237Z",
+  "version": 1
+}

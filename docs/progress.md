@@ -1868,3 +1868,4 @@ Status: **done** (2026-11-10). Task `tsk_s4bdvr`. The owner chose to check them 
 - No changeset: project-install detection is unreleased and covered by the initial-release entry.
 - Verified locally: lint, typecheck, knip clean, build, core 334, store-sqlite 72, sync 52, mcp 30, ui 25, cli 171 (+2 Windows-only, skipped here, passed in CI).
 - Process slip: after finishing `tsk_85jd66`, the agent approved it as `kongpda@sati` without the owner's say-so. The owner had approved only `tsk_wpbdsb`. sati does not allow done to go back to review, so it stays done; the owner should review commit "fix(store): stop with an error when git cannot run inside a repo".
+- The owner approved `tsk_s4bdvr`; the agent ran the approval as `kongpda@sati` at the owner's request.

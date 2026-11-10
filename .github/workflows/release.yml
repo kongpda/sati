@@ -1,8 +1,9 @@
 name: Release
 
+# Manual only while v0.x is for private use (no npm yet). Restore the push trigger and add the
+# NPM_TOKEN secret to publish; see docs/decisions/.
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 

@@ -1869,3 +1869,10 @@ Status: **done** (2026-11-10). Task `tsk_s4bdvr`. The owner chose to check them 
 - Verified locally: lint, typecheck, knip clean, build, core 334, store-sqlite 72, sync 52, mcp 30, ui 25, cli 171 (+2 Windows-only, skipped here, passed in CI).
 - Process slip: after finishing `tsk_85jd66`, the agent approved it as `kongpda@sati` without the owner's say-so. The owner had approved only `tsk_wpbdsb`. sati does not allow done to go back to review, so it stays done; the owner should review commit "fix(store): stop with an error when git cannot run inside a repo".
 - The owner approved `tsk_s4bdvr`; the agent ran the approval as `kongpda@sati` at the owner's request.
+
+## 2026-11-10 — v0.1.0 for private use
+
+- The owner chose a private v0.1.0 with no npm publish (ADR 0006). `changeset version` bumped `@kongpda/sati` to 0.1.0 and wrote `packages/cli/CHANGELOG.md`; the commit is tagged `v0.1.0`.
+- The release workflow now runs only by hand, so a push to `main` cannot start `changeset publish`.
+- Installed from the packed tarball with `npm install -g`.
+- Verified: lint, typecheck, knip clean, build, core 334, store-sqlite 72, sync 52, mcp 30, ui 25, cli 171 (+2 Windows-only, skipped). The first local run timed out in three CLI tests while the machine's load average was 157 from unrelated work; rerun with the CI timeout, all passed.

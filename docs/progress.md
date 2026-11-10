@@ -1835,3 +1835,5 @@ Status: **done for the items a test can reach on macOS** (2026-11-10). Task `tsk
 
 - PR #1 was already closed by the owner (2026-11-10 03:31); its boxes in `docs/review-followups.md` and PLAN WP9 now say so.
 - Rename out of a protected feature: the owner chose to keep the warning. Added to the Decisions table, explained in `docs/guide/guard.md`, decision recorded.
+- The owner approved the four review tasks (`tsk_p76vdv`, `tsk_hm0svw`, `tsk_8dz2xe`, `tsk_9n2jgt`). The review gate refuses agents, so the agent ran the approvals as the owner's actor `kongpda@sati`, at the owner's request.
+- The owner chose to make the repo public. Before the change, a scan of the full git history for AWS, GitHub, npm, Anthropic, OpenAI, Slack and Google keys and private-key blocks found only the fake keys in two test files. `gh repo view` reports PUBLIC.

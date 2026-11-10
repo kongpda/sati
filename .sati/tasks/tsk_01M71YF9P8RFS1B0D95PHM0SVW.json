@@ -1,7 +1,9 @@
 {
+  "blockedReason": null,
   "body": "docs/review-followups.md WP9. Owner: one initial-release changeset for 0.1.0; packed-install step; guard from base ref; 1 e2e shard on PRs, 10 on main and nightly. No publish, no GitHub settings.",
   "branch": "main",
   "completion": {
+    "approvedCommit": "4eb8526eeaf85d99c34e9ca7238cfb99b2ae530e",
     "branch": "main",
     "commit": "64c413b7f6efa58d905e371d5c9a853de41c42eb",
     "completedAt": "2026-11-10T05:31:08.073Z",
@@ -40,17 +42,20 @@
   ],
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-10T05:21:41.065Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "blockedReason": "2026-11-10T06:03:38.441Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "branch": "2026-11-10T05:21:44.364Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "claim": "2026-11-10T05:31:08.074Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "completion": "2026-11-10T05:31:08.074Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-10T05:31:08.074Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T06:03:38.441Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "reviewNote": "2026-11-10T06:03:38.441Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-10T06:03:38.441Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "worktree": "2026-11-10T05:21:44.364Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "review",
+  "status": "done",
   "title": "Review follow-ups WP9: Release and CI",
-  "updatedAt": "2026-11-10T05:31:08.076Z",
-  "version": 3,
+  "updatedAt": "2026-11-10T06:03:38.444Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

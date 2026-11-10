@@ -752,7 +752,7 @@ Added 2026-11-10 at the owner's request: the items the Phase 5g review found and
 - [ ] WP6 Board (all done except the manual screen-reader pass, which waits on the owner)
 - [x] WP7 Test store parity
 - [x] WP8 Docs and PLAN drift
-- [ ] WP9 Release and CI (all done except the owner's items: a public repo, required checks, npm publish; PR #1 was closed 2026-11-10)
+- [ ] WP9 Release and CI (all done except the owner's items: required checks, npm publish; PR #1 was closed and the repo made public on 2026-11-10)
 - [x] WP10 Finish the review
 
 ### Phase 6 — Hosted mode (deferred to v2)

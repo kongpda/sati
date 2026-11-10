@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "4eb8526eeaf85d99c34e9ca7238cfb99b2ae530e",
     "branch": "main",
     "commit": "c19c085d9969bc0b95dfe8c9663927203caca8cd",
     "completedAt": "2026-11-10T05:48:04.098Z",
@@ -53,17 +55,20 @@
   ],
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-10T05:31:59.722Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "blockedReason": "2026-11-10T06:03:38.148Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "branch": "2026-11-10T05:32:03.154Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "claim": "2026-11-10T05:48:04.100Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "completion": "2026-11-10T05:48:04.100Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-10T05:48:04.100Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T06:03:38.148Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "reviewNote": "2026-11-10T06:03:38.148Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-10T06:03:38.148Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "worktree": "2026-11-10T05:32:03.154Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "review",
+  "status": "done",
   "title": "Review follow-ups: WP10 leftovers (core, parity, guard docs)",
-  "updatedAt": "2026-11-10T05:48:04.101Z",
-  "version": 3,
+  "updatedAt": "2026-11-10T06:03:38.155Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

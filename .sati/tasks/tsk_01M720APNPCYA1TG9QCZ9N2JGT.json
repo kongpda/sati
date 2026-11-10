@@ -1,7 +1,9 @@
 {
+  "blockedReason": null,
   "body": "Windows items that can be reproduced with a stubbed rename or a platform argument.",
   "branch": "main",
   "completion": {
+    "approvedCommit": "4eb8526eeaf85d99c34e9ca7238cfb99b2ae530e",
     "branch": "main",
     "commit": "4655d8af179b31f48af2ed512a9cdbd869d6e14f",
     "completedAt": "2026-11-10T05:54:42.555Z",
@@ -17,17 +19,20 @@
   "id": "tsk_01M720APNPCYA1TG9QCZ9N2JGT",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-10T05:54:07.672Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "blockedReason": "2026-11-10T06:03:39.009Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "branch": "2026-11-10T05:54:07.786Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "claim": "2026-11-10T05:54:42.557Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "completion": "2026-11-10T05:54:42.557Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-10T05:54:42.557Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T06:03:39.009Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "reviewNote": "2026-11-10T06:03:39.009Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-10T06:03:39.009Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "worktree": "2026-11-10T05:54:07.786Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "review",
+  "status": "done",
   "title": "Review follow-ups: EPERM retry, UNC paths, doubtful list",
-  "updatedAt": "2026-11-10T05:54:42.558Z",
-  "version": 3,
+  "updatedAt": "2026-11-10T06:03:39.018Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

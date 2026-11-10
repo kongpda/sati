@@ -1,7 +1,9 @@
 {
+  "blockedReason": null,
   "body": "docs/review-followups.md Windows section: selfCommand X_OK, hooks.ts path compares, runtime.ts changedFiles worktree compare. Reproduce with path.win32 or a stubbed process.platform on macOS; items that need a Windows machine stay open.",
   "branch": "main",
   "completion": {
+    "approvedCommit": "4eb8526eeaf85d99c34e9ca7238cfb99b2ae530e",
     "branch": "main",
     "commit": "1f12d2ab94e0241223392fa6a96506ebacb801af",
     "completedAt": "2026-11-10T05:52:30.001Z",
@@ -17,17 +19,20 @@
   "id": "tsk_01M720414CF2MHA6RG318DZ2XE",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-10T05:50:29.006Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "blockedReason": "2026-11-10T06:03:38.722Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "branch": "2026-11-10T05:50:31.130Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "claim": "2026-11-10T05:52:30.002Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "completion": "2026-11-10T05:52:30.002Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-10T05:52:30.002Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T06:03:38.722Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "reviewNote": "2026-11-10T06:03:38.722Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-10T06:03:38.722Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "worktree": "2026-11-10T05:50:31.130Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "review",
+  "status": "done",
   "title": "Review follow-ups: Windows items reproducible by simulation",
-  "updatedAt": "2026-11-10T05:52:30.004Z",
-  "version": 3,
+  "updatedAt": "2026-11-10T06:03:38.725Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

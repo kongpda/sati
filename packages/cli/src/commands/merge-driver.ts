@@ -12,7 +12,8 @@ import { defineCommand } from "citty";
 export default defineCommand({
   meta: {
     name: "merge-driver",
-    description: "Git merge driver for .sati/ records (set up by init)",
+    description:
+      "Git merge driver for .sati/ records (set up by init). A conflict marks the record needsReview and still exits 0",
   },
   args: {
     base: { type: "positional", required: true, description: "%O: the common ancestor" },

@@ -23,7 +23,8 @@ function isLive(socketPath: string): Promise<boolean> {
 export default defineCommand({
   meta: {
     name: "serve",
-    description: "Own the database so other processes can use it over a local socket",
+    description:
+      "Own the database so other processes can use it over a local socket. Exit 4 if one is already running",
   },
   run: async () => {
     process.env.SATI_DAEMON_OWNER = "1";

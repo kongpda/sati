@@ -1,0 +1,35 @@
+{
+  "body": "Owner asked (2026-11-10) to update all docs from the guide to the CLI and improve them. Scope: WP8 items in docs/review-followups.md, the CLI --help sweep item from WP10, and an accuracy pass over docs/guide/*, README.md, packages/cli/README.md, CONTRIBUTING.md, SECURITY.md against the built CLI (including WP1 behaviour). History files (progress, decisions, ideas, review-followups) stay as records.",
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "heartbeatAt": "2026-11-10T03:04:32.668Z",
+    "holder": {
+      "host": "h:001065b26af48df5",
+      "pid": 98879
+    },
+    "leaseUntil": "2026-11-10T06:04:32.668Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-10T03:04:31.132Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "standard",
+  "id": "tsk_01M71PM4MW8W4YB6X7XCJ3G5A6",
+  "labels": [
+    "review-followups"
+  ],
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T03:04:31.132Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-10T03:04:32.668Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T03:04:32.668Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T03:04:32.668Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-10T03:04:32.668Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "in_progress",
+  "title": "Review follow-ups WP8 + CLI help sweep: docs from guide to CLI",
+  "updatedAt": "2026-11-10T03:04:32.669Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

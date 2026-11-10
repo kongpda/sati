@@ -530,22 +530,33 @@ function render(r: InitResult | UpgradeResult | DryRun | null): string {
 export default defineCommand({
   meta: { name: "init", description: `Set up ${CLI_NAME} for this project` },
   args: {
-    mode: { type: "string", description: "git | stealth | standalone" },
+    mode: {
+      type: "string",
+      description: "git (default in a repo) | stealth | standalone (outside git only)",
+    },
     kind: {
       type: "string",
       description: "code (default) | general: plans, todos and notes without features or locks",
     },
     name: { type: "string", description: "Project name (default: folder name)" },
-    slug: { type: "string", description: "Project slug (default: from the name)" },
+    slug: {
+      type: "string",
+      description: "Project slug: lowercase letters, digits and dashes (default: from the name)",
+    },
     tools: {
       type: "string",
-      description: "Also set up these agent tools, comma-separated (e.g. claude-code,codex)",
+      description:
+        "Also set up these agent tools, added to the ones detected, comma-separated (e.g. claude-code,codex)",
     },
-    yes: { type: "boolean", description: "Skip prompts and accept the defaults" },
+    yes: {
+      type: "boolean",
+      description:
+        "Skip prompts and accept the defaults (required without a terminal, or with --json)",
+    },
     upgrade: {
       type: "boolean",
       description:
-        "Update the git hooks, merge driver and agent files (as `rules sync` does) of an initialized project",
+        "Update the git hooks, merge driver and agent files (as `rules sync` does) of an initialized project. Exit 6 if there is none",
     },
     "dry-run": { type: "boolean", description: "Show what init would write, and write nothing" },
     "global-hooks": {

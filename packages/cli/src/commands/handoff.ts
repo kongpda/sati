@@ -28,7 +28,11 @@ export default defineCommand({
       type: "string",
       description: "Who it is for: an actor name or id (default: next claimer)",
     },
-    ack: { type: "boolean", description: "Mark the task's handoff read instead of writing one" },
+    ack: {
+      type: "boolean",
+      description:
+        "Mark the task's handoff read instead of writing one (wins over the other flags)",
+    },
     ...json,
   },
   run: ({ args }) => {

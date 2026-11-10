@@ -159,12 +159,16 @@ async function runHook(): Promise<void> {
 export default defineCommand({
   meta: {
     name: "guard",
-    description: "Check changes against shipped features and other agents' locks",
+    description:
+      "Check changes against shipped features and other agents' locks. Pick one of --staged, --paths, --range. Exit 10 if blocked; SATI_GUARD=off lets one change through (logged)",
   },
   args: {
     staged: { type: "boolean", description: "Check the staged diff (the pre-commit hook)" },
     paths: { type: "string", description: "Check these comma-separated paths as edits" },
-    hook: { type: "boolean", description: "Claude Code PreToolUse hook: read the edit from stdin" },
+    hook: {
+      type: "boolean",
+      description: "Claude Code PreToolUse hook: read the edit from stdin. Exit 2 blocks the edit",
+    },
     range: {
       type: "string",
       description: "Check a commit range, for example origin/main...HEAD",

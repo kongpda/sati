@@ -50,7 +50,8 @@ async function heldTasks(): Promise<{ held: Task[]; idle: string | null; warning
 export default defineCommand({
   meta: {
     name: "nudge",
-    description: "Stop hook: remind the agent to complete or update the tasks it holds",
+    description:
+      "Stop hook: remind the agent to complete or update the tasks it holds, and an idle agent to run next",
   },
   run: async () => {
     const input = readHookInput();

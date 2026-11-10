@@ -79,7 +79,8 @@ const put = defineCommand({
     "key-files": { type: "string", description: "Comma-separated most important files" },
     private: {
       type: "boolean",
-      description: "Keep it on this machine: never exported to .sati/ (--no-private shares it)",
+      description:
+        "Keep it on this machine: never exported to .sati/. Set when made; --no-private shares it for good",
     },
     ...json,
   },

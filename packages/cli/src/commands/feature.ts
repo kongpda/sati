@@ -21,7 +21,10 @@ const fields = {
   paths: { type: "string", description: "Comma-separated path globs the feature owns" },
   tests: { type: "string", description: "Comma-separated test path globs" },
   acceptance: { type: "string", description: "Comma-separated acceptance criteria" },
-  protected: { type: "boolean", description: "Guard the feature's paths against edits" },
+  protected: {
+    type: "boolean",
+    description: "Guard the feature's paths against edits (--no-protected turns it off)",
+  },
 } as const;
 
 const create = defineCommand({
@@ -52,12 +55,15 @@ const create = defineCommand({
 const ls = defineCommand({
   meta: { name: "list", description: "List features" },
   args: {
-    status: { type: "string", description: "Comma-separated statuses" },
+    status: {
+      type: "string",
+      description: "Comma-separated: planned, building, shipped, deprecated, removed",
+    },
     milestone: { type: "string", description: "Only features of this milestone" },
     format: {
       type: "string",
       description:
-        "md: what the product does today (shipped features, acceptance criteria, milestone)",
+        "md (the only value): what the product does today (shipped features, acceptance criteria, milestone); ignores the filters",
     },
     ...pagination,
     ...json,

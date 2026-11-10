@@ -28,7 +28,10 @@ A person can plan and record work two ways, and both write the same records:
 2. **In the sati web UI.** The board, lists, notes and the roadmap, for planning and working by
    hand, with live updates when an agent changes something.
 
-A capability counts as done only when both ways have it. Today they are uneven:
+A capability counts as done only when both ways have it. Before Phase 7a they were uneven, as
+this table shows. Phases 7a and 7b closed these gaps: both ways now have every row.
+
+**State before Phase 7a (history):**
 
 | Capability | Agent (MCP / CLI) | Web UI |
 | --- | --- | --- |

@@ -59,7 +59,8 @@ Supported agent tools: `claude-code`, `codex`, `cursor` and `gemini-cli` get a m
 block, the MCP server and, where the tool has them, hooks. `copilot`, `windsurf`, `cline` and
 `kiro` get the rules block.
 
-After you upgrade sati, refresh the git hooks, merge driver and `.gitattributes`:
+After you upgrade sati, refresh the git hooks, the merge driver, `.gitattributes`, the rules
+block and the agent configs in one step (the [FAQ](faq.md#how-do-i-update-sati) has the rest):
 
 ```bash
 sati init --upgrade
@@ -111,7 +112,8 @@ A backup of the database is written before each schema migration.
 
 ## Exit codes
 
-Every command takes `--json`. Errors print a message and a hint, and exit with a fixed code:
+Every command that returns data takes `--json`. Errors print a message and a hint, and exit
+with a fixed code:
 
 | Code | Meaning |
 | --- | --- |

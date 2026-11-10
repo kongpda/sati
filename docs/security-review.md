@@ -40,7 +40,7 @@ breaks.
 | Control | Evidence |
 | --- | --- |
 | The merge driver only parses JSON | `packages/sync/src/merge.ts` `parseRecord`; property tests in `merge.test.ts` |
-| Hooks call the absolute binary path recorded at init | `packages/cli/test/hooks.test.ts`, `init.test.ts` |
+| Hooks call the absolute binary path recorded at init (`node_modules/.bin/sati` for a project install) | `packages/cli/test/hooks.test.ts`, `init.test.ts` |
 | `sati init` shows and asks before writing hooks and configs | `packages/cli/test/init.test.ts` |
 
 ## Supply chain

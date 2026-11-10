@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This repo builds **Sati** (`sati`). The full spec is in `PLAN.md`; how to work is in `AGENT_KICKOFF.md`.
+This repo builds **Sati** (`sati`). The full spec is in `PLAN.md`. `AGENT_KICKOFF.md` is the original build brief, kept as history.
 
 ## Rules
 

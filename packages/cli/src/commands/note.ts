@@ -21,7 +21,8 @@ const fields = {
   pinned: { type: "boolean", description: "Pin the note (pinned notes reach every brief)" },
   private: {
     type: "boolean",
-    description: "Keep it on this machine: never exported to .sati/ (--no-private shares it)",
+    description:
+      "Keep it on this machine: never exported to .sati/. Set when made; --no-private shares it for good",
   },
 } as const;
 

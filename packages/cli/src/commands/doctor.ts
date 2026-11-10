@@ -122,7 +122,11 @@ async function worktreesCheck(ctx: ServiceContext, root: string): Promise<Doctor
 }
 
 export default defineCommand({
-  meta: { name: "doctor", description: "Check leases, locks, integrity and hooks" },
+  meta: {
+    name: "doctor",
+    description:
+      "Check leases, locks, integrity, hooks, setup files and finished worktrees. Exit 5 if a check fails",
+  },
   args: {
     vacuum: { type: "boolean", description: "Run VACUUM after the checks" },
     ...json,

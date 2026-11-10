@@ -1,5 +1,10 @@
 # Agent kickoff: build Sati
 
+> **History.** This is the brief that started the build in 2026. The name and npm scope are
+> settled (`sati`, `@kongpda/sati`, ADR 0002), and the phases it describes are done. For current
+> work read `AGENTS.md`, `PLAN.md` and `docs/review-followups.md`; for what happened, read
+> `docs/progress.md`.
+
 You are building **Sati**, a local-first memory, task and feature manager for AI coding agents, published to npm. The full specification is in `PLAN.md`. Read it fully before writing any code.
 
 > Working name: `sati` (CLI) and `@kongpda/sati` (package). The final name is not chosen yet. Use `sati` everywhere and keep the name in one constant (`packages/core/src/name.ts`) so a rename is a one-line change plus a search-and-replace.

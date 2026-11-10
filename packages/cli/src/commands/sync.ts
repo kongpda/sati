@@ -8,7 +8,8 @@ import { openRuntime, output, readProjectConfig, snapshotDir } from "../runtime.
 export const exportCmd = defineCommand({
   meta: {
     name: "export",
-    description: "Load newer records from .sati/, then write changed ones (run by pre-commit)",
+    description:
+      "Load newer records from .sati/, then write changed ones (run by pre-commit). Exit 5 if a record holding a secret was refused; the rest are written",
   },
   args: {
     ...json,
@@ -41,7 +42,10 @@ export const exportCmd = defineCommand({
 
 /** Also the top-level `sati import`. */
 export const importCmd = defineCommand({
-  meta: { name: "import", description: "Load newer records from .sati/ (run by git hooks)" },
+  meta: {
+    name: "import",
+    description: "Load newer records and the project kind from .sati/ (run by git hooks)",
+  },
   args: {
     quiet: { type: "boolean", description: "Print nothing unless records were imported" },
     ...json,
@@ -74,6 +78,9 @@ export const importCmd = defineCommand({
 });
 
 export default defineCommand({
-  meta: { name: "sync", description: "Export or import the .sati/ snapshot committed to git" },
+  meta: {
+    name: "sync",
+    description: "Export or import the .sati/ snapshot committed to git (git mode only)",
+  },
   subCommands: { export: exportCmd, import: importCmd },
 });

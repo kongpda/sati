@@ -6,7 +6,11 @@ import { readProjects } from "../projects.js";
 import { output } from "../runtime.js";
 
 export default defineCommand({
-  meta: { name: "projects", description: "Projects this machine knows" },
+  meta: {
+    name: "projects",
+    description:
+      "Projects this machine knows. Add `--project <slug>` to any command to run it against one",
+  },
   args: { ...json },
   run: ({ args }) =>
     output(

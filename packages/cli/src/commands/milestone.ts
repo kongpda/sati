@@ -60,10 +60,13 @@ const update = defineCommand({
   meta: { name: "update", description: "Update a milestone" },
   args: {
     ...id("Milestone"),
-    title: { type: "string" },
-    goal: { type: "string" },
+    title: { type: "string", description: "New title" },
+    goal: { type: "string", description: "What done looks like" },
     date: { type: "string", description: "Target date YYYY-MM-DD" },
-    status: { type: "string", description: "planned | active | done" },
+    status: {
+      type: "string",
+      description: "planned | active | done (planned and done change through active)",
+    },
     ...expectedVersion,
     ...json,
   },

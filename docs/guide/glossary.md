@@ -11,6 +11,7 @@ scripts and agents do not break. This table maps one to the other; the board's w
 | Waiting for approval | `review` | Finished and waiting for a person to approve it or send it back. |
 | Backlog, Done, Blocked, Cancelled | `backlog`, `done`, `blocked`, `cancelled` | Same words. |
 | "Kong is working on this until 2:32 PM" | claim, `leaseUntil` | Who has the task, and until when (your local time). |
+| "another machine" as the holder | a claim by an actor this clone does not know | The holder is a teammate's agent or person whose clone created them; their claim reached you through `.sati/`. |
 | "time on this ran out" | expired lease | The claim's time passed; anyone may take the task now. |
 | Take over | `sati task take-over` | A person takes a task from whoever has it. Logged. |
 | Release | `sati task release` | The holder (or a person, with `--force`) gives the task back. |

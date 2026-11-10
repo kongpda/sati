@@ -43,7 +43,7 @@ mode, commits a plain JSON snapshot so teammates and their agents see the same s
 | **File cards** | What an agent learned about a file, reused while the file is unchanged. Fewer tokens per session. |
 | **People in the loop** | Agents' finished work waits for a person to approve. Handoffs, questions and comments on every record. |
 | **A local board** | `sati ui`: board, roadmap, features, notes, decisions, activity. Light and dark, keyboard and screen-reader friendly. |
-| **One API, two doors** | The same operations over MCP and the CLI. Every command takes `--json`. |
+| **One API, two doors** | The same operations over MCP and the CLI. Every command that returns data takes `--json`. |
 
 ## Quick start
 
@@ -221,10 +221,11 @@ sati ui                        # the web board
 
 - Everything stays on your machine. sati makes no network calls; `sati ui` serves only on
   `127.0.0.1`, behind a one-time token and a strict CSP.
-- An export that would commit an API key, token, private key or `.env` line to `.sati/` is
-  refused.
+- A write that holds an API key, token, private key or `.env` line is refused, and so is an
+  export of an older record that holds one, so it never reaches `.sati/`.
 - Imported snapshots are validated with strict schemas and size limits, all or nothing.
-- Git hooks call sati by its absolute path, so a repo cannot swap the binary through `PATH`.
+- Git hooks call sati by the absolute path recorded at `sati init` (for a project install,
+  `node_modules/.bin/sati`), so a repo cannot swap the binary through `PATH`.
 - Every write is one transaction with an audit row (`sati activity`, `sati undo`).
 
 Report a vulnerability privately: see [SECURITY.md](SECURITY.md).

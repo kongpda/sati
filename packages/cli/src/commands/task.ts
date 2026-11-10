@@ -126,7 +126,8 @@ const create = defineCommand({
     ...fields,
     subtasks: {
       type: "string",
-      description: "JSON array of {title, body?, dependsOn?: number[]}",
+      description:
+        "JSON array of {title, body?, dependsOn?: number[]}; dependsOn holds zero-based positions in this array",
     },
     ...json,
   },
@@ -158,7 +159,10 @@ const create = defineCommand({
 const ls = defineCommand({
   meta: { name: "list", description: "List tasks" },
   args: {
-    status: { type: "string", description: "Comma-separated statuses" },
+    status: {
+      type: "string",
+      description: "Comma-separated: backlog, todo, in_progress, blocked, review, done, cancelled",
+    },
     feature: { type: "string", description: "Only tasks of this feature" },
     milestone: {
       type: "string",
@@ -168,7 +172,10 @@ const ls = defineCommand({
     "due-by": { type: "string", description: "Only tasks due on or before YYYY-MM-DD" },
     assignee: { type: "string", description: "Only tasks assigned to this name, id or me" },
     effort: { type: "string", description: "Only tasks of this effort: light | standard | deep" },
-    ready: { type: "boolean", description: "Only unclaimed tasks whose dependencies are done" },
+    ready: {
+      type: "boolean",
+      description: "Only todo tasks with no claim and all dependencies done",
+    },
     full: {
       type: "boolean",
       description: "Whole records with --json (body, completion); by default short rows",
@@ -216,7 +223,11 @@ const update = defineCommand({
   args: {
     ...id("Task"),
     title: { type: "string", description: "New title" },
-    status: { type: "string", description: "New status" },
+    status: {
+      type: "string",
+      description:
+        "New status. done approves a task in review (people only); otherwise finish with complete",
+    },
     ...fields,
     ...expectedVersion,
     ...token,
@@ -436,7 +447,11 @@ const takeOver = defineCommand({
 });
 
 const complete = defineCommand({
-  meta: { name: "complete", description: "Finish a task with a summary of what changed" },
+  meta: {
+    name: "complete",
+    description:
+      "Finish a task with a summary of what changed (an agent's task goes to review when the review setting asks for approval)",
+  },
   args: {
     ...id("Task"),
     summary: { type: "string", required: true, description: "What was done" },

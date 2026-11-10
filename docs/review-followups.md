@@ -550,18 +550,18 @@ So core tests can pass on behaviour the real store does not have.
 
 Effort: `light` for each item; the whole package suits a small model with a check by the claimer. Verify every command against `node packages/cli/dist/index.mjs <cmd> --help`.
 
-- [ ] `docs/handoff.md` is out of date throughout: says the licence is `UNLICENSED` (it is MIT), lists the name and npm scope as open (ADR 0002 settled them), treats PR #2 as open, cites wrong PLAN lines, says the repo is private. **Owner decision:** rewrite or delete. If deleted, record a decision and fix links to it.
-- [ ] `AGENT_KICKOFF.md` lines 5 and 28: "The final name is not chosen yet" and "Begin Phase 0". Mark the file as history at the top, or update it.
-- [ ] `PLAN.md` tech-stack table (about lines 41 to 58) names TanStack Router, shadcn/ui and Radix, `cmdk`, Tiptap, `@hono/zod-openapi` and `pino`; none is a dependency. AGENTS.md wants an ADR for stack changes. Write one ADR in `docs/decisions/` that records what was built instead and why, and make the table match.
-- [ ] `PLAN.md` about lines 138 to 143: "ten internal packages … publishes only two". There are six packages and one is published; `store-postgres`, `store-remote`, `server`, `sdk`, `apps/cloud` are Phase 6 plans. Say so.
-- [ ] `PLAN.md` lines 247 and 504 name `e2e/guard/`, which does not exist; the tests are in `packages/cli/test/hooks.test.ts`.
-- [ ] `PLAN.md` about lines 411 to 420 and 821 to 848 promise a CI benchmark that fails the build, a bundle-size check, a licence check, `sati migrate`, a daily update check and `next`/`latest` channels. None is built. Mark each "not built" with a pointer, or move to Phase 6.
-- [ ] `PLAN.md` Phase 0 has two unticked boxes that are done (the changesets and provenance workflow; the product name), and the open decisions "Product name and npm scope" and "Licence" are settled. Tick and move them.
-- [ ] `docs/team-brain.md` lines 27 to 40: the "today they are uneven" table describes the state before Phase 7a (notes CLI-only, plans and decisions read-only in the UI). Label it as the earlier state or update it.
-- [ ] `README.md` ("CLI at a glance") and `docs/guide/quick-start.md` say every command takes `--json`. `mcp`, `ui`, `nudge`, `serve`, `merge-driver` and `--version` do not. Say "every command that returns data".
-- [ ] `docs/guide/quick-start.md` line 47 and `docs/guide/faq.md` lines 51 to 54 disagree: `init --upgrade` already refreshes agent files, so the FAQ's extra `sati rules sync` step is not needed and the quick start leaves agent files out of its list. Make both say the same.
-- [ ] `README.md` (Data and security), `SECURITY.md`, `docs/security-review.md` say hooks call sati by absolute path. A project install records `node_modules/.bin/sati` (see the comment at the top of `packages/cli/src/hooks.ts`). Say both.
-- [ ] `CONTRIBUTING.md`: add a "Dev setup" section: `pnpm install`, `pnpm build`, `pnpm exec playwright install chromium` before `pnpm test:ui`, and `pnpm local` (`scripts/local.sh`) so the tracked `.claude/settings.json` and `.mcp.json` find `sati`. Remove the `server` scope, which has no package.
+- [x] `docs/handoff.md` is out of date throughout: says the licence is `UNLICENSED` (it is MIT), lists the name and npm scope as open (ADR 0002 settled them), treats PR #2 as open, cites wrong PLAN lines, says the repo is private. **Owner decision:** rewrite or delete. If deleted, record a decision and fix links to it.
+- [x] `AGENT_KICKOFF.md` lines 5 and 28: "The final name is not chosen yet" and "Begin Phase 0". Mark the file as history at the top, or update it.
+- [x] `PLAN.md` tech-stack table (about lines 41 to 58) names TanStack Router, shadcn/ui and Radix, `cmdk`, Tiptap, `@hono/zod-openapi` and `pino`; none is a dependency. AGENTS.md wants an ADR for stack changes. Write one ADR in `docs/decisions/` that records what was built instead and why, and make the table match.
+- [x] `PLAN.md` about lines 138 to 143: "ten internal packages … publishes only two". There are six packages and one is published; `store-postgres`, `store-remote`, `server`, `sdk`, `apps/cloud` are Phase 6 plans. Say so.
+- [x] `PLAN.md` lines 247 and 504 name `e2e/guard/`, which does not exist; the tests are in `packages/cli/test/hooks.test.ts`.
+- [x] `PLAN.md` about lines 411 to 420 and 821 to 848 promise a CI benchmark that fails the build, a bundle-size check, a licence check, `sati migrate`, a daily update check and `next`/`latest` channels. None is built. Mark each "not built" with a pointer, or move to Phase 6.
+- [x] `PLAN.md` Phase 0 has two unticked boxes that are done (the changesets and provenance workflow; the product name), and the open decisions "Product name and npm scope" and "Licence" are settled. Tick and move them.
+- [x] `docs/team-brain.md` lines 27 to 40: the "today they are uneven" table describes the state before Phase 7a (notes CLI-only, plans and decisions read-only in the UI). Label it as the earlier state or update it.
+- [x] `README.md` ("CLI at a glance") and `docs/guide/quick-start.md` say every command takes `--json`. `mcp`, `ui`, `nudge`, `serve`, `merge-driver` and `--version` do not. Say "every command that returns data".
+- [x] `docs/guide/quick-start.md` line 47 and `docs/guide/faq.md` lines 51 to 54 disagree: `init --upgrade` already refreshes agent files, so the FAQ's extra `sati rules sync` step is not needed and the quick start leaves agent files out of its list. Make both say the same.
+- [x] `README.md` (Data and security), `SECURITY.md`, `docs/security-review.md` say hooks call sati by absolute path. A project install records `node_modules/.bin/sati` (see the comment at the top of `packages/cli/src/hooks.ts`). Say both.
+- [x] `CONTRIBUTING.md`: add a "Dev setup" section: `pnpm install`, `pnpm build`, `pnpm exec playwright install chromium` before `pnpm test:ui`, and `pnpm local` (`scripts/local.sh`) so the tracked `.claude/settings.json` and `.mcp.json` find `sati`. Remove the `server` scope, which has no package.
 
 ---
 
@@ -589,12 +589,20 @@ Effort: `deep`. Read-only first; fixes go through the same rule as Phase 5g: fix
 
 - [ ] Read in full and review: `packages/core/src/services/recall.ts`, `brief.ts`, `changes.ts`, `shell-changes.ts`, `guard.ts`, `overlap.ts`, `similar.ts`, `workflow.ts`, `template.ts`, `doctor.ts`. Look for: writes outside one transaction or without an activity row, input not validated with Zod, full-table reads in hot paths, text that reaches an agent unfenced, wrong error codes.
 - [ ] `guard.ts` and `shell-changes.ts` deserve the most care: they are the safety checks. Try to get a removal past the guard (renames, moves across features, binary files, paths with spaces, a ratio just under `guard.maxRemovalRatio`).
-- [ ] CLI `--help` sweep: for every command and subcommand, compare the help text with what the command does. Check exit codes against the README table (1 internal, 2 usage, 3 not found, 4 conflict, 5 validation, 6 not initialized, 7 schema newer, 8 invalid transition, 9 ambiguous id, 10 guard blocked).
+- [x] CLI `--help` sweep: for every command and subcommand, compare the help text with what the command does. Check exit codes against the README table (1 internal, 2 usage, 3 not found, 4 conflict, 5 validation, 6 not initialized, 7 schema newer, 8 invalid transition, 9 ambiguous id, 10 guard blocked).
 - [ ] Compare each MCP tool with its CLI command: same fields, same defaults, same errors.
 - [ ] `doctor` in a stealth-mode project.
 - [ ] Dead code: add a knip config (entry points: each package's `src/index.ts`, the CLI bin, test files, scripts) as a dev dependency and report what it finds. The cli's `ulid` and `drizzle-orm` dev dependencies are unused on purpose (they are bundled); ignore them in the config. Adding a dev tool is a stack change: ask the owner or write an ADR first.
 - [ ] Windows: path handling in `hooks.ts`, `detect.ts`, the named pipe in `remote.ts`. Cannot be run here; read only, and list doubts.
 - [ ] Add the findings to this file and to `docs/progress.md`.
+
+### Found by the WP10 `--help` sweep (2026-11-10)
+
+- [x] `sati decision delete <handle>` looked the handle up among deleted decisions, so a live decision failed with NOT_FOUND (exit 3); a full id worked. Fixed, with a CLI test that deletes and restores a task, note and decision by handle.
+- [ ] Hook-mode exit codes differ from the README table on purpose: `guard --hook` exits 2 to block an edit (Claude Code's contract), and `nudge`, `wait --hook` and `merge-driver` exit 1 on any error. Now stated in their help; the README table could note it too.
+- [ ] `milestone update --date` cannot clear a date (`task --due none` can). Left as is; an idea, not a bug.
+- [ ] `card show --help` prints `USAGE sati card get`, and the `context` alias prints `(sati card)`: the aliases share one command definition. Cosmetic.
+
 
 ---
 

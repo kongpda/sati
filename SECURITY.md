@@ -25,7 +25,8 @@ Only the latest minor release of `@kongpda/sati` gets security fixes.
 - **Prompt injection**: notes and task bodies are data. The brief marks them as such, and MCP
   tools cannot run shell commands or write files outside `.sati/`.
 - **Hooks** call the `sati` binary by the absolute path recorded at `sati init`, so a repository
-  cannot swap it through `PATH`.
+  cannot swap it through `PATH`. A project install records `node_modules/.bin/sati` instead, so
+  the hooks follow the version in the lockfile.
 
 ## Dependencies
 

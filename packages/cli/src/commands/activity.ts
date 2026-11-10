@@ -8,12 +8,12 @@ export default defineCommand({
   args: {
     actor: { type: "string", description: "Actor id or name" },
     task: { type: "string", description: "Task id or handle" },
-    since: { type: "string", description: "UTC time, inclusive" },
+    since: { type: "string", description: "UTC time (ISO 8601), inclusive" },
     after: {
       type: "string",
       description: "Only rows written after this activity id, oldest first (a cursor)",
     },
-    limit: { type: "string", description: "Max rows (default 50)" },
+    limit: { type: "string", description: "Max rows (default 50, max 500)" },
     ...json,
   },
   run: ({ args }) =>

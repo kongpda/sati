@@ -12,7 +12,7 @@ export default defineCommand({
   args: {
     query: { type: "positional", required: true, description: "Words to find" },
     entities: { type: "string", description: "Comma-separated: task,feature,note,decision" },
-    limit: { type: "string", description: "Max results (default 50)" },
+    limit: { type: "string", description: "Max results (default 50, max 200)" },
     any: { type: "boolean", description: "Match any word instead of all words" },
     ...json,
   },

@@ -60,10 +60,18 @@ export default defineCommand({
     description: "Say you are waiting on a person (a question), or that they answered (--clear)",
   },
   args: {
-    question: { type: "positional", required: false, description: "What you need answered" },
+    question: {
+      type: "positional",
+      required: false,
+      description: "What you need answered (required unless --clear)",
+    },
     task: { type: "string", description: "Task id or handle (default: every task you hold)" },
     clear: { type: "boolean", description: "The person answered; stop waiting" },
-    hook: { type: "boolean", description: "Claude Code Notification / UserPromptSubmit hook" },
+    hook: {
+      type: "boolean",
+      description:
+        "Claude Code Notification / UserPromptSubmit hook (prints nothing; other flags are ignored)",
+    },
     ...json,
   },
   run: async ({ args }) => {

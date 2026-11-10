@@ -1,15 +1,47 @@
 {
   "body": "PLAN Phase 5h, WP1 in docs/review-followups.md (items 1.1 to 1.8). Decisions are in that file's Decisions table.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "heartbeatAt": "2026-11-10T02:44:57.679Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 98879
-    },
-    "leaseUntil": "2026-11-10T06:44:57.679Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "2913eec450a6c2bc6612e76348cb5636ea8b6ea4",
+    "completedAt": "2026-11-10T03:03:54.798Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/core/src/domain/secrets.ts",
+      "packages/core/src/services/task.ts",
+      "packages/core/src/services/decision.ts",
+      "packages/core/src/services/feature.ts",
+      "packages/core/src/services/milestone.ts",
+      "packages/core/src/services/context.ts",
+      "packages/core/src/services/records.ts",
+      "packages/sync/src/snapshot.ts",
+      "packages/sync/src/format.ts",
+      "packages/sync/src/merge.ts",
+      "packages/cli/src/runtime.ts",
+      "packages/cli/src/commands/mcp.ts",
+      "packages/cli/src/commands/ui.ts",
+      "packages/cli/src/commands/sync.ts",
+      "packages/ui/src/people.tsx",
+      "packages/ui/src/app.tsx",
+      "packages/ui/src/my-work.tsx",
+      "packages/ui/src/pages.tsx",
+      "packages/core/test/secrets.test.ts",
+      "packages/core/test/coordination.test.ts",
+      "packages/core/test/effort.test.ts",
+      "packages/sync/test/sync.test.ts",
+      "packages/sync/test/format.test.ts",
+      "packages/sync/test/merge.test.ts",
+      "packages/sync/test/secrets.test.ts",
+      "packages/cli/test/sync.test.ts",
+      "packages/ui/test/people.test.ts",
+      "docs/guide/faq.md",
+      "docs/review-followups.md",
+      "docs/progress.md",
+      "PLAN.md",
+      ".changeset/sync-safety.md"
+    ],
+    "releaseNote": "Sync safety: secrets are refused on every record write, exports skip and name a bad record, and teammates' newer files are loaded before export.",
+    "summary": "WP1 done (commit 2913eec). 1.1 secrets refused at write time for task/decision/feature/milestone; export skips and reports bad records, debounce does not re-queue. 1.2 import before pre-commit and MCP-start exports. 1.3 effort in EMPTY_FIELDS, new tasks carry effort: null, old files still compact; FAQ note. 1.4 symlinked folders refused. 1.5 stale .tmp files removed. 1.6 merged text capped, checklists merged per item. 1.7 unknown claim holder shown as \"another machine\". 1.8 same-version divergent copies merged by stamp on import. Gate: core 303, store 53, sync 52, mcp 26, ui 21, cli 146, test:ui 79."
   },
   "createdAt": "2026-11-10T02:44:36.868Z",
   "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
@@ -23,13 +55,14 @@
   "stamps": {
     "*": "2026-11-10T02:44:36.868Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "branch": "2026-11-10T02:44:57.680Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "claim": "2026-11-10T02:44:57.680Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-10T02:44:57.680Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-10T03:03:54.798Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-10T03:03:54.798Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-10T03:03:54.798Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "worktree": "2026-11-10T02:44:57.680Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Review follow-ups WP1: sync and snapshot safety",
-  "updatedAt": "2026-11-10T02:44:57.682Z",
-  "version": 2,
+  "updatedAt": "2026-11-10T03:03:54.799Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

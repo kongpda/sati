@@ -25,6 +25,26 @@ describe("sati CLI", () => {
     expect(sati(dir, "task", "list").stderr).toContain("hint: Run `sati init`.");
   });
 
+  // Agents pass the short handles the CLI prints. `decision delete` once looked a live decision up
+  // among deleted ones, so a handle failed with "not found" while a full id worked.
+  it("deletes and restores tasks, notes and decisions by short handle", async () => {
+    const dir = await tempRepo({ init: true });
+    const handle = (id: string) => `${id.split("_")[0]}_${id.slice(-6).toLowerCase()}`;
+    const made = {
+      task: satiJson<Rec>(dir, "task", "create", "Old task").data,
+      note: satiJson<Rec>(dir, "note", "create", "Old note", "--body", "x").data,
+      decision: satiJson<Rec>(dir, "decision", "record", "Old call", "--decision", "x").data,
+    };
+    for (const [entity, rec] of Object.entries(made)) {
+      const gone = satiJson<Rec>(dir, entity, "delete", handle(rec.id));
+      expect(gone.code, `${entity} delete`).toBe(0);
+      expect(gone.data.deletedAt).not.toBeNull();
+      const back = satiJson<Rec>(dir, entity, "restore", handle(rec.id));
+      expect(back.code, `${entity} restore`).toBe(0);
+      expect(back.data.deletedAt).toBeNull();
+    }
+  });
+
   // Trial: `task list --json` and `show --json` were mostly merge stamps; agents read them often.
   it("lists short task rows by default, whole records with --full, and never prints stamps", async () => {
     const dir = await tempRepo({ init: true });

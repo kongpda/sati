@@ -4,15 +4,18 @@ import { json } from "../args.js";
 import { execute, int, writeConfigKind } from "../runtime.js";
 
 export default defineCommand({
-  meta: { name: "settings", description: "Show or change project settings" },
+  meta: { name: "settings", description: "Show project settings, or change them with flags" },
   args: {
-    review: { type: "string", description: "agents | all | none" },
+    review: {
+      type: "string",
+      description: "Whose finished tasks wait for approval: agents (default) | all | none",
+    },
     // citty reads `--no-auto-continue` as `auto-continue: false`, so no separate flag is declared.
     "auto-continue": {
       type: "boolean",
       description: `Tell an idle agent to run ${CLI_NAME} next (--no-auto-continue turns it off)`,
     },
-    lease: { type: "string", description: "Claim lease in minutes" },
+    lease: { type: "string", description: "Claim lease in minutes (1-1440, default 30)" },
     kind: {
       type: "string",
       description: "code | general (general hides features, file locks and the guard)",

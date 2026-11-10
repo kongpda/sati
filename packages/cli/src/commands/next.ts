@@ -10,7 +10,10 @@ export default defineCommand({
     description: `Claim the top ready task (${CLI_NAME} task claim with no id)`,
   },
   args: {
-    lease: { type: "string", description: "Lease length in minutes" },
+    lease: {
+      type: "string",
+      description: "Lease length in minutes (default: the project setting)",
+    },
     ...json,
   },
   run: ({ args }) =>

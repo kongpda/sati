@@ -1,0 +1,14 @@
+{
+  "context": "Review 2026-11-10, WP8 owner decision: delete the handoff file rather than maintain it.",
+  "createdAt": "2026-11-10T03:05:41.908Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "decision": "Removed docs/handoff.md. docs/progress.md (gate results and choices) and docs/review-followups.md (open work) replace it; it had gone stale and duplicated both.",
+  "id": "dec_01M71PP9RMBY9BEKJK4AGFWKC0",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-10T03:05:41.908Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "title": "Delete docs/handoff.md",
+  "updatedAt": "2026-11-10T03:05:41.908Z",
+  "version": 1
+}

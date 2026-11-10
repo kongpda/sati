@@ -14,13 +14,18 @@ export default defineCommand({
   args: {
     since: {
       type: "string",
-      description: "2026-11-01, 24h, 7d (default), 2w, last-session, or a done milestone",
+      description:
+        "A day (2026-11-01), a UTC time, 24h, 7d (default), 2w, last-session, or a done milestone id or handle",
     },
-    milestone: { type: "string", description: "Only what belongs to this milestone" },
+    milestone: {
+      type: "string",
+      description: "Only what belongs to this milestone (id or handle)",
+    },
     actor: { type: "string", description: "Only what this person or agent did (id or name)" },
     format: {
       type: "string",
-      description: "plain (default), changelog (Markdown) or digest (to paste into chat)",
+      description:
+        "plain (default), changelog (Markdown) or digest (to paste into chat); ignored with --json",
     },
     ...json,
   },

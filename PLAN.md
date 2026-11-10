@@ -40,21 +40,21 @@ The whole stack is TypeScript, so one core library powers the CLI, the MCP serve
 | Schemas | Zod 4 | One schema drives DB validation, REST, MCP tool inputs and JSON files |
 | Local database | SQLite via Node's built-in `node:sqlite` (ADR 0003), WAL mode, FTS5 | No native addon to download or compile; synchronous; safe concurrent readers; built-in full-text search |
 | ORM / migrations | Drizzle ORM + drizzle-kit | Typed SQL, no runtime overhead, plain SQL migrations |
-| Hosted database | PostgreSQL 16+ (Drizzle pg dialect) | You already run it; row-level tenancy and `LISTEN/NOTIFY` |
+| Hosted database (Phase 6, not built) | PostgreSQL 16+ (Drizzle pg dialect) | You already run it; row-level tenancy and `LISTEN/NOTIFY` |
 | IDs | Prefixed ULIDs (`tsk_01JC…`), short display handle (`tsk_8f3k2a`) | Sortable and collision-free across worktrees; no sequential numbers to clash |
-| CLI | `citty` + `@clack/prompts` | Small, typed commands; friendly `sati init` wizard; `--json` on every command |
+| CLI | `citty` + `@clack/prompts` | Small, typed commands; friendly `sati init` wizard; `--json` on every command that returns data |
 | Agent protocol | `@modelcontextprotocol/sdk` (stdio locally, Streamable HTTP when hosted) | Works with Claude Code, Codex, Cursor, Gemini CLI |
-| HTTP server | Hono + `@hono/node-server`, `@hono/zod-openapi` | Tiny, fast, same code locally and hosted; auto OpenAPI spec |
+| HTTP server | Hono + `@hono/node-server`; a hand-written OpenAPI 3.1 document (ADR 0004) | Tiny, fast, same code locally and hosted |
 | Live updates | Server-sent events; cross-process change detection via `PRAGMA data_version` | No WebSocket infra; detects writes from other agents' processes cheaply |
-| Web UI | React 19 + Vite, TanStack Router + Query + Virtual | Typed routing, cache with optimistic updates, smooth long lists |
-| UI kit | Tailwind CSS v4 + shadcn/ui (Radix), `cmdk`, `dnd-kit`, Tiptap (Markdown) | Accessible primitives, command palette, keyboard-accessible drag and drop, rich notes |
+| Web UI | React 19 + Vite, TanStack Query + Virtual; a small `pushState` router (ADR 0004) | Cache with optimistic updates, smooth long lists |
+| UI kit | Tailwind CSS v4, `dnd-kit`; own components, command palette and Markdown renderer with a textarea editor (ADR 0004) | Keyboard-accessible drag and drop; dialogs, palette and editor covered by Playwright and axe |
 | Diagrams | `pele` (Mermaid → SVG), lazy-loaded via `pele/lazy` | Renders Mermaid blocks in notes, decisions and task bodies; no runtime deps, synchronous, themed with CSS variables, escapes text and limits size |
-| Hosted auth | Better Auth (GitHub OAuth, email) + hashed API tokens for agents | Self-hostable, no vendor lock-in |
-| Logging | `pino` (JSON logs) | Low overhead; structured logs for the hosted server |
+| Hosted auth (Phase 6, not built) | Better Auth (GitHub OAuth, email) + hashed API tokens for agents | Self-hostable, no vendor lock-in |
+| Logging (Phase 6, not built) | `pino` (JSON logs) | Low overhead; structured logs for the hosted server. The local CLI writes errors to stderr |
 | Lint / format | Biome | One fast tool instead of ESLint + Prettier |
 | Tests | Vitest, `fast-check` (property tests), Playwright | Unit, merge-driver fuzzing, UI end to end |
 | Release | Changesets, npm provenance, GitHub Actions | Versioned, signed, reproducible releases |
-| Hosted deploy | Single Docker image (server + UI) behind a reverse proxy | Runs on any VPS |
+| Hosted deploy (Phase 6, not built) | Single Docker image (server + UI) behind a reverse proxy | Runs on any VPS |
 
 **Considered and rejected:** Bun as the runtime (users install with npm/Node); `better-sqlite3` (replaced by `node:sqlite` in ADR 0003: the native addon was half the install and needed a compiler where no prebuilt binary existed); a markdown-files-only store like Backlog.md (no fast queries, no atomic claims); Electron or Tauri for v1 (a browser UI served by the CLI ships faster; Tauri can wrap it later).
 
@@ -137,7 +137,7 @@ Ten entities cover tasks, features, roadmap, memory and coordination. Every reco
 
 ## Repository structure
 
-The monorepo has ten internal packages but publishes only two to npm: `@kongpda/sati`, the app users install, and `@kongpda/sati-sdk`, for using it from code.
+Today the monorepo has six packages (`core`, `store-sqlite`, `sync`, `mcp`, `ui`, `cli`) and publishes one, `@kongpda/sati`. The HTTP server lives in `packages/cli/src/ui/`. `store-postgres`, `store-remote`, `server`, `sdk` (`@kongpda/sati-sdk`) and `apps/cloud` below are Phase 6 plans and do not exist yet.
 
 ```
 agent-sati/
@@ -410,7 +410,7 @@ The biggest risks are a local server that any website can reach, secrets leaking
 
 ## Performance budgets
 
-Agents call sati dozens of times per session, so the CLI must feel instant. Every budget below has a benchmark in CI that fails the build if it regresses by more than 20%.
+Agents call sati dozens of times per session, so the CLI must feel instant. The plan is a CI benchmark per budget that fails the build on a regression of more than 20%. **Not built yet:** there is no benchmark suite; the brief and board budgets are checked by tests, the rest by hand (moved to Phase 6).
 
 | Measure | Budget | How we hit it |
 | --- | --- | --- |
@@ -442,8 +442,8 @@ flowchart LR
 
 - [x] Create the monorepo: pnpm workspaces, Turborepo, `tsconfig.base.json` (strict, `noUncheckedIndexedAccess`), Biome
 - [x] GitHub Actions: lint, typecheck, test on Linux, macOS and Windows with Node 24 and 26
-- [ ] Changesets, npm scope reserved, two-factor on npm, provenance publishing workflow
-- [ ] Pick the product name and check npm and domain availability
+- [x] Changesets, npm scope reserved, two-factor on npm, provenance publishing workflow
+- [x] Pick the product name and check npm and domain availability (ADR 0002: `sati`, `@kongpda/sati`)
 - [x] Write `AGENTS.md` and the contribution conventions (conventional commits, ADR template)
 
 **Gate:** an empty `sati --version` publishes to npm as `0.0.1` from CI.
@@ -501,7 +501,7 @@ Verify: `pnpm typecheck && pnpm test && pnpm bench`, then in a temp git repo: `s
 - [x] E2E scenario: 4 agents in 4 worktrees, random claims, locks and merges for 1,000 steps with zero duplicate claims and zero lost records
 
 **Gate:** the E2E scenario passes 100 runs in CI; a staged deletion of a protected feature is blocked; `--no-verify` is caught by the CI guard.
-Verify: `pnpm test:e2e --repeat 100` and the guard fixtures in `e2e/guard/`.
+Verify: `pnpm test:e2e --repeat 100` and the guard tests in `packages/cli/test/hooks.test.ts`.
 
 ### Phase 3b — Daily workspace: agents work the backlog (week 7)
 
@@ -750,7 +750,7 @@ Added 2026-11-10 at the owner's request: the items the Phase 5g review found and
 - [ ] WP5 CLI
 - [ ] WP6 Board
 - [ ] WP7 Test store parity
-- [ ] WP8 Docs and PLAN drift
+- [x] WP8 Docs and PLAN drift
 - [ ] WP9 Release and CI
 - [ ] WP10 Finish the review
 
@@ -869,13 +869,13 @@ The riskiest code is concurrency and merging, so those get the heaviest testing:
 1. Install with frozen lockfile; Biome lint; typecheck.
 2. Unit, property and integration tests on Linux, macOS and Windows × Node 24 and 26.
 3. Concurrency, E2E and Playwright on Linux.
-4. Benchmarks with regression check; bundle size check.
-5. `pnpm audit` + OSV scan; licence check.
+4. Benchmarks with regression check; bundle size check. **Not built yet** (Phase 6).
+5. `pnpm audit` + OSV scan; a check that the packed CLI ships its licence files. A licence-compatibility check of dependencies is **not built yet** (Phase 6).
 6. On merge to `main` with a changeset: version, changelog, publish with provenance, GitHub release.
 
-**Versioning:** SemVer. The JSON snapshot format and MCP tool schemas are public APIs: a breaking change needs a major version and an automatic migration (`sati migrate`). Every JSON file carries `schemaVersion`.
+**Versioning:** SemVer. The JSON snapshot format and MCP tool schemas are public APIs: a breaking change needs a major version and an automatic migration (`sati migrate`, **not built yet**: the database migrates itself on open, and a newer `schemaVersion` fails with exit code 7). Every JSON file carries `schemaVersion`.
 
-**Release channels:** `next` (every merge) and `latest` (tagged releases). `sati` checks for updates at most once a day and only prints a notice, never auto-updates.
+**Release channels:** `next` (every merge) and `latest` (tagged releases). `sati` checks for updates at most once a day and only prints a notice, never auto-updates. **Not built yet** (Phase 6): releases go to `latest` only, and there is no update check.
 
 ## Review fixes
 
@@ -918,8 +918,12 @@ A second pass over this plan found 12 gaps that would cause real bugs in product
 
 **Open decisions**
 
-- [ ] Product name and npm scope.
-- [ ] Licence: MIT for the CLI, with the hosted server source-available or closed?
+- [ ] Licence of the hosted server: source-available or closed? (The CLI is MIT; see Settled decisions.)
 - [ ] Should `.sati/` snapshots be exported on every branch, or only on the main branch (fewer merges, but feature branches carry less history)? The recommended default is every branch.
 - [ ] Default lock mode for new locks: `exclusive` (safer) or `shared` (less friction)? The recommended default is `exclusive` for agents and `shared` for humans.
 - [ ] Hosted pricing and whether to offer it to agency clients.
+
+**Settled decisions**
+
+- Product name and npm scope: `sati` and `@kongpda/sati` (ADR 0002).
+- Licence of the CLI and every package in this repo: MIT (`LICENSE`).

@@ -1,14 +1,27 @@
 {
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "heartbeatAt": "2026-11-11T07:51:59.646Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 67720
-    },
-    "leaseUntil": "2026-11-11T09:51:59.646Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "a734fa159d14ae9dbdf1e998c8a48da6fbb21477",
+    "completedAt": "2026-11-11T07:58:49.046Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "packages/core/src/domain/schemas.ts",
+      "packages/core/src/services/context-cache.ts",
+      "packages/core/src/services/brief.ts",
+      "packages/core/src/services/recall.ts",
+      "packages/core/src/workflow.ts",
+      "packages/core/test/context-cache.test.ts",
+      "packages/cli/src/commands/context.ts",
+      "packages/cli/src/commands/doctor.ts",
+      "packages/mcp/src/server.ts",
+      "docs/guide/agent-workflow-general.md",
+      "docs/progress.md",
+      ".changeset/card-links.md",
+      "PLAN.md"
+    ],
+    "releaseNote": "Cards can describe a web link or a file outside the project folder.",
+    "summary": "A card path may be an http(s) link or an absolute path (commit a734fa1). Matched whole, no content hash (stale null until the caller passes seen), never removed by doctor --fix. Links with a user name, password or access-token query key are refused, as are other schemes. A new card for an absolute path is private unless private: false. MCP turns a full path inside the project into its project path. One test in context-cache.test.ts; it fails on the old code. Checked through the built CLI."
   },
   "createdAt": "2026-11-11T07:50:25.442Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
@@ -19,13 +32,14 @@
   "stamps": {
     "*": "2026-11-11T07:50:25.442Z#000001#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "branch": "2026-11-11T07:51:59.646Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "claim": "2026-11-11T07:51:59.646Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "status": "2026-11-11T07:51:59.646Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T07:58:49.047Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T07:58:49.047Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T07:58:49.047Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "worktree": "2026-11-11T07:51:59.646Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Card keys for files outside the project folder and for web, SharePoint or Drive links",
-  "updatedAt": "2026-11-11T07:51:59.647Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T07:58:49.048Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

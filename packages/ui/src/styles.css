@@ -1415,6 +1415,16 @@ fieldset.bare {
   text-transform: uppercase;
   font-size: 12px;
 }
+/* Someone else holds the task: quieter than "needs you", it is a fact and not a request. */
+.held-badge {
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-weight: 600;
+  margin-right: 6px;
+  font-size: 12px;
+}
 .blocked-reason {
   color: var(--clay);
 }

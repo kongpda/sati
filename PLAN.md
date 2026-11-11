@@ -925,7 +925,7 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 
 **9i — Terminal output (owner asked 2026-11-11)**
 
-- [x] For a person (stdout is a terminal): aligned columns cut to the terminal width, colour, symbols, local times, wrapped text, a summary line under `doctor`. Piped output keeps its compact lines, so agents and scripts read what they read before
+- [x] For a person (stdout is a terminal, and the caller is not an agent tool): aligned columns cut to the terminal width, colour, symbols, local times, wrapped text, a summary line under `doctor`. Piped output keeps its compact lines, so agents and scripts read what they read before
 - [x] Colour follows `NO_COLOR`, `FORCE_COLOR` and `TERM=dumb`; `--no-color` on every command. Help no longer prints colour codes into a pipe
 - [x] Root help lists the commands in groups, with an alias beside its command; help wraps to the terminal
 - [x] A wrong command word names the right one (`task get` → `task show`); a closed pipe (`sati task list | head`) ends quietly

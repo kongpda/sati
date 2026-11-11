@@ -51,6 +51,18 @@ describe("terminal detection", () => {
     });
   });
 
+  // Some agent tools give the command a pseudo-terminal. A table cut to 80 columns would hide
+  // the end of every title from the agent, so it gets the plain lines unless colour is forced.
+  it("stays plain for an agent even on a terminal", () => {
+    expect(detect({ CLAUDECODE: "1" }, tty, tty, "darwin")).toMatchObject({
+      rich: false,
+      color: false,
+    });
+    expect(detect({ AI_AGENT: "codex_1_agent" }, tty, tty, "darwin").rich).toBe(false);
+    expect(detect({ CLAUDECODE: "", AI_AGENT: " " }, tty, tty, "darwin").rich).toBe(true);
+    expect(detect({ CLAUDECODE: "1", FORCE_COLOR: "1" }, tty, tty, "darwin").rich).toBe(true);
+  });
+
   // stderr can be a terminal while stdout feeds a pipe: errors keep their colour there.
   it("colours stderr on its own", () => {
     expect(detect({}, pipe, tty, "darwin")).toMatchObject({ color: false, errColor: true });

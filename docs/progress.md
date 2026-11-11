@@ -2093,6 +2093,7 @@ Task `tsk_fevjbr`.
 - No new dependency: the colour codes, width (Intl.Segmenter, wide characters count two), wrapping and tables are in `packages/cli/src/term.ts`. Help is rendered by `help.ts` from the citty command definitions; citty still parses arguments. citty's own help printed colour into a pipe, listed 37 commands on one usage line and gave each alias a row.
 - Stored text is cleaned in one place, `output()`, and in error, warning and guard text. `--json` is not cleaned: JSON escapes control characters itself and a script may want the stored value.
 - `sati` with no command still exits 2, now with the grouped help.
+- An agent tool that runs commands in a pseudo-terminal (`CLAUDECODE=1` or `AI_AGENT` set) gets the plain lines: a table cut to the window would hide the end of each title from it. `FORCE_COLOR` still forces the rich layout.
 - Brief: `fit()` trims in two passes, first to a floor per section (2 lines; Ready keeps 5), then past it. The cap still holds at 200 tokens (existing test).
 - Cold start: `sati --help` in about 0.1 s on this machine, as before; the help renderer loads only the commands it lists.
 - Not built, in `docs/ideas.md`: shell completions, a pager for long lists, interactive pickers.

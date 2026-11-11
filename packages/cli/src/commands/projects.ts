@@ -68,7 +68,7 @@ export default defineCommand({
           const head = ["PROJECT", "READY", "DOING", "REVIEW", "FOLDER"].map(dim);
           const body = rows.map((p) =>
             p.ready < 0
-              ? [bold(p.slug), red("unreadable"), "", "", tilde(p.root)]
+              ? [bold(p.slug), red("?"), red("?"), red("?"), tilde(p.root)]
               : [
                   bold(p.slug),
                   String(p.ready),

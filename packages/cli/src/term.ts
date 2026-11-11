@@ -34,7 +34,10 @@ export function detect(
   const forced = force !== undefined && force !== "" && force !== "0" && force !== "false";
   const banned =
     (env.NO_COLOR !== undefined && env.NO_COLOR !== "") || force === "0" || force === "false";
-  const rich = forced || (stdout.isTTY === true && !dumb);
+  // Some agent tools run commands in a pseudo-terminal. An agent still needs every title whole
+  // and pays for padding, so it gets the plain lines. Same variables as `detectTool` in core.
+  const agent = env.CLAUDECODE === "1" || (env.AI_AGENT ?? "").trim() !== "";
+  const rich = forced || (stdout.isTTY === true && !dumb && !agent);
   // The legacy Windows console and the Linux virtual console lack the glyphs.
   const unicode =
     env.TERM !== "linux" &&

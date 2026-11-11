@@ -1,5 +1,24 @@
 {
   "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "cc73aeac06ae64714cf22e18f8c33c32dedace02",
+    "completedAt": "2026-11-11T06:12:06.567Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/core/src/services/recall.ts",
+      "packages/cli/src/runtime.ts",
+      "packages/store-sqlite/src/locate.ts",
+      "packages/core/src/services/shell-changes.ts",
+      "packages/ui/src/app.tsx",
+      "packages/cli/src/projects.ts",
+      "docs/decisions/0007-recall-ranking.md",
+      "docs/review-followups.md",
+      "PLAN.md",
+      "README.md"
+    ],
+    "summary": "Fixed the open audit findings in store, sync, CLI, core and the board, each with a test where one was possible. recall now ranks by recency and by files being edited (ADR 0007, idea from fff, no dependency). The branch is read from the HEAD file (about 10 ms saved per command). Docs describe the private tarball install; PLAN.md corrected; 15 minor and patch dependency updates. Left open: owner decisions in docs/review-followups.md, the major updates, small leftovers, pruning docs/ideas.md."
+  },
   "createdAt": "2026-11-11T05:31:31.479Z",
   "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
   "effort": "deep",
@@ -9,13 +28,14 @@
   "stamps": {
     "*": "2026-11-11T05:31:31.482Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "branch": "2026-11-11T05:31:37.638Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "claim": "2026-11-11T06:03:02.340Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-11T06:03:02.340Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-11T06:12:06.568Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-11T06:12:06.568Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-11T06:12:06.568Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "worktree": "2026-11-11T05:31:37.638Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "todo",
+  "status": "review",
   "title": "Audit follow-ups: fix open bugs, speed, recall ranking, docs",
-  "updatedAt": "2026-11-11T06:03:02.342Z",
-  "version": 3,
+  "updatedAt": "2026-11-11T06:12:06.570Z",
+  "version": 5,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

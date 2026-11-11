@@ -614,6 +614,10 @@ export function App() {
   // takes no focus or clicks, so Tab stays inside the dialog (aria-modal alone does not stop it).
   // A wide screen shows the panel beside the board, which stays usable: click another card to
   // switch tasks.
+  // "Working now" is a live lease. A claim whose lease ended is an agent that stopped; the card
+  // says so, and this strip must not show it as at work.
+  const now = new Date().toISOString();
+  const working = (data?.tasks ?? []).filter((t) => t.claim && t.claim.leaseUntil > now);
   const sheetOpen = task !== null && !!data?.tasks.some((t) => t.id === task);
   const dialog = creating || palette || sendingBack !== null;
   const modal = dialog || (sheetOpen && !wide);
@@ -752,15 +756,13 @@ export function App() {
                 ))}
               </nav>
             ) : null}
-            {(data?.tasks ?? []).some((t) => t.claim) ? (
+            {working.length > 0 ? (
               <div className="live">
-                {(data?.tasks ?? [])
-                  .filter((t) => t.claim)
-                  .map((t) => (
-                    <span className="pill" key={t.id}>
-                      <strong>{data ? holderName(data, t.claim?.actorId) : ""}</strong> · {t.title}
-                    </span>
-                  ))}
+                {working.map((t) => (
+                  <span className="pill" key={t.id}>
+                    <strong>{data ? holderName(data, t.claim?.actorId) : ""}</strong> · {t.title}
+                  </span>
+                ))}
               </div>
             ) : null}
             <select
@@ -834,6 +836,7 @@ export function App() {
           <MyWork
             data={data}
             onOpen={(id) => go(path, id)}
+            onGo={go}
             onApprove={(t) =>
               api
                 .patchTask(t.id, {

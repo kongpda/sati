@@ -14,7 +14,7 @@ import {
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
-import { bodyText, execute, int, list } from "../runtime.js";
+import { bodyText, execute, int, list, someChange } from "../runtime.js";
 
 /** A short handle in `--links` becomes the full id, as over MCP, so the link shows in threads. */
 const linksOf = async (ctx: ServiceContext, raw: string | undefined) => {
@@ -101,16 +101,23 @@ const update = defineCommand({
     execute(
       args.json,
       async ({ ctx }) =>
-        updateNote(ctx, await resolveId(ctx, "note", args.id), {
-          title: args.title,
-          body: bodyText(args.body),
-          tags: list(args.tags),
-          links: await linksOf(ctx, args.links),
-          pinned: args.pinned,
-          private: args.private,
-          reviewed: args.reviewed ? true : undefined,
-          expectedVersion: int(args["expected-version"], "expected-version"),
-        }),
+        updateNote(
+          ctx,
+          await resolveId(ctx, "note", args.id),
+          someChange(
+            {
+              title: args.title,
+              body: bodyText(args.body),
+              tags: list(args.tags),
+              links: await linksOf(ctx, args.links),
+              pinned: args.pinned,
+              private: args.private,
+              reviewed: args.reviewed ? true : undefined,
+              expectedVersion: int(args["expected-version"], "expected-version"),
+            },
+            "note update",
+          ),
+        ),
       (n: Note) => `Updated ${row(n)}`,
     ),
 });

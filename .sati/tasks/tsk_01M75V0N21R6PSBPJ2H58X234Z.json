@@ -1,0 +1,16 @@
+{
+  "createdAt": "2026-11-11T17:38:13.184Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "deletedAt": "2026-11-11T17:38:29.017Z",
+  "id": "tsk_01M75V0N21R6PSBPJ2H58X234Z",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T17:38:13.186Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "deletedAt": "2026-11-11T17:38:29.018Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "todo",
+  "title": "line1\nline2\rCR",
+  "updatedAt": "2026-11-11T17:38:29.020Z",
+  "version": 2
+}

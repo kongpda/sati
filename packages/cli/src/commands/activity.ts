@@ -1,4 +1,4 @@
-import { type Activity, listAll, shortHandle } from "@sati/core";
+import { type Activity, listAll, SatiError, shortHandle } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { handle } from "../render.js";
@@ -47,6 +47,17 @@ export default defineCommand({
       async ({ ctx }) => {
         const entityId = await ref(ctx, "task", args.task);
         const actorId = await actorRef(ctx, args.actor);
+        // The store compares text: a time it cannot read would match nothing, or everything.
+        const at = args.since === undefined ? undefined : Date.parse(args.since);
+        if (at !== undefined && Number.isNaN(at)) {
+          throw new SatiError("USAGE", `--since must be a time, got "${args.since}".`, {
+            hint: "Use a day or a UTC time: 2026-01-31 or 2026-01-31T09:00:00Z.",
+          });
+        }
+        const limit = int(args.limit, "limit");
+        if (limit !== undefined && limit < 1) {
+          throw new SatiError("USAGE", `--limit must be 1 or more, got ${limit}.`);
+        }
         // Names are for a person's table only; scripts and --json keep the ids.
         if (!args.json && term().rich) {
           for (const a of await ctx.store.read((r) => listAll(r, ctx, "actor"))) {
@@ -57,9 +68,9 @@ export default defineCommand({
           r.listActivity(ctx.projectId, {
             actorId,
             entityId,
-            since: args.since,
+            since: at === undefined ? undefined : new Date(at).toISOString(),
             after: args.after,
-            limit: int(args.limit, "limit"),
+            limit,
           }),
         );
       },

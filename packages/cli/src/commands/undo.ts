@@ -1,4 +1,4 @@
-import { undoActivity } from "@sati/core";
+import { shortHandle, undoActivity } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { execute } from "../runtime.js";
@@ -16,6 +16,12 @@ export default defineCommand({
     execute(
       args.json,
       ({ ctx }) => undoActivity(ctx, args.id),
-      (value) => `Undid\n${JSON.stringify(value, null, 2)}`,
+      (value) => {
+        // The whole record is in `--json`; a person needs to know which record went back.
+        const r = value as { id?: unknown; title?: unknown; deletedAt?: unknown };
+        const name = typeof r.title === "string" ? ` ${r.title}` : "";
+        const what = typeof r.id === "string" ? ` ${shortHandle(r.id)}${name}` : "";
+        return `Undid ${args.id}:${what}${r.deletedAt ? " (now deleted)" : ""}`.replace(/:$/u, ".");
+      },
     ),
 });

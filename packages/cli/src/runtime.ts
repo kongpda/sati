@@ -694,12 +694,48 @@ export async function refs(
   return items && Promise.all(items.map((v) => resolveId(ctx, entity, v)));
 }
 
+/**
+ * `update` with no option wrote a new version and an activity row that changed nothing. `keep`
+ * names the fields that say how to write (a version, a token), not what to write.
+ */
+export function someChange<T extends Record<string, unknown>>(
+  input: T,
+  command: string,
+  keep: readonly string[] = ["expectedVersion", "token"],
+): T {
+  if (Object.entries(input).some(([k, v]) => v !== undefined && !keep.includes(k))) return input;
+  throw new SatiError("USAGE", "Nothing to change: pass at least one option.", {
+    hint: `See the options with \`${CLI_NAME} ${command} --help\`.`,
+  });
+}
+
+/** Errors of the machine, not of sati: the disk or its permissions. They need no bug report. */
+const DISK: Record<string, string> = {
+  EACCES: "permission denied",
+  EPERM: "permission denied",
+  EROFS: "the file system is read-only",
+  ENOSPC: "the disk is full",
+};
+
+function unexpected(err: unknown): SatiError {
+  const { code, path } = (err ?? {}) as { code?: unknown; path?: unknown };
+  const why = typeof code === "string" ? DISK[code] : undefined;
+  if (why !== undefined) {
+    return new SatiError(
+      "INTERNAL",
+      `Cannot write${typeof path === "string" ? ` ${path}` : ""}: ${why}.`,
+      {
+        hint: "Check the folder's permissions and free space, then run the command again.",
+      },
+    );
+  }
+  return new SatiError("INTERNAL", err instanceof Error ? err.message : String(err), {
+    hint: `This is a bug in ${CLI_NAME}. Please report it with the command you ran.`,
+  });
+}
+
 export function printError(err: unknown, json: boolean): number {
-  const e = isSatiError(err)
-    ? err
-    : new SatiError("INTERNAL", err instanceof Error ? err.message : String(err), {
-        hint: `This is a bug in ${CLI_NAME}. Please report it with the command you ran.`,
-      });
+  const e = isSatiError(err) ? err : unexpected(err);
   if (json) {
     const error = { code: e.code, message: e.message, hint: e.hint ?? null, details: e.details };
     process.stdout.write(`${JSON.stringify({ error }, null, 2)}\n`);

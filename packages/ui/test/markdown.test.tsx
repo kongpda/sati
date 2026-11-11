@@ -24,6 +24,13 @@ describe("Markdown", () => {
     expect(out).not.toMatch(/href="(?:javascript|data):/u);
   });
 
+  // Notes come from agents and git: a line of 20,000 ">" overflowed the stack and blanked the board.
+  it("stops nesting quotes at a fixed depth", () => {
+    const out = html(`${"> ".repeat(20_000)}deep`);
+    expect(out.match(/<blockquote>/gu)).toHaveLength(6);
+    expect(out).toContain("deep");
+  });
+
   it("renders pipe tables and quotes, escaping their text", () => {
     const out = html("| Do | Don't |\n|---|:-:|\n| Sign up | <b>Register</b> |\n| Log in |");
     expect(out).toContain("<thead><tr><th>Do</th><th>Don&#x27;t</th></tr></thead>");

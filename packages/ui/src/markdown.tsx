@@ -66,7 +66,10 @@ function Chunk({ chunk, deep }: { chunk: ReturnType<typeof chunks>[number]; deep
   );
 }
 
-function Block({ text, deep }: { text: string; deep: boolean }) {
+/** Quotes nest this deep; past it the markers are dropped, so a wall of `>` cannot overflow the stack. */
+const MAX_QUOTE = 6;
+
+function Block({ text, deep, quote = 0 }: { text: string; deep: boolean; quote?: number }) {
   const lines = text.split("\n");
   const first = lines[0] ?? "";
   const heading = first.startsWith("## ") ? (deep ? 3 : 4) : first.startsWith("# ") ? 3 : 0;
@@ -100,7 +103,13 @@ function Block({ text, deep }: { text: string; deep: boolean }) {
   if (lines.every((line) => line.startsWith(">"))) {
     return (
       <blockquote>
-        <Block text={lines.map((line) => line.replace(/^> ?/u, "")).join("\n")} deep={deep} />
+        <Block
+          text={lines
+            .map((line) => line.replace(quote + 1 < MAX_QUOTE ? /^> ?/u : /^(?:> ?)+/u, ""))
+            .join("\n")}
+          deep={deep}
+          quote={quote + 1}
+        />
       </blockquote>
     );
   }

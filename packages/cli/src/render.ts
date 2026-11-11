@@ -97,6 +97,11 @@ function show(v: unknown): string {
       : v.map((x) => `\n${show(x)}`).join("");
   }
   if (v !== null && typeof v === "object") {
+    const step = v as { text?: unknown; done?: unknown };
+    // A checklist step reads as it does in `task checklist`, not as `text …, done true`.
+    if (typeof step.text === "string" && typeof step.done === "boolean") {
+      return `[${step.done ? "x" : " "}] ${step.text}`;
+    }
     return Object.entries(v)
       .filter(([, x]) => !empty(x))
       .map(([k, x]) => `${k} ${show(x)}`)
@@ -111,6 +116,10 @@ export function record(r: Row & Record<string, unknown>): string {
   if (!term().rich) {
     const lines = [row(r)];
     for (const [k, v] of fields) {
+      if (k === "checklist" && Array.isArray(v)) {
+        lines.push("  checklist:", ...v.map((x, i) => `    ${i + 1}. ${show(x)}`));
+        continue;
+      }
       lines.push(`  ${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`);
     }
     return lines.join("\n");

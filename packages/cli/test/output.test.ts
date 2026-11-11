@@ -337,6 +337,72 @@ describe("a task command without an id", () => {
   });
 });
 
+describe("a command that would do the wrong thing says so", () => {
+  interface Task {
+    id: string;
+    version: number;
+  }
+
+  // citty drops a word it has no place for, so an unquoted title made a task named "Fix".
+  it("refuses words it has no place for instead of dropping them", async () => {
+    const dir = await tempRepo({ init: true });
+    const r = sati(dir, "task", "create", "Fix", "the", "bug");
+    expect(r.code).toBe(2);
+    expect(r.stderr).toContain('Unexpected argument "the"');
+    expect(r.stderr).toContain("quotes");
+    expect(satiJson<Task[]>(dir, "task", "list").data).toEqual([]);
+    // A flag's value and a negative number are not surplus words.
+    expect(sati(dir, "task", "create", "Fix the bug", "--priority", "high").code).toBe(0);
+  });
+
+  // An update with no option wrote a new version and an audit row that changed nothing.
+  it("refuses an update that changes nothing, and writes nothing", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = satiJson<Task>(dir, "task", "create", "One").data;
+    const r = sati(dir, "task", "update", t.id);
+    expect(r.code).toBe(2);
+    expect(r.stderr).toContain("Nothing to change");
+    expect(satiJson<Task>(dir, "task", "show", t.id).data.version).toBe(t.version);
+  });
+
+  // The store compares times as text: "yesterday" matched every row without a word.
+  it("refuses a --since it cannot read and a --limit below 1", async () => {
+    const dir = await tempRepo({ init: true });
+    const since = sati(dir, "activity", "--since", "yesterday");
+    expect(since.code).toBe(2);
+    expect(since.stderr).toContain("--since must be a time");
+    expect(sati(dir, "activity", "--limit", "0").code).toBe(2);
+    expect(sati(dir, "activity", "--since", "2020-01-01").code).toBe(0);
+  });
+
+  // "Claim it" is wrong advice when someone else holds the task: the claim would be refused too.
+  it("tells a second actor that the task is held, not to claim it", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = satiJson<Task>(dir, "task", "create", "One").data;
+    expect(run(dir, ["task", "claim", t.id], { SATI_ACTOR: "codex" }).code).toBe(0);
+    const r = sati(dir, "task", "update", t.id, "--title", "Mine");
+    expect(r.code).not.toBe(0);
+    expect(r.stderr).toContain("Another actor holds it");
+    expect(r.stderr).not.toContain("Claim it with");
+  });
+
+  it("prints undo as one line and a checklist as numbered steps, not JSON", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = satiJson<Task>(dir, "task", "create", "One").data;
+    expect(sati(dir, "task", "checklist", t.id, "--add", "step one").code).toBe(0);
+    const shown = sati(dir, "task", "show", t.id).stdout;
+    expect(shown).toContain("1. [ ] step one");
+    expect(shown).not.toContain('"done"');
+
+    expect(sati(dir, "task", "delete", t.id).code).toBe(0);
+    const last = satiJson<{ id: string }[]>(dir, "activity", "--limit", "1").data[0];
+    const undone = sati(dir, "undo", last?.id ?? "");
+    expect(undone.code).toBe(0);
+    expect(undone.stdout.trim().split("\n")).toHaveLength(1);
+    expect(undone.stdout).toContain("One");
+  });
+});
+
 describe("validation errors", () => {
   // Zod's own text repeated "Invalid" twice and listed options as "a"|"b".
   it("name the field and the allowed values once", async () => {

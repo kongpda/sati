@@ -761,9 +761,12 @@ function checkToken(task: Task, token: number | undefined, actorId: string): voi
       details,
     });
   }
+  const theirs = task.claim != null && task.claim.actorId !== actorId;
   const hint =
     token === undefined
-      ? `Claim it with \`${CLI_NAME} task claim ${task.id}\` and pass the token it returns.`
+      ? theirs
+        ? `Another actor holds it, and only the holder writes. A person can run \`${CLI_NAME} task take-over ${task.id}\`.`
+        : `Claim it with \`${CLI_NAME} task claim ${task.id}\` and pass the token it returns.`
       : `Your claim was lost. Run \`${CLI_NAME} task show ${task.id}\` before changing anything.`;
   throw new SatiError(
     "CONFLICT",

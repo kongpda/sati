@@ -63,9 +63,13 @@ export async function resolveId(
   const input = ref.trim();
   const prefix = ID_PREFIXES[entity];
   const wrongKind = () =>
-    new SatiError("VALIDATION", `"${input}" is not a ${entity} id.`, {
-      hint: `${entity} ids look like ${prefix}_8f3k2a.`,
-    });
+    new SatiError(
+      "VALIDATION",
+      `"${input}" is not ${/^[aeiou]/u.test(entity) ? "an" : "a"} ${entity} id.`,
+      {
+        hint: `${entity} ids look like ${prefix}_8f3k2a.`,
+      },
+    );
   const full = parseId(input);
   if (full) {
     if (full.prefix !== prefix) throw wrongKind();

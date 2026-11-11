@@ -2151,3 +2151,16 @@ Task `tsk_fevjbr`.
 - The picker test uses Python's `pty` module (`packages/cli/test/support/pty-run.py`), not a Node pty package: those are native add-ons, and a new dependency needs an ADR. The test skips on Windows and where `python3` is missing. The script sets the terminal to 100 columns (a new pty has none, and the prompt then wraps one letter per line) and gives up after 30 s.
 - fish in CI: the completion script passed on fish 3.7.1 and 4.9.3 locally. Ubuntu 24.04 ships 3.7. Installed on the `ubuntu-latest` / Node 24 cell only. Not seen in CI yet when this was written.
 
+## 2026-11-12 — 9n: final pass before the cloud phase
+
+- Method: three read-only reviews (a walk through every CLI command in a scratch project, the board's source, the core and store for security), then each finding was checked against the code or a scratch run before any fix. Branches, pull requests and stashes were checked first: one branch, nothing open.
+- Rejected after checking, with the reason: a task title cannot inject lines into the brief (titles are flattened to one line); `undo` on a task another actor holds is refused; stale `.tmp` files in `.sati/` are cleaned at the next export; `lock release --force` is open to every actor by design and is logged; the actor kind from the environment is advisory by design; an import replacing a claim follows the git trust model. The form dialog's Cancel button closes without asking: that is what Cancel means, and only Esc and the backdrop are guarded.
+- Surplus words: citty silently drops a positional it has no place for. The flag walker in `main.ts` now counts words against the command's positionals and refuses the first extra one. Words after `--` are not counted.
+- "Nothing to change" is checked in the CLI, not the core: an MCP `task_update` with only a token is a heartbeat-like write some callers rely on.
+- Disk errors (`EACCES`, `EPERM`, `EROFS`, `ENOSPC`) keep the `INTERNAL` code and exit status; only the message and hint changed, so scripts see no difference.
+- The socket: `listen` on a path binds inside the call, so a umask of 0177 around it is enough. The `chmod` stays for a file system that ignores the umask.
+- The board's error screen is a React error boundary around the whole app. It cannot recover a part of the page; it replaces a white page with a sentence and a Reload button.
+- A mistake to know about: the CLI reviewer was told to work in a scratch project and still created four test tasks in this repo's project. They were soft-deleted; their tombstone files in `.sati/tasks/` are committed like any other deleted record.
+- Not done, moved to `docs/ideas.md`: several toasts at once, a repeated `--add`, caching the board snapshot, a longer list of secret patterns.
+- Not run here: the Playwright board tests (`e2e/ui`); CI runs them.
+

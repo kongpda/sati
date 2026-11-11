@@ -177,7 +177,7 @@ describe("sati guard --paths and --hook", () => {
     run(dir, ["lock", "acquire", "src/auth/**"], { SATI_ACTOR: "other" });
     const r = sati(dir, "guard", "--paths", "src/auth/login.ts,README.md");
     expect(r.code).toBe(10);
-    expect(r.stdout).toContain("src/auth/login.ts is inside a exclusive lock held by other");
+    expect(r.stdout).toContain("src/auth/login.ts is inside an exclusive lock held by other");
     expect(sati(dir, "guard").code).toBe(2);
   });
 

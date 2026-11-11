@@ -560,6 +560,7 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   app.get("/events", (c) => {
     let last = version();
     let timer: ReturnType<typeof setInterval> | undefined;
+    let beat: ReturnType<typeof setInterval> | undefined;
     // EventSource sends back the last `id:` it saw when it reconnects. Nothing written since
     // means the browser's copy is current, so it is not told to refetch the whole board.
     const resume = ActivityCursor.safeParse(c.req.header("last-event-id"));
@@ -574,6 +575,11 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
             new TextEncoder().encode(`${id}data: ${JSON.stringify({ version: last })}\n\n`),
           );
         };
+        // A comment line every 25 s: a proxy or a sleeping laptop drops a silent stream, and the
+        // write is also how the server learns that the browser has gone.
+        beat = setInterval(() => {
+          if (!closed) controller.enqueue(new TextEncoder().encode(": ping\n\n"));
+        }, 25_000);
         let cursor: string | undefined;
         let missed = true;
         if (resume.success) {
@@ -611,6 +617,7 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
       cancel() {
         closed = true;
         if (timer) clearInterval(timer);
+        if (beat) clearInterval(beat);
       },
     });
     return new Response(stream, {

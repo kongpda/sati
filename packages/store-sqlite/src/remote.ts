@@ -325,7 +325,14 @@ export function listenStore(
     // Only the owner may connect: anyone who can reach the socket can read and write every record.
     server.once("listening", () => chmodSync(socketPath, 0o600));
   }
-  server.listen(socketPath);
+  // The socket is bound inside this call. A tight umask makes it private from its first moment;
+  // the chmod above alone left a short window with the default mode.
+  const umask = process.umask(0o177);
+  try {
+    server.listen(socketPath);
+  } finally {
+    process.umask(umask);
+  }
   return server;
 }
 

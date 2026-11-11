@@ -1,0 +1,16 @@
+{
+  "createdAt": "2026-11-11T17:38:12.425Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "deletedAt": "2026-11-11T17:38:28.698Z",
+  "id": "tsk_01M75V0MAAP9PH2X03JW6K8HGB",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T17:38:12.427Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "deletedAt": "2026-11-11T17:38:28.699Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "todo",
+  "title": "First task",
+  "updatedAt": "2026-11-11T17:38:28.701Z",
+  "version": 2
+}

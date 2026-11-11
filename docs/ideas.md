@@ -40,3 +40,12 @@ From the 2026-11-10 review (WP10), features rather than bugs:
 - A line in the brief, and a badge on the board's Memory page, when an approved file changed since its approval. Today `sati card show` and the guard tell; the board shows only that a file is approved.
 - An interactive picker for `task show` with no id. Not for `task claim`: with no id it already claims the top ready task. Completions and the pager from this list were built in 9j.
 
+From the 2026-11-12 final pass (9n), not bugs:
+
+- **More than one toast**: the board has one toast slot, so a "Saved" that follows a delete replaces its Undo. A short queue, or keeping an Undo toast until it times out.
+- **A repeated flag**: `task checklist --add a --add b` keeps only `b`. Either take both or refuse the repeat.
+- **Snapshot caching for the board**: `/api/snapshot` reads every record on each change. Fine at the tested sizes; a per-entity version check would cut the work on large projects.
+- **Long comment threads and note lists** are drawn in full; a windowed list would help past a few hundred rows.
+- **Secret patterns**: the scanner knows upper-case `NAME=value` lines; lower-case and `export name=` forms pass.
+- **Pruning `backups/`**: database backups made before a migration are kept for ever.
+

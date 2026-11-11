@@ -62,21 +62,36 @@ async function unknownFlag(root: CommandDef, argv: readonly string[]): Promise<s
     { type?: string; alias?: string | string[] }
   >;
   const known = new Map<string, boolean>(); // name -> takes a value
+  let places = 0;
+  const words: string[] = [];
   for (const [name, def] of Object.entries(defs)) {
-    if (def.type === "positional") continue;
+    if (def.type === "positional") {
+      places += 1;
+      continue;
+    }
     const takesValue = def.type !== "boolean";
     const aliases = def.alias === undefined ? [] : [def.alias].flat();
     for (const n of [name, kebab(name), camel(name), ...aliases]) known.set(n, takesValue);
   }
+  // `sati task create Fix the bug` made a task named "Fix": citty drops the words it has no place
+  // for. Only the words before a `--` are counted; what follows it belongs to the command.
+  const surplus = () => {
+    const extra = words[places];
+    return extra === undefined
+      ? undefined
+      : `Unexpected argument "${extra}". Put quotes around a value that has spaces.`;
+  };
   let valueNext = false;
   for (const token of rest) {
-    if (token === "--") return undefined;
+    if (token === "--") return surplus();
     if (valueNext) {
       valueNext = false;
       continue;
     }
-    if (!token.startsWith("-") || token === "-") continue;
-    if (/^-\d/.test(token)) continue; // a negative number
+    if (!token.startsWith("-") || token === "-" || /^-\d/.test(token)) {
+      words.push(token); // a word, or a negative number
+      continue;
+    }
     const body = token.replace(/^--?/, "");
     const [flag = "", ...value] = body.split("=");
     const negated = token.startsWith("--no-") ? known.has(flag.slice(3)) : false;
@@ -90,7 +105,7 @@ async function unknownFlag(root: CommandDef, argv: readonly string[]): Promise<s
     const hint = best && best.d <= 2 ? ` Did you mean --${best.n}?` : "";
     return `Unknown option ${token.startsWith("--") ? `--${flag}` : `-${flag}`}.${hint}`;
   }
-  return undefined;
+  return surplus();
 }
 
 /** The leading words of `typed` that name commands, e.g. `merge-driver` of `merge-driver a`. */

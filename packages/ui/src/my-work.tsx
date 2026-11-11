@@ -98,12 +98,15 @@ export function myWork(data: Snapshot, now = new Date()) {
 export function MyWork({
   data,
   onOpen,
+  onGo,
   onApprove,
   onSendBack,
   onAnswered,
 }: {
   data: Snapshot;
   onOpen: (id: string) => void;
+  /** Go to another page of the board without loading it again. */
+  onGo: (page: string) => void;
   onApprove: (task: Task) => Promise<unknown>;
   /** The person answered the agent where it runs; the task stops asking. */
   onAnswered: (task: Task) => Promise<unknown>;
@@ -130,7 +133,7 @@ export function MyWork({
       {mentions.length ? (
         <Section title="Mentions" count={mentions.length} empty="">
           {mentions.map((n) => (
-            <Mention key={n.id} data={data} note={n} onOpen={onOpen} />
+            <Mention key={n.id} data={data} note={n} onOpen={onOpen} onGo={onGo} />
           ))}
         </Section>
       ) : null}
@@ -245,10 +248,12 @@ function Mention({
   data,
   note,
   onOpen,
+  onGo,
 }: {
   data: Snapshot;
   note: Note;
   onOpen: (id: string) => void;
+  onGo: (page: string) => void;
 }) {
   const on = note.links[0] ?? "";
   const task = data.tasks.find((t) => t.id === on);
@@ -262,7 +267,15 @@ function Mention({
           {task.title}
         </button>
       ) : (
-        <a className="row-link" href={page}>
+        <a
+          className="row-link"
+          href={page}
+          onClick={(e) => {
+            // A plain link reloaded the whole board and dropped the live stream.
+            e.preventDefault();
+            onGo(page);
+          }}
+        >
           {other ?? "A record"}
         </a>
       )}

@@ -96,7 +96,7 @@ function lockFinding(lock: Lock, holder: string, paths: string[]): GuardFinding 
   return {
     level: exclusive ? "blocked" : "warn",
     rule: exclusive ? "locked" : "locked-shared",
-    message: `${paths.join(", ")} ${paths.length > 1 ? "are" : "is"} inside a ${lock.mode} lock held by ${holder} until ${lock.leaseUntil}.`,
+    message: `${paths.join(", ")} ${paths.length > 1 ? "are" : "is"} inside ${lock.mode === "exclusive" ? "an" : "a"} ${lock.mode} lock held by ${holder} until ${lock.leaseUntil}.`,
     paths,
     lockId: lock.id,
   };

@@ -23,7 +23,17 @@ import {
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination, taskId } from "../args.js";
 import { record, row, rows } from "../render.js";
-import { bodyText, execute, heldTask, int, list, parseJson, ref, refs } from "../runtime.js";
+import {
+  bodyText,
+  execute,
+  heldTask,
+  int,
+  list,
+  parseJson,
+  ref,
+  refs,
+  someChange,
+} from "../runtime.js";
 import { clean, when } from "../term.js";
 
 const token = {
@@ -263,27 +273,33 @@ const update = defineCommand({
       args.json,
       async ({ ctx }) => {
         const taskId = await resolveId(ctx, "task", args.id);
+        const input = someChange(
+          {
+            needsInput: args["needs-input"],
+            approvedCommit: args["approved-commit"],
+            title: args.title,
+            body: bodyText(args.body),
+            status: args.status,
+            priority: args.priority,
+            effort: orNone(args.effort),
+            featureId: await link(ctx, "feature", args.feature),
+            parentId: await link(ctx, "task", args.parent),
+            dependsOn: await depends(ctx, args.depends),
+            labels: list(args.labels),
+            branch: args.branch,
+            worktree: args.worktree,
+            dueDate: orNone(args.due),
+            milestoneId: await link(ctx, "milestone", args.milestone),
+            assigneeIds: await assignees(ctx, args.assign),
+            expectedVersion: int(args["expected-version"], "expected-version"),
+            reviewed: args.reviewed ? true : undefined,
+            reason: args.reason,
+          },
+          "task update",
+        );
         return updateTask(ctx, taskId, {
-          needsInput: args["needs-input"],
-          approvedCommit: args["approved-commit"],
-          title: args.title,
-          body: bodyText(args.body),
-          status: args.status,
-          priority: args.priority,
-          effort: orNone(args.effort),
-          featureId: await link(ctx, "feature", args.feature),
-          parentId: await link(ctx, "task", args.parent),
-          dependsOn: await depends(ctx, args.depends),
-          labels: list(args.labels),
-          branch: args.branch,
-          worktree: args.worktree,
-          dueDate: orNone(args.due),
-          milestoneId: await link(ctx, "milestone", args.milestone),
-          assigneeIds: await assignees(ctx, args.assign),
-          expectedVersion: int(args["expected-version"], "expected-version"),
+          ...input,
           token: await claimToken(ctx, taskId, args.token),
-          reviewed: args.reviewed ? true : undefined,
-          reason: args.reason,
         });
       },
       (t: Task) => `Updated ${row(t)}`,

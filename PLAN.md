@@ -965,6 +965,17 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 - [x] The `task claim --pick` prompt is tested in a pseudo-terminal: arrow down and Enter claims the second task, Ctrl-C claims nothing
 - [x] CI installs fish on one Ubuntu cell, so the fish completion test runs there
 
+**9n — Final pass before the cloud phase (owner asked 2026-11-12)**
+
+- [x] Words with no place on the command line are refused (`sati task create Fix the bug` made a task named "Fix")
+- [x] `task update` and `note update` with no option refuse and write nothing
+- [x] `activity --since` takes only a time it can read; `--limit` below 1 is refused
+- [x] A write on a task another actor holds says so, and no longer says "claim it"
+- [x] `undo` prints one line; `task show` prints the checklist as numbered steps
+- [x] A full disk or a folder without write permission is not reported as a bug in sati
+- [x] The `sati serve` socket is private from the moment it is bound (umask), not only after `chmod`
+- [x] Board: an error screen with Reload in place of a white page; quotes nest 6 deep at most; the "working now" strip leaves out ended leases; the Mentions link does not reload the board; the live stream sends a heartbeat
+
 **Not in Phase 9:** registry collisions (two folders with one slug, a copied folder sharing a database) are fixed under task `tsk_01M74P…VB2MP62GRN1XC90AKCE` by another agent.
 
 **Gate:** the Phase 8 gate folder, on a machine with no git, driven through MCP by a client that sets no agent variable: the caller is recorded as an agent, cards with anchors go stale when the file changes, and Khmer questions recall Khmer cards. `pnpm lint && pnpm typecheck && pnpm test` pass and the performance budgets are unchanged.

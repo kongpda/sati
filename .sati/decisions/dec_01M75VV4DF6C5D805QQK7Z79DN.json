@@ -1,0 +1,15 @@
+{
+  "consequences": "A later review that raises these again can read the reasons here and in docs/progress.md (9n).",
+  "context": "Three reviews (CLI walk-through, board source, core and store security) ran before the cloud phase. Each finding was checked against the code or a scratch run.",
+  "createdAt": "2026-11-11T17:52:40.879Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "Not changed: brief title injection (titles are one line), undo on another actor's task (already refused), stale .tmp files (cleaned at export), lock release --force for every actor (by design, logged), actor kind from the environment (advisory), import replacing a claim (git trust model), the form dialog's Cancel closing without a question. \"Nothing to change\" is refused in the CLI only; MCP update with only a token stays allowed. Postponed to docs/ideas.md: toast queue, repeated --add, snapshot caching, windowed lists, more secret patterns, pruning backups.",
+  "id": "dec_01M75VV4DF6C5D805QQK7Z79DN",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T17:52:40.882Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "Final pass 9n: review findings rejected after checking",
+  "updatedAt": "2026-11-11T17:52:40.879Z",
+  "version": 1
+}

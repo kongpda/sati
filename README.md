@@ -158,7 +158,7 @@ Every worktree of a repo shares one live database, so agents in parallel worktre
 tasks. Each clone runs `sati init` once; it loads the committed snapshot.
 
 Not a code project? `sati init --kind general` hides features, locks and the guard, and keeps
-plans, todos, notes and decisions. Start from a template (`sati template apply event`, `campaign` or `release`)
+plans, todos, notes and decisions. Start from a template (`sati template apply event`, `campaign`, `proposal`, `monthly-report`, `content-calendar`, `meeting-notes` or `release`)
 or import a Markdown checklist (`sati plan import plan.md`).
 
 ## Agent tools

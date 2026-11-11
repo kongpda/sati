@@ -1953,3 +1953,13 @@ Task `tsk_fevjbm`.
 - Anchors: a path of the form `<file with extension>#<part>` is a card about a part of that file. The hash covers the file, so every part goes stale together. A query for the file lists its parts; a query for one part does not list the others. A file really named with `#` is kept whole when the file list has it.
 - An edited or untracked file now gets the id git gives its content (`blob <size>\0` plus the bytes, SHA-1 or SHA-256 by the repo's format), not a separate `wt:` hash. Cards saved against the old `wt:` hash read stale once. Not covered: a repo that rewrites content on add (autocrlf, LFS) still gives another id after the commit.
 - Seen while testing: under a machine load of 61 two git-hook CLI tests hit the 5 s test limit in the full run; alone they pass.
+
+## 2026-11-11 — Phase 9d: office wiring
+
+Task `tsk_fevjbn`.
+
+- `--project` already existed as a global flag taking a slug from the machine's registry. Choice: the same flag also takes the project folder as an absolute path, instead of a second `--project` on `mcp` with another meaning. A slug has no path separator, so the two cannot be confused, and a folder is exact where two projects share a slug.
+- `sati init --desktop` prints the Claude Desktop entry and writes nothing. The entry names Node, the script and the folder in full, because the app starts servers without the shell's PATH. Cost: the entry must be printed again after Node or sati moves (an nvm upgrade).
+- MCP: `handoff_write` is a new tool; `task_update` takes `tick` (step numbers from 1) and `addSteps`. Untick and remove stay with replacing the whole `checklist`, to keep the schema small.
+- The general rules block grew by one sentence (budget in the test raised from 1219 to 1305 characters); the detail is in the workflow page.
+- Starters added: `content-calendar`, `monthly-report`, `proposal`, `meeting-notes`. The UI comment in `packages/ui/src/forms.tsx` still lists three; that file is in another agent's work.

@@ -13,6 +13,7 @@ import {
   buildBrief,
   CHANGE_FORMATS,
   ChangesInput,
+  ChecklistItem,
   CLI_NAME,
   ClaimTaskInput,
   COMMENT_TAG,
@@ -36,6 +37,7 @@ import {
   getContext,
   getProject,
   getRecord,
+  HandoffInput,
   isSatiError,
   LIMITS,
   ListTasksInput,
@@ -74,6 +76,7 @@ import {
   updateTask,
   WORKFLOW,
   withoutStamps,
+  writeHandoff,
 } from "@sati/core";
 import { z } from "zod";
 import pkg from "../package.json" with { type: "json" };
@@ -216,6 +219,40 @@ function slim(record: object, input: object): Record<string, unknown> {
     if (!CONTROL_KEYS.has(key) && key in rec) out[key] = rec[key];
   }
   return out;
+}
+
+const Steps = z
+  .array(z.number().int().min(1).max(100))
+  .max(100)
+  .optional()
+  .describe("Checklist steps to tick, counted from 1");
+const StepTexts = z
+  .array(ChecklistItem.shape.text)
+  .max(100)
+  .optional()
+  .describe("Checklist steps to add at the end");
+
+/**
+ * The checklist with steps ticked and added, as `sati task checklist --done N --add "…"` does.
+ * The version read here guards the list against a change made meanwhile.
+ */
+async function editSteps(
+  ctx: ServiceContext,
+  taskId: string,
+  tick: number[] = [],
+  add: string[] = [],
+): Promise<{ checklist: ChecklistItem[]; expectedVersion: number }> {
+  const t = await getRecord(ctx, "task", taskId);
+  const items: ChecklistItem[] = [...(t.checklist ?? [])];
+  for (const n of tick) {
+    const item = items[n - 1];
+    if (!item) {
+      throw new SatiError("VALIDATION", `tick ${n}: the checklist has ${items.length} steps.`);
+    }
+    items[n - 1] = { ...item, done: true };
+  }
+  for (const text of add) items.push({ text, done: false });
+  return { checklist: items, expectedVersion: t.version };
 }
 
 /** Cards listed by `context_get` with no path; one path returns them in full. */
@@ -424,12 +461,37 @@ function registerTools(
     "task_update",
     {
       description:
-        "Update a task's fields or status; returns id, version, status, claim and the fields you set. While it is claimed, pass the token from task_claim; a stale token means your claim was lost: stop. checklist and assigneeIds replace the list (send expectedVersion); null clears dueDate, milestoneId or effort. needsInput asks a person a question. blocked needs a reason. Back to todo releases the claim.",
-      inputSchema: linkable(UpdateTaskInput).extend({ id: Ref }),
+        "Update a task's fields or status; returns id, version, status, claim and the fields you set. While it is claimed, pass the token from task_claim; a stale token means your claim was lost: stop. tick: [2] ticks checklist step 2 and addSteps appends steps; checklist and assigneeIds replace the list (send expectedVersion); null clears dueDate, milestoneId or effort. needsInput asks a person a question. blocked needs a reason. Back to todo releases the claim.",
+      inputSchema: linkable(UpdateTaskInput).extend({ id: Ref, tick: Steps, addSteps: StepTexts }),
       annotations: { destructiveHint: false, openWorldHint: false },
     },
-    ({ id, ...input }) =>
-      run(async () => slim(await updateTask(ctx, await task(id), await links(ctx, input)), input)),
+    ({ id, tick, addSteps, ...input }) =>
+      run(async () => {
+        const taskId = await task(id);
+        const steps = tick || addSteps ? await editSteps(ctx, taskId, tick, addSteps) : {};
+        const fields = { ...input, ...steps };
+        return slim(await updateTask(ctx, taskId, await links(ctx, fields)), fields);
+      }),
+  );
+
+  server.registerTool(
+    "handoff_write",
+    {
+      description:
+        "Leave a where-I-stopped note on a task before you stop without finishing it: what is done, the next step, open questions, files in flight. It replaces the task's last handoff. `to` names one actor (name or id); without it, whoever claims the task next gets it from task_claim. Then move the task back to todo.",
+      inputSchema: HandoffInput.extend({ taskId: Ref, to: Ref.optional() }),
+      annotations: { destructiveHint: false, openWorldHint: false },
+    },
+    ({ taskId, to, ...input }) =>
+      run(async () => {
+        const named = to && (await ctx.store.read((r) => r.getByKey("actor", ctx.projectId, to)));
+        const note = await writeHandoff(ctx, {
+          ...input,
+          taskId: await task(taskId),
+          ...(to && { to: named ? named.id : await resolveId(ctx, "actor", to) }),
+        });
+        return { id: note.id, version: note.version };
+      }),
   );
 
   server.registerTool(

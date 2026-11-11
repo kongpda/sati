@@ -259,6 +259,45 @@ describe("sati init", () => {
     expect(list.code, list.stderr).toBe(0);
   });
 
+  // PLAN Phase 9d: Claude Desktop starts servers in its own folder and without the shell's
+  // PATH, so `sati mcp` found no project there. The printed entry must start this project's
+  // server from anywhere.
+  it("prints a Claude Desktop entry that serves the project from another folder", () => {
+    const dir = join(tempDir(), "Q3 Launch");
+    mkdirSync(dir);
+    const home = tempDir();
+    expect(run(dir, ["init", "--yes"], { HOME: home }).code).toBe(0);
+    const printed = run(dir, ["init", "--desktop", "--json"], { HOME: home });
+    expect(printed.code, printed.stderr).toBe(0);
+    const servers = (
+      JSON.parse(printed.stdout) as {
+        desktop: { mcpServers: Record<string, { command: string; args: string[] }> };
+      }
+    ).desktop.mcpServers;
+    const entry = servers["sati-q3-launch"];
+    expect(entry?.args.slice(1)).toEqual(["mcp", "--project", dir]);
+    const hello = {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-06-18",
+        capabilities: {},
+        clientInfo: { name: "claude-ai", version: "0" },
+      },
+    };
+    const served = spawnSync(entry?.command ?? "", entry?.args ?? [], {
+      cwd: home,
+      env: { ...process.env, HOME: home },
+      input: `${JSON.stringify(hello)}\n`,
+      encoding: "utf8",
+      timeout: 20_000,
+    });
+    expect(served.stdout, served.stderr).toContain('"serverInfo"');
+    // Before init there is no server to start, so no entry is printed.
+    expect(run(tempDir(), ["init", "--desktop"], { HOME: home }).code).not.toBe(0);
+  });
+
   // Trial: outside git a card never said its file changed, so a fresh agent gave old answers.
   it("standalone mode marks a card stale when its file changes, without opening it", () => {
     const dir = tempDir();

@@ -183,7 +183,7 @@ describe("sati CLI", () => {
       "# Offsite\n## Go (-1w)\n- [ ] Book bus\n  - [ ] Get quotes\n",
     );
     expect(sati(dir, "template", "list").stdout).toContain(
-      "offsite      Offsite (1 task in 1 stage, .sati/templates/offsite.md)",
+      "offsite          Offsite (1 task in 1 stage, .sati/templates/offsite.md)",
     );
     const made = satiJson<{ milestone: Rec; taskIds: string[] }>(
       dir,

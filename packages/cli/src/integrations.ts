@@ -58,7 +58,7 @@ export const GENERAL_RULES_BLOCK = `${START}
 This project uses \`${CLI_NAME}\` for plans, todos, notes and decisions. People and agents work here together.
 1. Start: call \`${CLI_NAME}_brief\` (or run \`${CLI_NAME} brief\`), unless the session opened with it.
 2. Before working on a todo: \`task_claim\` it. Never work on a task claimed by someone else. A task the brief marks \`light\` can go to a subagent on a small model; you keep the claim and check its work.
-3. Ask before reading: \`recall\` what is known. Before opening a file, \`context_get\` its card; reuse it if unchanged. After reading one, \`context_put\` a card with facts and \`sourceSeen\`.
+3. Ask before reading: \`recall\` what is known. Before opening a file, \`context_get\` its card; reuse it if unchanged. After reading one, \`context_put\` a card with facts and \`sourceSeen\`. Office and PDF files: one card per part (\`budget.xlsx#Sheet2\`, \`deck.pptx#slide-12\`).
 4. Keep what you learn: \`note_upsert\` for facts, research and meeting notes.
 5. Record why: \`decision_record\` for a choice worth remembering, or a rejected option.
 6. Finish: \`task_complete\` with the claim token, a summary and the files touched.

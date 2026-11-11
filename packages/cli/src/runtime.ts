@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir, hostname, uptime, userInfo } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import {
   type Actor,
   actorIdentity,
@@ -426,6 +426,9 @@ export function processProbe(long: boolean): ProcessProbe {
 
 async function resolveLocation(cwd: string): Promise<DbLocation> {
   const slug = process.env.SATI_PROJECT;
+  // A folder instead of a slug: a desktop app starts `mcp` outside the project, and two
+  // projects may share a slug. A slug has no path separator, so the two cannot be confused.
+  if (slug && isAbsolute(slug)) return locateDb(slug);
   if (slug) return (await import("./projects.js")).projectLocation(slug);
   try {
     return locateDb(cwd);

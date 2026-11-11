@@ -56,7 +56,7 @@ export interface TemplateSummary {
 }
 
 /**
- * The three starters. A file with the same name in `.sati/templates/` replaces one; `sati
+ * The starters. A file with the same name in `.sati/templates/` replaces one; `sati
  * template show <name>` prints one to copy and edit.
  */
 const STARTERS: Record<string, string> = {
@@ -159,6 +159,106 @@ Labels: release
 - [ ] Watch error reports and support questions
 - [ ] Fix urgent issues in a patch release
 - [ ] Write up what to change next time
+`,
+  "content-calendar": `# Content calendar
+Goal: A month of posts is planned, approved and scheduled before the month starts.
+Labels: content
+
+## Plan (-3w)
+- [ ] Review last month: what worked and what did not
+- [ ] Pick the themes and key dates for the month
+- [ ] List the posts: channel, date, topic and owner
+
+## Create (-2w)
+- [ ] Write the copy for each post
+- [ ] Make the visuals and videos
+- [ ] Collect links, tags and tracking codes
+
+## Approve (-1w)
+- [ ] Review the posts with the approver
+  - [ ] Copy
+  - [ ] Visuals
+  - [ ] Dates and channels
+- [ ] Fix what the review found
+
+## Schedule (0d)
+- [ ] Schedule every post
+- [ ] Share the calendar with the team
+
+## Measure (+5w)
+- [ ] Collect reach and results per post
+- [ ] Note what to repeat next month
+`,
+  "monthly-report": `# Monthly report
+Goal: The report is correct, reviewed and sent on the due date.
+Labels: report
+
+## Collect (-7d)
+- [ ] Ask each owner for their numbers and notes
+- [ ] Export the data from each source
+- [ ] Check the numbers against last month
+
+## Draft (-4d)
+- [ ] Update the spreadsheet and charts
+- [ ] Write the summary: results, reasons, next steps
+- [ ] Build the slides or document
+
+## Review (-2d)
+- [ ] Review with the approver
+  - [ ] Numbers match the sources
+  - [ ] Charts are readable
+  - [ ] Summary says what changed and why
+- [ ] Fix what the review found
+
+## Send (0d)
+- [ ] Export the final file and send it
+- [ ] Save the final file and its sources in the project folder
+`,
+  proposal: `# Proposal
+Goal: The client gets a clear, approved proposal before the deadline.
+Labels: proposal
+
+## Understand (-3w)
+- [ ] Read the request and list what the client asks for
+- [ ] Ask the client the open questions
+- [ ] Decide to bid or not, and record why
+
+## Draft (-2w)
+- [ ] Outline the proposal
+- [ ] Write the approach and scope
+- [ ] Build the budget and timeline
+- [ ] Add the team, references and case studies
+
+## Review (-1w)
+- [ ] Review with the approver
+  - [ ] Scope and price
+  - [ ] Legal terms
+  - [ ] Spelling and layout
+- [ ] Fix what the review found
+
+## Send (0d)
+- [ ] Export the final file and send it
+- [ ] Confirm the client received it
+
+## Follow up (+1w)
+- [ ] Ask the client for a decision or feedback
+- [ ] Record the result and what to change next time
+`,
+  "meeting-notes": `# Meeting
+Goal: People come prepared, decisions are written down, and every action has an owner.
+Labels: meeting
+
+## Prepare (-3d)
+- [ ] Write the agenda and the goal of the meeting
+- [ ] Send the invitation with the agenda and files to read
+
+## Meet (0d)
+- [ ] Take notes: decisions, actions, owners and dates
+
+## After (+1d)
+- [ ] Save the notes as a note, and each decision as a decision
+- [ ] Create a task for each action, with its owner and due date
+- [ ] Send the notes to everyone invited
 `,
 };
 

@@ -882,10 +882,10 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 
 **9d — Office wiring**
 
-- [ ] `sati mcp --project <folder>` and an `init` option that prints the Claude Desktop entry with it, because desktop apps start servers outside the project folder
-- [ ] The general rules block and skill say how to work with Office and PDF files: read with the agent's own tools, then save a card with facts, an anchor and `sourceSeen`
-- [ ] Four more starter templates: content calendar, monthly report, proposal, meeting notes
-- [ ] MCP parity with the CLI for handoff and the task checklist
+- [x] `sati mcp --project <folder>` and an `init` option that prints the Claude Desktop entry with it, because desktop apps start servers outside the project folder
+- [x] The general rules block and skill say how to work with Office and PDF files: read with the agent's own tools, then save a card with facts, an anchor and `sourceSeen`
+- [x] Four more starter templates: content calendar, monthly report, proposal, meeting notes
+- [x] MCP parity with the CLI for handoff and the task checklist
 
 **9e — Languages without spaces**
 

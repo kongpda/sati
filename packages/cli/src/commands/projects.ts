@@ -9,7 +9,7 @@ export default defineCommand({
   meta: {
     name: "projects",
     description:
-      "Projects this machine knows. Add `--project <slug>` to any command to run it against one",
+      "Projects this machine knows. Add `--project <slug>` (or the folder's full path) to any command to run it against one",
   },
   args: {
     prune: {

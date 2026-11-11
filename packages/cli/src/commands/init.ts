@@ -548,12 +548,60 @@ function summary(p: InitPlan) {
   };
 }
 
+/** Where Claude Desktop keeps its config, for the hint under the entry. */
+const DESKTOP_CONFIG =
+  process.platform === "win32"
+    ? "%APPDATA%\\Claude\\claude_desktop_config.json"
+    : process.platform === "darwin"
+      ? "~/Library/Application Support/Claude/claude_desktop_config.json"
+      : "~/.config/Claude/claude_desktop_config.json";
+
+interface DesktopEntry {
+  desktop: { mcpServers: Record<string, { command: string; args: string[] }> };
+}
+
+/**
+ * The entry a desktop app needs to start this project's MCP server. The app starts servers in
+ * its own folder and without the shell's PATH, so the entry names Node, this script and the
+ * project folder in full.
+ */
+export function desktopEntry(cwd: string, script = process.argv[1] ?? CLI_NAME): DesktopEntry {
+  const { root, path } = locateDb(cwd);
+  if (!existsSync(path)) {
+    throw new SatiError("NOT_INITIALIZED", `This project has no ${CLI_NAME} yet.`, {
+      hint: `Run \`${CLI_NAME} init\` first.`,
+    });
+  }
+  const slug = basename(root)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, "-")
+    .replace(/^-+|-+$/gu, "");
+  return {
+    desktop: {
+      mcpServers: {
+        [slug ? `${CLI_NAME}-${slug}` : CLI_NAME]: {
+          command: process.execPath,
+          args: [script, "mcp", "--project", root],
+        },
+      },
+    },
+  };
+}
+
 interface DryRun {
   dryRun: ReturnType<typeof summary>;
 }
 
-function render(r: InitResult | UpgradeResult | DryRun | null): string {
+function render(r: InitResult | UpgradeResult | DryRun | DesktopEntry | null): string {
   if (!r) return "Cancelled. Nothing was written.";
+  if ("desktop" in r) {
+    return [
+      `Add this to ${DESKTOP_CONFIG} (merge it into "mcpServers" if the file has one),`,
+      "then restart Claude Desktop. Nothing was written.",
+      "",
+      JSON.stringify(r.desktop, null, 2),
+    ].join("\n");
+  }
   if ("dryRun" in r) {
     const p = r.dryRun;
     const head = p.upgrade ? `Upgrade "${p.upgrade.slug}" would write:` : "Init would write:";
@@ -618,6 +666,11 @@ export default defineCommand({
         "Update the git hooks, merge driver and agent files (as `rules sync` does) of an initialized project. Exit 6 if there is none",
     },
     "dry-run": { type: "boolean", description: "Show what init would write, and write nothing" },
+    desktop: {
+      type: "boolean",
+      description:
+        "Print the Claude Desktop config entry for this initialized project, and write nothing",
+    },
     "global-hooks": {
       type: "boolean",
       description:
@@ -630,6 +683,7 @@ export default defineCommand({
       args.json,
       async () => {
         const cwd = process.cwd();
+        if (args.desktop) return desktopEntry(cwd);
         const opts = {
           mode: args.mode,
           kind: args.kind,

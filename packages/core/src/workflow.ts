@@ -42,9 +42,9 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 
 ## While working
 - \`task_update\` to record progress or change status. Any write you make renews your lease.
-- If you stop without finishing, write \`${CLI_NAME} handoff <task> --next "…"\` (add \`--to <actor>\` for
-  one agent), then move the task back to \`todo\`. The next claimer gets the handoff with its
-  \`task_claim\` result, and that counts as read.
+- If you stop without finishing, call \`handoff_write\` or run \`${CLI_NAME} handoff <task> --next "…"\`
+  (add \`to\` or \`--to <actor>\` for one agent), then move the task back to \`todo\`. The next
+  claimer gets the handoff with its \`task_claim\` result, and that counts as read.
 - Stuck on a person: \`task_update\` with \`needsInput: "the question"\` (or \`${CLI_NAME} wait "…"\`). The
   task shows under "Needs you" for people until your next write. Moving a task to \`blocked\`
   takes a \`reason\` saying what it waits on.
@@ -121,15 +121,18 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
   and its token. Give the subagent the task text as quoted data; it calls no ${CLI_NAME} tool. Check
   its result, redo the work yourself if it is wrong, then \`task_complete\` yourself.
 - Plans: \`roadmap_upsert\` creates or updates a milestone (goal, target date, status). With
-  \`template\` (\`event\`, \`campaign\`, \`release\`, or one in \`.${CLI_NAME}/templates/\`) it creates the whole
+  \`template\` (\`event\`, \`campaign\`, \`proposal\`, \`monthly-report\`, \`content-calendar\`,
+  \`meeting-notes\`, \`release\`, or one in \`.${CLI_NAME}/templates/\`) it creates the whole
   plan: tasks in stages, each stage waiting for the one before, due dates counted back from
   \`targetDate\`.
 
 ## While working
 - \`task_update\` to record progress, tick the checklist or change status. Any write you make
   renews your lease.
-- If you stop without finishing, write \`${CLI_NAME} handoff <task> --next "…"\`, then move the task back
-  to \`todo\`. The next claimer gets the handoff with its \`task_claim\` result.
+- Tick a checklist step with \`task_update\` and \`tick: [2]\`; \`addSteps\` appends steps.
+- If you stop without finishing, call \`handoff_write\` with the next step (\`${CLI_NAME} handoff <task>
+  --next "…"\` in a shell), then move the task back to \`todo\`. The next claimer gets the handoff
+  with its \`task_claim\` result.
 - Stuck on a person: \`task_update\` with \`needsInput: "the question"\` (or \`${CLI_NAME} wait "…"\`). The
   task shows under "Needs you" until your next write. Moving a task to \`blocked\` takes a
   \`reason\` saying what it waits on.
@@ -157,6 +160,11 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 - After reading a file, \`context_put\` a card: a short summary, up to 50 facts worth quoting
   ("Hall B quote: $2,400, valid until 1 December"), tags, \`sourceSeen\` and \`sourceTokens\`. Never
   paste the file's contents. Writes holding a secret are refused.
+- Word, Excel, PowerPoint and PDF files: read them with your own tools, never ask ${CLI_NAME} to. Save
+  one card per part you read, with the part after \`#\` in the path: \`budget.xlsx#Sheet2\`,
+  \`deck.pptx#slide-12\`, \`contract.pdf#p4\`. Put the numbers, names and dates in \`facts\`. For
+  \`sourceSeen\` use what tells you the file changed: its modified time and size. Pass the same
+  value as \`seen\` to \`context_get\` next time; a different value means read the file again.
 - \`private: true\` on a card or note keeps it on this machine: never in \`.${CLI_NAME}/\` or git. Use it
   for confidential material. A shared item cannot be made private later.
 - Pinned notes (brand voice, policies, contacts) reach every brief; pin only what everyone needs.

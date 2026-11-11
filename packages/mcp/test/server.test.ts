@@ -86,6 +86,7 @@ describe("MCP server", () => {
       "decision_record",
       "feature_check",
       "feature_upsert",
+      "handoff_write",
       "lock_acquire",
       "lock_release",
       "note_get",
@@ -423,7 +424,9 @@ describe("MCP server", () => {
     const client = new Client({ name: "test", version: "0" });
     await client.connect(clientSide);
     const tool = (await client.listTools()).tools.find((t) => t.name === "roadmap_upsert");
-    expect(tool?.description).toContain("campaign, event, offsite, release");
+    expect(tool?.description).toContain(
+      "meeting-notes, monthly-report, offsite, proposal, release",
+    );
 
     const plan = await call(client, "roadmap_upsert", {
       template: "release",
@@ -849,6 +852,43 @@ describe("MCP server", () => {
     const other = await connect({ ...ctx, actorId: next.id });
     const taken = await call(other, "task_claim", { id: created.body.id });
     expect(taken.body.handoff.body).toContain("Ask Dara about the host");
+  });
+
+  // PLAN Phase 9d: an agent in a desktop app has no shell, so the handoff and the checklist
+  // steps the CLI offers must exist as tools.
+  it("writes a handoff and ticks checklist steps without a shell", async () => {
+    const client = await connect();
+    const created = await call(client, "task_create", {
+      title: "Draft the Q3 report",
+      checklist: [
+        { text: "Collect numbers", done: false },
+        { text: "Write summary", done: false },
+      ],
+    });
+    const id = created.body.id;
+    const token = (await call(client, "task_claim", { id })).body.claim.token;
+    const ticked = await call(client, "task_update", {
+      id,
+      token,
+      tick: [1],
+      addSteps: ["Send to Dara"],
+    });
+    expect(ticked.body.checklist).toEqual([
+      { text: "Collect numbers", done: true },
+      { text: "Write summary", done: false },
+      { text: "Send to Dara", done: false },
+    ]);
+    const bad = await client.callTool({
+      name: "task_update",
+      arguments: { id, token, tick: [9] },
+    });
+    expect(bad.isError).toBe(true);
+
+    await call(client, "handoff_write", { taskId: id, next: "Chart on Sheet2 is missing" });
+    await call(client, "task_update", { id, token, status: "todo" });
+    const next = await ensureActor(ctx, { name: "desktop@b", kind: "agent", tool: "claude-ai" });
+    const taken = await call(await connect({ ...ctx, actorId: next.id }), "task_claim", { id });
+    expect(taken.body.handoff.body).toContain("Chart on Sheet2 is missing");
   });
 
   // Why: the server announced a hard-coded version, so clients saw a stale number after a release.

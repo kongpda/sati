@@ -100,7 +100,10 @@ async function commandWords(root: CommandDef, typed: readonly string[]): Promise
   return path;
 }
 
-/** `--project slug` or `--project=slug`; removes it from argv. Returns false on a missing slug. */
+/**
+ * `--project slug` or `--project=slug`; removes it from argv. Returns false on a missing slug.
+ * The value may also be the project folder as an absolute path (see `resolveLocation`).
+ */
 function takeProject(argv: string[]): boolean {
   const at = argv.findIndex((a) => a === "--project" || a.startsWith("--project="));
   if (at === -1) return true;

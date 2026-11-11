@@ -5,6 +5,7 @@ import {
   listRecords,
   listTasks,
   parseTemplate,
+  STARTER_TEMPLATES,
   summarize,
   type TemplateFile,
 } from "../src/index.js";
@@ -109,6 +110,24 @@ describe("applyTemplate", () => {
 });
 
 describe("templates", () => {
+  // A starter is what an office user sees first. A stage without an offset gives its tasks no
+  // due date, and a missing day-0 stage leaves the plan's own date without a task.
+  it("ships starters whose every stage counts from the plan's day", () => {
+    for (const file of STARTER_TEMPLATES) {
+      const t = parseTemplate(file);
+      expect(t.goal, file.name).not.toBe("");
+      expect(t.stages.length, file.name).toBeGreaterThan(1);
+      expect(
+        t.stages.every((s) => s.offsetDays !== null && s.tasks.length > 0),
+        file.name,
+      ).toBe(true);
+      expect(
+        t.stages.some((s) => s.offsetDays === 0),
+        file.name,
+      ).toBe(true);
+    }
+  });
+
   it("reads stages, offsets, steps and notes, and lets a project file replace a starter", () => {
     const own = file(
       "event",
@@ -153,7 +172,11 @@ describe("templates", () => {
     const all = availableTemplates([own, file("Bad Name", "- [ ] x"), file("trip", "- [ ] Go")]);
     expect(all.map((x) => [x.name, x.source])).toEqual([
       ["campaign", "built-in"],
+      ["content-calendar", "built-in"],
       ["event", ".sati/templates/event.md"],
+      ["meeting-notes", "built-in"],
+      ["monthly-report", "built-in"],
+      ["proposal", "built-in"],
       ["release", "built-in"],
       ["trip", ".sati/templates/trip.md"],
     ]);

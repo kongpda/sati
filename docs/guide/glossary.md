@@ -33,7 +33,7 @@ scripts and agents do not break. This table maps one to the other; the board's w
 | Changes, Copy changelog | `sati changes --format changelog`, MCP `changes` | What changed in a time range. The changelog uses each task's release note (`--release-note`), falling back to its summary, and leaves out tasks labelled `internal`. |
 | Since my last visit | `--since last-session` | From your previous session's last write; for an agent, its previous session with the same name. |
 | Copy feature list | `sati feature list --format md` | Shipped features with their acceptance criteria, by plan. |
-| New plan | `sati template apply <name>`, MCP `roadmap_upsert` with `template` | A milestone and its tasks from a template (event, campaign, release, or `.sati/templates/<name>.md`). Each stage waits for the one before; due dates count back from the day. |
+| New plan | `sati template apply <name>`, MCP `roadmap_upsert` with `template` | A milestone and its tasks from a template (event, campaign, proposal, monthly-report, content-calendar, meeting-notes, release, or `.sati/templates/<name>.md`). Each stage waits for the one before; due dates count back from the day. |
 | Needs you · "Codex asks" · I answered | `claim.waiting`, `sati wait`, `needsInput`, `POST …/answered` | An agent waits on a person for an answer or a permission. Answer it in the agent's session, then mark it answered. |
 | Blocked: "…" | `blockedReason`, `--status blocked --reason` | What a blocked task waits on. |
 | "has new commits since this was sent" · Approve latest | `completion.commit`, `approvedCommit` | The branch moved after the work was sent for approval; the approval records the commit you saw. |
@@ -45,7 +45,7 @@ tooltip. Due dates are calendar days ("by Friday") and never shift between time 
 ## Writing a template
 
 A template is a Markdown file in `.sati/templates/<name>.md`, committed with the project. A file
-named like a starter (`event`, `campaign`, `release`) replaces it. `sati template show event`
+named like a starter (`event`, `campaign`, `release` and the others `sati template list` shows) replaces it. `sati template show event`
 prints a starter to copy.
 
 ```markdown

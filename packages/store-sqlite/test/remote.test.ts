@@ -296,17 +296,22 @@ describe("daemon framing", () => {
     const huge = task({ body: "x".repeat(17 * 1024 * 1024) });
     await owner.write((w) => w.insert("task", huge));
     const remote = connectStore(sock);
-    const fromDaemon = await within(remote.read((r) => r.get("task", huge.id))).catch((e) => e);
+    // 17 MB is written, read and framed three times: over the default 5 s on a busy macOS runner.
+    const fromDaemon = await within(
+      remote.read((r) => r.get("task", huge.id)),
+      10_000,
+    ).catch((e) => e);
     expect(fromDaemon).toBeInstanceOf(SatiError);
     expect(fromDaemon.message).toMatch(/limit is 16 MB/);
     const toDaemon = await within(
       remote.write((w) => w.insert("task", { ...huge, id: task().id })),
+      10_000,
     ).catch((e) => e);
     expect(toDaemon.message).toMatch(/limit is 16 MB/);
     // The connection survives both refusals.
     expect(await within(remote.read((r) => r.getProject()))).toMatchObject({ id: project().id });
     await remote.close();
-  });
+  }, 30_000);
 
   // Anyone who can open the socket can read and write every record.
   it.skipIf(process.platform === "win32")("creates the socket readable only by its owner", () => {

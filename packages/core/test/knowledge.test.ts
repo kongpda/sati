@@ -160,7 +160,9 @@ describe("private memory", () => {
     const mine = await createNote(ctx, { title: "Mine", body: "local", private: true });
     const newer = { ...mine, body: "from a file", version: mine.version + 1 };
     const { private: _, ...unmarked } = newer;
-    const planted = { ...unmarked, id: mine.id.replace(/.$/u, "Z"), private: true as const };
+    // A different last character, whatever the random id ends with.
+    const other = mine.id.endsWith("Z") ? "Y" : "Z";
+    const planted = { ...unmarked, id: mine.id.replace(/.$/u, other), private: true as const };
     const result = await importRecords(ctx, [
       { entity: "note", source: "notes/a.json", record: unmarked },
       { entity: "note", source: "notes/b.json", record: planted },

@@ -47,8 +47,12 @@ const entityTable = (name: string, extra: Extra = () => []) =>
 
 export const projects = entityTable("projects");
 export const milestones = entityTable("milestones");
-export const features = entityTable("features");
+export const features = entityTable("features", (t) => [
+  index("features_project_milestone").on(t.projectId, t.milestoneId),
+]);
 export const tasks = entityTable("tasks", (t) => [
+  // A milestone's page and the roadmap list its tasks and features by this column.
+  index("tasks_project_milestone").on(t.projectId, t.milestoneId),
   index("tasks_claim_lease").on(t.claimLeaseUntil),
   index("tasks_parent").on(t.parentId),
 ]);

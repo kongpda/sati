@@ -152,13 +152,16 @@ function ok(value: unknown): CallToolResult {
   return { content: [{ type: "text", text: fencedJson(value) }] };
 }
 
-/** Domain errors become tool errors with a code and hint the agent can act on. */
+/**
+ * Domain errors become tool errors with a code and hint the agent can act on. Fenced like a
+ * result: a message can quote a title, and `details` a lock holder's name or a file path.
+ */
 function fail(err: unknown): CallToolResult {
   const e = isSatiError(err)
     ? err
     : new SatiError("INTERNAL", err instanceof Error ? err.message : String(err));
   const error = { code: e.code, message: e.message, hint: e.hint ?? null, details: e.details };
-  return { isError: true, content: [{ type: "text", text: JSON.stringify({ error }) }] };
+  return { isError: true, content: [{ type: "text", text: fencedJson({ error }) }] };
 }
 
 /**
@@ -777,19 +780,35 @@ async function roadmap(ctx: ServiceContext): Promise<string> {
   const flat = (t: string) => t.replace(/\s+/g, " ").replace(/`/g, "'").trim();
   const line = (f: Feature) =>
     `- ${shortHandle(f.id)} ${flat(f.title)} (${f.status}${f.protected ? ", protected" : ""})`;
+  // One pass over the features and one over the tasks, not one of each per milestone.
+  const byMilestone = new Map<string, Feature[]>();
+  const milestoneOf = new Map<string, string>();
+  for (const f of features) {
+    if (f.milestoneId === null) continue;
+    milestoneOf.set(f.id, f.milestoneId);
+    const list = byMilestone.get(f.milestoneId);
+    if (list) list.push(f);
+    else byMilestone.set(f.milestoneId, [f]);
+  }
+  const counts = new Map<string, { all: number; done: number }>();
+  for (const t of tasks) {
+    // A task counts once per milestone, its own and its feature's.
+    const via = t.featureId === null ? undefined : milestoneOf.get(t.featureId);
+    for (const id of new Set([t.milestoneId, via])) {
+      if (!id) continue;
+      const c = counts.get(id) ?? { all: 0, done: 0 };
+      c.all += 1;
+      if (t.status === "done") c.done += 1;
+      counts.set(id, c);
+    }
+  }
   const out = [`# ${flat(project.name)} roadmap`, DATA_NOTICE, "", "```data"];
   for (const m of milestones) {
     out.push("", `## ${shortHandle(m.id)} ${flat(m.title)} (${m.status})`);
     if (m.goal) out.push(flat(m.goal));
-    const mine = features.filter((f) => f.milestoneId === m.id);
-    const ids = new Set(mine.map((f) => f.id));
-    const inIt = tasks.filter(
-      (t) => t.milestoneId === m.id || (t.featureId !== null && ids.has(t.featureId)),
-    );
-    if (inIt.length > 0) {
-      const done = inIt.filter((t) => t.status === "done").length;
-      out.push(`${done}/${inIt.length} tasks done`);
-    }
+    const mine = byMilestone.get(m.id) ?? [];
+    const count = counts.get(m.id);
+    if (count) out.push(`${count.done}/${count.all} tasks done`);
     out.push(...mine.map(line));
   }
   const loose = features.filter((f) => f.milestoneId === null);

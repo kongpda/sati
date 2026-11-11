@@ -712,23 +712,24 @@ Fixed:
 
 Open, code (likely bugs; each needs a test before a fix):
 
-- [ ] `doctor` `hooksCheck` reads the hook's binary with its own regex, which breaks on a path with an apostrophe; `installedSelf` already parses it correctly.
-- [ ] `hooks.ts` `runner` only checks the last word of the command. With `node <script>` and a removed node binary, pre-commit exits 127 and blocks every commit.
-- [ ] `doctor` `worktreesCheck` drops the first entry of `git worktree list`, assuming it is the current worktree. Inside a linked worktree it is the main one.
-- [ ] `init --upgrade` accepts `--mode`, `--kind`, `--name` and `--slug` and ignores them.
-- [ ] `sati review` calls `checkChanges` without `maxRemovalRatio` and without the general-project switch, so it can disagree with `sati guard`.
-- [ ] `samePath` in `git.ts` has no realpath and no Windows case fold, unlike `isLocalInstall`.
-- [ ] `merge-driver.ts` writes with `writeFileSync` + `renameSync`, not `writeFileAtomic`; `sync/src/snapshot.ts` `writeAtomic` has no Windows rename retry either, and `removeStaleTemps` can throw ENOENT when two exports race.
-- [ ] `filesystemKind` on macOS runs `stat -f %T`, which prints a file-type mark, not the filesystem type (confirmed on this machine). The network-drive warning never fires on macOS.
-- [ ] A socket path over about 104 characters fails `sati serve` with a bare EINVAL (reproduced by a reviewer).
-- [ ] `locateDb`: git's stderr is thrown away, so the new INTERNAL error cannot say why git failed; inside `.git` or a bare repo the hint ("git is missing") is wrong; a broken `.git` above a standalone project now blocks it.
+- [x] `doctor` `hooksCheck` reads the hook's binary with its own regex, which breaks on a path with an apostrophe; `installedSelf` already parses it correctly.
+- [x] `hooks.ts` `runner` only checks the last word of the command. With `node <script>` and a removed node binary, pre-commit exits 127 and blocks every commit.
+- [x] `doctor` `worktreesCheck` drops the first entry of `git worktree list`, assuming it is the current worktree. Inside a linked worktree it is the main one.
+- [x] `init --upgrade` accepts `--mode`, `--kind`, `--name` and `--slug` and ignores them.
+- [x] `sati review` calls `checkChanges` without `maxRemovalRatio` and without the general-project switch, so it can disagree with `sati guard`.
+- [x] `samePath` in `git.ts` has no realpath and no Windows case fold, unlike `isLocalInstall`.
+- [x] `merge-driver.ts` writes with `writeFileSync` + `renameSync`, not `writeFileAtomic`; `sync/src/snapshot.ts` `writeAtomic` has no Windows rename retry either, and `removeStaleTemps` can throw ENOENT when two exports race.
+- [x] `filesystemKind` on macOS runs `stat -f %T`, which prints a file-type mark, not the filesystem type (confirmed on this machine). The network-drive warning never fires on macOS.
+- [x] A socket path over about 104 characters fails `sati serve` with a bare EINVAL (reproduced by a reviewer).
+- [x] `locateDb`: git's stderr is thrown away, so the new INTERNAL error cannot say why git failed; inside `.git` or a bare repo the hint ("git is missing") is wrong; a broken `.git` above a standalone project now blocks it.
 - [ ] `needsReview` can be set by the merge driver on any record, but `doctor` counts only tasks, and a flagged milestone or decision has no way to be cleared.
 - [ ] Dry runs check less than real runs: `importPlan` (title length, secrets) and `applyTemplate` (duplicate milestone name).
-- [ ] MCP `fail()` returns error text unfenced; it can contain record text (a title, a holder's name).
+- [x] MCP `fail()` returns error text unfenced; it can contain record text (a title, a holder's name).
 - [ ] `scan` and `review` read 500 records with no paging; `ensurePersonal` throws a raw EEXIST; `stop` in `ui.ts`/`serve.ts` has no `.catch`; the registry is rewritten with no lock.
 - [ ] `shell-changes`: `mv a dir/` reports the wrong target; `git commit -m -n` is blocked as `--no-verify`; removing a husky hook file is not seen.
 - [ ] Board: moving one card twice quickly can send a stale version and show a conflict; a partial bulk-move failure uses the 6-second toast; Enter and `x` act on a non-board page; a feature hit in the palette opens the hidden Features page in a general project; Esc does nothing when focus is outside the dialog's form; `saving` in Settings can stick; `completion.summary` renders as Markdown where the comment says plain text; avatar colours are literal hex outside the dark-mode tokens.
-- [ ] Efficiency: FTS triggers rewrite the row on every update (lease renewals too); no index on `milestone_id`; MCP `roadmap` loads every record; `openRuntime` runs `git rev-parse --abbrev-ref HEAD` for every command; `issueStamp` adds two statements per record in bulk imports; Notes, Decisions and Memory lists parse Markdown for every row on each refresh; `e2e/ui/flows.spec.ts:1155` waits on fixed timeouts.
+- [x] Efficiency: FTS triggers rewrite the row on every update (lease renewals too); no index on `milestone_id`; MCP `roadmap` filtered every feature and task once per milestone (it still reads them all: the store has no count query).
+- [ ] Efficiency: `openRuntime` runs `git rev-parse --abbrev-ref HEAD` for every command; `issueStamp` adds two statements per record in bulk imports; Notes, Decisions and Memory lists parse Markdown for every row on each refresh; `e2e/ui/flows.spec.ts:1155` waits on fixed timeouts.
 - [ ] Small leftovers: three `git()` helpers and three copies of the export debounce wiring in the CLI; the unreachable `C` (copy) branch in `git.ts`; `absFrom` exported for one file; the `copyFileSync` fallback in `migrate.ts`.
 
 Open, docs and repo (owner decisions):

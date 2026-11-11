@@ -298,8 +298,21 @@ export function listenStore(
       else gate.resolve();
     });
   });
-  // Only the owner may connect: anyone who can reach the socket can read and write every record.
-  if (process.platform !== "win32") server.once("listening", () => chmodSync(socketPath, 0o600));
+  if (process.platform !== "win32") {
+    // The kernel keeps a socket path in a fixed field (108 bytes on Linux, 104 on macOS and the
+    // BSDs, with the closing NUL). Node reports a longer one as a bare EINVAL.
+    const limit = process.platform === "linux" ? 107 : 103;
+    const bytes = Buffer.byteLength(socketPath);
+    if (bytes > limit) {
+      throw new SatiError(
+        "VALIDATION",
+        `The socket path is ${bytes} bytes; this system allows ${limit}: ${socketPath}`,
+        { hint: "Move the project to a folder with a shorter path." },
+      );
+    }
+    // Only the owner may connect: anyone who can reach the socket can read and write every record.
+    server.once("listening", () => chmodSync(socketPath, 0o600));
+  }
   server.listen(socketPath);
   return server;
 }

@@ -4,5 +4,6 @@
     "packages/cli": {
       "ignoreDependencies": ["ulid", "drizzle-orm", "@sati/ui"]
     }
-  }
+  },
+  "ignoreBinaries": ["mount"]
 }

@@ -68,12 +68,11 @@ function fenced(text: string): string {
   return text.slice(FENCE_HEAD.length, -"\n```\n".length);
 }
 
-/** Calls a tool and returns its parsed JSON payload plus the error flag. Results are fenced. */
+/** Calls a tool and returns its parsed JSON payload plus the error flag. Both are fenced. */
 async function call(client: Client, name: string, args: Record<string, unknown> = {}) {
   const res = await client.callTool({ name, arguments: args });
   const text = (res.content as { type: string; text: string }[])[0]?.text ?? "null";
-  const isError = res.isError === true;
-  return { isError, body: JSON.parse(isError ? text : fenced(text)) };
+  return { isError: res.isError === true, body: JSON.parse(fenced(text)) };
 }
 
 describe("MCP server", () => {
@@ -371,6 +370,11 @@ describe("MCP server", () => {
     const got = fenced(await raw("task_get", { id: shortHandle(t.id) }));
     expect(got).not.toContain("`");
     expect(JSON.parse(got)).toMatchObject({ id: t.id, body: attack, status: "in_progress" });
+
+    // An error can quote record text too (a title, a lock holder's name), so it has the same
+    // fence. Every failing `call` in this file checks that through `fenced`.
+    const refused = await raw("task_get", { id: "tsk_zzzzzz" });
+    expect(JSON.parse(fenced(refused)).error.code).toBe("NOT_FOUND");
 
     for (const [name, args] of [
       ["task_list", { detail: "full" }],
@@ -699,15 +703,28 @@ describe("MCP server", () => {
     const feat = await call(client, "feature_upsert", { title: "Login" });
     await call(client, "task_create", { title: "Form", featureId: feat.body.id });
 
+    // The count is the milestone's own tasks plus its features' tasks, each task once.
+    const m = await createMilestone(ctx, { title: "Beta" });
+    await call(client, "feature_upsert", { id: feat.body.id, milestoneId: m.id });
+    const own = await createTask(ctx, { title: "Own", milestoneId: m.id });
+    await createTask(ctx, { title: "Both", milestoneId: m.id, featureId: feat.body.id });
+    await createTask(ctx, { title: "Elsewhere" });
+    // Written straight to the store: only a person's approval moves a task to done.
+    await store.write((w) => w.update("task", { ...own, status: "done", version: 2 }, 1));
+
     const roadmap = await client.readResource({ uri: "sati://project/roadmap" });
     const text = (roadmap.contents[0] as { text: string }).text;
     expect(text).toContain("# Demo roadmap");
     expect(text).toContain(`${shortHandle(feat.body.id)} Login (planned)`);
+    expect(text).toContain("1/3 tasks done");
 
     const one = await client.readResource({ uri: `sati://feature/${shortHandle(feat.body.id)}` });
     const body = JSON.parse(fenced((one.contents[0] as { text: string }).text));
     expect(body.feature.id).toBe(feat.body.id);
-    expect(body.tasks).toEqual([expect.objectContaining({ title: "Form", status: "todo" })]);
+    expect(body.tasks).toEqual([
+      expect.objectContaining({ title: "Form", status: "todo" }),
+      expect.objectContaining({ title: "Both", status: "todo" }),
+    ]);
   });
 
   it("returns the brief as Markdown, listing the task the agent claimed", async () => {

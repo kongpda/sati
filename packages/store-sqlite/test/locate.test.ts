@@ -97,6 +97,36 @@ describe("locateDb", () => {
     }
   });
 
+  // The error has to say why git failed; "git is missing" was the hint for every cause.
+  it("says to leave .git when run inside it, and keeps git's own message", () => {
+    const repo = tmp();
+    git(repo, "init", "-q");
+    expect(() => locateDb(join(repo, ".git"), { home: tmp() })).toThrow(
+      expect.objectContaining({
+        code: "INTERNAL",
+        hint: expect.stringContaining("working tree"),
+        details: expect.objectContaining({ cause: expect.stringContaining("work tree") }),
+      }),
+    );
+  });
+
+  // A standalone project names its mode in its own config; an unreadable `.git` in a parent
+  // folder (a broken clone in the home folder, say) must not lock the user out of it.
+  it("opens a standalone project below a .git that git cannot read", () => {
+    const outer = tmp();
+    mkdirSync(join(outer, ".git"));
+    const dir = join(outer, "plans");
+    mkdirSync(dir);
+    writeConfig(dir, "standalone");
+    expect(locateDb(dir, { home: tmp() })).toMatchObject({ mode: "standalone", root: dir });
+    // With no standalone config the broken repo is still reported.
+    const bare = join(outer, "src");
+    mkdirSync(bare);
+    expect(() => locateDb(bare, { home: tmp() })).toThrow(
+      expect.objectContaining({ code: "INTERNAL" }),
+    );
+  });
+
   // Standalone projects must keep working on machines without git.
   it("finds a standalone project when git cannot run outside any repo", () => {
     const dir = tmp();

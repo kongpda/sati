@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { CONFIG_DIR, CONFIG_FILE, SatiConfigSchema, SatiError } from "@sati/core";
+import { CLI_NAME, CONFIG_DIR, CONFIG_FILE, SatiConfigSchema, SatiError } from "@sati/core";
 
 export interface DbLocation {
   /** Absolute path of the live SQLite file. */
@@ -28,7 +28,16 @@ export function locateDb(cwd: string, opts: LocateOptions = {}): DbLocation {
   const key = `${resolve(cwd)}\0${opts.home ?? ""}`;
   const hit = cache.get(key);
   if (hit) return hit;
-  const found = fromGit(cwd) ?? fromStandalone(cwd, opts.home ?? homedir());
+  let gitError: unknown;
+  let found: DbLocation | undefined;
+  try {
+    found = fromGit(cwd);
+  } catch (err) {
+    gitError = err;
+  }
+  // A standalone project says so in its own config, so a broken `.git` above it does not block it.
+  found ??= fromStandalone(cwd, opts.home ?? homedir());
+  if (!found && gitError) throw gitError;
   if (!found) {
     throw new SatiError("NOT_INITIALIZED", "No git repository or standalone project found.", {
       hint: "Run `sati init` in a git repository, or `sati init --mode standalone`.",
@@ -54,16 +63,22 @@ function fromGit(cwd: string): DbLocation | undefined {
     out = execFileSync("git", ["rev-parse", "--show-toplevel", "--git-common-dir"], {
       cwd,
       encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
+      stdio: ["ignore", "pipe", "pipe"],
     });
   } catch (err) {
     // Not a repo is fine. A `.git` here that git cannot read means git is missing or broken;
-    // falling back to standalone would hide that and skip the git hooks.
+    // treating the folder as "no project" would hide that and skip the git hooks.
     const gitDir = findGitDir(cwd);
     if (!gitDir) return undefined;
+    const stderr = String((err as { stderr?: unknown }).stderr ?? "").trim();
+    const cause = stderr || (err instanceof Error ? err.message : String(err));
+    // git says "this operation must be run in a work tree" inside `.git` itself.
+    const hint = /work tree/iu.test(stderr)
+      ? `Run ${CLI_NAME} from the working tree, not from inside \`.git\`.`
+      : "Check that git is installed and on PATH, and that `git status` works here.";
     throw new SatiError("INTERNAL", `Found ${gitDir}, but \`git rev-parse\` failed.`, {
-      hint: "Check that git is installed and on PATH, and that `git status` works here.",
-      details: { gitDir, cause: err instanceof Error ? err.message : String(err) },
+      hint,
+      details: { gitDir, cause },
     });
   }
   const [top, common] = out.trim().split(/\r?\n/);

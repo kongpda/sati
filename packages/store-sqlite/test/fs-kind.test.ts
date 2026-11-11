@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createIdFactory, createTask, initProject, systemClock } from "@sati/core";
 import { describe, expect, it } from "vitest";
-import { classifyFilesystem, filesystemKind } from "../src/fs-kind.js";
+import { classifyFilesystem, filesystemKind, mountedType } from "../src/fs-kind.js";
 import { connectStore, listenStore, socketPath } from "../src/remote.js";
 import { SqliteStore } from "../src/store.js";
 
@@ -26,7 +26,45 @@ describe("filesystem class", () => {
   });
 });
 
+describe("filesystem type on macOS", () => {
+  const mounts = [
+    "/dev/disk3s1s1 on / (apfs, sealed, local, read-only, journaled)",
+    "/dev/disk3s5 on /System/Volumes/Data (apfs, local, journaled, nobrowse)",
+    "//me@nas/team on /Volumes/team (smbfs, nodev, nosuid, mounted by me)",
+    "nas:/export on /Volumes/team/deep on disk (nfs, nodev)",
+  ].join("\n");
+
+  // `stat -f %T` prints a file-type mark there ("/" for a folder), so every disk read as local
+  // and a database on a share ran SQLite WAL over the network with no warning.
+  it("reads the type of the longest mount point that holds the path", () => {
+    expect(mountedType(mounts, "/Users/me/repo/.git/sati")).toBe("apfs");
+    expect(mountedType(mounts, "/Volumes/team/repo/.git/sati")).toBe("smbfs");
+    expect(mountedType(mounts, "/Volumes/team/deep on disk/repo")).toBe("nfs");
+    // A name that only starts like a mount point is not inside it.
+    expect(mountedType(mounts, "/Volumes/teammate/repo")).toBe("apfs");
+    expect(classifyFilesystem(mountedType(mounts, "/Volumes/team/repo") ?? "")).toBe("network");
+  });
+
+  it.runIf(process.platform === "darwin")("sees the local disk as local", () => {
+    expect(filesystemKind(tmpdir())).toBe("local");
+  });
+});
+
 describe("socket path", () => {
+  // Reproduced: a database 110 characters deep failed `serve` with a bare "listen EINVAL".
+  it.runIf(process.platform !== "win32")("names the limit when the path is too long", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "sati-sock-"));
+    const owner = await SqliteStore.open(join(dir, "sati.db"));
+    try {
+      const long = join(dir, "d".repeat(110), "sati.sock");
+      expect(() => listenStore(owner, long)).toThrow(
+        expect.objectContaining({ code: "VALIDATION", hint: expect.stringContaining("shorter") }),
+      );
+    } finally {
+      await owner.close();
+    }
+  });
+
   // PLAN: `sati serve` must work on Windows, which cannot listen on a socket file in a folder.
   it("uses a named pipe on Windows and a socket file next to the database elsewhere", () => {
     expect(socketPath("/repo/.git/sati/sati.db", "linux")).toBe(

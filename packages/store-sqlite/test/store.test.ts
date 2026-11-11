@@ -317,6 +317,42 @@ describe("search", () => {
     expect(count("SELECT count(*) AS n FROM search_rowids")).toBe(0);
   });
 
+  // Most updates change no searchable text: a claim, a lease renewal, a move on the board.
+  // Rewriting the search row for each one was the larger part of the cost of those writes.
+  it("rewrites the search row only when the indexed text changes", async () => {
+    const t = task({ title: "Steady words" });
+    await store.write((w) => w.insert("task", t));
+    const changes = (run: () => void) => {
+      const before = Number(store.db.prepare("SELECT total_changes() AS n").get()?.n);
+      run();
+      return Number(store.db.prepare("SELECT total_changes() AS n").get()?.n) - before;
+    };
+    const set = store.db.prepare("UPDATE tasks SET status = ?, data = ? WHERE id = ?");
+    const data = (over: object) => JSON.stringify({ ...t, ...over });
+    expect(changes(() => set.run("in_progress", data({ status: "in_progress" }), t.id))).toBe(1);
+    expect(changes(() => set.run("todo", data({ body: "Now with a body" }), t.id))).toBeGreaterThan(
+      1,
+    );
+    expect(await store.read((r) => r.search(PROJECT_ID, "body"))).toHaveLength(1);
+    expect(changes(() => set.run("todo", data({ title: "Other" }), t.id))).toBeGreaterThan(1);
+    expect(await store.read((r) => r.search(PROJECT_ID, "steady"))).toEqual([]);
+    expect(await store.read((r) => r.search(PROJECT_ID, "body"))).toEqual([]);
+  });
+
+  // A milestone's task list filtered by scanning every task of the project.
+  it("finds a milestone's tasks and features by index", () => {
+    for (const table of ["tasks", "features"]) {
+      const plan = store.db
+        .prepare(
+          `EXPLAIN QUERY PLAN SELECT id FROM ${table} WHERE project_id = ? AND milestone_id = ?`,
+        )
+        .all("p", "m")
+        .map((row) => String(row.detail))
+        .join(" ");
+      expect(plan).toContain(`${table}_project_milestone`);
+    }
+  });
+
   // Records indexed before migration 0003 have no search_rowids entry until it backfills them;
   // without the backfill their edits would leave stale text in the index.
   it("upgrading from schema v3 keeps existing records searchable and editable", async () => {

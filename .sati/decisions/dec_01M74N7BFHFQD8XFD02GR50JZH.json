@@ -1,0 +1,15 @@
+{
+  "consequences": "If -C is ever added to the diff arguments, copies must be handled again.",
+  "context": "git diff runs with -M only, so git never reports a copy. node:sqlite backup() writes the backup file or throws, so the file is never missing afterwards.",
+  "createdAt": "2026-11-11T06:37:46.864Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "decision": "Remove the C (copy) status branch in packages/cli/src/git.ts and the copyFileSync fallback in packages/store-sqlite/src/migrate.ts.",
+  "id": "dec_01M74N7BFHFQD8XFD02GR50JZH",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T06:37:46.867Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "title": "Remove two unreachable branches found by the audit",
+  "updatedAt": "2026-11-11T06:37:46.864Z",
+  "version": 1
+}

@@ -1,0 +1,44 @@
+{
+  "body": "Code and docs done; unit tests pass. Waiting for the Playwright run, then commit, push and complete.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "521541998a94c23d073165a20633f24d46c48d6a",
+    "completedAt": "2026-11-11T06:47:07.613Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "package.json",
+      "packages/ui/package.json",
+      "packages/cli/package.json",
+      "e2e/package.json",
+      "pnpm-lock.yaml",
+      "biome.json",
+      "packages/cli/src/git.ts",
+      "packages/store-sqlite/src/migrate.ts",
+      "docs/ideas.md",
+      "docs/review-followups.md",
+      "docs/progress.md",
+      "docs/decisions/0008-vite-8-and-release-age.md"
+    ],
+    "summary": "Vite 8 and plugin-react 6 (ADR 0008). Dependencies repinned to versions at least 14 days old, correcting commit cc73aea. Removed two unreachable branches (dec_r50jzh). Pruned the finished list in docs/ideas.md. GitHub: private vulnerability reporting, secret scanning, push protection and Dependabot turned on; stale remote branch deleted. Not done: required CI checks, npm publish, AGENT_KICKOFF.md, screen-reader pass, Renovate app."
+  },
+  "createdAt": "2026-11-11T06:34:51.415Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "id": "tsk_01M74N204RT06ENZYFGCQMNS5A",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T06:34:51.417Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "body": "2026-11-11T06:44:26.833Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-11T06:34:57.444Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-11T06:47:07.616Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-11T06:47:07.616Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-11T06:47:07.616Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-11T06:34:57.444Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "review",
+  "title": "Audit leftovers: major updates, small cleanups, ideas prune, repo settings",
+  "updatedAt": "2026-11-11T06:47:07.619Z",
+  "version": 5,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

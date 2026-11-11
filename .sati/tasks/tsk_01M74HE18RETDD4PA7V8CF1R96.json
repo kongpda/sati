@@ -1,6 +1,8 @@
 {
+  "blockedReason": null,
   "branch": "main",
   "completion": {
+    "approvedCommit": "521541998a94c23d073165a20633f24d46c48d6a",
     "branch": "main",
     "commit": "cc73aeac06ae64714cf22e18f8c33c32dedace02",
     "completedAt": "2026-11-11T06:12:06.567Z",
@@ -25,17 +27,20 @@
   "id": "tsk_01M74HE18RETDD4PA7V8CF1R96",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-11T05:31:31.482Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "blockedReason": "2026-11-11T06:34:51.314Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "branch": "2026-11-11T05:31:37.638Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "claim": "2026-11-11T06:12:06.568Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "completion": "2026-11-11T06:12:06.568Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-11T06:12:06.568Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-11T06:34:51.314Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "reviewNote": "2026-11-11T06:34:51.314Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-11T06:34:51.314Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "worktree": "2026-11-11T05:31:37.638Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "review",
+  "status": "done",
   "title": "Audit follow-ups: fix open bugs, speed, recall ranking, docs",
-  "updatedAt": "2026-11-11T06:12:06.570Z",
-  "version": 5,
+  "updatedAt": "2026-11-11T06:34:51.317Z",
+  "version": 6,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

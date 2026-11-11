@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { backup, type DatabaseSync } from "node:sqlite";
 import { MIGRATIONS } from "./migrations.gen.js";
@@ -26,7 +26,6 @@ export async function migrate(db: DatabaseSync, path: string): Promise<number> {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const target = join(dir, `${basename(path)}.v${current}.${stamp}.bak`);
     await backup(db, target);
-    if (!existsSync(target)) copyFileSync(path, target);
   }
 
   db.exec("BEGIN EXCLUSIVE");

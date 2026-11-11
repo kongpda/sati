@@ -1896,3 +1896,13 @@ Status: **done, waiting for the owner's review**. Task `tsk_cf1r96`. The owner a
 - Docs and dependencies (F): install text for the private v0.1.0 tarball; `PLAN.md` tool count, hooks table, `.gitattributes` pattern and benchmark wording; 15 minor and patch dependency updates.
 - No direct test: `scan` and `review` paging (the shared `listAll` has one), the two shutdown `.catch` handlers, the Settings saving state, the avatar colour tokens, the `removeStaleTemps` race, FTS trigger speed (no benchmark was run). The "being edited" lift is asserted, but only the recency lift was shown to fail the test when removed.
 - Left open: the small leftovers line, the majors (`vite` 8, `@vitejs/plugin-react` 6), pruning `docs/ideas.md`, and every owner decision listed under "Open, docs and repo" in `docs/review-followups.md`.
+
+## 2026-11-11 — Audit leftovers
+
+Task `tsk_qmns5a`. The owner approved `tsk_82snym` and `tsk_cf1r96` ("approve and do all remaining"); the agent ran both approvals as `kongpda@sati` at the owner's request.
+
+- `vite` 8 and `@vitejs/plugin-react` 6 (ADR 0008). **Slip, corrected:** commit `cc73aea` took dependency versions younger than the 14 days `renovate.json` asks for (one published the same day). Every package is now pinned to the newest version at least 14 days old; packages that were already younger before this work stay.
+- Removed two unreachable branches (decision `dec_r50jzh`): the `C` status in `git.ts`, the `copyFileSync` fallback in `migrate.ts`. No new test: the code could not run.
+- `docs/ideas.md`: the finished 2026-11-10 list is replaced by a pointer to `docs/review-followups.md`.
+- GitHub, at the owner's word: private vulnerability reporting, secret scanning, push protection, Dependabot alerts and security updates turned on; remote branch `changeset-release/main` deleted (it was at `c171f0f`, PR #1 closed).
+- Not done, with the reason: required CI checks on `main` (they would block the direct pushes this repo and its agents use; needs a PR workflow first); npm publish (ADR 0006 stands, and there is no `NPM_TOKEN`); `AGENT_KICKOFF.md` (kept as history, `AGENTS.md` says so); the manual screen-reader pass (needs a person); Renovate (the owner must install the app).

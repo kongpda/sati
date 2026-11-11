@@ -79,12 +79,13 @@ function diffChanges(
   for (let i = 0; i < status.length; i++) {
     const code = status[i];
     if (!code) continue;
-    if (code.startsWith("R") || code.startsWith("C")) {
+    // Only `-M` is passed, so git reports renames here and never copies.
+    if (code.startsWith("R")) {
       const from = status[i + 1];
       const path = status[i + 2];
       i += 2;
       if (!from || !path) continue;
-      kinds.push(code.startsWith("R") ? { path, kind: "renamed", from } : { path, kind: "added" });
+      kinds.push({ path, kind: "renamed", from });
       continue;
     }
     const path = status[i + 1];

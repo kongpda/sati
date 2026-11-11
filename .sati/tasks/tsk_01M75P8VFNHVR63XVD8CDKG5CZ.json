@@ -1,0 +1,30 @@
+{
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "heartbeatAt": "2026-11-11T16:15:56.366Z",
+    "holder": {
+      "host": "h:001065b26af48df5",
+      "pid": 23266
+    },
+    "leaseUntil": "2026-11-11T20:15:56.366Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-11T16:15:19.029Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M75P8VFNHVR63XVD8CDKG5CZ",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T16:15:19.030Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-11T16:15:56.367Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-11T16:15:56.367Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-11T16:15:56.367Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-11T16:15:56.367Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "in_progress",
+  "title": "CLI DX pass: leftovers from 9j (fish check, pager test, hook text, task picker, stray tick) and a review of every command's help, errors and hints",
+  "updatedAt": "2026-11-11T16:15:56.368Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

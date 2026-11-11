@@ -2107,3 +2107,11 @@ Task `tsk_fevjbr`.
 - Not built: a picker for `task claim`. `task claim` with no id already claims the top ready task; a picker would change that.
 - Left as it is: a comment list in a `NO_COLOR` terminal can show a check mark when an actor's name starts with "Created". Too rare to add a rule for.
 
+## 2026-11-11 — 9k: build stamp
+
+- Form: `0.1.0+48a630b`, semver build metadata. It does not change version order, so npm compares versions as before. `.dirty` follows when `packages/` or `pnpm-lock.yaml` had changes that were not committed at build time. Built outside git (a tarball of the source): no stamp, the plain version.
+- The stamp is fixed at build time by a tsdown `define`. Nothing runs git for `--version`; it still answers in about 0.05 s.
+- A build made by CI from a checkout carries the commit too, so a published package will say which commit it came from.
+- `-v` and `-V` both print the version. No command has a verbose flag, node, npm and pnpm use `-v`, and many other tools use `-V`. They work only as the single argument, like `--version`.
+- `turbo.json` turns the cache off for the CLI build only. A cached `dist` would come back with the stamp of an older commit. The other packages still cache; the CLI bundle builds in about a second.
+- `sati doctor` adds a `build` check only when the bundle sits inside a source checkout. It compares the stamped commit with `HEAD` for `packages/` and `pnpm-lock.yaml` only: task records and docs change with every piece of work and do not make a build old. A stale build fails the check in every project, with the folder and `pnpm build` in the message. A build with uncommitted changes passes and says so.

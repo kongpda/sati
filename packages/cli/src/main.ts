@@ -5,6 +5,8 @@ import { type HelpLayout, usage } from "./help.js";
 import { errorText, setTerm } from "./term.js";
 
 const HELP = new Set(["--help", "-h"]);
+/** `-v` as node, npm and pnpm print it; `-V` as many other tools do. No command has a verbose flag. */
+const VERSION_FLAGS = new Set(["--version", "-v", "-V"]);
 
 type Resolvable<T> = T | Promise<T> | (() => T | Promise<T>);
 const resolveValue = async <T>(v: Resolvable<T>): Promise<T> =>
@@ -77,7 +79,7 @@ async function unknownFlag(root: CommandDef, argv: readonly string[]): Promise<s
       valueNext = value.length === 0 && !negated && known.get(flag) === true;
       continue;
     }
-    if (HELP.has(token) || token === "--version") continue;
+    if (HELP.has(token) || VERSION_FLAGS.has(token)) continue;
     const pool = [...known.keys()].filter((n) => n.length > 1);
     const best = pool.map((n) => ({ n, d: distance(flag, n) })).sort((a, b) => a.d - b.d)[0];
     const hint = best && best.d <= 2 ? ` Did you mean --${best.n}?` : "";
@@ -192,7 +194,7 @@ export async function main(root: CommandDef, layout: HelpLayout): Promise<void> 
     process.exitCode = 2;
     return;
   }
-  if (argv.length === 1 && argv[0] === "--version") {
+  if (argv.length === 1 && VERSION_FLAGS.has(argv[0] ?? "")) {
     const meta = (await resolveValue(root.meta ?? {})) as { version?: string };
     process.stdout.write(`${meta.version ?? ""}\n`);
     return;

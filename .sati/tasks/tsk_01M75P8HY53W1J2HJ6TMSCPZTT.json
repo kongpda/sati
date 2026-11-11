@@ -1,0 +1,45 @@
+{
+  "body": "Owner asked 2026-11-11. Every source build says 0.1.0, so a stale build cannot be told from a fresh one. Version becomes 0.1.0+<sha>[.dirty] (semver build metadata), stamped at build time. -v and -V print it. sati doctor says when the source checkout has newer code than the build.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "48a630b3f105254079fea30d77c6794da56763db",
+    "completedAt": "2026-11-11T16:23:08.150Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "packages/cli/src/version.ts",
+      "packages/cli/src/build-check.ts",
+      "packages/cli/src/index.ts",
+      "packages/cli/src/main.ts",
+      "packages/cli/src/help.ts",
+      "packages/cli/src/commands/doctor.ts",
+      "packages/cli/src/commands/mcp.ts",
+      "packages/cli/tsdown.config.ts",
+      "packages/cli/test/version.test.ts",
+      "turbo.json",
+      "PLAN.md",
+      "README.md",
+      "docs/progress.md",
+      ".changeset/build-stamp.md"
+    ],
+    "summary": "`sati --version` prints `0.1.0+<sha7>[.dirty]`, fixed at build time by a tsdown define; `-v` and `-V` print the same; the MCP server reports it. `sati doctor` adds a `build` check in a source checkout: fails when `packages/` or `pnpm-lock.yaml` changed between the stamped commit and HEAD. Turbo cache is off for the CLI build so the stamp is never stale. Tests: version.test.ts (flags, stamp equals HEAD, build check in temp git repos)."
+  },
+  "createdAt": "2026-11-11T16:15:09.253Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "id": "tsk_01M75P8HY53W1J2HJ6TMSCPZTT",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T16:15:09.256Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "branch": "2026-11-11T16:15:11.070Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T16:23:08.164Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T16:23:08.164Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T16:23:08.164Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "worktree": "2026-11-11T16:15:11.070Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "status": "review",
+  "title": "Build stamp in the version: sati --version shows the commit it was built from; -v and -V; doctor says when the build is behind",
+  "updatedAt": "2026-11-11T16:23:08.165Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

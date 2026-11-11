@@ -939,6 +939,11 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 - [x] Output taller than the terminal goes through a pager (`SATI_PAGER`, then `PAGER`, then `less`), only for a person at a terminal. `PAGER=cat` turns it off
 - [x] `sati review` wraps long lines to the terminal; a tab in a title no longer shifts a table column
 
+**9k — Build stamp (owner asked 2026-11-11)**
+
+- [x] `sati --version` shows the commit the build was made from (`0.1.0+48a630b`, `.dirty` for uncommitted changes); `-v` and `-V` print the same line
+- [x] `sati doctor`, when sati runs from a source checkout, says when the source has newer code than the build
+
 **Not in Phase 9:** registry collisions (two folders with one slug, a copied folder sharing a database) are fixed under task `tsk_01M74P…VB2MP62GRN1XC90AKCE` by another agent.
 
 **Gate:** the Phase 8 gate folder, on a machine with no git, driven through MCP by a client that sets no agent variable: the caller is recorded as an agent, cards with anchors go stale when the file changes, and Khmer questions recall Khmer cards. `pnpm lint && pnpm typecheck && pnpm test` pass and the performance budgets are unchanged.

@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -60,6 +61,24 @@ function thirdPartyLicenses(): Plugin {
   };
 }
 
+/**
+ * The commit this bundle is built from, for `sati --version`: `a8104c0`, or `a8104c0.dirty` when
+ * the source has changes that are not committed. Empty outside git (a source archive). The paths
+ * are the ones `buildCheck` in src/version.ts compares.
+ */
+function buildStamp(): string {
+  const root = fileURLToPath(new URL("../..", import.meta.url));
+  const git = (...args: string[]) =>
+    execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+  try {
+    const sha = git("rev-parse", "--short=7", "HEAD").trim();
+    const dirty = git("status", "--porcelain", "--", "packages", "pnpm-lock.yaml").trim() !== "";
+    return dirty ? `${sha}.dirty` : sha;
+  } catch {
+    return "";
+  }
+}
+
 // Every runtime package is a devDependency, so tsdown bundles it and `npm install` fetches only
 // this package: about 3 MB instead of 29. Only the code used ends up in the bundle, split per
 // command, so `sati --version` loads none of it. SQLite is Node's built-in node:sqlite.
@@ -70,5 +89,6 @@ export default defineConfig({
   banner: { js: "#!/usr/bin/env node" },
   // A binary, not a library: no type declarations to ship.
   dts: false,
+  define: { __SATI_BUILD__: JSON.stringify(buildStamp()) },
   plugins: [thirdPartyLicenses()],
 });

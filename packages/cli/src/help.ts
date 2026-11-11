@@ -28,6 +28,12 @@ const GLOBAL: [string, string][] = [
   ["-h, --help", "Show this help"],
 ];
 
+/** Only `sati` itself answers this one. */
+const VERSION_FLAG: [string, string] = [
+  "-v, --version",
+  "Show the version and the commit it was built from",
+];
+
 /** The flag column is at most this wide; a longer flag puts its description on the next line. */
 const LEFT_MAX = 26;
 
@@ -143,7 +149,7 @@ export async function usage(
     }
   }
   if (options.length > 0) out.push(heading("OPTIONS"), ...columns(options), "");
-  out.push(heading("GLOBAL OPTIONS"), ...columns(GLOBAL), "");
+  out.push(heading("GLOBAL OPTIONS"), ...columns(atRoot ? [...GLOBAL, VERSION_FLAG] : GLOBAL), "");
   if (subs && Object.keys(subs).length > 0) {
     out.push(dim(`Run \`${name} <command> --help\` for a command's options.`), "");
   }

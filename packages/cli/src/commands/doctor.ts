@@ -21,6 +21,7 @@ import {
 import { SqliteStore } from "@sati/store-sqlite";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
+import { buildCheck } from "../build-check.js";
 import { defaultBase, samePath } from "../git.js";
 import { installedSelf } from "../hooks.js";
 import { runHint } from "../install.js";
@@ -265,6 +266,8 @@ export default defineCommand({
             const worktrees = await worktreesCheck(rt.ctx, rt.location.root);
             if (worktrees) checks.push(worktrees);
           }
+          const build = buildCheck();
+          if (build) checks.push(build);
           const ok = checks.every((c) => c.ok);
           // A failed check fails the command, or CI and scripts read a broken project as healthy.
           if (!ok) process.exitCode = ERROR_EXIT_CODES.VALIDATION;

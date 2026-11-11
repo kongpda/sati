@@ -6,7 +6,6 @@ import {
   type ServiceContext,
 } from "@sati/core";
 import { defineCommand } from "citty";
-import pkg from "../../package.json" with { type: "json" };
 import {
   exportWritten,
   openRuntime,
@@ -18,6 +17,7 @@ import {
 import { markSeen, watchFolder } from "../shared-folder.js";
 import { readTemplateFiles } from "../templates.js";
 import { warn } from "../term.js";
+import { VERSION } from "../version.js";
 
 /**
  * Each write exports only what it touched, so one full export before serving repairs anything an
@@ -69,7 +69,7 @@ export default defineCommand({
       if (!dir) {
         try {
           await adopt(ctx);
-          await serveStdio(ctx, pkg.version, kind, location.root, templates, named);
+          await serveStdio(ctx, VERSION, kind, location.root, templates, named);
         } finally {
           await ctx.store.close();
         }
@@ -95,7 +95,7 @@ export default defineCommand({
         await adopt({ ...ctx, store: synced.store });
         await serveStdio(
           { ...ctx, store: synced.store },
-          pkg.version,
+          VERSION,
           kind,
           location.root,
           templates,

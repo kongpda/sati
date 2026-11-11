@@ -2,6 +2,7 @@ import { CLI_NAME } from "@sati/core/name";
 import { type CommandDef, defineCommand } from "citty";
 import pkg from "../package.json" with { type: "json" };
 import { main } from "./main.js";
+import { VERSION } from "./version.js";
 
 // The store needs node:sqlite as in Node 24.15 (ADR 0003). Commands load lazily, so this check
 // runs before anything imports it. `engines.node` is `>=major.minor`.
@@ -20,7 +21,7 @@ const lazy = (load: () => Promise<{ default: unknown }>) => () =>
   load().then((m) => m.default as ReturnType<typeof defineCommand>);
 
 const root: CommandDef = defineCommand({
-  meta: { name: CLI_NAME, version: pkg.version, description: pkg.description },
+  meta: { name: CLI_NAME, version: VERSION, description: pkg.description },
   subCommands: {
     init: lazy(() => import("./commands/init.js")),
     upgrade: lazy(() => import("./commands/upgrade.js")),

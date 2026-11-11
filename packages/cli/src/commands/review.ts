@@ -1,8 +1,8 @@
 import {
   CLI_NAME,
   type Decision,
+  listAll,
   listRecords,
-  listTasks,
   reviewDrift,
   SatiError,
   type ServiceContext,
@@ -72,7 +72,8 @@ export default defineCommand({
         // The `.sati/` snapshot changes with every write; it is not the code under review.
         const paths = changes.map((c) => c.path).filter((p) => !p.startsWith(SNAPSHOT));
         const guard = await projectVerdict(rt, changes);
-        const features = await listRecords(rt.ctx, "feature", { limit: 500 });
+        // Every feature and every task in review: a project past 500 records would lose findings.
+        const features = await rt.ctx.store.read((r) => listAll(r, rt.ctx, "feature"));
         const touched = features.filter((f) =>
           paths.some((path) => micromatch.isMatch(path, f.paths, { dot: true })),
         );
@@ -81,7 +82,9 @@ export default defineCommand({
           rangeStart(rt.location.root, span),
           new Set(touched.map((f) => f.id)),
         );
-        const inReview = await listTasks(rt.ctx, { status: ["review"], limit: 500 });
+        const inReview = await rt.ctx.store.read((r) =>
+          listAll(r, rt.ctx, "task", { status: ["review"] }),
+        );
         const drift = await reviewDrift(rt.ctx, inReview);
         return {
           range: span,

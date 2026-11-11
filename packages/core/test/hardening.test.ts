@@ -99,6 +99,25 @@ describe("deleting a claimed task", () => {
 describe("importPlan limits", () => {
   const lines = (n: number) => Array.from({ length: n }, (_, i) => `- [ ] task ${i}`).join("\n");
 
+  // A dry run is how a person checks a plan before importing it. One that passes while the
+  // import then refuses the file is worse than no dry run.
+  it("refuses a secret or an over-long heading in a dry run, as the import does", async () => {
+    const { ctx } = await setup();
+    const key = `gh${"p_"}${"a1".repeat(18)}`;
+    for (const markdown of [
+      `# M\n- [ ] deploy with ${key}\n`,
+      `# Release ${key}\n- [ ] ship\n`,
+      `# ${"h".repeat(600)}\n- [ ] ship\n`,
+    ]) {
+      await expect(importPlan(ctx, { markdown, dryRun: true })).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      await expect(importPlan(ctx, { markdown })).rejects.toMatchObject({ code: "VALIDATION" });
+    }
+    expect(await listRecords(ctx, "task")).toHaveLength(0);
+    expect(await listRecords(ctx, "milestone")).toHaveLength(0);
+  });
+
   // A pasted huge file must not create thousands of rows; the dry run must warn the same way.
   it("refuses more than 500 tasks, in a dry run too", async () => {
     const { ctx } = await setup();

@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { CLI_NAME, SatiError } from "@sati/core";
 import type { DbLocation } from "@sati/store-sqlite";
 import { writeFileAtomic } from "@sati/sync";
@@ -39,14 +39,48 @@ export function readProjects(home?: string): KnownProject[] {
   });
 }
 
+const LOCK_STALE_MS = 10_000;
+const LOCK_WAIT_MS = 2_000;
+
+/**
+ * Runs `change` while holding a lock folder next to the registry. Two `init` runs at once would
+ * each read the list, add one entry and write: the second write dropped the first entry.
+ * A lock older than 10 seconds belongs to a process that died, so it is taken over.
+ */
+function withRegistryLock<T>(path: string, change: () => T): T {
+  mkdirSync(dirname(path), { recursive: true });
+  const lock = `${path}.lock`;
+  const deadline = Date.now() + LOCK_WAIT_MS;
+  for (;;) {
+    try {
+      mkdirSync(lock);
+      break;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+      const age = Date.now() - (statSync(lock, { throwIfNoEntry: false })?.mtimeMs ?? 0);
+      if (age > LOCK_STALE_MS || Date.now() > deadline) {
+        rmSync(lock, { recursive: true, force: true });
+        continue;
+      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20);
+    }
+  }
+  try {
+    return change();
+  } finally {
+    rmSync(lock, { recursive: true, force: true });
+  }
+}
+
 export function rememberProject(project: KnownProject, home?: string): void {
-  const all = readProjects(home).filter(
-    (p) => p.slug !== project.slug && p.projectId !== project.projectId,
-  );
-  all.push(project);
   const path = file(home);
-  mkdirSync(join(path, ".."), { recursive: true });
-  writeFileAtomic(path, `${JSON.stringify(all, null, 2)}\n`);
+  withRegistryLock(path, () => {
+    const all = readProjects(home).filter(
+      (p) => p.slug !== project.slug && p.projectId !== project.projectId,
+    );
+    all.push(project);
+    writeFileAtomic(path, `${JSON.stringify(all, null, 2)}\n`);
+  });
 }
 
 /**
@@ -54,18 +88,21 @@ export function rememberProject(project: KnownProject, home?: string): void {
  * dropped. Only on request: a folder on an unmounted drive also looks gone.
  */
 export function pruneProjects(home?: string): KnownProject[] {
-  const all = readProjects(home);
-  const gone = all.filter((p) => !existsSync(p.root) || !existsSync(p.db));
-  if (gone.length === 0) return [];
-  writeFileAtomic(
-    file(home),
-    `${JSON.stringify(
-      all.filter((p) => !gone.includes(p)),
-      null,
-      2,
-    )}\n`,
-  );
-  return gone;
+  if (!existsSync(file(home))) return [];
+  return withRegistryLock(file(home), () => {
+    const all = readProjects(home);
+    const gone = all.filter((p) => !existsSync(p.root) || !existsSync(p.db));
+    if (gone.length === 0) return [];
+    writeFileAtomic(
+      file(home),
+      `${JSON.stringify(
+        all.filter((p) => !gone.includes(p)),
+        null,
+        2,
+      )}\n`,
+    );
+    return gone;
+  });
 }
 
 export function projectLocation(slug: string, home?: string): DbLocation {

@@ -1,8 +1,11 @@
-import { shortHandle } from "../domain/ids.js";
+import { SatiError } from "../domain/errors.js";
+import { ID_PREFIXES, shortHandle } from "../domain/ids.js";
 import { findDependencyCycle } from "../domain/rules.js";
 import type { Task } from "../domain/schemas.js";
+import { CLI_NAME } from "../name.js";
 import type { StorageReader } from "../ports/storage.js";
-import { listAll, nowIso, type ServiceContext } from "./context.js";
+import { listAll, mustGet, nowIso, type ServiceContext, updateWithLog } from "./context.js";
+import { resolveId } from "./query.js";
 import { claimHealth } from "./task.js";
 
 export interface DoctorCheck {
@@ -64,6 +67,30 @@ export async function linkProblems(
   return out;
 }
 
+/** Every kind of record the merge driver can flag `needsReview`. */
+const REVIEWABLE = ["task", "feature", "milestone", "note", "decision", "context"] as const;
+
+/**
+ * Clears `needsReview` on any record, after a person has looked at the merge. Tasks, features
+ * and notes also take `reviewed` on their own update; milestones, decisions and cards have only
+ * this.
+ */
+export async function markReviewed(ctx: ServiceContext, ref: string): Promise<{ id: string }> {
+  const prefix = ref.trim().split("_")[0];
+  const entity = REVIEWABLE.find((e) => ID_PREFIXES[e] === prefix);
+  if (!entity) {
+    throw new SatiError("VALIDATION", `"${ref}" is not a record that can need review.`, {
+      hint: `Give the id of a ${REVIEWABLE.join(", ")}.`,
+    });
+  }
+  const id = await resolveId(ctx, entity, ref);
+  return ctx.store.write(async (w) => {
+    const before = await mustGet(w, ctx, entity, id);
+    const after = await updateWithLog(w, ctx, entity, before, {}, { clear: ["needsReview"] });
+    return { id: after.id };
+  });
+}
+
 /**
  * Stale claims, claims whose agent has stopped, expired locks, tasks flagged needsReview, broken
  * links, and the private notes and cards that never leave this machine.
@@ -74,15 +101,26 @@ export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> 
     // One read of every task: the claims, review and link checks each used to read them again.
     const all = await listAll(r, ctx, "task", { includeDeleted: true });
     const live = all.filter((t) => t.deletedAt === null);
+    const notes = await listAll(r, ctx, "note");
+    const cards = await listAll(r, ctx, "context");
+    // The merge driver can flag any synced record, not only a task.
+    const synced: { id: string; needsReview?: true | undefined }[] = [
+      ...live,
+      ...(await listAll(r, ctx, "feature")),
+      ...(await listAll(r, ctx, "milestone")),
+      ...(await listAll(r, ctx, "decision")),
+      ...notes,
+      ...cards,
+    ];
     return {
       tasks: live.filter((t) => ["in_progress", "review", "blocked"].includes(t.status)),
       locks: await listAll(r, ctx, "lock"),
-      review: live.filter((t) => t.needsReview === true),
+      review: synced.filter((rec) => rec.needsReview === true).map((rec) => shortHandle(rec.id)),
       links: await linkProblems(r, ctx, undefined, all),
       mode: (await r.getProject())?.mode ?? "git",
       private: [
-        ...(await listAll(r, ctx, "note")).filter((n) => n.private).map((n) => `note "${n.title}"`),
-        ...(await listAll(r, ctx, "context")).filter((c) => c.private).map((c) => `card ${c.path}`),
+        ...notes.filter((n) => n.private).map((n) => `note "${n.title}"`),
+        ...cards.filter((c) => c.private).map((c) => `card ${c.path}`),
       ],
     };
   });
@@ -127,7 +165,7 @@ export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> 
       detail:
         flagged.length === 0
           ? "Nothing is flagged needsReview."
-          : `${flagged.length} record(s) still need review.`,
+          : `${flagged.length} record(s) still need review: ${flagged.slice(0, 8).join(", ")}${flagged.length > 8 ? ", …" : ""}. A merge changed them on both sides. Look at each, then run \`${CLI_NAME} doctor --reviewed <id>\`.`,
     },
     {
       name: "links",

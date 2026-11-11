@@ -421,6 +421,12 @@ async function ensurePersonal(): Promise<DbLocation> {
   }
   const home = homedir();
   const root = join(home, ".sati", "personal");
+  // The folder can outlive its registry entry. Stop before a second database is made for it.
+  if (existsSync(join(root, CONFIG_DIR, CONFIG_FILE))) {
+    throw new SatiError("CONFLICT", `A personal workspace already exists at ${root}.`, {
+      hint: `It is not in the list of projects on this machine. Run \`${CLI_NAME}\` from that folder, or remove the folder to start a new one.`,
+    });
+  }
   const ids = createIdFactory();
   const projectId = ids("project");
   const db = standaloneDbPath(home, projectId);

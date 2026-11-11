@@ -8,6 +8,7 @@ import {
   commentTarget,
   completeTask,
   createFeature,
+  createMilestone,
   createNote,
   createTask,
   deleteRecord,
@@ -16,6 +17,7 @@ import {
   ensureActor,
   importPlan,
   listComments,
+  markReviewed,
   recordDecision,
   releaseTask,
   restoreRecord,
@@ -281,6 +283,35 @@ describe("daily workspace", () => {
     expect(cleared.needsReview).toBeUndefined();
     const checks = await doctorChecks(ctx);
     expect(checks.find((c) => c.name === "needsReview")?.ok).toBe(true);
+  });
+
+  // The merge driver flags any synced record. Doctor counted only tasks, and a flagged
+  // milestone, decision or card had no command that cleared it, so the flag stayed for good.
+  it("reports a flagged milestone or decision and lets a person clear it", async () => {
+    const { ctx, store } = await setup();
+    const milestone = await createMilestone(ctx, { title: "Beta" });
+    const decision = await recordDecision(ctx, { title: "Use SQLite", decision: "Yes" });
+    for (const [entity, rec] of [
+      ["milestone", milestone],
+      ["decision", decision],
+    ] as const) {
+      await store.write((w) =>
+        w.update(entity, { ...rec, needsReview: true, version: rec.version + 1 }, rec.version),
+      );
+    }
+    const review = async () => (await doctorChecks(ctx)).find((c) => c.name === "needsReview");
+    expect(await review()).toMatchObject({ ok: false });
+    expect((await review())?.detail).toContain(shortHandle(milestone.id));
+    expect((await review())?.detail).toContain(shortHandle(decision.id));
+
+    await markReviewed(ctx, shortHandle(milestone.id));
+    await markReviewed(ctx, decision.id);
+    expect(await review()).toMatchObject({ ok: true });
+    expect(await store.read((r) => r.get("decision", decision.id))).not.toHaveProperty(
+      "needsReview",
+    );
+    // A lock or an actor is never merged by the driver.
+    await expect(markReviewed(ctx, ctx.actorId)).rejects.toMatchObject({ code: "VALIDATION" });
   });
 
   it("stores the project kind only while it is general", async () => {

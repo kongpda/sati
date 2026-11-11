@@ -126,4 +126,36 @@ describe("parseShellChanges bypasses", () => {
     expect(hookBypass("git config --get core.hooksPath")).toBeUndefined();
     expect(hookBypass("cat .git/hooks/pre-commit")).toBeUndefined();
   });
+
+  // A false alarm here blocks an honest commit, and a miss lets the guard be skipped.
+  it("reads the word after a value flag as that value, not as -n", () => {
+    for (const line of [
+      "git commit -m -n",
+      "git commit --message -n",
+      "git commit -F -n",
+      "git commit -am -n",
+      "git commit --author -n -m x",
+      "git commit -m x -- -n",
+    ]) {
+      expect(hookBypass(line), line).toBeUndefined();
+    }
+    // `-S` and `-u` take a value only inside the same word, so `-n` after them is still a flag.
+    expect(hookBypass("git commit -S -n -m x")).toMatch(/--no-verify/);
+    expect(hookBypass("git commit -m x -n")).toMatch(/--no-verify/);
+    expect(hookBypass("git commit --message=x -n")).toMatch(/--no-verify/);
+  });
+
+  // husky runs our block from `.husky/pre-commit`; removing that file turns the guard off.
+  it("spots the removal of a husky hook file, and allows husky setup", () => {
+    expect(hookBypass("rm .husky/pre-commit")).toMatch(/husky/);
+    expect(hookBypass("mv .husky/pre-commit /tmp/x")).toMatch(/husky/);
+    expect(hookBypass("chmod +x .husky/pre-commit")).toBeUndefined();
+    expect(hookBypass("rm -rf .husky/_")).toBeUndefined();
+    expect(hookBypass("mv /tmp/new .husky/pre-commit")).toBeUndefined();
+  });
+
+  // The guard checks the path a record points at; a wrong new path hides the move from it.
+  it("drops a closing slash from the moved folder's name", () => {
+    expect(parseShellChanges("mv src/a/ dest/")).toEqual(parseShellChanges("mv src/a dest/"));
+  });
 });

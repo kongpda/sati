@@ -90,13 +90,21 @@ describe("applyTemplate", () => {
       dueDate: "2026-10-20",
       checklist: [],
     });
+    // The preview must refuse what the real run refuses: a taken name, and a secret.
+    await applyTemplate(ctx, [], { template: "campaign", title: "Spring" });
+    const again = { template: "campaign", title: "spring", dryRun: true };
+    expect(await code(() => applyTemplate(ctx, [], again))).toBe("CONFLICT");
+    const key = `gh${"p_"}${"a1".repeat(18)}`;
+    const leaky = file("leaky", `## A\n- [ ] deploy with ${key}\n`);
+    expect(await code(() => applyTemplate(ctx, [leaky], { template: "leaky", dryRun: true }))).toBe(
+      "VALIDATION",
+    );
     const long = file("long", `## A\n- [ ] ok\n- [ ] ${"x".repeat(400)}\n`);
     expect(await code(() => applyTemplate(ctx, [long], { template: "long" }))).toBe("VALIDATION");
     const empty = file("empty", "# Nothing here\n\nJust prose.\n");
     expect(await code(() => applyTemplate(ctx, [empty], { template: "empty" }))).toBe("VALIDATION");
     expect(await code(() => applyTemplate(ctx, [], { template: "wedding" }))).toBe("NOT_FOUND");
-    expect(await listRecords(ctx, "milestone", {})).toHaveLength(0);
-    expect(await listTasks(ctx, {})).toHaveLength(0);
+    expect(await listRecords(ctx, "milestone", {})).toHaveLength(1);
   });
 });
 

@@ -142,7 +142,8 @@ function operands(argv: readonly string[]): string[] {
 }
 
 function baseName(path: string): string {
-  const parts = path.split("/");
+  // `mv src/a/ dest/` moves the folder `a`: a closing slash is not part of the name.
+  const parts = path.replace(/\/+$/u, "").split("/");
   return parts[parts.length - 1] || path;
 }
 
@@ -244,7 +245,7 @@ function moves(args: readonly string[], dir: string | undefined): ShellChange[] 
   return sources.map((source) => ({
     path: under(dir, destination(target === undefined ? dest : `${dest}/`, source, many)),
     kind: "renamed" as const,
-    from: under(dir, source),
+    from: under(dir, source.replace(/(?<=.)\/+$/u, "")),
   }));
 }
 
@@ -297,6 +298,26 @@ export function parseShellChanges(commandLine: string): ShellChange[] {
 
 /** Short flags of `git commit` that take a value, so letters after them are that value. */
 const COMMIT_VALUE_FLAGS = new Set(["m", "F", "C", "c", "t", "S", "u"]);
+/**
+ * Of those, the ones whose value may be the next word (`-m -n` commits with the message "-n").
+ * `-S` and `-u` take a value only in the same word, so `-S -n` does skip the hooks.
+ */
+const COMMIT_NEXT_WORD_FLAGS = new Set(["m", "F", "C", "c", "t"]);
+/** Long options of `git commit` whose value is the next word when written without `=`. */
+const COMMIT_VALUE_OPTIONS = new Set([
+  "--message",
+  "--file",
+  "--reuse-message",
+  "--reedit-message",
+  "--template",
+  "--author",
+  "--date",
+  "--fixup",
+  "--squash",
+  "--cleanup",
+  "--trailer",
+  "--pathspec-from-file",
+]);
 
 /** `--no-verify` or a prefix git accepts for it; `--no-ver` could also be `--no-verbose`. */
 const isNoVerify = (word: string) => word.startsWith("--no-veri") && "--no-verify".startsWith(word);
@@ -304,16 +325,34 @@ const isNoVerify = (word: string) => word.startsWith("--no-veri") && "--no-verif
 /** Commands that can remove or disable a git hook file. */
 const HOOK_FILE_COMMANDS = new Set(["rm", "unlink", "mv", "cp", "ln", "chmod", "truncate"]);
 const HOOK_FILE = /(?:^|\/)(?:\.git\/hooks|sati\/hooks)(?:\/|$)/u;
+/**
+ * husky's folder holds hook files that our block is chained into. Only removal counts there:
+ * `chmod +x .husky/pre-commit` and `cp` into it are everyday husky setup.
+ */
+const HUSKY_REMOVERS = new Set(["rm", "unlink", "mv", "truncate"]);
+const HUSKY_HOOK = /(?:^|\/)\.husky\/[^/_][^/]*$/u;
 
 const HOOKS_PATH = "core.hookspath";
 
 function skipsVerify(args: readonly string[]): boolean {
-  for (const word of args) {
+  for (let i = 0; i < args.length; i++) {
+    const word = args[i] as string;
+    // After `--` every word is a path.
+    if (word === "--") return false;
     if (isNoVerify(word)) return true;
+    if (COMMIT_VALUE_OPTIONS.has(word)) {
+      i++;
+      continue;
+    }
     if (!/^-[A-Za-z]+$/u.test(word)) continue;
-    for (const letter of word.slice(1)) {
+    const letters = word.slice(1);
+    for (let at = 0; at < letters.length; at++) {
+      const letter = letters[at] as string;
       if (letter === "n") return true;
-      if (COMMIT_VALUE_FLAGS.has(letter)) break;
+      if (!COMMIT_VALUE_FLAGS.has(letter)) continue;
+      // The value is the rest of this word, or the next word when the flag ends it.
+      if (at === letters.length - 1 && COMMIT_NEXT_WORD_FLAGS.has(letter)) i++;
+      break;
     }
   }
   return false;
@@ -340,6 +379,10 @@ export function hookBypass(commandLine: string): string | undefined {
     }
     if (HOOK_FILE_COMMANDS.has(c.cmd) && operands(c.args).some((w) => HOOK_FILE.test(w))) {
       return `\`${c.cmd}\` on a git hook file turns the hooks off.`;
+    }
+    const husky = c.cmd === "mv" ? operands(c.args).slice(0, -1) : operands(c.args);
+    if (HUSKY_REMOVERS.has(c.cmd) && husky.some((w) => HUSKY_HOOK.test(w))) {
+      return `\`${c.cmd}\` on a husky hook file turns the hooks off.`;
     }
     if (c.cmd !== "git") continue;
     const [sub, ...rest] = c.args;

@@ -100,7 +100,11 @@ export default defineCommand({
         void server
           .close()
           .then(flush)
-          .finally(() => closeRuntime());
+          .finally(() => closeRuntime())
+          // A failed flush or close must end with a message, not an unhandled rejection.
+          .catch((err: unknown) => {
+            process.exitCode = printError(err, false);
+          });
       };
       process.on("SIGINT", stop);
       process.on("SIGTERM", stop);

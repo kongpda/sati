@@ -2,10 +2,11 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { LIMITS } from "../domain/schemas.js";
+import { refuseSecrets } from "../domain/secrets.js";
 import { CLI_NAME } from "../name.js";
 import type { StorageReader, StorageWriter } from "../ports/storage.js";
 import { listAll, parseInput, type ServiceContext } from "./context.js";
-import { createMilestoneIn } from "./milestone.js";
+import { CreateMilestoneInput, createMilestoneIn } from "./milestone.js";
 import { createTaskIn } from "./task.js";
 
 export const ImportPlanInput = z.strictObject({
@@ -122,12 +123,11 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
         result.skipped.push({ kind: "milestone", title, key });
         continue;
       }
+      // Parsed and checked for secrets here, so a dry run refuses what the import would.
+      const data = parseInput(CreateMilestoneInput, { title, goal: "", order: nextOrder++ });
+      refuseSecrets("milestone", data);
       result.added.push({ kind: "milestone", title, key });
-      if (write)
-        milestoneIds.set(
-          title,
-          (await createMilestoneIn(write, ctx, { title, goal: "", order: nextOrder++ })).id,
-        );
+      if (write) milestoneIds.set(title, (await createMilestoneIn(write, ctx, data)).id);
     }
     for (const item of items) {
       const label = `plan:${item.key}`;
@@ -136,6 +136,7 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
         result.skipped.push(change);
         continue;
       }
+      refuseSecrets("task", { title: item.title });
       result.added.push(change);
       taskKeys.add(label);
       const milestoneId = milestoneIds.get(item.heading);

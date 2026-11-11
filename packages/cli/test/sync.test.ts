@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, join } from "node:path";
+import { shortHandle } from "@sati/core";
 import { locateDb, SqliteStore } from "@sati/store-sqlite";
 import { stableJson } from "@sati/sync";
 import { describe, expect, it } from "vitest";
@@ -236,6 +237,15 @@ describe("merge driver", () => {
     ).data;
     expect(merged).toMatchObject({ title: "Renamed", labels: ["x"], needsReview: true });
     expect(merged.body).toContain("<<<<<<< ours\nMAIN\n=======\nSIDE\n>>>>>>> theirs");
+
+    // The flag is useful only if a person can find the record and say it has been read.
+    const handle = shortHandle(task.id);
+    expect(sati(dir, "doctor").stdout).toContain(handle);
+    const cleared = sati(dir, "doctor", "--reviewed", task.id);
+    expect(cleared.stderr + cleared.stdout).toContain("Cleared needsReview");
+    const after = satiJson<Rec & { needsReview?: boolean }>(dir, "task", "show", task.id).data;
+    expect(after.needsReview).toBeUndefined();
+    expect(sati(dir, "doctor").stdout).not.toContain(handle);
   }, 30_000);
 });
 

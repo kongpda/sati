@@ -1,5 +1,12 @@
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createIdFactory, initProject, SEARCHABLE, systemClock } from "@sati/core";
@@ -348,6 +355,48 @@ describe("small", () => {
     expect(readProjects(home).map((p) => p.slug)).toEqual(["kept"]);
     const r = run(kept, ["projects", "--prune"], { HOME: home });
     expect(r.stderr).toContain("Forgot 0 projects");
+  });
+
+  // Why: `init` reads the list, adds one entry and writes it back. Run in two repos at once,
+  // the second write dropped the first project from `sati projects`.
+  it("keeps every project when several are registered at the same time", async () => {
+    const home = mkdtempSync(join(tmpdir(), "sati-home-"));
+    const repos = await Promise.all(Array.from({ length: 6 }, () => tempRepo()));
+    const codes = await Promise.all(
+      repos.map(
+        (cwd) =>
+          new Promise<number | null>((done) => {
+            const child = spawn(process.execPath, [bin, "init", "--yes", "--tools", ""], {
+              cwd,
+              env: { ...process.env, HOME: home, USERPROFILE: home, SATI_REGISTRY: "" },
+              stdio: "ignore",
+            });
+            child.on("close", done);
+          }),
+      ),
+    );
+    expect(codes).toEqual([0, 0, 0, 0, 0, 0]);
+    expect(
+      readProjects(home)
+        .map((p) => p.root)
+        .sort(),
+    ).toEqual([...repos].sort());
+  }, 30_000);
+
+  // Why: a process killed while it held the lock must not block every later `init`.
+  it("takes over a registry lock left by a dead process", () => {
+    const home = mkdtempSync(join(tmpdir(), "sati-home-"));
+    const lock = join(home, ".sati", "projects.json.lock");
+    mkdirSync(lock, { recursive: true });
+    const old = new Date(Date.now() - 60_000);
+    utimesSync(lock, old, old);
+    const root = mkdtempSync(join(tmpdir(), "sati-kept-"));
+    rememberProject(
+      { slug: "a", name: "a", projectId: "prj_a", root, mode: "git", db: join(root, "sati.db") },
+      home,
+    );
+    expect(readProjects(home).map((p) => p.slug)).toEqual(["a"]);
+    expect(existsSync(lock)).toBe(false);
   });
 
   // Why: `projects` opened each database for writing, which created an empty one where it was

@@ -4,7 +4,7 @@ import { connect, type Server } from "node:net";
 import { CLI_NAME, SatiError, type StorageAdapter } from "@sati/core";
 import { listenStore, socketPath as socketPathFor } from "@sati/store-sqlite";
 import { defineCommand } from "citty";
-import { closeRuntime, openRuntime } from "../runtime.js";
+import { closeRuntime, openRuntime, printError } from "../runtime.js";
 
 /** True when something accepts connections on the socket; a stale file refuses or is gone. */
 function isLive(socketPath: string): Promise<boolean> {
@@ -64,7 +64,10 @@ export default defineCommand({
     process.stdout.write(`${CLI_NAME} serve ${socketPath}\n`);
     const stop = () => {
       server.close();
-      void closeRuntime();
+      // A failed close must still end the process with a message, not an unhandled rejection.
+      closeRuntime().catch((err: unknown) => {
+        process.exitCode = printError(err, false);
+      });
     };
     process.on("SIGINT", stop);
     process.on("SIGTERM", stop);

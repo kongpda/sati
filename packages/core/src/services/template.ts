@@ -2,8 +2,9 @@ import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { shortHandle } from "../domain/ids.js";
 import { IsoDay, LIMITS, type Milestone, type Task } from "../domain/schemas.js";
+import { refuseSecrets } from "../domain/secrets.js";
 import { CLI_NAME } from "../name.js";
-import type { StorageWriter } from "../ports/storage.js";
+import type { StorageReader, StorageWriter } from "../ports/storage.js";
 import { listAll, parseInput, type ServiceContext } from "./context.js";
 import { CreateMilestoneInput, createMilestoneIn } from "./milestone.js";
 import { CreateTaskInput, createTaskIn } from "./task.js";
@@ -355,11 +356,12 @@ export async function applyTemplate(
         : {}),
     }),
   );
+  refuseSecrets("milestone", milestoneInput);
+  for (const input of taskInputs) refuseSecrets("task", input);
   const result = { template: t.name, title, targetDate, tasks };
-  if (data.dryRun) return { ...result, milestone: null, taskIds: [] };
-
-  return ctx.store.write(async (w: StorageWriter) => {
-    const same = (await listAll(w, ctx, "milestone")).find(
+  // A dry run refuses what the real run would: a secret, or a plan of the same name.
+  const refuseSameName = async (r: StorageReader) => {
+    const same = (await listAll(r, ctx, "milestone")).find(
       (m) => m.title.toLowerCase() === title.toLowerCase(),
     );
     if (same) {
@@ -370,6 +372,14 @@ export async function applyTemplate(
         { hint: `Or add tasks to the existing plan \`${shortHandle(same.id)}\`.` },
       );
     }
+  };
+  if (data.dryRun) {
+    await ctx.store.read(refuseSameName);
+    return { ...result, milestone: null, taskIds: [] };
+  }
+
+  return ctx.store.write(async (w: StorageWriter) => {
+    await refuseSameName(w);
     const milestone = await createMilestoneIn(w, ctx, milestoneInput);
     const created: Task[] = [];
     let previous: string[] = [];

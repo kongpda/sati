@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -89,5 +89,13 @@ describe("loop commands", () => {
     const other = mkdtempSync(join(tmpdir(), "sati-home-"));
     const refused = run(cwd, ["task", "create", "Nope"], { HOME: other });
     expect(refused.code).not.toBe(0);
+
+    // The folder outlived its registry entry. A raw EEXIST came out here, after a second
+    // database had been created for the same folder.
+    rmSync(join(home, ".sati", "projects.json"));
+    const again = run(cwd, ["task", "create", "Twice"], env);
+    expect(again.code).not.toBe(0);
+    expect(again.stderr).toContain("A personal workspace already exists");
+    expect(again.stderr).not.toContain("EEXIST");
   });
 });

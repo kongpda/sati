@@ -104,6 +104,7 @@ sign-in URL only. The URL holds a one-time token; do not share it.
 ```bash
 sati doctor              # stale leases, orphan locks, DB integrity, hook health
 sati doctor --vacuum     # also compact the database
+sati doctor --reviewed <id>   # clear the "needs review" flag a merge left on a record
 sati export              # write every record to .sati/
 sati import              # load records from .sati/ into the live database
 ```

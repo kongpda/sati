@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { createFeature, listRecords } from "@sati/core";
+import { createFeature, listAll } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { execute } from "../runtime.js";
@@ -76,7 +76,7 @@ export default defineCommand({
           ...routeFolders(rt.location.root),
         ]);
         // Skip what an earlier run (or a person) already made, so a rerun adds nothing.
-        const existing = await listRecords(rt.ctx, "feature", { limit: 500 });
+        const existing = await rt.ctx.store.read((r) => listAll(r, rt.ctx, "feature"));
         const names = new Set(existing.map((f) => f.title.toLowerCase()));
         const globs = new Set(existing.flatMap((f) => f.paths));
         const fresh = proposals.filter(

@@ -7,8 +7,10 @@ import {
   doctorChecks,
   ERROR_EXIT_CODES,
   type LinkedWorktree,
+  markReviewed,
   removableWorktrees,
   type ServiceContext,
+  shortHandle,
 } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
 import { defineCommand } from "citty";
@@ -16,7 +18,7 @@ import { json } from "../args.js";
 import { defaultBase, samePath } from "../git.js";
 import { installedSelf } from "../hooks.js";
 import { runHint } from "../install.js";
-import { closeRuntime, openRuntime, output, worktreePaths } from "../runtime.js";
+import { closeRuntime, execute, openRuntime, output, worktreePaths } from "../runtime.js";
 import { pendingUpgrade } from "./init.js";
 
 /**
@@ -136,10 +138,22 @@ export default defineCommand({
   },
   args: {
     vacuum: { type: "boolean", description: "Run VACUUM after the checks" },
+    reviewed: {
+      type: "string",
+      description: "Clear needsReview on the record with this id, once you have looked at it",
+    },
     ...json,
   },
-  run: ({ args }) =>
-    output(
+  run: ({ args }) => {
+    if (args.reviewed !== undefined) {
+      const id = args.reviewed;
+      return execute(
+        args.json,
+        ({ ctx }) => markReviewed(ctx, id),
+        (r) => `Cleared needsReview on ${shortHandle(r.id)}.`,
+      );
+    }
+    return output(
       args.json,
       async () => {
         const rt = await openRuntime();
@@ -168,5 +182,6 @@ export default defineCommand({
       },
       (report: { ok: boolean; checks: DoctorCheck[] }) =>
         report.checks.map((c) => `${c.ok ? "ok" : "fail"} ${c.name}: ${c.detail}`).join("\n"),
-    ),
+    );
+  },
 });

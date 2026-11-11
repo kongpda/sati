@@ -1,14 +1,26 @@
 {
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
-    "heartbeatAt": "2026-11-11T16:42:49.465Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 23266
-    },
-    "leaseUntil": "2026-11-11T20:42:49.465Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "326635bb2a27afb1f19acd91051f45fea754c2cb",
+    "completedAt": "2026-11-11T16:51:05.137Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/cli/src/args.ts",
+      "packages/cli/src/runtime.ts",
+      "packages/cli/src/commands/task.ts",
+      "packages/cli/src/commands/handoff.ts",
+      "packages/cli/test/output.test.ts",
+      "packages/core/src/services/context.ts",
+      "packages/core/test/hardening.test.ts",
+      "PLAN.md",
+      "README.md",
+      "docs/ideas.md",
+      "docs/progress.md",
+      ".changeset/held-task.md"
+    ],
+    "releaseNote": "Task commands need no id when you hold exactly one task; validation errors are shorter.",
+    "summary": "`task show`, `task complete`, `task release` and `handoff` with no id use the one task the caller holds (`heldTask` in runtime.ts); none or several refuse with exit 2 and list them. Core `parseInput` writes shorter validation text for CLI and MCP. Tests: CLI output.test.ts (held task, refusals, another agent's claim, validation text), core hardening.test.ts (message wording, issues kept). All package tests pass with a long timeout; the 5 s default timed out once in sync fuzz under machine load 38+."
   },
   "createdAt": "2026-11-11T16:42:46.403Z",
   "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
@@ -18,13 +30,14 @@
   "stamps": {
     "*": "2026-11-11T16:42:46.404Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "branch": "2026-11-11T16:42:49.466Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "claim": "2026-11-11T16:42:49.466Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "status": "2026-11-11T16:42:49.466Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-11T16:51:05.137Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-11T16:51:05.137Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-11T16:51:05.137Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "worktree": "2026-11-11T16:42:49.466Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "CLI: omitted task id means the task you hold (release, complete, handoff, show); validation errors worded for people",
-  "updatedAt": "2026-11-11T16:42:49.466Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T16:51:05.138Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

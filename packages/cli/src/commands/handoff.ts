@@ -6,12 +6,13 @@ import {
   type Note,
   resolveId,
   SatiError,
+  shortHandle,
   writeHandoff,
 } from "@sati/core";
 import { defineCommand } from "citty";
-import { id, json } from "../args.js";
+import { json, taskId } from "../args.js";
 import { row } from "../render.js";
-import { execute, list } from "../runtime.js";
+import { execute, heldTask, list } from "../runtime.js";
 
 export default defineCommand({
   meta: {
@@ -19,7 +20,7 @@ export default defineCommand({
     description: "Leave a where-I-stopped note on a task, or read it (no flags)",
   },
   args: {
-    ...id("Task"),
+    ...taskId,
     done: { type: "string", description: "What is already done" },
     next: { type: "string", description: "The next step" },
     questions: { type: "string", description: "Open questions" },
@@ -42,14 +43,15 @@ export default defineCommand({
     return execute(
       args.json,
       async ({ ctx }) => {
-        const taskId = await resolveId(ctx, "task", args.id);
+        const taskId = await heldTask(ctx, args.id);
+        const shown = args.id ?? shortHandle(taskId);
         // With nothing to write, read the handoff: an empty write would wipe the last one.
         if (args.ack || !writing) {
           const notes = await ctx.store.read((r) => listAll(r, ctx, "note"));
           const note = notes.find((n) => n.tags.includes(HANDOFF_TAG) && n.links.includes(taskId));
           if (!note) {
-            throw new SatiError("NOT_FOUND", `Task ${args.id} has no handoff.`, {
-              hint: `Write one with \`${CLI_NAME} handoff ${args.id} --done "..." --next "..."\`.`,
+            throw new SatiError("NOT_FOUND", `Task ${shown} has no handoff.`, {
+              hint: `Write one with \`${CLI_NAME} handoff ${shown} --done "..." --next "..."\`.`,
             });
           }
           return args.ack ? acknowledgeHandoff(ctx, note.id) : note;

@@ -21,9 +21,9 @@ import {
   updateTask,
 } from "@sati/core";
 import { defineCommand } from "citty";
-import { expectedVersion, id, json, pagination } from "../args.js";
+import { expectedVersion, id, json, pagination, taskId } from "../args.js";
 import { record, row, rows } from "../render.js";
-import { bodyText, execute, int, list, parseJson, ref, refs } from "../runtime.js";
+import { bodyText, execute, heldTask, int, list, parseJson, ref, refs } from "../runtime.js";
 import { clean, when } from "../term.js";
 
 const token = {
@@ -221,11 +221,11 @@ const ls = defineCommand({
 
 const show = defineCommand({
   meta: { name: "show", description: "Show one task" },
-  args: { ...id("Task"), ...json },
+  args: { ...taskId, ...json },
   run: ({ args }) =>
     execute(
       args.json,
-      async ({ ctx }) => getRecord(ctx, "task", await resolveId(ctx, "task", args.id)),
+      async ({ ctx }) => getRecord(ctx, "task", await heldTask(ctx, args.id)),
       record,
     ),
 });
@@ -460,7 +460,7 @@ const release = defineCommand({
     description: "Give up a claim (an in_progress task goes back to todo)",
   },
   args: {
-    ...id("Task"),
+    ...taskId,
     force: {
       type: "boolean",
       description: "Release another actor's live claim (people only; logged)",
@@ -471,7 +471,7 @@ const release = defineCommand({
     execute(
       args.json,
       async ({ ctx }) =>
-        releaseTask(ctx, await resolveId(ctx, "task", args.id), { force: args.force ?? false }),
+        releaseTask(ctx, await heldTask(ctx, args.id), { force: args.force ?? false }),
       (t: Task) => `Released ${row(t)}`,
     ),
 });
@@ -505,7 +505,7 @@ const complete = defineCommand({
       "Finish a task with a summary of what changed (an agent's task goes to review when the review setting asks for approval)",
   },
   args: {
-    ...id("Task"),
+    ...taskId,
     summary: { type: "string", required: true, description: "What was done" },
     "release-note": {
       type: "string",
@@ -523,7 +523,7 @@ const complete = defineCommand({
     execute(
       args.json,
       async ({ ctx }) => {
-        const taskId = await resolveId(ctx, "task", args.id);
+        const taskId = await heldTask(ctx, args.id);
         return completeTask(ctx, taskId, {
           summary: args.summary,
           releaseNote: args["release-note"],

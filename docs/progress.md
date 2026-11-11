@@ -2126,3 +2126,10 @@ Task `tsk_fevjbr`.
 - The stray check mark: a rich list that opens with stored text starts with a marker (`LISTED`) that `polish` removes. Only the comment list needed it.
 - Not built, in `docs/ideas.md`: commands that take a task id defaulting to the task you hold.
 
+## 2026-11-11 — 9l: the task you hold, validation text
+
+- An omitted task id means the one task the caller holds: an `in_progress` task whose claim belongs to the caller's actor. 9k left this out because a wrong guess finishes the wrong task. The rule that answers it: exactly one held task, or the command refuses with exit 2 and lists what the caller holds. Another agent's claim never counts.
+- It applies to `task show`, `task complete`, `task release` and `handoff`. `task update` and the rest still need an id: they also work on tasks nobody holds, so there is no obvious default.
+- `Missing <id>` no longer shows for those four commands; the answer is `You hold no task, so say which one.`
+- Validation text changed in the core (`parseInput`), not in the CLI, so MCP callers read the same words. Zod's `Invalid option:` and `Invalid input:` labels are dropped from each issue, option lists read `a, b, c`, an array index is dropped from the field name (`status.0` is `status`), and an empty string says `must not be empty`. The `Invalid input: ` prefix, the `VALIDATION` code, exit 5 and `details.issues` are unchanged.
+- Not done: a test that drives the `task claim --pick` prompt needs a pseudo-terminal, which the test setup does not have; the refusal paths are tested. The fish completion test still skips in CI: installing fish there was not tried, because the script is verified on fish 4.9 only and Ubuntu ships 3.x.

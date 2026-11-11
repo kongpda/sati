@@ -28,6 +28,7 @@ import {
   invalidConfig,
   isSatiError,
   listAll,
+  listTasks,
   type ProcessProbe,
   type Project,
   type ProjectKind,
@@ -40,6 +41,7 @@ import {
   type ServiceContext,
   type StorageAdapter,
   type StoredEntity,
+  shortHandle,
   systemClock,
   withoutStamps,
 } from "@sati/core";
@@ -782,6 +784,27 @@ export async function exportWritten(
 async function paged(text: string): Promise<boolean> {
   const use = pager(text.split("\n").length);
   return use !== null && pipeTo(use, text);
+}
+
+/**
+ * The task a command is about when no id was typed: the one task the caller holds. With none or
+ * several it refuses and lists them, because a guess could finish the wrong task.
+ */
+export async function heldTask(ctx: ServiceContext, typed: string | undefined): Promise<string> {
+  if (typed !== undefined) return resolveId(ctx, "task", typed);
+  const mine = (await listTasks(ctx, { status: ["in_progress"], limit: 500 })).filter(
+    (t) => t.claim?.actorId === ctx.actorId,
+  );
+  const [only] = mine;
+  if (only !== undefined && mine.length === 1) return only.id;
+  if (only === undefined) {
+    throw new SatiError("USAGE", "You hold no task, so say which one.", {
+      hint: `List them with \`${CLI_NAME} task list\`, or claim one with \`${CLI_NAME} next\`.`,
+    });
+  }
+  throw new SatiError("USAGE", `You hold ${mine.length} tasks, so say which one.`, {
+    hint: mine.map((t) => `${shortHandle(t.id)} ${t.title}`).join("; "),
+  });
 }
 
 /** Like `execute`, for commands that run before a project exists (`init`). */

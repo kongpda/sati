@@ -215,7 +215,7 @@ describe("usage errors teach the command", () => {
       sati(dir, "task", "claim", "--help").stdout,
     );
     expect(sati(dir, "help").stdout).toBe(sati(dir, "--help").stdout);
-    expect(sati(dir, "task", "show").stderr).toContain("sati task show <id>");
+    expect(sati(dir, "task", "update").stderr).toContain("sati task update <id>");
     expect(sati(dir, "task", "complete", "x").stderr).toContain("Missing --summary.");
     expect(sati(dir, "--bogus").stderr).toContain("Unknown option --bogus.");
     // Scripts keep the error as JSON.
@@ -229,5 +229,75 @@ describe("usage errors teach the command", () => {
     const dir = await tempRepo();
     expect(sati(dir, "--help").stdout).not.toContain("Exit 5 if a check fails");
     expect(sati(dir, "doctor", "--help").stdout).toContain("Exit 5 if a check fails");
+  });
+});
+
+describe("a task command without an id", () => {
+  interface Task {
+    id: string;
+    status: string;
+  }
+
+  // An agent holds one task at a time, and typing its id again on every command is the long way
+  // round. A guess is not allowed: completing the wrong task loses work.
+  it("uses the one task the caller holds, for show, handoff, complete and release", async () => {
+    const dir = await tempRepo({ init: true });
+    const one = satiJson<Task>(dir, "task", "create", "One").data;
+    const two = satiJson<Task>(dir, "task", "create", "Two").data;
+    expect(sati(dir, "task", "claim", one.id).code).toBe(0);
+
+    expect(satiJson<Task>(dir, "task", "show").data.id).toBe(one.id);
+    expect(sati(dir, "handoff", "--done", "half of it").code).toBe(0);
+    expect(sati(dir, "handoff").stdout).toContain("half of it");
+
+    const done = sati(dir, "task", "complete", "--summary", "shipped", "--files", "a.ts");
+    expect(done.code).toBe(0);
+    expect(satiJson<Task>(dir, "task", "show", one.id).data.status).not.toBe("in_progress");
+    expect(satiJson<Task>(dir, "task", "show", two.id).data.status).toBe("todo");
+
+    expect(sati(dir, "task", "claim", two.id).code).toBe(0);
+    expect(sati(dir, "task", "release").code).toBe(0);
+    expect(satiJson<Task>(dir, "task", "show", two.id).data.status).toBe("todo");
+  });
+
+  it("refuses to guess with no held task, and with several it lists them", async () => {
+    const dir = await tempRepo({ init: true });
+    const one = satiJson<Task>(dir, "task", "create", "One").data;
+    const two = satiJson<Task>(dir, "task", "create", "Two").data;
+
+    const none = sati(dir, "task", "complete", "--summary", "x");
+    expect(none.code).toBe(2);
+    expect(none.stderr).toContain("You hold no task");
+
+    // Another agent's claim is not the caller's: it must not be picked up.
+    expect(run(dir, ["task", "claim", one.id], { SATI_ACTOR: "codex" }).code).toBe(0);
+    expect(sati(dir, "task", "release").code).toBe(2);
+    expect(satiJson<Task>(dir, "task", "show", one.id).data.status).toBe("in_progress");
+
+    expect(sati(dir, "task", "claim", two.id).code).toBe(0);
+    const three = satiJson<Task>(dir, "task", "create", "Three").data;
+    expect(sati(dir, "task", "claim", three.id).code).toBe(0);
+    const several = sati(dir, "task", "release");
+    expect(several.code).toBe(2);
+    expect(several.stderr).toContain("You hold 2 tasks");
+    expect(several.stderr).toContain("Two");
+    expect(several.stderr).toContain("Three");
+    expect(satiJson<Task>(dir, "task", "show", two.id).data.status).toBe("in_progress");
+  });
+});
+
+describe("validation errors", () => {
+  // Zod's own text repeated "Invalid" twice and listed options as "a"|"b".
+  it("name the field and the allowed values once", async () => {
+    const dir = await tempRepo({ init: true });
+    const r = sati(dir, "task", "create", "x", "--priority", "hi");
+    expect(r.code).toBe(5);
+    expect(r.stderr).toContain(
+      "Invalid input: priority: expected one of low, medium, high, urgent",
+    );
+    expect(sati(dir, "task", "list", "--status", "nope").stderr).toContain(
+      "status: expected one of backlog, todo,",
+    );
+    expect(sati(dir, "task", "create", "").stderr).toContain("title: must not be empty");
   });
 });

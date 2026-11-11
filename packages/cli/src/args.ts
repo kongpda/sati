@@ -19,3 +19,12 @@ export const id = (what: string) =>
   ({
     id: { type: "positional", required: true, description: `${what} id or short handle` },
   }) as const;
+
+/** A task id that may be left out by the one who holds a task (see `heldTask`). */
+export const taskId = {
+  id: {
+    type: "positional",
+    required: false,
+    description: "Task id or short handle (default: the one task you hold)",
+  },
+} as const;

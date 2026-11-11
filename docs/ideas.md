@@ -39,6 +39,4 @@ From the 2026-11-10 review (WP10), features rather than bugs:
 - Drop old tombstones: a deleted record stays in `.sati/` for ever so a merge can tell "deleted" from "never seen". After an age every clone has seen (say 180 days), the file could go. Needs a rule for a clone that was offline longer. (From Phase 9f, 2026-11-11.)
 - A line in the brief, and a badge on the board's Memory page, when an approved file changed since its approval. Today `sati card show` and the guard tell; the board shows only that a file is approved.
 - An interactive picker for `task show` with no id. Not for `task claim`: with no id it already claims the top ready task. Completions and the pager from this list were built in 9j.
-- `task release`, `task complete`, `handoff` and `task show` with no id could use the one task the caller holds. Raised in the 9k command-line review; left out because a wrong guess finishes the wrong task.
-- Validation text for people: `--priority hi` answers `Invalid input: priority: Invalid option: expected one of "low"|"medium"|…`. The core writes it for MCP too; a CLI-only wording would need a second formatter.
 

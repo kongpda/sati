@@ -33,6 +33,23 @@ export interface ServiceContext {
 
 export type Verb = (typeof VERBS)[number];
 
+/** `status.0` is the first of the statuses: the name is what the caller typed. */
+const field = (path: readonly PropertyKey[]): string =>
+  path.filter((p) => typeof p !== "number").join(".") || "input";
+
+/**
+ * Zod writes `Invalid option: expected one of "low"|"high"` and `Invalid input: expected string,
+ * received undefined`. The summary already says the input is invalid, so the label goes, and a
+ * list of options reads as a list.
+ */
+const plainIssue = (message: string): string =>
+  message
+    .replace(/^Invalid (?:option|input): /u, "")
+    .replace(/^Too small: expected string to have >=1 characters$/u, "must not be empty")
+    .replace(/^expected one of (.+)$/u, (_, options: string) => {
+      return `expected one of ${options.replaceAll('"', "").split("|").join(", ")}`;
+    });
+
 /**
  * Validates untrusted input; failures become VALIDATION errors listing the first issues.
  * Top-level `undefined` values count as absent, so `{ body: undefined }` gets the default body
@@ -45,7 +62,7 @@ export function parseInput<T extends z.ZodType>(schema: T, input: unknown): z.ou
   const issues = result.error.issues;
   const summary = issues
     .slice(0, 3)
-    .map((i) => `${i.path.join(".") || "input"}: ${i.message}`)
+    .map((i) => `${field(i.path)}: ${plainIssue(i.message)}`)
     .join("; ");
   throw new SatiError("VALIDATION", `Invalid input: ${summary}`, { details: { issues } });
 }

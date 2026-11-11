@@ -9,8 +9,10 @@ import {
   doctorChecks,
   ensureActor,
   importPlan,
+  isSatiError,
   listLocks,
   listRecords,
+  listTasks,
   pathsOverlap,
   releaseExpiredClaims,
   restoreRecord,
@@ -218,5 +220,35 @@ describe("more than 500 active tasks", () => {
     const checks = await doctorChecks(ctx);
     expect(checks.find((c) => c.name === "claims")?.ok).toBe(false);
     expect(await releaseExpiredClaims(ctx)).toHaveLength(502);
+  });
+});
+
+describe("validation messages", () => {
+  // The same text reaches a person at the CLI and an agent over MCP, so it names the field and
+  // the allowed values once, without Zod's labels. The issues stay whole in `details`.
+  it("says the field, the allowed values and nothing twice", async () => {
+    const { ctx } = await setup();
+    const message = async (run: () => Promise<unknown>) => {
+      const err = await run().then(
+        () => undefined,
+        (e: unknown) => e,
+      );
+      if (!isSatiError(err)) throw new Error("expected a SatiError");
+      expect(err.code).toBe("VALIDATION");
+      expect(err.details).toHaveProperty("issues");
+      return err.message;
+    };
+    expect(await message(() => createTask(ctx, { title: "x", priority: "hi" }))).toBe(
+      "Invalid input: priority: expected one of low, medium, high, urgent",
+    );
+    expect(await message(() => listTasks(ctx, { status: ["nope"] }))).toMatch(
+      /^Invalid input: status: expected one of backlog, todo, /u,
+    );
+    expect(await message(() => createTask(ctx, { title: "" }))).toBe(
+      "Invalid input: title: must not be empty",
+    );
+    expect(await message(() => createTask(ctx, {}))).toBe(
+      "Invalid input: title: expected string, received undefined",
+    );
   });
 });

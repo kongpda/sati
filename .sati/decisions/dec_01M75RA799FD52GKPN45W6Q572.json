@@ -1,0 +1,15 @@
+{
+  "consequences": "The `Invalid input: ` prefix, VALIDATION code, exit 5 and `details.issues` are unchanged, so callers that read the code or the issues are not affected; callers that matched the old message text would be. `sati task show` with no id no longer answers `Missing <id>`.",
+  "context": "The 9k command-line review left \"no id means the task you hold\" out, because a wrong guess finishes the wrong task. Validation errors read `Invalid input: priority: Invalid option: expected one of \"low\"|\"medium\"|…`; the core writes that text for the CLI and MCP.",
+  "createdAt": "2026-11-11T16:51:01.033Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "`task show`, `task complete`, `task release` and `handoff` with no id act on the caller's held task only when the caller holds exactly one in_progress task (claim.actorId is the caller). With none or several they refuse with USAGE (exit 2) and list them. Other commands keep a required id. Validation wording changes in core `parseInput` for all callers: Zod's `Invalid option:`/`Invalid input:` labels are dropped per issue, options read `a, b, c`, array indexes leave the field name, an empty string says `must not be empty`. Rejected: a CLI-only formatter (two wordings for one error) and guessing the most recent claim.",
+  "id": "dec_01M75RA799FD52GKPN45W6Q572",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T16:51:01.036Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "An omitted task id means the one task the caller holds; validation text is reworded in the core",
+  "updatedAt": "2026-11-11T16:51:01.033Z",
+  "version": 1
+}

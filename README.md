@@ -231,6 +231,8 @@ If you are an agent working in a repo that uses sati:
 - **Tab completion.** `eval "$(sati completion)"` in your shell profile (bash, zsh; fish:
   `sati completion | source`).
 - **Help anywhere.** `sati help task claim`, `sati task claim --help`, or a group alone (`sati task`).
+- **The task you hold needs no id.** `sati task show`, `sati task complete --summary … --files …`,
+  `sati task release` and `sati handoff` act on it. With no task, or more than one, they ask which.
 - **After you update sati**, run `sati upgrade` in each project.
 - **Never** edit `.sati/` by hand or commit with `--no-verify`.
 

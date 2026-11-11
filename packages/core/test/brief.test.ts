@@ -82,6 +82,27 @@ describe("buildBrief", () => {
     expect(md).not.toContain("A decision");
   });
 
+  // A brief that lists 25 tasks in review and then no ready task tells its reader nothing to do.
+  it("keeps the ready tasks when a long section above them uses up the budget", async () => {
+    const { ctx } = await setup();
+    const long = (i: number) => `${"Long review task title ".repeat(8)}${i}`;
+    for (let i = 0; i < 25; i++) {
+      const t = await claimTask(ctx, (await createTask(ctx, { title: long(i) })).id);
+      await completeTask(ctx, t.id, { summary: "x", filesTouched: ["a"], token: t.claim?.token });
+      await recordDecision(ctx, { title: long(i), decision: "x" });
+    }
+    const ready = [];
+    for (let i = 0; i < 5; i++) ready.push(await createTask(ctx, { title: `Ready ${i}` }));
+    const human = await ensureActor(ctx, { name: "ada@test", kind: "human" });
+    const brief = await buildBrief({ ...ctx, actorId: human.id }, { maxTokens: 600 });
+    expect(brief.tokens).toBeLessThanOrEqual(600);
+    expect(brief.omitted).toBeGreaterThan(0);
+    expect(brief.markdown).toContain("## Waiting for review\n- tsk_");
+    for (const t of ready) expect(brief.markdown).toContain(shortHandle(t.id));
+    // Lower sections keep a couple of lines each instead of a bare "N more left out".
+    expect(brief.markdown).toMatch(/## Decisions, last 7 days\n- dec_/u);
+  });
+
   // The cap is the point of the brief: it must hold however much the project has stored.
   it("stays under the token cap on a large project, trimming the lowest sections first", async () => {
     const { ctx } = await setup();

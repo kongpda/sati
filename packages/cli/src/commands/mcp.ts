@@ -17,6 +17,7 @@ import {
 } from "../runtime.js";
 import { markSeen, watchFolder } from "../shared-folder.js";
 import { readTemplateFiles } from "../templates.js";
+import { warn } from "../term.js";
 
 /**
  * Each write exports only what it touched, so one full export before serving repairs anything an
@@ -28,7 +29,7 @@ import { readTemplateFiles } from "../templates.js";
 async function syncAtStart(ctx: ServiceContext, dir: string): Promise<void> {
   const { exportSnapshot, importSnapshot, refusedError } = await import("@sati/sync");
   const { problems } = await importSnapshot(ctx, dir);
-  for (const p of problems) process.stderr.write(`warning: ${p}\n`);
+  for (const p of problems) warn(p);
   const { refused } = await exportSnapshot(ctx, dir);
   if (refused.length > 0) printError(refusedError(refused), false);
 }

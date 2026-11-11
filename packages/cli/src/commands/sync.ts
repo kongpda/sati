@@ -9,6 +9,7 @@ import {
   snapshotDir,
   writeConfigShare,
 } from "../runtime.js";
+import { warn } from "../term.js";
 
 /** Also the top-level `sati export`. */
 export const exportCmd = defineCommand({
@@ -31,7 +32,7 @@ export const exportCmd = defineCommand({
         // first, so the commit carries it as it is. A refused import throws here and stops the
         // commit: committing over a snapshot that cannot be read spreads it to every clone.
         const { problems } = await importSnapshot(rt.ctx, dir);
-        for (const p of problems) process.stderr.write(`warning: ${p}\n`);
+        for (const p of problems) warn(p);
         const result = await exportSnapshot(rt.ctx, dir);
         // The other records are written; a refused one fails the command, and so the commit.
         if (result.refused.length > 0) throw refusedError(result.refused);

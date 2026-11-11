@@ -4,6 +4,7 @@ import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { pruneProjects, readProjects } from "../projects.js";
 import { output } from "../runtime.js";
+import { bold, dim, red, table, term, tilde } from "../term.js";
 
 export default defineCommand({
   meta: {
@@ -62,8 +63,32 @@ export default defineCommand({
         }
         return rows;
       },
-      (rows) =>
-        rows.length
+      (rows) => {
+        if (rows.length && term().rich) {
+          const head = ["PROJECT", "READY", "DOING", "REVIEW", "FOLDER"].map(dim);
+          const body = rows.map((p) =>
+            p.ready < 0
+              ? [bold(p.slug), red("unreadable"), "", "", tilde(p.root)]
+              : [
+                  bold(p.slug),
+                  String(p.ready),
+                  String(p.inProgress),
+                  String(p.review),
+                  tilde(p.root),
+                ],
+          );
+          const broken = rows.filter((p) => p.ready < 0).length;
+          return [
+            table([head, ...body], { flex: 4, paint: dim }),
+            ...(broken
+              ? [
+                  "",
+                  `${broken} with no readable database. \`${CLI_NAME} projects --prune\` forgets them.`,
+                ]
+              : []),
+          ].join("\n");
+        }
+        return rows.length
           ? rows
               .map((p) =>
                 // `ready` is -1 in JSON when the database did not open. A person gets the reason.
@@ -72,6 +97,7 @@ export default defineCommand({
                   : `${p.slug}  ready ${p.ready}  in_progress ${p.inProgress}  review ${p.review}  ${p.root}`,
               )
               .join("\n")
-          : `No projects yet. Run \`${CLI_NAME} init\`.`,
+          : `No projects yet. Run \`${CLI_NAME} init\`.`;
+      },
     ),
 });

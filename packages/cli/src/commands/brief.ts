@@ -2,6 +2,7 @@ import { type Brief, buildBrief } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { execute } from "../runtime.js";
+import { markdown } from "../term.js";
 
 export default defineCommand({
   meta: { name: "brief", description: "Session-start summary for agents (Markdown)" },
@@ -16,6 +17,6 @@ export default defineCommand({
     execute(
       args.json,
       ({ ctx }) => buildBrief(ctx, { format: args.format }),
-      (b: Brief) => b.markdown.trimEnd(),
+      (b: Brief) => markdown(b.markdown.trimEnd()),
     ),
 });

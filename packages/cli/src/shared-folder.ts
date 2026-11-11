@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ServiceContext } from "@sati/core";
+import { warn } from "./term.js";
 
 /** How often the board and the MCP server look for files a file-sync app brought (ADR 0009). */
 const CHECK_MS = 5000;
@@ -44,7 +45,7 @@ export async function loadFolder(
       mergeCopies: true,
       skipBad: true,
     });
-    for (const p of result.problems) process.stderr.write(`warning: ${p}\n`);
+    for (const p of result.problems) warn(p);
     // A record merged from two edits is a version past both files; write it for the others.
     const { written } = await exportSnapshot(ctx, dir, { only: result.imported });
     // A skipped copy stays unseen, so its warning comes back until someone deletes it.

@@ -225,6 +225,8 @@ If you are an agent working in a repo that uses sati:
 - **Exit codes are stable**: 2 usage, 3 not found, 4 conflict (someone else holds it),
   5 validation, 6 not initialized, 8 invalid status change, 9 ambiguous short id,
   10 guard blocked. Errors print a message and a `hint:` line with the next command to run.
+- **Output follows the reader.** In a terminal: colour, aligned columns and local times. In a
+  pipe: compact lines without colour. `NO_COLOR=1` or `--no-color` turns colour off anywhere.
 - **Never** edit `.sati/` by hand or commit with `--no-verify`.
 
 ## CLI at a glance

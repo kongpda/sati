@@ -2,6 +2,7 @@ import { type Recall, recall } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { execute, int } from "../runtime.js";
+import { markdown } from "../term.js";
 
 export default defineCommand({
   meta: {
@@ -18,6 +19,6 @@ export default defineCommand({
       args.json,
       ({ ctx }) =>
         recall(ctx, { question: args.question, maxTokens: int(args["max-tokens"], "max-tokens") }),
-      (r: Recall) => r.markdown.trimEnd(),
+      (r: Recall) => markdown(r.markdown.trimEnd()),
     ),
 });

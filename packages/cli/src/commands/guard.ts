@@ -26,6 +26,7 @@ import {
   readProjectConfig,
   readStdin,
 } from "../runtime.js";
+import { clean, polish } from "../term.js";
 
 /** `SATI_GUARD=off` lets one blocked run through; the override is logged. */
 const overridden = () => process.env.SATI_GUARD === "off";
@@ -193,7 +194,7 @@ async function runHook(): Promise<void> {
     if (changes.length === 0) return;
     const result = await check(rt, changes, false, false);
     if (result.verdict === "blocked" && !overridden()) {
-      process.stderr.write(`${render(result)}\n`);
+      process.stderr.write(`${clean(render(result))}\n`);
       process.exitCode = 2;
     } else if (result.verdict !== "ok") {
       const hookSpecificOutput = { hookEventName: "PreToolUse", additionalContext: render(result) };
@@ -263,7 +264,9 @@ export default defineCommand({
               return { path, kind: "modified" as const };
             });
       const result = await check(rt, changes, args.staged ?? false, !args.paths);
-      process.stdout.write(asJson ? `${JSON.stringify(result, null, 2)}\n` : `${render(result)}\n`);
+      process.stdout.write(
+        asJson ? `${JSON.stringify(result, null, 2)}\n` : `${polish(clean(render(result)))}\n`,
+      );
       if (result.verdict === "blocked" && !overridden()) {
         process.exitCode = ERROR_EXIT_CODES.BLOCKED;
       }

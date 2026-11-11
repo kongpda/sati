@@ -55,6 +55,7 @@ import {
   writePlanned,
 } from "../integrations.js";
 import { currentBranch, osUser, output, readProjectConfig, writeConfigKind } from "../runtime.js";
+import { warn } from "../term.js";
 
 interface InitPlan {
   mode: Mode;
@@ -365,7 +366,7 @@ export function syncedDbWarning(db: string): string | undefined {
 
 const warnIfSynced = (db: string) => {
   const warning = syncedDbWarning(db);
-  if (warning) process.stderr.write(`warning: ${warning}\n`);
+  if (warning) warn(warning);
 };
 
 function applyUpgrade(p: InitPlan & { upgrade: Project }): UpgradeResult {

@@ -3,6 +3,7 @@ import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { row } from "../render.js";
 import { execute, int } from "../runtime.js";
+import { when } from "../term.js";
 
 export default defineCommand({
   meta: {
@@ -24,7 +25,7 @@ export default defineCommand({
         return { ...next.task, acceptance: next.acceptance };
       },
       (t: Task & { acceptance?: string[] }) =>
-        `Claimed ${row(t)} until ${t.claim?.leaseUntil}, token ${t.claim?.token}${
+        `Claimed ${row(t)} until ${when(t.claim?.leaseUntil)}, token ${t.claim?.token}${
           t.acceptance?.length ? `\n${t.acceptance.map((line) => `- ${line}`).join("\n")}` : ""
         }`,
     ),

@@ -23,6 +23,7 @@ import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
 import { bodyText, execute, int, list, parseJson, ref, refs } from "../runtime.js";
+import { when } from "../term.js";
 
 const token = {
   token: {
@@ -379,7 +380,7 @@ const claim = defineCommand({
         return claimTask(ctx, await resolveId(ctx, "task", args.id), { leaseMinutes });
       },
       (t: Task & { acceptance?: string[] }) =>
-        `Claimed ${row(t)} until ${t.claim?.leaseUntil}, token ${t.claim?.token}${
+        `Claimed ${row(t)} until ${when(t.claim?.leaseUntil)}, token ${t.claim?.token}${
           t.acceptance?.length ? `\n${t.acceptance.map((a) => `- ${a}`).join("\n")}` : ""
         }`,
     ),
@@ -452,7 +453,8 @@ const takeOver = defineCommand({
         takeOverTask(ctx, await resolveId(ctx, "task", args.id), {
           leaseMinutes: int(args.lease, "lease"),
         }),
-      (t: Task) => `Took over ${row(t)} until ${t.claim?.leaseUntil}, token ${t.claim?.token}`,
+      (t: Task) =>
+        `Took over ${row(t)} until ${when(t.claim?.leaseUntil)}, token ${t.claim?.token}`,
     ),
 });
 

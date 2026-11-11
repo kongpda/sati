@@ -365,7 +365,7 @@ The UI is keyboard-first, instant and calm, in the spirit of Linear: you run `sa
 - Time shown as relative ("3 min ago") with the exact time on hover; all timestamps stored in UTC.
 - Fonts that render Khmer correctly (system stack + Noto Sans Khmer fallback), so notes in Khmer display properly.
 
-**Terminal UX:** colour only when the output is a TTY, `--json` for machines, helpful errors that say what to run next ("Task held by codex@feature-b until 14:32. Run `sati task list --ready` for other work."), and exit codes that are documented and stable.
+**Terminal UX:** colour and the aligned layout only when the output is a TTY (a pipe gets compact lines; `NO_COLOR` and `--no-color` are honoured), stored text printed without terminal control characters, `--json` for machines, helpful errors that say what to run next ("Task held by codex@feature-b until 14:32. Run `sati task list --ready` for other work."), and exit codes that are documented and stable.
 
 ## Security
 
@@ -922,6 +922,15 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 - [x] A comment that calls an agent by name (`@claude-code`) shows in that agent's brief until it answers
 - [x] The brief finds a lost claim by asking for the day's imports, not by reading the newest 200 activity rows
 - [x] A mention of an agent ends when any session of that agent answers, not only the session that read it
+
+**9i — Terminal output (owner asked 2026-11-11)**
+
+- [x] For a person (stdout is a terminal): aligned columns cut to the terminal width, colour, symbols, local times, wrapped text, a summary line under `doctor`. Piped output keeps its compact lines, so agents and scripts read what they read before
+- [x] Colour follows `NO_COLOR`, `FORCE_COLOR` and `TERM=dumb`; `--no-color` on every command. Help no longer prints colour codes into a pipe
+- [x] Root help lists the commands in groups, with an alias beside its command; help wraps to the terminal
+- [x] A wrong command word names the right one (`task get` → `task show`); a closed pipe (`sati task list | head`) ends quietly
+- [x] Stored text is printed without terminal control characters and bidirectional overrides, so a title cannot rewrite the screen or the clipboard. `--json` keeps the stored text
+- [x] Brief: every section keeps two lines, and Ready keeps all of its tasks, before any section is trimmed further, so a long review list no longer leaves "Ready" empty
 
 **Not in Phase 9:** registry collisions (two folders with one slug, a copied folder sharing a database) are fixed under task `tsk_01M74P…VB2MP62GRN1XC90AKCE` by another agent.
 

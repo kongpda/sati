@@ -2086,3 +2086,13 @@ Task `tsk_fevjbr`.
 
 - Each agent session is an actor of its own (`claude-code@sati#<session>`), so "done once you answer" never held past one session: the next session got the same mention for 14 days. The brief now counts every agent actor with the same user part of the name as the same agent, for the answer and for who wrote the comment. This replaces the line above that an answer by one session does not clear it for the others.
 - People are not grouped: `ann@laptop` and `ann@office` stay two actors, as on the board.
+
+## 2026-11-11 — 9i: terminal output
+
+- Two layouts, chosen by `stdout.isTTY` (or `FORCE_COLOR`): rich for a person, the old compact lines for a pipe. Agents and scripts read piped output, and the existing CLI tests assert on it, so none of them changed.
+- No new dependency: the colour codes, width (Intl.Segmenter, wide characters count two), wrapping and tables are in `packages/cli/src/term.ts`. Help is rendered by `help.ts` from the citty command definitions; citty still parses arguments. citty's own help printed colour into a pipe, listed 37 commands on one usage line and gave each alias a row.
+- Stored text is cleaned in one place, `output()`, and in error, warning and guard text. `--json` is not cleaned: JSON escapes control characters itself and a script may want the stored value.
+- `sati` with no command still exits 2, now with the grouped help.
+- Brief: `fit()` trims in two passes, first to a floor per section (2 lines; Ready keeps 5), then past it. The cap still holds at 200 tokens (existing test).
+- Cold start: `sati --help` in about 0.1 s on this machine, as before; the help renderer loads only the commands it lists.
+- Not built, in `docs/ideas.md`: shell completions, a pager for long lists, interactive pickers.

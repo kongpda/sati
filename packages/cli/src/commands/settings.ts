@@ -1,7 +1,9 @@
 import { CLI_NAME, readSettings, updateSettings } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
+import { pairs } from "../render.js";
 import { execute, int, writeConfigKind } from "../runtime.js";
+import { term } from "../term.js";
 
 export default defineCommand({
   meta: { name: "settings", description: "Show project settings, or change them with flags" },
@@ -42,7 +44,16 @@ export default defineCommand({
         writeConfigKind(location.root, settings.kind);
         return settings;
       },
-      (settings) =>
-        `kind ${settings.kind}\nreview ${settings.review}\nautoContinue ${settings.autoContinue}\nlease ${settings.leaseMinutes} min`,
+      (settings) => {
+        const fields: [string, string][] = [
+          ["kind", settings.kind],
+          ["review", settings.review],
+          ["autoContinue", String(settings.autoContinue)],
+          ["lease", `${settings.leaseMinutes} min`],
+        ];
+        return term().rich
+          ? pairs(fields, term().width).join("\n")
+          : fields.map(([k, v]) => `${k} ${v}`).join("\n");
+      },
     ),
 });

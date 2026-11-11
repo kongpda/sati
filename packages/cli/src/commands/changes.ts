@@ -3,6 +3,7 @@ import { defineCommand } from "citty";
 import { z } from "zod";
 import { json } from "../args.js";
 import { actorRef, execute } from "../runtime.js";
+import { markdown } from "../term.js";
 
 const Format = z.enum(CHANGE_FORMATS).default("plain");
 
@@ -41,7 +42,11 @@ export default defineCommand({
           actorId: await actorRef(ctx, args.actor),
         });
       },
-      (c: Changes) => formatChanges(c, format).trimEnd(),
+      // A changelog or digest is pasted elsewhere, so only the plain format is laid out.
+      (c: Changes) => {
+        const text = formatChanges(c, format).trimEnd();
+        return format === "plain" ? markdown(text) : text;
+      },
     );
   },
 });

@@ -58,6 +58,7 @@ import { watchedSha256 } from "./file-hash.js";
 import { defaultBase, samePath } from "./git.js";
 import { runHint } from "./install.js";
 import { loadFolder, markSeen } from "./shared-folder.js";
+import { cleanDeep, errorText, polish } from "./term.js";
 
 export interface Runtime {
   ctx: ServiceContext;
@@ -701,8 +702,7 @@ export function printError(err: unknown, json: boolean): number {
     const error = { code: e.code, message: e.message, hint: e.hint ?? null, details: e.details };
     process.stdout.write(`${JSON.stringify({ error }, null, 2)}\n`);
   } else {
-    process.stderr.write(`error: ${e.message}\n`);
-    if (e.hint) process.stderr.write(`hint: ${e.hint}\n`);
+    process.stderr.write(errorText(e.message, e.hint));
     if (!isSatiError(err) && err instanceof Error && err.stack && process.env.SATI_DEBUG) {
       process.stderr.write(`${err.stack}\n`);
     }
@@ -732,7 +732,7 @@ export async function withExport<T>(rt: Runtime, fn: (rt: Runtime) => Promise<T>
   if (!dir) return fn(rt);
   const { afterWrites } = await import("@sati/sync");
   const warn = (err: unknown) => {
-    process.stderr.write("warning: the .sati/ snapshot was not updated.\n");
+    warn("the .sati/ snapshot was not updated.");
     printError(err, false);
   };
   // No git hook loads a teammate's files in a shared folder, so each command looks first.
@@ -740,7 +740,7 @@ export async function withExport<T>(rt: Runtime, fn: (rt: Runtime) => Promise<T>
   const db = rt.location.path;
   if (folder) {
     await loadFolder(rt.ctx, dir, db, (err) => {
-      process.stderr.write("warning: the shared .sati/ folder was not loaded.\n");
+      warn("the shared .sati/ folder was not loaded.");
       printError(err, false);
     });
   }
@@ -786,7 +786,9 @@ export async function output<T>(
 ): Promise<void> {
   try {
     const value = await fn();
-    const text = json ? JSON.stringify(value, withoutStamps, 2) : render(value);
+    // Record text is cleaned of terminal control characters before it is laid out; JSON
+    // escapes them itself.
+    const text = json ? JSON.stringify(value, withoutStamps, 2) : polish(render(cleanDeep(value)));
     // An empty rendering prints nothing at all (a quiet git hook), not a blank line.
     if (text !== "") process.stdout.write(`${text}\n`);
   } catch (err) {

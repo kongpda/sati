@@ -63,4 +63,15 @@ const root = defineCommand({
   },
 });
 
-await main(root);
+await main(root, {
+  groups: {
+    Start: ["init", "brief", "next", "doctor"],
+    Work: ["task", "feature", "milestone", "plan", "template", "handoff", "wait"],
+    Memory: ["note", "comment", "decision", "card", "recall", "search"],
+    "Work together": ["lock", "guard", "review", "scan"],
+    History: ["activity", "changes", "undo"],
+    Project: ["settings", "projects", "ui", "rules", "sync", "export", "import"],
+    "Run by tools": ["mcp", "serve", "nudge", "merge-driver"],
+  },
+  aliases: { context: "card", app: "ui" },
+});

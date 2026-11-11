@@ -75,7 +75,15 @@ interface Section {
   /** Shown when the section has no items, or `null` to hide an empty section. */
   empty: string | null;
   items: string[];
+  /** Items the first trimming pass leaves in place. Defaults to `SECTION_FLOOR`. */
+  keep?: number;
 }
+
+/**
+ * What each section keeps while a longer one above or below it can still give lines up, so
+ * one long list (25 tasks in review) cannot empty every section under it.
+ */
+const SECTION_FLOOR = 2;
 
 /**
  * The session-start brief: who I am, my claimed tasks with their acceptance criteria, ready
@@ -406,6 +414,8 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       title: short ? "Ready (top 3)" : "Ready (top 5)",
       empty: "No ready tasks.",
       items: data.ready.map((t) => taskLine(t)),
+      // What to do next is the reason to read a brief; it goes last of all.
+      keep: 5,
     },
     {
       title: "Knowledge (pinned notes; cards for your tasks)",
@@ -505,8 +515,8 @@ async function decisionsSince(r: StorageReader, ctx: ServiceContext, since: stri
 }
 
 /**
- * Renders the sections, dropping items from the bottom section up until the text fits. If it
- * still does not fit, sections left with no items fold into one closing line, bottom up, since
+ * Renders the sections, dropping items from the bottom section up until the text fits: first
+ * down to each section's floor, then past it. If it still does not fit, sections left with no items fold into one closing line, bottom up, since
  * each would otherwise cost a heading and a "left out" line.
  */
 function fit(header: string[], sections: Section[], maxTokens: number): Brief {
@@ -531,12 +541,16 @@ function fit(header: string[], sections: Section[], maxTokens: number): Brief {
     return `${out.join("\n")}\n`;
   };
   let text = render();
-  for (let i = sections.length - 1; i >= 0 && estimateTokens(text) > maxTokens; i--) {
-    const section = sections[i];
-    if (!section) continue;
-    while ((dropped[i] ?? 0) < section.items.length && estimateTokens(text) > maxTokens) {
-      dropped[i] = (dropped[i] ?? 0) + 1;
-      text = render();
+  // First down to each section's floor, then, only if that was not enough, to nothing.
+  for (const floored of [true, false]) {
+    for (let i = sections.length - 1; i >= 0 && estimateTokens(text) > maxTokens; i--) {
+      const section = sections[i];
+      if (!section) continue;
+      const most = section.items.length - (floored ? (section.keep ?? SECTION_FLOOR) : 0);
+      while ((dropped[i] ?? 0) < most && estimateTokens(text) > maxTokens) {
+        dropped[i] = (dropped[i] ?? 0) + 1;
+        text = render();
+      }
     }
   }
   for (let i = sections.length - 1; i >= 0 && estimateTokens(text) > maxTokens; i--) {

@@ -6,13 +6,17 @@ import {
   reviewDrift,
   SatiError,
   type ServiceContext,
-  shortHandle,
 } from "@sati/core";
 import { defineCommand } from "citty";
 import micromatch from "micromatch";
 import { json } from "../args.js";
 import { defaultBase, rangeChanges, rangeStart } from "../git.js";
+import { handle } from "../render.js";
 import { execute } from "../runtime.js";
+import { bold, green, red, yellow } from "../term.js";
+
+const verdict = (v: string) => (v === "ok" ? green(v) : v === "blocked" ? bold(red(v)) : yellow(v));
+
 import { projectVerdict } from "./guard.js";
 
 const SNAPSHOT = ".sati/";
@@ -104,7 +108,7 @@ export default defineCommand({
           report.features.length
             ? `features:\n${report.features.map((f) => `- ${f.title}`).join("\n")}`
             : "features: none matched",
-          `guard: ${report.guard.verdict} (${report.guard.findings.length} findings)`,
+          `guard: ${verdict(report.guard.verdict)} (${report.guard.findings.length} findings)`,
           // A blocked guard with no reason gives the reviewer nothing to act on.
           ...report.guard.findings.map((f) => `- ${f.level}: ${f.message}`),
           report.decisions.length
@@ -115,7 +119,7 @@ export default defineCommand({
                 `changed after it was sent for approval:\n${report.moved
                   .map(
                     (t) =>
-                      `- ${shortHandle(t.id)} ${t.title}: ${t.branch} ${t.commit?.slice(0, 12)} -> ${t.head?.slice(0, 12)}`,
+                      `- ${handle(t.id)} ${t.title}: ${t.branch} ${t.commit?.slice(0, 12)} -> ${t.head?.slice(0, 12)}`,
                   )
                   .join("\n")}`,
               ]

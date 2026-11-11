@@ -12,7 +12,9 @@ import {
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { fileSha256 } from "../file-hash.js";
+import { handle } from "../render.js";
 import { execute, int, list, parseJson, type Runtime } from "../runtime.js";
+import { bold, dim, green, red, term, wrap, yellow } from "../term.js";
 import { projectPath } from "./guard.js";
 
 /** A card as shown: with how its file compares with the version a person approved. */
@@ -56,9 +58,25 @@ function facts(value: string | undefined): unknown {
 
 const render = (e: Shown) => {
   const lock = `${e.approval ? `  [${APPROVAL[e.approval]}]` : ""}${e.private ? "  (private)" : ""}`;
-  const lines = [`${shortHandle(e.id)}  ${e.path}  [${state(e)}]${lock}`, `  ${e.summary}`];
-  for (const f of e.facts ?? []) lines.push(`  - ${f}`);
-  if (e.tags?.length) lines.push(`  tags: ${e.tags.join(", ")}`);
+  if (!term().rich) {
+    const lines = [`${shortHandle(e.id)}  ${e.path}  [${state(e)}]${lock}`, `  ${e.summary}`];
+    for (const f of e.facts ?? []) lines.push(`  - ${f}`);
+    if (e.tags?.length) lines.push(`  tags: ${e.tags.join(", ")}`);
+    return lines.join("\n");
+  }
+  const max = Math.min(term().width, 120);
+  const mark = e.stale
+    ? yellow(`[${state(e)}]`)
+    : e.stale === false
+      ? green("[fresh]")
+      : dim(`[${state(e)}]`);
+  const alarm = e.approval === "changed" || e.approval === "missing";
+  const lines = [
+    `${handle(e.id)}  ${bold(e.path)}  ${mark}${alarm ? red(lock) : lock}`,
+    wrap(`  ${e.summary}`, max),
+  ];
+  for (const f of e.facts ?? []) lines.push(wrap(`  - ${f}`, max, "  "));
+  if (e.tags?.length) lines.push(dim(`  tags: ${e.tags.join(", ")}`));
   return lines.join("\n");
 };
 
@@ -94,7 +112,7 @@ const get = defineCommand({
       },
       (entries: Shown[]) =>
         entries.length
-          ? entries.map(render).join("\n")
+          ? entries.map(render).join(term().rich ? "\n\n" : "\n")
           : `No cards. Add one with \`${CLI_NAME} card put <path> --summary "…"\`.`,
     ),
 });

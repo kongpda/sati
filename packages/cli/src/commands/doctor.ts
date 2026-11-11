@@ -24,6 +24,7 @@ import { json } from "../args.js";
 import { defaultBase, samePath } from "../git.js";
 import { installedSelf } from "../hooks.js";
 import { runHint } from "../install.js";
+import { checks } from "../render.js";
 import { closeRuntime, execute, openRuntime, output, worktreePaths } from "../runtime.js";
 import { pendingUpgrade, syncedDbWarning } from "./init.js";
 
@@ -272,8 +273,7 @@ export default defineCommand({
           await closeRuntime();
         }
       },
-      (report: { ok: boolean; checks: DoctorCheck[] }) =>
-        report.checks.map((c) => `${c.ok ? "ok" : "fail"} ${c.name}: ${c.detail}`).join("\n"),
+      (report: { ok: boolean; checks: DoctorCheck[] }) => checks(report.checks),
     );
   },
 });

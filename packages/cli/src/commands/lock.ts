@@ -10,11 +10,13 @@ import {
 } from "@sati/core";
 import { defineCommand } from "citty";
 import { id, json } from "../args.js";
+import { handle } from "../render.js";
 import { execute, int, list, ref } from "../runtime.js";
+import { dim, table, term, when, yellow } from "../term.js";
 import { projectPath } from "./guard.js";
 
 const line = (l: Lock) =>
-  `${shortHandle(l.id)}  ${l.mode}  ${l.paths.join(", ")}  by ${shortHandle(l.actorId)} until ${l.leaseUntil}`;
+  `${handle(l.id)}  ${l.mode}  ${l.paths.join(", ")}  by ${shortHandle(l.actorId)} until ${when(l.leaseUntil)}`;
 
 const acquire = defineCommand({
   meta: { name: "acquire", description: "Lock paths so other agents do not edit them" },
@@ -76,10 +78,20 @@ const ls = defineCommand({
     execute(
       args.json,
       async ({ ctx }) => listLocks(ctx),
-      (locks: Lock[]) =>
-        locks.length
-          ? locks.map(line).join("\n")
-          : `No locks. Lock paths with \`${CLI_NAME} lock acquire "src/area/**"\`.`,
+      (locks: Lock[]) => {
+        if (!locks.length)
+          return `No locks. Lock paths with \`${CLI_NAME} lock acquire "src/area/**"\`.`;
+        if (!term().rich) return locks.map(line).join("\n");
+        return table(
+          locks.map((l) => [
+            handle(l.id),
+            l.mode === "exclusive" ? yellow(l.mode) : l.mode,
+            l.paths.join(", "),
+            dim(`by ${shortHandle(l.actorId)} until ${when(l.leaseUntil)}`),
+          ]),
+          { flex: 2 },
+        );
+      },
     ),
 });
 

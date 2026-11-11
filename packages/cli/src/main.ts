@@ -1,6 +1,8 @@
 import { stripVTControlCharacters } from "node:util";
 import { CLI_NAME } from "@sati/core/name";
-import { type CommandDef, runCommand, runMain, showUsage } from "citty";
+import { type CommandDef, runCommand } from "citty";
+import { type HelpLayout, usage } from "./help.js";
+import { errorText, setTerm } from "./term.js";
 
 const HELP = new Set(["--help", "-h"]);
 
@@ -122,24 +124,84 @@ function words(argv: readonly string[]): string[] {
   return argv.slice(0, end === -1 ? argv.length : end);
 }
 
+/** What people type for a command that has another name here. */
+const SYNONYMS: Record<string, string> = {
+  get: "show",
+  view: "show",
+  ls: "list",
+  new: "create",
+  add: "create",
+  rm: "delete",
+  remove: "delete",
+  done: "complete",
+  finish: "complete",
+  edit: "update",
+};
+
+/** The command under `path` closest to the unknown word, for "did you mean". */
+async function nearCommand(
+  root: CommandDef,
+  path: readonly string[],
+  typed: string,
+): Promise<string | undefined> {
+  let cmd = root;
+  for (const word of path) {
+    const subs = (await resolveValue(cmd.subCommands)) as
+      | Record<string, Resolvable<CommandDef>>
+      | undefined;
+    const next = subs?.[word];
+    if (next === undefined) return undefined;
+    cmd = await resolveValue(next);
+  }
+  const names = Object.keys(
+    ((await resolveValue(cmd.subCommands)) as Record<string, unknown> | undefined) ?? {},
+  );
+  const synonym = SYNONYMS[typed];
+  if (synonym !== undefined && names.includes(synonym)) return synonym;
+  const best = names.map((n) => ({ n, d: distance(typed, n) })).sort((a, b) => a.d - b.d)[0];
+  return best && best.d <= 2 ? best.n : undefined;
+}
+
+/** Removes a boolean flag from argv; true if it was there. */
+function takeFlag(argv: string[], flag: string): boolean {
+  const at = argv.indexOf(flag);
+  // After `--`, the word is an argument, not a flag.
+  const end = argv.indexOf("--");
+  if (at === -1 || (end !== -1 && at > end)) return false;
+  argv.splice(at, 1);
+  return true;
+}
+
 /**
- * citty's `runMain` exits 1 on bad usage; sati documents exit code 2 (USAGE) for that, and
- * `--json` callers get the error as JSON. Help and version still go through `runMain`.
+ * Parses and runs. Bad usage exits 2 (USAGE), where citty's own runner exits 1, and `--json`
+ * callers get the error as JSON. Help and the version are printed here, so they need no core.
  */
-export async function main(root: CommandDef): Promise<void> {
+export async function main(root: CommandDef, layout: HelpLayout): Promise<void> {
   const argv = process.argv.slice(2);
+  // `sati task list | head` closes the pipe early; that is not an error.
+  process.stdout.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EPIPE") process.exit(0);
+    throw err;
+  });
+  if (takeFlag(argv, "--no-color")) {
+    process.env.NO_COLOR = "1";
+    setTerm();
+  }
   if (!takeProject(argv)) {
-    process.stderr.write(`error: --project needs a slug.\nhint: Run \`${CLI_NAME} projects\`.\n`);
+    process.stderr.write(errorText("--project needs a slug.", `Run \`${CLI_NAME} projects\`.`));
     process.exitCode = 2;
     return;
   }
-  if (argv.some((a) => HELP.has(a)) || (argv.length === 1 && argv[0] === "--version")) {
-    await runMain(root);
+  if (argv.length === 1 && argv[0] === "--version") {
+    const meta = (await resolveValue(root.meta ?? {})) as { version?: string };
+    process.stdout.write(`${meta.version ?? ""}\n`);
     return;
   }
-  if (argv.length === 0) {
-    await showUsage(root);
-    process.exitCode = 2;
+  if (argv.length === 0 || argv.some((a) => HELP.has(a))) {
+    const path = await commandWords(root, words(argv));
+    process.stdout.write(`${await usage(root, path, layout)}\n`);
+    // Asked-for help is a success; a bare `sati` is a command left unfinished.
+    if (argv.length === 0) process.exitCode = 2;
     return;
   }
   try {
@@ -164,9 +226,14 @@ export async function main(root: CommandDef): Promise<void> {
     const unknown = /^Unknown command (\S+)/u.exec(message)?.[1];
     const at = unknown === undefined ? -1 : typed.indexOf(unknown);
     const known = at === -1 ? await commandWords(root, typed) : typed.slice(0, at);
-    const usage = new SatiError("USAGE", message, {
-      hint: `Run \`${[CLI_NAME, ...known, "--help"].join(" ")}\` for usage.`,
-    });
-    process.exitCode = printError(usage, argv.includes("--json"));
+    const near = unknown === undefined ? undefined : await nearCommand(root, known, unknown);
+    const usageError = new SatiError(
+      "USAGE",
+      near === undefined
+        ? message
+        : `${message}. Did you mean \`${[CLI_NAME, ...known, near].join(" ")}\`?`,
+      { hint: `Run \`${[CLI_NAME, ...known, "--help"].join(" ")}\` for usage.` },
+    );
+    process.exitCode = printError(usageError, argv.includes("--json"));
   }
 }

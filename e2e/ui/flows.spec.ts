@@ -108,10 +108,23 @@ test("creates, edits, filters and bulk-moves tasks", async ({ page }) => {
       .map((t) => t.status);
 
   // A refused move rolls back every card and says why. Two moves fail at once, so a
-  // whole-board rollback from one would bring back the other's refused state.
+  // whole-board rollback from one would bring back the other's refused state. The board no
+  // longer offers a move it knows core refuses, so the refusal here is one it cannot foresee.
   for (const title of titles) await pick(title);
   await expect(page.getByText("2 selected")).toBeVisible();
-  await page.getByLabel("Move selected").selectOption("review");
+  await expect(
+    page.getByLabel("Move selected").locator("option", { hasText: "Waiting for approval" }),
+  ).toHaveCount(0);
+  await page.route("**/api/tasks/*", (route) =>
+    route.request().method() === "PATCH"
+      ? route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "CONFLICT", message: "The store is busy." } }),
+        })
+      : route.fallback(),
+  );
+  await page.getByLabel("Move selected").selectOption("blocked");
   // An error, so it stays until it is closed; the plain toast left after 6 seconds.
   await expect(page.getByRole("alert").locator(".toast")).toContainText(
     "2 of 2 tasks did not move.",
@@ -119,8 +132,9 @@ test("creates, edits, filters and bulk-moves tasks", async ({ page }) => {
   const todo = column(page, "To do");
   for (const title of titles)
     await expect(todo.getByRole("button", { name: title, exact: true })).toBeVisible();
-  await expect(column(page, "Waiting for approval").locator(".card")).toHaveCount(0);
+  await expect(column(page, "Blocked").locator(".card")).toHaveCount(0);
   expect(await statuses()).toEqual(["todo", "todo"]);
+  await page.unroute("**/api/tasks/*");
 
   // An allowed bulk move lands on the server too.
   // Refused tasks stay selected, so the next move applies to them without picking again.

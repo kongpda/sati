@@ -1,9 +1,15 @@
 name: Release
 
-# Manual only while v0.x is for private use (no npm yet). Restore the push trigger and add the
-# NPM_TOKEN secret to publish; see docs/decisions/.
+# Manual only while v0.x is for private use (ADR 0006: no npm yet). A run opens or updates the
+# version pull request and publishes nothing. Publishing is a separate choice: tick `publish`
+# once the NPM_TOKEN secret exists.
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish to npm (needs the NPM_TOKEN secret)
+        type: boolean
+        default: false
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -47,6 +53,11 @@ jobs:
           npx sati --version
           npx sati init --yes
       - uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        if: ${{ !inputs.publish }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        if: ${{ inputs.publish }}
         with:
           publish: pnpm release
         env:

@@ -63,4 +63,37 @@ describe("plain words", () => {
       "Bad date. Use YYYY-MM-DD.",
     );
   });
+
+  // A person reads these on the board: no status ids, record ids or command names.
+  it("puts a refused move in the board's own words", () => {
+    const move = new ApiError(
+      "A task cannot move from in_progress to backlog.",
+      "Allowed from in_progress: todo, review, done, blocked, cancelled.",
+      "INVALID_TRANSITION",
+    );
+    expect(plainError(move)).toBe(
+      "This cannot go from Working on it to Backlog. It can go to To do, Waiting for approval, Done, Blocked, Cancelled.",
+    );
+    const review = new ApiError(
+      "Use complete to send a task to review.",
+      "Complete it: `sati task complete`.",
+      "INVALID_TRANSITION",
+    );
+    expect(plainError(review)).toMatch(/finishes it with a summary/u);
+    expect(plainError(review)).not.toMatch(/complete/u);
+    const taken = new ApiError(
+      "Only a person can take task 01M74PVVB2MP62GRN1XC90AKCE from codex.",
+      "Pick another ready task with `sati task list --ready`.",
+      "CONFLICT",
+    );
+    expect(plainError(taken)).toBe("Only a person can take a task from whoever is working on it.");
+    const waiting = new ApiError(
+      "Task 01M74PVVB2MP62GRN1XC90AKCE is waiting for review.",
+      "A person moves it to done, or back to todo with a reason.",
+      "INVALID_TRANSITION",
+    );
+    expect(plainError(waiting)).toBe(
+      "This task is waiting for review. A person moves it to done, or back to todo with a reason.",
+    );
+  });
 });

@@ -1932,6 +1932,19 @@ Task `tsk_fevjbk`.
 - Not tested: the flush (no test can cut the power); a real failed COMMIT (the test sends the `abort` after a finished transaction, the same server state).
 - Tooling note: `pnpm exec biome` run through the `rtk` hook ended with "Linter process terminated abnormally" on one file; the raw binary checks it clean.
 
+## 2026-11-11 — The board offers only what core accepts
+
+Task `tsk_90akce`, from the owner's report that the board shows an action, lets the user do it and then fails. Checklist: "Board offers actions the server refuses" in `docs/review-followups.md` (B1-B10, R1-R3, O1-O2).
+
+- Rule: the board hides or disables what core will refuse and says why before the click. Core stays the judge; `packages/ui/src/moves.ts` only mirrors its rules, and `constants.test.ts` fails when the copy of `TASK_TRANSITIONS` drifts.
+- Choice: a task held by someone else is locked in the panel also after the claim's time ran out, because core refuses those saves too. Take over or Release unlocks it.
+- Choice: a board started from an agent's terminal is not refused; it shows a banner and offers no person-only action. The snapshot now carries the project's review setting so the board knows when approval needs a person.
+- Choice: person-only buttons that stay visible are disabled with the reason as their tooltip; the banner gives the same reason to keyboard and screen-reader users.
+- Tests: `packages/ui/test/moves.test.ts`, and `e2e/ui/refusals.spec.ts` (a refused drop sends no request; panel options; send-back reason; locked panel; bulk reasons; comment tag; an agent-run board). The old bulk-move rollback test now gets its refusal from a stubbed 409, since the board no longer offers a move it knows will fail.
+- Test runs put their temp folders under one run folder in `/tmp` and remove it at the end (`scripts/test-tmp.ts`). `/tmp`, not the per-user temp folder, keeps Unix socket paths short on macOS.
+- `release.yml` publishes only when the `publish` input is ticked; CI lints and typechecks on one matrix cell.
+- Not done: removing the roughly 12,000 folders earlier test runs left in `/tmp` (owner's call); the MCP config and hook `sh` syntax on Windows (needs a Windows machine); sharing build output between CI jobs.
+
 ## 2026-11-11 — Phase 9c: cards
 
 Task `tsk_fevjbm`.

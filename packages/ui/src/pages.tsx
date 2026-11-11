@@ -17,6 +17,7 @@ import {
   PlanSelect,
 } from "./forms.js";
 import { Markdown } from "./markdown.js";
+import { canTakeOver, claimRefusal, heldByOther, moveTargets, needsReason } from "./moves.js";
 import { Avatar, holderName, nameOf, personName } from "./people.js";
 import { isThreadNote, Thread, threadOf } from "./thread.js";
 import { Ago } from "./time.js";
@@ -80,6 +81,9 @@ export function Agents({
                   <button
                     type="button"
                     aria-label={`Release ${t.title}`}
+                    // Only a person ends someone else's live claim; the banner says how.
+                    disabled={t.claim !== null && claimRefusal(data, t.claim) !== null}
+                    title={(t.claim && claimRefusal(data, t.claim)) ?? undefined}
                     onClick={() => onReleaseTask(t.id)}
                   >
                     Release
@@ -642,12 +646,12 @@ const valuesOf = (t: Task) => ({
   assigneeIds: t.assigneeIds ?? [],
 });
 
-const EDITABLE = ["backlog", "todo", "in_progress", "review", "blocked", "cancelled"];
+const STATUS_ORDER = ["backlog", "todo", "in_progress", "review", "blocked", "done", "cancelled"];
 
 /** A person approves work in review by moving it to done; done is otherwise read-only here. */
-function statusOptions(status: string): string[] {
-  if (status === "review") return [...EDITABLE, "done"];
-  return EDITABLE.includes(status) ? EDITABLE : [status, ...EDITABLE];
+function statusOptions(data: Snapshot, task: Task): string[] {
+  const open = new Set([task.status, ...moveTargets(data, task)]);
+  return STATUS_ORDER.filter((s) => open.has(s));
 }
 
 /** Keep this keyed by task id: it moves focus into the dialog on open and back on close. */
@@ -709,6 +713,8 @@ export function TaskSheet({
   // changed, and Save sends only the fields the person changed since the form loaded.
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  // The status picked in the form, with the form it was picked in: a reloaded form starts over.
+  const [picked, setPicked] = useState<{ form: number; status: string } | null>(null);
   // The body shows rendered until the person chooses to edit it (owner decision, review 6.2).
   const [editingBody, setEditingBody] = useState(false);
   const bodyField = useRef<HTMLTextAreaElement>(null);
@@ -754,6 +760,10 @@ export function TaskSheet({
   }
   const base = formKey.current.base ?? task;
   const feature = data.features.find((f) => f.id === task.featureId);
+  // Core refuses every save on a task someone else holds, so the form says so instead of failing.
+  const locked = heldByOther(data, task);
+  const sendsBack =
+    picked !== null && picked.form === formKey.current.n && needsReason(task, picked.status);
   // Someone else's live claim is ended with Take over or Release first, not deleted under them.
   const held =
     task.claim !== null &&
@@ -792,6 +802,7 @@ export function TaskSheet({
         <ClaimBox
           data={data}
           claim={task.claim}
+          takeOver={canTakeOver(task)}
           onRelease={(force) => onRelease(task.id, force)}
           onTakeOver={() => onTakeOver(task.id)}
         />
@@ -846,6 +857,9 @@ export function TaskSheet({
             setDirty(false);
             return;
           }
+          if (typeof patch.status === "string" && needsReason(task, patch.status)) {
+            patch.reason = String(form.get("reason") ?? "").trim();
+          }
           setSaving(true);
           // Both changed the same field: the version the form loaded makes the server refuse
           // it, so neither edit is lost without a word.
@@ -865,6 +879,7 @@ export function TaskSheet({
               };
               setDirty(false);
               setEditingBody(false);
+              setPicked(null);
               onToast("Saved");
               refocus.current = true;
             })
@@ -872,63 +887,86 @@ export function TaskSheet({
             .finally(() => setSaving(false));
         }}
       >
-        <input className="field" name="title" defaultValue={task.title} aria-label="Title" />
-        <div className="sheet-details">
-          <h3>Details</h3>
-          {editingBody || !task.body.trim() ? (
-            <textarea
-              ref={bodyField}
-              className="field"
-              name="body"
-              rows={8}
-              defaultValue={task.body}
-              aria-label="Body"
-            />
-          ) : (
-            <>
-              <Markdown source={task.body} />
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingBody(true);
-                  requestAnimationFrame(() => bodyField.current?.focus());
-                }}
-              >
-                Edit details
-              </button>
-            </>
-          )}
-        </div>
-        <label className="sheet-label">
-          Due date
-          <input className="field" type="date" name="dueDate" defaultValue={task.dueDate ?? ""} />
-        </label>
-        <EffortSelect className="sheet-label" chosen={task.effort ?? null} />
-        {data.milestones.length > 0 ? (
-          <PlanSelect className="sheet-label" data={data} chosen={task.milestoneId ?? null} />
-        ) : null}
-        <Assignees data={data} chosen={task.assigneeIds ?? []} />
-        <label className="sheet-label sheet-status">
-          Status
-          <select name="status" defaultValue={task.status}>
-            {statusOptions(task.status).map((s) => (
-              <option key={s} value={s}>
-                {statusWord(s)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="submit" className="primary" disabled={saving} ref={saveButton}>
-          {saving ? "Saving…" : "Save"}
-        </button>
+        <fieldset className="sheet-lock" disabled={locked}>
+          <input
+            className="field"
+            name="title"
+            defaultValue={task.title}
+            aria-label="Title"
+            required
+            maxLength={300}
+          />
+          <div className="sheet-details">
+            <h3>Details</h3>
+            {editingBody || !task.body.trim() ? (
+              <textarea
+                ref={bodyField}
+                className="field"
+                name="body"
+                rows={8}
+                defaultValue={task.body}
+                aria-label="Body"
+              />
+            ) : (
+              <>
+                <Markdown source={task.body} />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingBody(true);
+                    requestAnimationFrame(() => bodyField.current?.focus());
+                  }}
+                >
+                  Edit details
+                </button>
+              </>
+            )}
+          </div>
+          <label className="sheet-label">
+            Due date
+            <input className="field" type="date" name="dueDate" defaultValue={task.dueDate ?? ""} />
+          </label>
+          <EffortSelect className="sheet-label" chosen={task.effort ?? null} />
+          {data.milestones.length > 0 ? (
+            <PlanSelect className="sheet-label" data={data} chosen={task.milestoneId ?? null} />
+          ) : null}
+          <Assignees data={data} chosen={task.assigneeIds ?? []} />
+          <label className="sheet-label sheet-status">
+            Status
+            <select
+              name="status"
+              defaultValue={task.status}
+              onChange={(e) =>
+                setPicked({ form: formKey.current.n, status: e.currentTarget.value })
+              }
+            >
+              {statusOptions(data, task).map((s) => (
+                <option key={s} value={s}>
+                  {statusWord(s)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" className="primary" disabled={saving} ref={saveButton}>
+            {saving ? "Saving…" : "Save"}
+          </button>
+          {sendsBack ? (
+            <label className="sheet-label">
+              What still needs doing
+              <input className="field" name="reason" required maxLength={2000} />
+            </label>
+          ) : null}
+        </fieldset>
       </form>
-      <Checklist
-        version={task.version}
-        items={task.checklist ?? []}
-        onChange={(checklist, expectedVersion) => onSave(task.id, { checklist, expectedVersion })}
-        onDraft={setStepDraft}
-        onRemoved={(text, undo) => onToast(`Removed the step ${text}.`, undo)}
-      />
+      <fieldset className="bare" disabled={locked}>
+        <Checklist
+          version={task.version}
+          items={task.checklist ?? []}
+          onChange={(checklist, expectedVersion) => onSave(task.id, { checklist, expectedVersion })}
+          onDraft={setStepDraft}
+          onRemoved={(text, undo) => onToast(`Removed the step ${text}.`, undo)}
+        />
+      </fieldset>
       {feature && feature.acceptance.length > 0 ? (
         <>
           <h3>Acceptance</h3>
@@ -1156,11 +1194,14 @@ function Checklist({
 function ClaimBox({
   data,
   claim,
+  takeOver,
   onRelease,
   onTakeOver,
 }: {
   data: Snapshot;
   claim: { actorId: string; leaseUntil: string };
+  /** False where the task cannot be claimed again (blocked, in review): then only Release ends it. */
+  takeOver: boolean;
   onRelease: (force: boolean) => void;
   onTakeOver: () => void;
 }) {
@@ -1172,6 +1213,8 @@ function ClaimBox({
       {untilTime(claim.leaseUntil)}
     </time>
   );
+  // Core lets only a person end someone else's live claim; a claim that ran out is anyone's.
+  const agentOnly = claimRefusal(data, claim);
   const confirmed = (action: string) =>
     !live ||
     window.confirm(
@@ -1184,19 +1227,28 @@ function ClaimBox({
         {live ? null : `${mine ? "Your" : `${name}'s`} time on this ran out at `}
         {until}.
       </p>
-      <div className="claim-actions">
-        {mine ? null : (
-          <button type="button" onClick={() => confirmed("Take this over") && onTakeOver()}>
-            Take over
+      {mine ? null : (
+        <p className="claim-note">
+          It cannot be changed here until {name} releases it
+          {agentOnly ? "." : takeOver ? " or you take it over." : " or you release it."}
+          {agentOnly ? ` Only a person can take it from them. ${agentOnly}` : ""}
+        </p>
+      )}
+      {agentOnly ? null : (
+        <div className="claim-actions">
+          {mine || !takeOver ? null : (
+            <button type="button" onClick={() => confirmed("Take this over") && onTakeOver()}>
+              Take over
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => (mine || confirmed("Release this")) && onRelease(!mine)}
+          >
+            Release
           </button>
-        )}
-        <button
-          type="button"
-          onClick={() => (mine || confirmed("Release this")) && onRelease(!mine)}
-        >
-          Release
-        </button>
-      </div>
+        </div>
+      )}
     </section>
   );
 }

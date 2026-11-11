@@ -25,13 +25,18 @@ export interface Ui {
   env: Record<string, string>;
   /** Runs the CLI in the repo and returns parsed `--json` output. */
   sati: <T>(...args: string[]) => T;
+  /** The same, as another actor: an agent's session, or a second person. */
+  as: (actor: string, kind: "agent" | "person") => <T>(...args: string[]) => T;
   /** Calls the REST API with the session cookie, as the page would. */
   api: <T>(method: string, path: string, body?: unknown) => Promise<T>;
   stop: () => Promise<void>;
 }
 
-/** A fresh git repo with `sati init`, and `sati ui --no-open` serving it on a free port. */
-export async function startUi(): Promise<Ui> {
+/**
+ * A fresh git repo with `sati init`, and `sati ui --no-open` serving it on a free port. The board
+ * runs as a person unless `runAs` names an agent's session, as when an agent starts it.
+ */
+export async function startUi(runAs?: { agent: string }): Promise<Ui> {
   if (!existsSync(bin)) throw new Error(`Build the CLI first (pnpm build): ${bin} is missing.`);
   const repo = realpathSync.native(mkdtempSync(join(tmpdir(), "sati-ui-")));
   // `open` and `xdg-open` stand-ins record any launch: `sati ui --no-open` must never open a tab.
@@ -42,22 +47,23 @@ export async function startUi(): Promise<Ui> {
     writeFileSync(join(fakeBin, name), `#!/bin/sh\necho "$@" >> '${launched}'\n`);
     chmodSync(join(fakeBin, name), 0o755);
   }
+  const registry = mkdtempSync(join(tmpdir(), "sati-registry-"));
   const env = {
     ...process.env,
     PATH: `${fakeBin}${delimiter}${process.env.PATH ?? ""}`,
     // `sati init` chains into `core.hooksPath`; keep the developer's global git config out of it.
     GIT_CONFIG_GLOBAL: devNull,
     GIT_CONFIG_NOSYSTEM: "1",
-    SATI_ACTOR: "playwright",
+    SATI_ACTOR: runAs?.agent ?? "playwright",
     // Keep these temp repos out of the developer's ~/.sati/projects.json (review 5.7).
-    SATI_REGISTRY: join(mkdtempSync(join(tmpdir(), "sati-registry-")), "projects.json"),
-    CLAUDECODE: "",
+    SATI_REGISTRY: join(registry, "projects.json"),
+    CLAUDECODE: runAs ? "1" : "",
     AI_AGENT: "",
   };
-  const run = (cmd: string, args: string[]) =>
+  const run = (cmd: string, args: string[], more: Record<string, string> = {}) =>
     execFileSync(cmd, args, {
       cwd: repo,
-      env,
+      env: { ...env, ...more },
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -65,6 +71,15 @@ export async function startUi(): Promise<Ui> {
   run(process.execPath, [bin, "init", "--yes", "--tools", ""]);
   const sati = <T>(...args: string[]): T =>
     JSON.parse(run(process.execPath, [bin, ...args, "--json"])) as T;
+  const as =
+    (actor: string, kind: "agent" | "person") =>
+    <T>(...args: string[]): T =>
+      JSON.parse(
+        run(process.execPath, [bin, ...args, "--json"], {
+          SATI_ACTOR: actor,
+          CLAUDECODE: kind === "agent" ? "1" : "",
+        }),
+      ) as T;
 
   const child: ChildProcess = spawn(process.execPath, [bin, "ui", "--no-open"], {
     cwd: repo,
@@ -109,8 +124,9 @@ export async function startUi(): Promise<Ui> {
     }
     const opened = existsSync(launched);
     rmSync(repo, { recursive: true, force: true });
+    rmSync(registry, { recursive: true, force: true });
     if (opened) throw new Error("`sati ui --no-open` launched a browser.");
   };
   const set = Object.entries(env).filter((e): e is [string, string] => e[1] !== undefined);
-  return { origin, signIn, repo, env: Object.fromEntries(set), sati, api, stop };
+  return { origin, signIn, repo, env: Object.fromEntries(set), sati, as, api, stop };
 }

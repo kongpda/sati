@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { type Actor, api, type ProjectKind, type Snapshot } from "./api.js";
 import { FormDialog } from "./forms.js";
+import { personOnly } from "./moves.js";
 import { Avatar, COLORS, colorOf, initialsOf, personName } from "./people.js";
 
 const COLOR_NAMES: Record<string, string> = {
@@ -113,6 +114,9 @@ export function Settings({
               <button
                 type="button"
                 aria-label={`Edit ${personName(p)}`}
+                // Core lets only a person change how people are shown.
+                disabled={personOnly(data) !== null}
+                title={personOnly(data) ?? undefined}
                 onClick={() => setEditing(p)}
               >
                 Edit

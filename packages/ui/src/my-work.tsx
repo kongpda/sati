@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from "react";
 import { dueLabel, type Snapshot, type Task, today, waitingOn } from "./api.js";
+import { answerRefusal, moveRefusal } from "./moves.js";
 import { holderName, knownName } from "./people.js";
 import { capital, statusWord } from "./words.js";
 
@@ -204,6 +205,7 @@ function Needs({
   const who = holderName(data, task.claim?.actorId);
   // One click at a time: a second request would be refused and shown as an error.
   const [busy, setBusy] = useState(false);
+  const refused = answerRefusal(data, task);
   return (
     <Row data={data} task={task} onOpen={onOpen}>
       {waiting ? (
@@ -220,7 +222,8 @@ function Needs({
             <button
               type="button"
               aria-label={`${task.title}: I answered`}
-              disabled={busy}
+              disabled={busy || refused !== null}
+              title={refused ?? undefined}
               onClick={() => {
                 setBusy(true);
                 void onAnswered(task).finally(() => setBusy(false));
@@ -259,6 +262,9 @@ function Approval({
   const by = task.completion ? knownName(data, task.completion.completedBy) : null;
   const files = task.completion?.filesTouched.length ?? 0;
   const drift = data.drift?.[task.id];
+  // Known before the click: an agent-run board cannot approve, and a held task takes no save.
+  const noApprove = moveRefusal(data, task, "done");
+  const noSendBack = moveRefusal(data, task, "todo");
   return (
     <Row data={data} task={task} onOpen={onOpen}>
       {task.completion ? (
@@ -307,7 +313,8 @@ function Approval({
             className="primary"
             // The name starts with the visible text, so voice control finds it (WCAG 2.5.3).
             aria-label={`${drift?.moved ? "Approve latest" : "Approve"}: ${task.title}`}
-            disabled={busy}
+            disabled={busy || noApprove !== null}
+            title={noApprove ?? undefined}
             onClick={() => {
               setBusy(true);
               void onApprove(task).finally(() => setBusy(false));
@@ -318,6 +325,8 @@ function Approval({
           <button
             type="button"
             aria-label={`Send back ${task.title}`}
+            disabled={noSendBack !== null}
+            title={noSendBack ?? undefined}
             onClick={() => setSending(true)}
           >
             Send back…

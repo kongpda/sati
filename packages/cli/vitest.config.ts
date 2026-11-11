@@ -16,6 +16,7 @@ export default defineConfig({
   test: {
     testTimeout: process.platform === "win32" || process.env.CI ? 30_000 : 5_000,
     setupFiles: ["test/setup-registry.ts"],
+    globalSetup: ["../../scripts/test-tmp.ts"],
     env: {
       GIT_CONFIG_GLOBAL: emptyGitConfig,
       GIT_CONFIG_NOSYSTEM: "1",

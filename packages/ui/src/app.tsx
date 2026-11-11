@@ -11,8 +11,9 @@ import {
 } from "./api.js";
 import { Board, boardOrder } from "./board.js";
 import { Changes } from "./changes.js";
-import { NewTask } from "./forms.js";
+import { NewTask, SendBack } from "./forms.js";
 import { Memory } from "./memory.js";
+import { heldByOther, moveRefusal, moveTargets, needsReason, personOnly } from "./moves.js";
 import { MyWork } from "./my-work.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
 import { holderName } from "./people.js";
@@ -93,6 +94,12 @@ export function App() {
   );
   const [palette, setPalette] = useState(false);
   const [creating, setCreating] = useState(false);
+  /** Tasks on their way back from review, held until the person says what still needs doing. */
+  const [sendingBack, setSendingBack] = useState<{
+    ids: string[];
+    status: string;
+    bulk: boolean;
+  } | null>(null);
   const [offline, setOffline] = useState(false);
   /** The session cookie was refused (the board server restarted): updates will not come back. */
   const [expired, setExpired] = useState(false);
@@ -317,9 +324,14 @@ export function App() {
    * move of the same card waits for the first: sent at once, it carried the version from
    * before the first move and the server refused it as a conflict.
    */
-  function move(id: string, status: string, onFail?: (reason: string) => void): Promise<boolean> {
+  function move(
+    id: string,
+    status: string,
+    onFail?: (reason: string) => void,
+    reason?: string,
+  ): Promise<boolean> {
     const run = (moveQueue.current.get(id) ?? Promise.resolve(true)).then(() =>
-      moveNow(id, status, onFail),
+      moveNow(id, status, onFail, reason),
     );
     moveQueue.current.set(id, run);
     void run.finally(() => {
@@ -332,16 +344,15 @@ export function App() {
     id: string,
     status: string,
     onFail?: (reason: string) => void,
+    reason?: string,
   ): Promise<boolean> {
     const current = client.getQueryData<Snapshot>(["snapshot"]);
     const item = current?.tasks.find((t) => t.id === id);
-    if (!item || item.status === status) return false;
-    // A person approves work waiting in review; anything else reaches done through
-    // `task complete`, which records the summary and the files.
-    if (status === "done" && item.status !== "review") {
-      (onFail ?? setToast)(
-        "Only work waiting for approval can be moved to Done. Whoever does the task finishes it with a summary.",
-      );
+    if (!current || !item || item.status === status) return false;
+    // What core is certain to refuse is not sent: the card would jump to the column and back.
+    const refusal = moveRefusal(current, item, status);
+    if (refusal) {
+      (onFail ?? ((message: string) => setToastState({ message, error: true })))(refusal);
       return false;
     }
     // A refetch already in flight would overwrite the optimistic status with the old one.
@@ -354,7 +365,8 @@ export function App() {
       const updated = await api.patchTask(id, {
         status,
         expectedVersion: item.version,
-        ...(status === "done" && current ? approvedCommit(current, id) : {}),
+        ...(reason ? { reason } : {}),
+        ...(status === "done" ? approvedCommit(current, id) : {}),
       });
       // The refetch waits for the other moves; a queued move of this card needs the version now.
       client.setQueryData<Snapshot>(["snapshot"], (snap) =>
@@ -391,26 +403,42 @@ export function App() {
     }
   }
 
-  async function moveSelected(status: string) {
-    const ids = [...selected];
-    // Say why once: the tasks usually fail for the same reason.
-    let reason = "";
+  /**
+   * Moves the tasks and says what did not move, each reason once with how many tasks it stopped.
+   * Tasks already in the column are left out of the count.
+   */
+  async function moveMany(ids: string[], status: string, bulk: boolean, reason?: string) {
+    const why = new Map<string, number>();
     const results = await Promise.all(
       ids.map((id) =>
-        move(id, status, (why) => {
-          reason ||= why;
-        }),
+        move(id, status, (message) => why.set(message, (why.get(message) ?? 0) + 1), reason),
       ),
     );
     const failed = ids.filter((_, i) => !results[i]);
-    setSelected(new Set(failed));
-    if (failed.length > 0) {
-      // An error toast stays until it is closed; the plain one is gone after 6 seconds.
-      setToastState({
-        message: `${failed.length} of ${ids.length} tasks did not move. ${reason}`.trim(),
-        error: true,
-      });
-    }
+    if (bulk) setSelected(new Set(failed));
+    if (why.size === 0) return;
+    const stopped = [...why.values()].reduce((a, b) => a + b, 0);
+    const reasons = [...why].map(([message, n]) =>
+      why.size === 1 ? message : `${n} ${n === 1 ? "task" : "tasks"}: ${message}`,
+    );
+    // An error toast stays until it is closed; the plain one is gone after 6 seconds.
+    setToastState({
+      message: !bulk
+        ? (reasons[0] ?? "")
+        : `${stopped} of ${ids.length} tasks did not move. ${reasons.join(" ")}`,
+      error: true,
+    });
+  }
+
+  /** A move from a drag or the bulk menu. Work sent back from review asks for the reason first. */
+  function requestMove(ids: string[], status: string, bulk = false) {
+    const current = client.getQueryData<Snapshot>(["snapshot"]);
+    const asks = ids.some((id) => {
+      const item = current?.tasks.find((t) => t.id === id);
+      return current && item && needsReason(item, status) && !moveRefusal(current, item, status);
+    });
+    if (asks) setSendingBack({ ids, status, bulk });
+    else void moveMany(ids, status, bulk);
   }
 
   useEffect(() => {
@@ -491,6 +519,16 @@ export function App() {
   }, [toast, setToast]);
 
   const general = query.data?.project?.kind === "general";
+  // Where the bulk menu may send the selection: any column at least one selected task can reach.
+  const bulkTargets = useMemo(() => {
+    const snap = query.data;
+    const targets = new Set<string>();
+    if (!snap || selected.size === 0) return targets;
+    for (const t of snap.tasks) {
+      if (selected.has(t.id)) for (const to of moveTargets(snap, t)) targets.add(to);
+    }
+    return targets;
+  }, [query.data, selected]);
   // A general project shows no features or file reservations anywhere, even ones left over
   // from when it was a code project; they stay in the store and come back if it switches back.
   // Memoised: a new object each render would re-render the memoised board on every keystroke.
@@ -533,8 +571,8 @@ export function App() {
     .slice(0, 3);
 
   // Stable handlers, so a memoised card re-renders only when its own task changes.
-  const latest = useRef({ data, move });
-  latest.current = { data, move };
+  const latest = useRef({ data, requestMove });
+  latest.current = { data, requestMove };
   const openTask = useCallback((id: string) => go("/", id), [go]);
   const toggle = useCallback(
     (id: string) =>
@@ -557,8 +595,16 @@ export function App() {
     },
     [client, fail],
   );
+  const refusal = useCallback(
+    (t: Task, status: string) => (data ? moveRefusal(data, t, status) : null),
+    [data],
+  );
+  const heldBy = useCallback(
+    (t: Task) => (data && heldByOther(data, t) ? holderName(data, t.claim?.actorId) : null),
+    [data],
+  );
   const moveCard = useCallback((id: string, status: string) => {
-    void latest.current.move(id, status);
+    latest.current.requestMove([id], status);
   }, []);
 
   // While New task, Search or (on a narrow screen) the task panel is open, the page behind it
@@ -566,7 +612,7 @@ export function App() {
   // A wide screen shows the panel beside the board, which stays usable: click another card to
   // switch tasks.
   const sheetOpen = task !== null && !!data?.tasks.some((t) => t.id === task);
-  const dialog = creating || palette;
+  const dialog = creating || palette || sendingBack !== null;
   const modal = dialog || (sheetOpen && !wide);
 
   return (
@@ -634,6 +680,12 @@ export function App() {
         ) : offline ? (
           <p className="banner" role="status">
             Live updates disconnected. Reconnecting…
+          </p>
+        ) : null}
+        {data && personOnly(data) ? (
+          <p className="banner" role="status">
+            {personOnly(data)?.replace(" to do this.", "")} to approve work, take over a task or
+            change how people are shown.
           </p>
         ) : null}
         {data?.truncated && data.truncated.length > 0 ? (
@@ -719,16 +771,22 @@ export function App() {
                     const status = e.target.value;
                     e.target.value = "";
                     if (!status) return;
-                    void moveSelected(status);
+                    requestMove([...selected], status, true);
                   }}
                 >
                   <option value="">Move to…</option>
-                  {COLUMNS.filter(([id]) => id !== "done").map(([id, label]) => (
-                    <option key={id} value={id}>
-                      {label}
-                    </option>
-                  ))}
+                  {/* Only where at least one selected task can go; the rest say why they stayed. */}
+                  {COLUMNS.filter(([id]) => id !== "done" && bulkTargets.has(id)).map(
+                    ([id, label]) => (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    ),
+                  )}
                 </select>
+                {bulkTargets.size === 0 ? (
+                  <span className="hint">None of these can be moved from here.</span>
+                ) : null}
               </div>
             ) : null}
             {!data ? null : data.tasks.length === 0 ? (
@@ -751,6 +809,8 @@ export function App() {
                 onToggle={toggle}
                 onReviewed={reviewed}
                 onMove={moveCard}
+                refusal={refusal}
+                heldBy={heldBy}
               />
             )}
           </>
@@ -966,6 +1026,20 @@ export function App() {
             setCreating(false);
             setToast(`Created ${created.title}.`);
             void client.invalidateQueries({ queryKey: ["snapshot"] });
+          }}
+        />
+      ) : null}
+      {sendingBack && data ? (
+        <SendBack
+          titles={sendingBack.ids.flatMap((id) => {
+            const t = data.tasks.find((x) => x.id === id);
+            return t && needsReason(t, sendingBack.status) ? [t.title] : [];
+          })}
+          onClose={() => setSendingBack(null)}
+          onSend={async (reason) => {
+            const { ids, status, bulk } = sendingBack;
+            setSendingBack(null);
+            await moveMany(ids, status, bulk, reason);
           }}
         />
       ) : null}

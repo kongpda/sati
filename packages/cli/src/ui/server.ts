@@ -295,6 +295,8 @@ async function snapshot(rt: UiRuntime, version: () => number) {
           name: project.name,
           slug: project.slug,
           kind: readSettings(project.settings).kind,
+          // The board hides Approve from an agent only while the gate is on.
+          review: readSettings(project.settings).review,
         }
       : null,
     you: ctx.actorId,

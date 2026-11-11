@@ -194,6 +194,10 @@ textarea {
   background: color-mix(in srgb, var(--panel) 70%, transparent);
   border-radius: 10px;
 }
+/* While a card is dragged, the columns it cannot go to step back. */
+.column.closed {
+  opacity: 0.45;
+}
 .column h2 {
   font-size: 13px;
   font-weight: 600;
@@ -911,8 +915,25 @@ button.danger {
 .sheet form .sheet-label.sheet-status {
   grid-column: auto;
 }
-.sheet form > button[type="submit"] {
+.sheet form .sheet-lock > button[type="submit"] {
   align-self: end;
+}
+/* Wraps the task form so one attribute locks it; lays out as the form's own grid. */
+.sheet form .sheet-lock {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.sheet-lock,
+fieldset.bare {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-inline-size: 0;
+}
+.claim-note {
+  color: var(--muted);
+  font-size: 14px;
 }
 .sheet-meta {
   margin: -6px 0 8px;

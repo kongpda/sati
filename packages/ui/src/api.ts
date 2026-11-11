@@ -130,7 +130,14 @@ interface Activity {
 export type ProjectKind = "code" | "general";
 
 export interface Snapshot {
-  project: { id: string; name: string; slug: string; kind: ProjectKind } | null;
+  project: {
+    id: string;
+    name: string;
+    slug: string;
+    kind: ProjectKind;
+    /** Whose finished work waits for a person: agents', everyone's, or no one's. */
+    review?: "agents" | "all" | "none";
+  } | null;
   you: string;
   version: number;
   tasks: Task[];

@@ -31,6 +31,8 @@ export const Board = memo(function Board({
   onToggle,
   onReviewed,
   onMove,
+  refusal,
+  heldBy,
 }: {
   tasks: Task[];
   /** Every task, for which ones a card is waiting on. */
@@ -46,6 +48,10 @@ export const Board = memo(function Board({
   onToggle: (id: string) => void;
   onReviewed: (id: string) => void;
   onMove: (id: string, status: string) => void;
+  /** Why the task cannot move to the column, or null when it can. */
+  refusal: (task: Task, status: string) => string | null;
+  /** Who else is working on the task, or null: its saves are refused until they stop. */
+  heldBy: (task: Task) => string | null;
 }) {
   const { featureName, columns } = useMemo(() => boardColumns(tasks, features), [tasks, features]);
   const people = useMemo(() => new Map(actors.map((a) => [a.id, a])), [actors]);
@@ -73,15 +79,30 @@ export const Board = memo(function Board({
     id === undefined ? "" : statusWord(String(id));
   const announcements: Announcements = {
     onDragStart: ({ active }) => `Picked up ${titleOf(active.id)}.`,
-    onDragOver: ({ active, over }) =>
-      over ? `${titleOf(active.id)} is over ${columnOf(over.id)}.` : undefined,
-    onDragEnd: ({ active, over }) =>
-      over
-        ? `${titleOf(active.id)} moved to ${columnOf(over.id)}.`
-        : `${titleOf(active.id)} was dropped outside the columns and stays where it was.`,
+    onDragOver: ({ active, over }) => {
+      if (!over) return undefined;
+      const why = refused(active.id, over.id);
+      return why
+        ? `${titleOf(active.id)} cannot move to ${columnOf(over.id)}.`
+        : `${titleOf(active.id)} is over ${columnOf(over.id)}.`;
+    },
+    onDragEnd: ({ active, over }) => {
+      if (!over) {
+        return `${titleOf(active.id)} was dropped outside the columns and stays where it was.`;
+      }
+      const why = refused(active.id, over.id);
+      // The reason itself comes as an alert from the page.
+      return why
+        ? `${titleOf(active.id)} stays where it was.`
+        : `${titleOf(active.id)} moved to ${columnOf(over.id)}.`;
+    },
     onDragCancel: ({ active }) => `Moving ${titleOf(active.id)} was cancelled.`,
   };
-  const dragged = tasks.find((t) => t.id === dragging);
+  const dragged = allTasks.find((t) => t.id === dragging);
+  function refused(id: string | number, status: string | number): string | null {
+    const task = allTasks.find((t) => t.id === id);
+    return task ? refusal(task, String(status)) : null;
+  }
   function onDragStart(event: DragStartEvent) {
     setDragging(String(event.active.id));
   }
@@ -105,6 +126,10 @@ export const Board = memo(function Board({
             status={status}
             label={label}
             show={shows(column, status)}
+            closed={
+              dragged && dragged.status !== status ? refusal(dragged, status) !== null : false
+            }
+            heldBy={heldBy}
             count={count}
             rows={rows}
             featureName={features.length > 0 ? featureName : null}
@@ -141,6 +166,8 @@ function Column({
   status,
   label,
   show,
+  closed,
+  heldBy,
   count,
   rows,
   featureName,
@@ -156,6 +183,9 @@ function Column({
   status: string;
   label: string;
   show: boolean;
+  /** The card being dragged cannot go here. */
+  closed: boolean;
+  heldBy: (task: Task) => string | null;
   count: number;
   rows: LaneRow[];
   /** null when there are no features: no lane headings, so no "No feature" in every column. */
@@ -197,10 +227,14 @@ function Column({
     virtual.scrollToIndex(openIndex, { align: "auto" });
   }, [open]);
   return (
-    <section className={show ? "column show" : "column"} ref={sectionRef} aria-label={label}>
+    <section
+      className={`column${show ? " show" : ""}${closed ? " closed" : ""}`}
+      ref={sectionRef}
+      aria-label={label}
+    >
       <h2>
         {label} <span className="count">{count}</span>
-        {isOver ? " · drop" : ""}
+        {isOver ? (closed ? " · cannot move here" : " · drop") : ""}
       </h2>
       <div className="cards" ref={parent}>
         {count === 0 ? <p className="column-empty">No tasks</p> : null}
@@ -242,6 +276,7 @@ function Column({
                   waiting={waiting(item.task)}
                   fresh={fresh.has(item.task.id)}
                   selected={selected.has(item.task.id)}
+                  heldBy={heldBy(item.task)}
                   open={item.task.id === open}
                   onOpen={onOpen}
                   onToggle={onToggle}
@@ -264,6 +299,7 @@ const Card = memo(function Card({
   waiting,
   fresh,
   selected,
+  heldBy,
   open,
   onOpen,
   onToggle,
@@ -275,6 +311,7 @@ const Card = memo(function Card({
   waiting: number;
   fresh: boolean;
   selected: boolean;
+  heldBy: string | null;
   open: boolean;
   onOpen: (id: string) => void;
   onToggle: (id: string) => void;
@@ -313,7 +350,9 @@ const Card = memo(function Card({
         waiting={waiting}
         fresh={fresh}
         selected={selected}
-        onReviewed={onReviewed}
+        heldBy={heldBy}
+        // "Looks right" is a save: refused while someone else holds the task.
+        {...(heldBy ? {} : { onReviewed })}
         onToggle={onToggle}
       />
     </div>
@@ -328,6 +367,7 @@ function CardBody({
   waiting,
   fresh,
   selected,
+  heldBy = null,
   onToggle,
   onReviewed,
 }: {
@@ -338,6 +378,7 @@ function CardBody({
   waiting: number;
   fresh: boolean;
   selected: boolean;
+  heldBy?: string | null;
   onToggle?: (id: string) => void;
   onReviewed?: (id: string) => void;
 }) {
@@ -354,6 +395,14 @@ function CardBody({
           {waitingOn(task) ? (
             <span className="needs-badge" title={waitingOn(task)?.text}>
               needs you
+            </span>
+          ) : null}
+          {heldBy ? (
+            <span
+              className="held-badge"
+              title={`${heldBy} is working on this. Open it to take it over or release it before you change it.`}
+            >
+              {heldBy}
             </span>
           ) : null}
           <time dateTime={task.updatedAt} title={fullTime(task.updatedAt)}>

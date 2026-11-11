@@ -128,6 +128,28 @@ export function plainError(err: unknown): string {
   if (err.code === "CONFLICT" && /locked/u.test(err.message)) {
     return "Someone has reserved these files for their edits. Try again when they are done.";
   }
+  if (/^Only a person can take task/u.test(err.message)) {
+    return "Only a person can take a task from whoever is working on it.";
+  }
+  if (err.code === "INVALID_TRANSITION") {
+    if (/^Use complete/u.test(err.message)) {
+      return `A task reaches ${statusWord("review")} or ${statusWord("done")} when whoever does it finishes it with a summary. It cannot be moved there by hand.`;
+    }
+    if (/can be claimed/u.test(err.message)) {
+      return `Only a task in ${statusWord("todo")} or ${statusWord("in_progress")} can be taken over. Release it instead.`;
+    }
+    const moved = /cannot move from (\w+) to (\w+)\./u.exec(err.message);
+    const allowed = /^Allowed from \w+: (.+)\.$/u.exec(err.hint ?? "");
+    if (moved?.[1] && moved[2]) {
+      const next = allowed?.[1] && allowed[1] !== "none" ? allowed[1].split(", ") : [];
+      const where = next.length > 0 ? ` It can go to ${next.map(statusWord).join(", ")}.` : "";
+      return `This cannot go from ${statusWord(moved[1])} to ${statusWord(moved[2])}.${where}`;
+    }
+  }
   const hint = err.hint && !err.hint.includes("`") ? ` ${err.hint}` : "";
-  return `${err.message}${hint}`;
+  // A record id means nothing to a person: the message is about what they just touched.
+  return `${err.message}${hint}`.replace(
+    /\b([Tt])ask (?:tsk_\w+|[0-9A-HJKMNP-TV-Z]{26})\b/gu,
+    "$1his task",
+  );
 }

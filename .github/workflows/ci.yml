@@ -32,8 +32,11 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Lint and types do not depend on the OS or the Node version: one cell checks them.
       - run: pnpm lint
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 24
       - run: pnpm typecheck
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 24
       - run: pnpm test
 
   # ADR 0003 gate: the packed CLI installs from npm with nothing to compile, and works.

@@ -11,6 +11,7 @@ import {
   type TemplateSummary,
 } from "./api.js";
 import { Avatar, personName } from "./people.js";
+import { COMMENT_TAG } from "./thread.js";
 import { capital, plainError, statusWord } from "./words.js";
 
 /** Kept in step with PRIORITIES in core (test/constants.test.ts checks it). */
@@ -225,6 +226,40 @@ export function Assignees({ data, chosen = [] }: { data: Snapshot; chosen?: stri
         ))}
       </div>
     </fieldset>
+  );
+}
+
+/**
+ * Asks what still needs doing before work goes back from review. Core refuses the move without a
+ * reason, and whoever picks the task up next reads it.
+ */
+export function SendBack({
+  titles,
+  onClose,
+  onSend,
+}: {
+  /** The tasks going back. */
+  titles: string[];
+  onClose: () => void;
+  onSend: (reason: string) => Promise<unknown>;
+}) {
+  const one = titles.length === 1 ? titles[0] : undefined;
+  return (
+    <FormDialog
+      title={one ? `Send back ${one}` : `Send back ${titles.length} tasks`}
+      submit="Send back"
+      busy="Sending…"
+      onClose={onClose}
+      onSubmit={(form) => onSend(text(form, "reason").trim())}
+    >
+      <label>
+        What still needs doing
+        <input className="field" name="reason" required maxLength={2000} />
+      </label>
+      <p className="dialog-note">
+        Whoever takes {one ? "the task" : "these tasks"} next reads this first.
+      </p>
+    </FormDialog>
   );
 }
 
@@ -582,6 +617,14 @@ export function NoteForm({
           name="tags"
           defaultValue={opened.tags.join(", ")}
           placeholder="launch, venue"
+          // Core keeps this tag for comments and refuses it on a note: say so before the save.
+          onInput={(e) =>
+            e.currentTarget.setCustomValidity(
+              parseLabels(e.currentTarget.value).includes(COMMENT_TAG)
+                ? `The tag "${COMMENT_TAG}" is kept for comments. Pick another tag.`
+                : "",
+            )
+          }
         />
       </label>
       <label className="dialog-check">

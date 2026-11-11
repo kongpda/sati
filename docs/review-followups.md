@@ -737,7 +737,7 @@ Open, docs and repo (owner decisions):
 
 - [x] `SECURITY.md` points to GitHub's private vulnerability reporting, which is off (`gh api` returns `enabled: false`). Secret scanning, push protection and Dependabot security updates are off too, and no Renovate PR exists. Done (2026-11-11, owner said to do it): private vulnerability reporting, secret scanning, push protection, Dependabot alerts and Dependabot security updates are on. Renovate is still not installed on the repository (a GitHub App the owner must add).
 - [x] Install text that cannot work while nothing is on npm: README Quick start, `docs/guide/quick-start.md`, `faq.md`, `guard.md`, `packages/cli/README.md`. No doc describes the tarball install from ADR 0006. Done (2026-11-11): the README shows the tarball install, and the quick start, FAQ, guard guide and CLI README say that npm is not available yet and point to it.
-- [ ] `release.yml` run by hand still calls `changeset publish`.
+- [x] `release.yml` run by hand still calls `changeset publish`. Done (2026-11-11): see O1 below.
 - [x] `PLAN.md`: line 914 names `sati sync resolve`, which does not exist; the MCP tool count says 15 and 19 where the server has 20; the Phase 3 `.gitattributes` line and the hooks table are out of date; "no benchmark suite" where `pnpm bench` exists. Done (2026-11-11). The counts inside ticked checklist lines stay: they record the state at that time.
 - [ ] `docs/ideas.md` has items from 2026-11-10 that are done; `AGENT_KICKOFF.md` is history; the remote branch `changeset-release/main` is stale. Done in part (2026-11-11): the finished 2026-11-10 list in `docs/ideas.md` is replaced by a pointer to this file; the remote branch `changeset-release/main` is deleted. `AGENT_KICKOFF.md` stays: `AGENTS.md` keeps it as history.
 - [ ] CI runs lint and typecheck on all 7 matrix cells and shares no build output between jobs.
@@ -749,24 +749,24 @@ Owner's report: the board shows an action, lets the user do it, and the server t
 An audit of every write on the board against core found the items below. Rule for the fixes: the
 board hides or disables what core will refuse and says why before the click, not after.
 
-- [ ] B1. Drag-and-drop and the bulk "Move to" menu accept every column. Core refuses moves outside `TASK_TRANSITIONS` (backlog to in progress, done to anything but to do, any move to review). The card moves, snaps back and shows raw status names.
-- [ ] B2. The status select in the task panel lists all statuses for every task, with the same refusals. "Waiting for approval" is offered on every task and never works.
-- [ ] B3. Sending a review task back to To do needs a reason. Drag, the panel and bulk move have no place to enter one.
-- [ ] B4. A task claimed by someone else refuses every save (move, panel Save, checklist, "Looks right"), also after the claim's time ran out. The panel still offers Save and the card still drags.
-- [ ] B5. "Take over" is offered on a claimed task that is blocked or in review, where core can only release the claim.
-- [ ] B6. Approve, Take over, Release of another's claim, "I answered" and Edit person need a person. A board started from an agent terminal acts as an agent and every one of them fails after the click.
-- [ ] B7. A bulk move reports only the first reason for all failed tasks.
-- [ ] B8. The title field in the task panel has no `required` and no length limit; an empty title shows raw Zod text after Save.
-- [ ] B9. The note form accepts the tag `comment`, which core refuses.
-- [ ] B10. Refusals show core's text as sent: raw status names (`in_progress`), record ids, and no hint when the hint has a backtick.
+- [x] B1. Drag-and-drop and the bulk "Move to" menu accept every column. Core refuses moves outside `TASK_TRANSITIONS` (backlog to in progress, done to anything but to do, any move to review). The card moves, snaps back and shows raw status names. Done (2026-11-11): `packages/ui/src/moves.ts` holds the move rule (`moveRefusal`, a copy of `TASK_TRANSITIONS` checked by `constants.test.ts`). While a card is dragged the columns that refuse it are dimmed and their header says "cannot move here"; a refused drop sends no request and shows the reason. The bulk menu lists only columns at least one selected task can reach.
+- [x] B2. The status select in the task panel lists all statuses for every task, with the same refusals. "Waiting for approval" is offered on every task and never works. Done (2026-11-11): the select lists the current status and `moveTargets` only.
+- [x] B3. Sending a review task back to To do needs a reason. Drag, the panel and bulk move have no place to enter one. Done (2026-11-11): the panel shows a required "What still needs doing" field when a review task is set to To do; a drag or bulk move opens a "Send back" dialog. Both send `reason`.
+- [x] B4. A task claimed by someone else refuses every save (move, panel Save, checklist, "Looks right"), also after the claim's time ran out. The panel still offers Save and the card still drags. Done (2026-11-11): the card shows the holder's name and has no "Looks right"; the panel form and checklist are disabled with a note that says how to unlock them; drag and bulk move say who holds the task and send nothing.
+- [x] B5. "Take over" is offered on a claimed task that is blocked or in review, where core can only release the claim. Done (2026-11-11): Take over shows only for a task in To do or Working on it; elsewhere only Release.
+- [x] B6. Approve, Take over, Release of another's claim, "I answered" and Edit person need a person. A board started from an agent terminal acts as an agent and every one of them fails after the click. Done (2026-11-11): the snapshot carries the review setting and the board knows the kind of actor it runs as. An agent-run board shows a banner, leaves Done out for review tasks, disables Approve, "I answered" (unless it holds the task), Edit person and Release of another's live claim, and the claim box says only a person can take the task. A claim that ran out can still be released by anyone, as in core.
+- [x] B7. A bulk move reports only the first reason for all failed tasks. Done (2026-11-11): each reason is listed once with the number of tasks it stopped.
+- [x] B8. The title field in the task panel has no `required` and no length limit; an empty title shows raw Zod text after Save. Done (2026-11-11): `required maxLength={300}`.
+- [x] B9. The note form accepts the tag `comment`, which core refuses. Done (2026-11-11): the Tags field refuses `comment` with a message before the save.
+- [x] B10. Refusals show core's text as sent: raw status names (`in_progress`), record ids, and no hint when the hint has a backtick. Done (2026-11-11): `plainError` puts transition refusals in the board's status words, drops record ids, and words the person-only refusal plainly. Left: other core messages are still shown as sent.
 
 Found on the way:
 
-- [ ] R1. `sati projects` printed `ready -1` for a project whose database does not open.
-- [ ] R2. The owner's `~/.sati/projects.json` held 2,087 projects; 2,085 were temp repos from test runs before the registry was isolated (WP5). `--prune` kept 1,316 of them because their folders still existed.
-- [ ] R3. Test runs never delete their temp folders: `/private/tmp` held about 12,000 `sati-*` folders.
+- [x] R1. `sati projects` printed `ready -1` for a project whose database does not open. Done (2026-11-11): prints "database not readable" with the `--prune` hint; JSON keeps `ready: -1`.
+- [x] R2. The owner's `~/.sati/projects.json` held 2,087 projects; 2,085 were temp repos from test runs before the registry was isolated (WP5). `--prune` kept 1,316 of them because their folders still existed. Done (2026-11-11): the temp entries were removed from the owner's registry (backup `~/.sati/projects.json.bak-2026-11-11`); 2 real projects remain.
+- [x] R3. Test runs never delete their temp folders: `/private/tmp` held about 12,000 `sati-*` folders. Done (2026-11-11) for new runs: `scripts/test-tmp.ts` is the vitest global setup of every package that makes temp folders; it points the temp folder at one run folder under `/tmp` and removes it when the run ends. The Playwright fixture removes its registry folder too. Not done: the folders left by earlier runs are still there; deleting them is the owner's call, since other agents may have live test runs in the same place.
 
 Still open from earlier lists, to settle here:
 
-- [ ] O1. `release.yml` run by hand still calls `changeset publish` (ADR 0006: nothing is published).
-- [ ] O2. CI runs lint and typecheck on all 7 matrix cells.
+- [x] O1. `release.yml` run by hand still calls `changeset publish` (ADR 0006: nothing is published). Done (2026-11-11): a run opens the version pull request only; publishing needs the `publish` input ticked.
+- [x] O2. CI runs lint and typecheck on all 7 matrix cells. Done (2026-11-11): lint and typecheck run on the ubuntu / node 24 cell only. Sharing build output between jobs is not done.

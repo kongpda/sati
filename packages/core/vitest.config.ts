@@ -3,6 +3,7 @@ import { defineConfig } from "vitest/config";
 // PLAN Phase 1: core keeps 90%+ unit test coverage. `pnpm test` fails below it.
 export default defineConfig({
   test: {
+    globalSetup: ["../../scripts/test-tmp.ts"],
     coverage: {
       provider: "v8",
       include: ["src/**"],

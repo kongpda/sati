@@ -1931,3 +1931,12 @@ Task `tsk_fevjbk`.
 - `syncedFolder` guesses the file-sync app from folder names only. `doctor` fails the new `synced folder` check; `init` prints a warning and continues. Choice: a failing check, because doctor has no warning level and a synced database does get corrupted.
 - Not tested: the flush (no test can cut the power); a real failed COMMIT (the test sends the `abort` after a finished transaction, the same server state).
 - Tooling note: `pnpm exec biome` run through the `rtk` hook ended with "Linter process terminated abnormally" on one file; the raw binary checks it clean.
+
+## 2026-11-11 — Phase 9c: cards
+
+Task `tsk_fevjbm`.
+
+- `seen` on `card get` and `context_get`: the card for the given path is stale when `seen` differs from its `sourceSeen`. Choice: the caller's version can add staleness or answer "unknown" (`null`), and never hides a change the file list shows. `seen` without a path is refused.
+- Anchors: a path of the form `<file with extension>#<part>` is a card about a part of that file. The hash covers the file, so every part goes stale together. A query for the file lists its parts; a query for one part does not list the others. A file really named with `#` is kept whole when the file list has it.
+- An edited or untracked file now gets the id git gives its content (`blob <size>\0` plus the bytes, SHA-1 or SHA-256 by the repo's format), not a separate `wt:` hash. Cards saved against the old `wt:` hash read stale once. Not covered: a repo that rewrites content on add (autocrlf, LFS) still gives another id after the commit.
+- Seen while testing: under a machine load of 61 two git-hook CLI tests hit the 5 s test limit in the full run; alone they pass.

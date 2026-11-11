@@ -97,6 +97,49 @@ describe("context cache", () => {
     expect((await buildBrief(later)).markdown).not.toContain("Stale context");
   });
 
+  // Deep review 2026-11-11: sourceSeen was stored and never compared, so a card for a file sati
+  // cannot list (no git, a shared drive) could never be told stale.
+  it("compares the version the caller sees now with the one the card was saved with", async () => {
+    const { ctx } = await setup();
+    await putContext(ctx, { path: "budget.xlsx", summary: "Q3", sourceSeen: "2026-11-01T09:00Z" });
+    const stale = async (seen?: string) =>
+      (await getContext(ctx, { path: "budget.xlsx", seen }))[0]?.stale;
+    expect(await stale()).toBeNull();
+    expect(await stale("2026-11-01T09:00Z")).toBe(false);
+    expect(await stale("2026-11-09T16:30Z")).toBe(true);
+    await expect(getContext(ctx, { seen: "x" })).rejects.toMatchObject({ code: "VALIDATION" });
+  });
+
+  it("does not let the caller's version hide a change the file list shows", async () => {
+    const files: RepoFile[] = [{ path: "budget.xlsx", blob: "1" }];
+    const { ctx } = await withRepo(files);
+    await putContext(ctx, { path: "budget.xlsx", summary: "Q3", sourceSeen: "v1" });
+    files[0] = { path: "budget.xlsx", blob: "2" };
+    const later: ServiceContext = { ...ctx, repo: fakeRepo(files) };
+    expect((await getContext(later, { path: "budget.xlsx", seen: "v1" }))[0]?.stale).toBe(true);
+  });
+
+  // Office files are large: one card per sheet, slide or page keeps each card small. sati cannot
+  // see inside the file, so every part goes stale when the file changes.
+  it("lets a card name a part of a file, stale when the file changes", async () => {
+    const files: RepoFile[] = [
+      { path: "budget.xlsx", blob: "1" },
+      { path: "notes.md", blob: "1" },
+    ];
+    const { ctx } = await withRepo(files);
+    await putContext(ctx, { path: "budget.xlsx#Sheet2", summary: "Venue costs" });
+    await putContext(ctx, { path: "budget.xlsx#Totals", summary: "Totals" });
+    const paths = async (path: string, repo = files) =>
+      (await getContext({ ...ctx, repo: fakeRepo(repo) }, { path })).map((c) => [c.path, c.stale]);
+    expect(await paths("budget.xlsx")).toEqual([
+      ["budget.xlsx#Sheet2", false],
+      ["budget.xlsx#Totals", false],
+    ]);
+    expect(await paths("budget.xlsx#Sheet2")).toEqual([["budget.xlsx#Sheet2", false]]);
+    const changed = [{ path: "budget.xlsx", blob: "2" }, files[1] as RepoFile];
+    expect(await paths("budget.xlsx#Sheet2", changed)).toEqual([["budget.xlsx#Sheet2", true]]);
+  });
+
   it("rejects paths outside the repo and empty summaries", async () => {
     const { ctx } = await withRepo([]);
     await expect(putContext(ctx, { path: "../x", summary: "s" })).rejects.toMatchObject({

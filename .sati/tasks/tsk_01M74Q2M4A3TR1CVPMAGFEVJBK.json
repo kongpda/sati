@@ -1,15 +1,29 @@
 {
   "body": "core sync.ts isNewer/joinTies; snapshot.ts BOM and stray conflicted-copy names; atomic.ts fsync; remote.ts abort after failed COMMIT; fs-kind.ts fuseblk and synced-folder detection.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "heartbeatAt": "2026-11-11T07:18:44.147Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 67720
-    },
-    "leaseUntil": "2026-11-11T09:18:44.147Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "93a3628dcccbac539275a6a64248ba5c981e8383",
+    "completedAt": "2026-11-11T07:23:44.615Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "PLAN.md",
+      "docs/progress.md",
+      ".changeset/office-sync-safety.md",
+      "packages/cli/src/commands/doctor.ts",
+      "packages/cli/src/commands/init.ts",
+      "packages/cli/test/hardening.test.ts",
+      "packages/store-sqlite/src/fs-kind.ts",
+      "packages/store-sqlite/src/index.ts",
+      "packages/store-sqlite/src/remote.ts",
+      "packages/store-sqlite/test/fs-kind.test.ts",
+      "packages/store-sqlite/test/remote.test.ts",
+      "packages/sync/src/atomic.ts",
+      "packages/sync/src/snapshot.ts",
+      "packages/sync/test/sync.test.ts"
+    ],
+    "releaseNote": "Pulls keep unexported local edits; file-sync copies no longer block import; init and doctor warn about a database in a synced folder.",
+    "summary": "Commit 93a3628. joinTies merges by field stamps when DB and file diverged at any version. Snapshot reader drops a BOM and skips id-plus-text copies with a problem line. writeFileAtomic flushes before rename. Daemon answers abort/end for a finished transaction; client request limit 60 s. fuseblk local. syncedFolder by path; doctor fails a \"synced folder\" check, init warns. Not tested: flush; a real failed COMMIT."
   },
   "createdAt": "2026-11-11T07:10:09.035Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
@@ -20,13 +34,14 @@
   "stamps": {
     "*": "2026-11-11T07:10:09.035Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "branch": "2026-11-11T07:18:44.147Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "claim": "2026-11-11T07:18:44.147Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "status": "2026-11-11T07:18:44.147Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T07:23:44.615Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T07:23:44.615Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T07:23:44.615Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "worktree": "2026-11-11T07:18:44.147Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "9b Sync and store safety: merge diverged stamps on import, tolerant snapshot reader, fsync, abort timeout, fuseblk, cloud-folder warning",
-  "updatedAt": "2026-11-11T07:18:44.147Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T07:23:44.616Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

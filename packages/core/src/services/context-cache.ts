@@ -29,15 +29,39 @@ export const PutContextInput = z.strictObject({
 });
 export type PutContextInput = z.input<typeof PutContextInput>;
 
-export const GetContextInput = z.strictObject({
-  /** Only entries whose path overlaps this one. All entries when absent. */
-  path: RepoPath.optional(),
-});
+export const GetContextInput = z
+  .strictObject({
+    /** Only entries whose path overlaps this one. All entries when absent. */
+    path: RepoPath.optional(),
+    /**
+     * The version of the file at `path` the caller sees now (modified time or hash, in the form
+     * it gave as `sourceSeen`). The card for `path` is stale when the two differ.
+     */
+    seen: card.sourceSeen,
+  })
+  .refine((v) => v.seen === undefined || v.path !== undefined, {
+    message: "`seen` needs the `path` of the file it describes",
+    path: ["seen"],
+  });
 export type GetContextInput = z.input<typeof GetContextInput>;
 
 export interface ContextView extends ContextEntry {
   /** The files under `path` changed since the summary was written. null: no git repo to check. */
   stale: boolean | null;
+}
+
+/** `budget.xlsx#Sheet2`: a file with an extension, then the part of it the card is about. */
+const ANCHORED = /^(.+\.[A-Za-z0-9]+)#[^/#]+$/u;
+
+/**
+ * The file a card path names: the path without its anchor (`budget.xlsx#Sheet2`,
+ * `deck.pptx#slide-12`, `contract.pdf#p4`). A file really named with a `#` is known from the
+ * file list and kept whole.
+ */
+export function cardFile(path: string, files?: readonly RepoFile[]): string {
+  const file = ANCHORED.exec(path)?.[1];
+  if (file === undefined || files?.some((f) => f.path === path)) return path;
+  return file;
 }
 
 /**
@@ -70,7 +94,7 @@ export async function putContext(ctx: ServiceContext, input: unknown): Promise<C
     path: data.path,
     summary: data.summary,
     keyFiles: data.keyFiles ?? [],
-    contentHash: files ? moduleHash(data.path, files) : "",
+    contentHash: files ? moduleHash(cardFile(data.path, files), files) : "",
     gitCommit,
     ...(data.facts?.length ? { facts: data.facts } : {}),
     ...(data.tags?.length ? { tags: data.tags } : {}),
@@ -115,17 +139,37 @@ export function staleness(
   path: string,
   files: readonly RepoFile[] | undefined,
 ) {
-  return files && contentHash !== "" ? moduleHash(path, files) !== contentHash : null;
+  // A card about one sheet or page goes stale with its file: sati cannot see inside it.
+  return files && contentHash !== ""
+    ? moduleHash(cardFile(path, files), files) !== contentHash
+    : null;
+}
+
+/** Two card paths meet when their files overlap, unless they name different parts of one file. */
+function cardsOverlap(a: string, b: string): boolean {
+  const fa = cardFile(a);
+  const fb = cardFile(b);
+  return pathsOverlap(fa, fb) && (fa === a || fb === b || a === b);
 }
 
 /** Context entries with a `stale` flag, recomputed from the file list on every call. */
 export async function getContext(ctx: ServiceContext, input: unknown = {}): Promise<ContextView[]> {
-  const { path } = parseInput(GetContextInput, input);
+  const { path, seen } = parseInput(GetContextInput, input);
   const all = await ctx.store.read((r) => listAll(r, ctx, "context"));
-  const entries = path === undefined ? all : all.filter((e) => pathsOverlap(path, e.path));
+  const entries = path === undefined ? all : all.filter((e) => cardsOverlap(path, e.path));
   if (entries.length === 0) return [];
   const files = ctx.repo ? await ctx.repo.files() : undefined;
   return entries
-    .map((e) => ({ ...e, stale: staleness(e.contentHash, e.path, files) }))
+    .map((e) => {
+      const stale = staleness(e.contentHash, e.path, files);
+      // The caller's own look at the file is the only evidence where sati has no file list (a
+      // file outside the project, a folder too large to walk). It can add staleness, and it can
+      // answer "unknown"; it never overrules a file list that says the file changed.
+      const told =
+        seen !== undefined &&
+        e.sourceSeen !== undefined &&
+        cardFile(e.path) === cardFile(path ?? "");
+      return { ...e, stale: told ? stale === true || seen !== e.sourceSeen : stale };
+    })
     .sort((a, b) => a.path.localeCompare(b.path));
 }

@@ -156,7 +156,14 @@ export function gitRepoIndex(root: string): RepoIndex {
             const abs = join(root, change.path);
             // An untracked folder is listed as one entry (`dir/`); it has no content to hash.
             if (statSync(abs).isDirectory()) continue;
-            blob = `wt:${createHash("sha256").update(readFileSync(abs)).digest("hex")}`;
+            // The id git gives this content, so a card saved now is still fresh once the same
+            // content is committed. (A repo that rewrites files on add, as with autocrlf or LFS,
+            // gets another id, and the card reads stale once.)
+            const content = readFileSync(abs);
+            blob = createHash(out[0]?.blob.length === 64 ? "sha256" : "sha1")
+              .update(`blob ${content.length}\0`)
+              .update(content)
+              .digest("hex");
           } catch {
             continue; // vanished or unreadable: one file must not drop every other dirty hash
           }

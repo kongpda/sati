@@ -51,6 +51,11 @@ const get = defineCommand({
       required: false,
       description: "Only entries overlapping this path or glob",
     },
+    seen: {
+      type: "string",
+      description:
+        "The file's version now (modified time or hash); the card for <path> is stale if it was saved with another",
+    },
     ...json,
   },
   run: ({ args }) =>
@@ -59,6 +64,7 @@ const get = defineCommand({
       async (rt) =>
         getContext(rt.ctx, {
           path: args.path === undefined ? undefined : projectPath(rt, args.path),
+          seen: args.seen,
         }),
       (entries: ContextView[]) =>
         entries.length

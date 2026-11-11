@@ -365,8 +365,13 @@ describe("gitRepoIndex", () => {
     mkdirSync(join(dir, "fresh"));
     writeFileSync(join(dir, "fresh", "x.txt"), "x\n");
     const after = (await gitRepoIndex(dir).files()).find((f) => f.path === "a.txt");
-    expect(after?.blob).toMatch(/^wt:/);
     expect(after?.blob).not.toBe(before?.blob);
+    // Deep review 2026-11-11: an edited file had its own kind of hash, so a card saved before
+    // the commit read stale after it, though nothing changed. It now has the id git will give.
+    git(dir, "add", "a.txt");
+    git(dir, "commit", "-qm", "two");
+    const committed = (await gitRepoIndex(dir).files()).find((f) => f.path === "a.txt");
+    expect(committed?.blob).toBe(after?.blob);
     // Recall lifts the card of a file being edited; it reads this flag.
     expect(before?.dirty).toBeUndefined();
     expect(after?.dirty).toBe(true);

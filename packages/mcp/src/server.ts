@@ -470,7 +470,7 @@ function registerTools(
     "context_get",
     {
       description:
-        "Cards: what agents learned about files, folders and modules (summary, facts, tags, sourceSeen). Before opening a file, get its card by path: stale: false means the file is unchanged since the card was saved, so use the card instead; stale: true means it changed: re-read it, then context_put. With no path, lists up to 50 card paths with a total.",
+        "Cards: what agents learned about files, folders and modules (summary, facts, tags, sourceSeen). Before opening a file, get its card by path: stale: false means the file is unchanged since the card was saved, so use the card instead; stale: true means it changed: re-read it, then context_put. Pass seen (the file's modified time or hash now, in the form you saved as sourceSeen) to have it compared; do this for files outside the project. A path may name a part of a file: budget.xlsx#Sheet2, deck.pptx#slide-12, contract.pdf#p4. With no path, lists up to 50 card paths with a total.",
       inputSchema: GetContextInput,
       annotations: { readOnlyHint: true, openWorldHint: false },
     },

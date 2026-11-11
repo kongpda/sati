@@ -876,9 +876,9 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 
 **9c — Cards**
 
-- [ ] `card get` and `context_get` take the file version the caller sees now and compare it with `sourceSeen`, so staleness works where sati has no file list
-- [ ] A card saved while its file had uncommitted changes does not turn stale when that same content is committed
-- [ ] A card path may end in an anchor (`budget.xlsx#Sheet2`, `deck.pptx#slide-12`, `contract.pdf#p4`); staleness uses the file part
+- [x] `card get` and `context_get` take the file version the caller sees now and compare it with `sourceSeen`, so staleness works where sati has no file list
+- [x] A card saved while its file had uncommitted changes does not turn stale when that same content is committed
+- [x] A card path may end in an anchor (`budget.xlsx#Sheet2`, `deck.pptx#slide-12`, `contract.pdf#p4`); staleness uses the file part
 
 **9d — Office wiring**
 

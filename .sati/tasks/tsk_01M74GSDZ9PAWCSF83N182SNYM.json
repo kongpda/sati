@@ -1,10 +1,21 @@
 {
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "heartbeatAt": "2026-11-11T05:20:25.151Z",
-    "leaseUntil": "2026-11-11T05:50:25.151Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "05d1ec8a2ec329627342e2af95dfa38ef27acc41",
+    "completedAt": "2026-11-11T05:30:53.971Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/core/src/domain/secrets.ts",
+      "packages/core/src/domain/locks.ts",
+      "packages/store-sqlite/src/remote.ts",
+      "packages/cli/src/commands/projects.ts",
+      "packages/core/src/services/changes.ts",
+      "packages/core/src/services/milestone.ts",
+      "packages/core/src/services/brief.ts",
+      "docs/review-followups.md"
+    ],
+    "summary": "Audit by five reviewers. Fixed 7 verified bugs with tests (secret-check freeze, lock path dot segments, serve undefined args and non-array args, projects creating a DB, 500 cap in changes, init PATH test) plus two small efficiency fixes and knip cleanup. The rest is listed in docs/review-followups.md under 'Found in the full-project audit (2026-11-11)'."
   },
   "createdAt": "2026-11-11T05:20:16.360Z",
   "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
@@ -15,13 +26,14 @@
   "stamps": {
     "*": "2026-11-11T05:20:16.365Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "branch": "2026-11-11T05:20:25.152Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "claim": "2026-11-11T05:20:25.152Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-11T05:20:25.152Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-11T05:30:53.973Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-11T05:30:53.973Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-11T05:30:53.973Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "worktree": "2026-11-11T05:20:25.152Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Full-project audit: broken, inconsistent, inefficient, unused",
-  "updatedAt": "2026-11-11T05:20:25.154Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T05:30:53.975Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

@@ -1,0 +1,15 @@
+{
+  "consequences": "An agent that needs a new version signed off must ask a person. All sessions of one agent tool share a handle, so each sees a mention until it answers on that record.",
+  "context": "approveCard had no check on who approves. An agent could run `sati card approve` on its own new version, or clear the approval, and pass the guard. Separately, the 9g choice was that agents do not get mentions in their brief.",
+  "createdAt": "2026-11-11T11:20:55.130Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "decision": "approveCard refuses any actor that is not a person (INVALID_TRANSITION), for approve and for clear. The brief now has a Mentions section for any actor, with the same rule as the board's My work. This reverses the earlier choice that agents get no mentions. Not done by the agent on purpose: approving tasks in review (a person's step) and publishing to npm (ADR 0006 says not yet, and it cannot be undone).",
+  "id": "dec_01M755DSJT3MZ2W6JSFQ8JKB83",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T11:20:55.131Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "title": "Only a person approves a file; agents get mentions in the brief",
+  "updatedAt": "2026-11-11T11:20:55.130Z",
+  "version": 1
+}

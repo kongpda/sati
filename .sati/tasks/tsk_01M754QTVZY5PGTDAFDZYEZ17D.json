@@ -1,15 +1,39 @@
 {
   "body": "Owner asked 2026-11-11. (1) approveCard refuses an agent. (2) Brief line and board badge when an approved file changed since its approval. (3) A comment that calls an actor by @name shows in that actor's brief. (4) Brief finds a lost claim by verb, not in the newest 200 rows.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "heartbeatAt": "2026-11-11T11:09:01.815Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 26060
-    },
-    "leaseUntil": "2026-11-11T14:09:01.815Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "d74c7ef36f1fe6719ae39be6410778274555062c",
+    "completedAt": "2026-11-11T11:21:00.996Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "packages/core/src/services/context-cache.ts",
+      "packages/core/src/services/comment.ts",
+      "packages/core/src/services/brief.ts",
+      "packages/core/src/ports/repo.ts",
+      "packages/core/src/ports/storage.ts",
+      "packages/core/test/support/memory-store.ts",
+      "packages/core/test/context-cache.test.ts",
+      "packages/core/test/sync.test.ts",
+      "packages/core/test/workspace.test.ts",
+      "packages/store-sqlite/src/store.ts",
+      "packages/store-sqlite/test/store.test.ts",
+      "packages/cli/src/file-hash.ts",
+      "packages/cli/src/runtime.ts",
+      "packages/cli/src/ui/server.ts",
+      "packages/cli/test/ui-server.test.ts",
+      "packages/ui/src/api.ts",
+      "packages/ui/src/memory.tsx",
+      "e2e/ui/flows.spec.ts",
+      "e2e/ui/refusals.spec.ts",
+      "PLAN.md",
+      "README.md",
+      "docs/progress.md",
+      "docs/ideas.md",
+      ".changeset/person-approval-mentions.md"
+    ],
+    "releaseNote": "Only a person can approve a file; the brief and board say when an approved file changed; agents see comments that call them by name.",
+    "summary": "approveCard is person-only (approve and clear). RepoIndex has an optional sha256 port; the CLI gives it with a size+mtime cache and a 256 MB cap. The brief warns on changed or missing approved files; the board's Memory page shows a badge and hides Approve on an agent's board. Core mentionsOf puts comments that call the actor by name in the brief. ActivityQuery has verb; the brief asks for the day's imports. Checks: lint, typecheck, 773 unit tests (2 skipped, as before), build, 97 Playwright tests. Commit d74c7ef."
   },
   "createdAt": "2026-11-11T11:08:55.551Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
@@ -19,13 +43,14 @@
   "stamps": {
     "*": "2026-11-11T11:08:55.552Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "branch": "2026-11-11T11:09:01.815Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "claim": "2026-11-11T11:09:01.815Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "status": "2026-11-11T11:09:01.815Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T11:21:00.997Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T11:21:00.997Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T11:21:00.997Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "worktree": "2026-11-11T11:09:01.815Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "9h follow-ups 2: person-only file approval, changed-approval warning, agent mentions in brief, lost-claim query",
-  "updatedAt": "2026-11-11T11:09:01.816Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T11:21:00.998Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

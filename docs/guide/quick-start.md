@@ -86,7 +86,7 @@ After you upgrade sati, refresh the git hooks, the merge driver, `.gitattributes
 block and the agent configs in one step (the [FAQ](faq.md#how-do-i-update-sati) has the rest):
 
 ```bash
-sati init --upgrade
+sati upgrade
 ```
 
 ## First task

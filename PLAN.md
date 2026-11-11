@@ -932,6 +932,13 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 - [x] Stored text is printed without terminal control characters and bidirectional overrides, so a title cannot rewrite the screen or the clipboard. `--json` keeps the stored text
 - [x] Brief: every section keeps two lines, and Ready keeps all of its tasks, before any section is trimmed further, so a long review list no longer leaves "Ready" empty
 
+**9j — Terminal follow-ups (owner asked 2026-11-11)**
+
+- [x] `sati upgrade`: the work of `init --upgrade --yes` under a short name. It asks nothing, `--dry-run` shows the files first, and `doctor` names it. `init --upgrade` stays
+- [x] `sati completion bash|zsh|fish` prints a completion script built from the command definitions
+- [x] Output taller than the terminal goes through a pager (`SATI_PAGER`, then `PAGER`, then `less`), only for a person at a terminal. `PAGER=cat` turns it off
+- [x] `sati review` wraps long lines to the terminal; a tab in a title no longer shifts a table column
+
 **Not in Phase 9:** registry collisions (two folders with one slug, a copied folder sharing a database) are fixed under task `tsk_01M74P…VB2MP62GRN1XC90AKCE` by another agent.
 
 **Gate:** the Phase 8 gate folder, on a machine with no git, driven through MCP by a client that sets no agent variable: the caller is recorded as an agent, cards with anchors go stale when the file changes, and Khmer questions recall Khmer cards. `pnpm lint && pnpm typecheck && pnpm test` pass and the performance budgets are unchanged.

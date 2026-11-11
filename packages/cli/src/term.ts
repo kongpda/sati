@@ -207,10 +207,12 @@ const GAP = "  ";
  * width and is cut to fit; give it plain text and a `paint` to colour it after the cut.
  */
 export function table(
-  rows: readonly (readonly string[])[],
+  input: readonly (readonly string[])[],
   opts: { flex?: number; paint?: (text: string) => string; indent?: string } = {},
 ): string {
   const indent = opts.indent ?? "";
+  // A tab moves the cursor by an amount only the terminal knows, which breaks the columns.
+  const rows = input.map((r) => r.map((c) => c.replaceAll("\t", " ")));
   const cols = Math.max(0, ...rows.map((r) => r.length));
   const widths = Array.from({ length: cols }, (_, c) =>
     Math.max(0, ...rows.map((r) => width(r[c] ?? ""))),
@@ -338,4 +340,21 @@ export function errorText(message: string, hint?: string | null): string {
 
 export function warn(message: string): void {
   process.stderr.write(`${errYellow("warning:")} ${clean(message)}\n`);
+}
+
+/**
+ * The pager for output taller than the window, or `null` to print as usual. As git does: `PAGER`
+ * names it, `less` is the default, and `PAGER=cat` or an empty `PAGER` turns it off. `less` gets
+ * F (leave at once if the text fits), R (keep colour) and X (leave the text on screen).
+ */
+export function pager(
+  lines: number,
+  env: Record<string, string | undefined> = process.env,
+  stdout: { isTTY?: boolean | undefined; rows?: number | undefined } = process.stdout,
+  platform: string = process.platform,
+): { command: string; env: Record<string, string> } | null {
+  if (!term().rich || stdout.isTTY !== true || !stdout.rows || lines < stdout.rows) return null;
+  const command = (env.SATI_PAGER ?? env.PAGER)?.trim() ?? (platform === "win32" ? "" : "less");
+  if (command === "" || command === "cat") return null;
+  return { command, env: env.LESS === undefined ? { LESS: "FRX" } : {} };
 }

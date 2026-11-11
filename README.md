@@ -227,6 +227,9 @@ If you are an agent working in a repo that uses sati:
   10 guard blocked. Errors print a message and a `hint:` line with the next command to run.
 - **Output follows the reader.** In a terminal: colour, aligned columns and local times. In a
   pipe: compact lines without colour. `NO_COLOR=1` or `--no-color` turns colour off anywhere.
+  Output taller than the terminal opens in your pager (`PAGER=cat` turns that off).
+- **Tab completion.** `eval "$(sati completion zsh)"` in your shell profile; also `bash` and `fish`.
+- **After you update sati**, run `sati upgrade` in each project.
 - **Never** edit `.sati/` by hand or commit with `--no-verify`.
 
 ## CLI at a glance

@@ -1,0 +1,15 @@
+{
+  "consequences": "Hints in doctor and init name `sati upgrade`. The text inside the git hook runner still says `init --upgrade`, because changing it would mark every project's hooks as out of date. `task claim` with no id keeps claiming the top ready task. fish completion is untested.",
+  "context": "The owner asked why updating a project needs `sati init --upgrade --yes`. The upgrade only rewrites files this tool manages, and git shows the change, so the question added a flag without adding safety.",
+  "createdAt": "2026-11-11T16:11:12.769Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "`sati upgrade` does the work of `init --upgrade --yes` and never prompts; `--dry-run` previews. `init --upgrade` keeps its prompt and its `--yes` rule. Completions are generated from the command tree at run time. Long output goes through a pager only for a person at a terminal (SATI_PAGER, PAGER, less; PAGER=cat off; none by default on Windows). Rejected: an interactive picker for `task claim`.",
+  "id": "dec_01M75P1B01X5RQ7BA5ERJJYTMP",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T16:11:12.770Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "Terminal follow-ups: `sati upgrade` asks nothing; pager as git; no picker for task claim",
+  "updatedAt": "2026-11-11T16:11:12.769Z",
+  "version": 1
+}

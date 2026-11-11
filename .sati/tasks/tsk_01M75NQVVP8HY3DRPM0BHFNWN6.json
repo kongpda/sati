@@ -1,0 +1,50 @@
+{
+  "body": "Owner asked 2026-11-11 (\"fix all as your recommendation\") after the 9i output work. Fix the three cosmetic leftovers and build the three ideas noted in docs/ideas.md. Work in worktree branch cli-output.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "cf89ae3e8b45c2dd61191644afa5be8533bcdc57",
+    "completedAt": "2026-11-11T16:11:17.455Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/cli/src/commands/completion.ts",
+      "packages/cli/src/commands/upgrade.ts",
+      "packages/cli/src/commands/init.ts",
+      "packages/cli/src/commands/doctor.ts",
+      "packages/cli/src/commands/review.ts",
+      "packages/cli/src/index.ts",
+      "packages/cli/src/runtime.ts",
+      "packages/cli/src/term.ts",
+      "packages/cli/test/init.test.ts",
+      "packages/cli/test/output.test.ts",
+      "packages/cli/test/term.test.ts",
+      "PLAN.md",
+      "README.md",
+      "docs/progress.md",
+      "docs/ideas.md",
+      "docs/guide/faq.md",
+      "docs/guide/quick-start.md",
+      ".changeset/cli-followups.md"
+    ],
+    "releaseNote": "`sati upgrade`, shell completions (`sati completion zsh`), and a pager for long output.",
+    "summary": "Added `sati upgrade` (short form of `init --upgrade --yes`, no prompt, --dry-run), `sati completion bash|zsh|fish` built from the command tree, a pager for output taller than the terminal, wrapping in `sati review`, and tab replacement in tables. Doctor and init hints name `sati upgrade`. Not built: picker for `task claim` (it already claims the top ready task). Left: stray check mark when an actor name starts with \"Created\" in a NO_COLOR terminal. fish completion not run."
+  },
+  "createdAt": "2026-11-11T16:06:02.358Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M75NQVVP8HY3DRPM0BHFNWN6",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T16:06:02.360Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-11T16:06:04.182Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-11T16:11:17.456Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-11T16:11:17.456Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-11T16:11:17.456Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-11T16:06:04.182Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "review",
+  "title": "CLI output follow-ups: review wrap, tick only on action lines, tabs in tables, shell completions, pager, task picker",
+  "updatedAt": "2026-11-11T16:11:17.456Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

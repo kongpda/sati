@@ -223,7 +223,7 @@ async function plan(
   const found = await alreadyInitialized(db);
   if (found && !args.upgrade) {
     throw new SatiError("CONFLICT", `This project is already initialized as "${found.slug}".`, {
-      hint: `Run \`${CLI_NAME} init --upgrade\` to update its git hooks, merge driver and agent files.`,
+      hint: `Run \`${CLI_NAME} upgrade\` to update its git hooks, merge driver and agent files.`,
     });
   }
   if (!found && args.upgrade) {
@@ -723,6 +723,44 @@ export default defineCommand({
           hint: `Run \`${CLI_NAME} init ${flags}--yes\`, or \`${CLI_NAME} init ${flags}--dry-run\` to see what it would write.`,
           details: { preview: summary(p) },
         });
+      },
+      render,
+    ),
+});
+
+/**
+ * `upgrade`: the work of `init --upgrade --yes` under a short name. It asks nothing: it only
+ * rewrites files this tool manages, and `--dry-run` shows them first.
+ */
+export const upgradeCommand = defineCommand({
+  meta: {
+    name: "upgrade",
+    description: "Update this project's git hooks, merge driver and agent files",
+  },
+  args: {
+    tools: {
+      type: "string",
+      description:
+        "Also set up these agent tools, added to the ones detected, comma-separated (e.g. claude-code,codex)",
+    },
+    "dry-run": { type: "boolean", description: "Show what it would write, and write nothing" },
+    "global-hooks": {
+      type: "boolean",
+      description:
+        "Also chain the git hooks into a global core.hooksPath, which every repo on this machine uses",
+    },
+    ...json,
+  },
+  run: ({ args }) =>
+    output(
+      args.json,
+      async () => {
+        const p = await plan(process.cwd(), {
+          upgrade: true,
+          tools: args.tools,
+          globalHooks: args["global-hooks"],
+        });
+        return args["dry-run"] ? { dryRun: summary(p) } : apply(p);
       },
       render,
     ),

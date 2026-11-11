@@ -13,7 +13,7 @@ import { json } from "../args.js";
 import { defaultBase, rangeChanges, rangeStart } from "../git.js";
 import { handle } from "../render.js";
 import { execute } from "../runtime.js";
-import { bold, green, red, yellow } from "../term.js";
+import { bold, green, red, term, wrap, yellow } from "../term.js";
 
 const verdict = (v: string) => (v === "ok" ? green(v) : v === "blocked" ? bold(red(v)) : yellow(v));
 
@@ -124,6 +124,11 @@ export default defineCommand({
                   .join("\n")}`,
               ]
             : []),
-        ].join("\n"),
+        ]
+          .join("\n")
+          .split("\n")
+          // For a person, a long title wraps under its own text instead of at the window edge.
+          .map((line) => (term().rich ? wrap(line, term().width, "  ") : line))
+          .join("\n"),
     ),
 });

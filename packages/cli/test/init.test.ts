@@ -176,8 +176,8 @@ describe("sati init", () => {
     const dir = await tempRepo({ init: true });
     type Doctor = { checks: { name: string; ok: boolean; detail: string }[] };
     const hooks = () => satiJson<Doctor>(dir, "doctor").data.checks.find((c) => c.name === "hooks");
-    expect(hooks()).toMatchObject({ ok: false, detail: expect.stringContaining("init --upgrade") });
-    expect(sati(dir, "init", "--upgrade", "--yes").code).toBe(0);
+    expect(hooks()).toMatchObject({ ok: false, detail: expect.stringContaining("sati upgrade") });
+    expect(sati(dir, "upgrade").code).toBe(0);
     expect(hooks()?.ok).toBe(true);
   });
 
@@ -201,7 +201,7 @@ describe("sati init", () => {
     const agents = join(dir, "AGENTS.md");
     writeFileSync(agents, readFileSync(agents, "utf8").replace("sati_brief", "sati_old"));
     expect(setup()).toMatchObject({ ok: false, detail: expect.stringContaining("AGENTS.md") });
-    expect(setup()?.detail).toContain("init --upgrade");
+    expect(setup()?.detail).toContain("sati upgrade");
     expect(sati(dir, "doctor").code).not.toBe(0);
     expect(sati(dir, "init", "--upgrade", "--yes").code).toBe(0);
     expect(setup()?.ok).toBe(true);
@@ -460,7 +460,7 @@ describe("sati init", () => {
     const r = satiJson<Err>(dir, "init", "--yes");
     expect(r.code).toBe(4);
     expect(r.data.error.code).toBe("CONFLICT");
-    expect(r.data.error.hint).toContain("sati init --upgrade");
+    expect(r.data.error.hint).toContain("sati upgrade");
   });
 
   // PLAN: an initialized project gets newer hooks, driver, .gitattributes and agent files

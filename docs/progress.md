@@ -2097,3 +2097,13 @@ Task `tsk_fevjbr`.
 - Brief: `fit()` trims in two passes, first to a floor per section (2 lines; Ready keeps 5), then past it. The cap still holds at 200 tokens (existing test).
 - Cold start: `sati --help` in about 0.1 s on this machine, as before; the help renderer loads only the commands it lists.
 - Not built, in `docs/ideas.md`: shell completions, a pager for long lists, interactive pickers.
+
+## 2026-11-11 — 9j: terminal follow-ups
+
+- `sati upgrade` asks nothing. It only rewrites files this tool manages (hooks, merge driver, rules block, agent configs), git shows the change, and `--dry-run` previews it. `init --upgrade` still asks in a terminal and still needs `--yes` without one, so scripts that call it are unchanged. Without `--global-hooks` it does not chain into a global `core.hooksPath`; the note it prints says how.
+- The text inside the git hook runner still says `init --upgrade`: changing it would mark the hooks of every project as out of date.
+- Completions are generated from the citty command tree at run time, so a new command or flag needs no second list. Hidden commands are left out. Bash is tested by running the script; zsh was checked by hand; fish was not run (not installed here).
+- Pager: as git does it. Only when the layout is for a person, stdout is a terminal and the text is taller than it. `less` gets `LESS=FRX` when `LESS` is unset, so colour shows and the text stays on screen. No default pager on Windows. A pager that cannot start falls back to plain printing.
+- Not built: a picker for `task claim`. `task claim` with no id already claims the top ready task; a picker would change that.
+- Left as it is: a comment list in a `NO_COLOR` terminal can show a check mark when an actor's name starts with "Created". Too rare to add a rule for.
+

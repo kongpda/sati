@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import pkg from "../package.json" with { type: "json" };
 import { run, sati, satiJson, tempRepo } from "./helpers.js";
@@ -123,5 +124,45 @@ describe("output for a person", () => {
     expect(doctor).toMatch(/^[✔✖] claims\s/mu);
     expect(doctor).toMatch(/\d+ (checks passed|failed, \d+ passed)\.\n$/u);
     expect(sati(dir, "doctor").stdout).toMatch(/^(ok|fail) claims: /mu);
+  });
+});
+
+describe("completion", () => {
+  // The script is built from the command definitions, so a new command or flag is in it
+  // without anyone remembering to add it.
+  it("prints a script for each shell that names the commands and their flags", async () => {
+    const dir = await tempRepo();
+    for (const shell of ["bash", "zsh", "fish"]) {
+      const r = sati(dir, "completion", shell);
+      expect(r.code).toBe(0);
+      expect(r.stdout).not.toContain(ESC);
+      for (const word of ["task", "claim", "priority", "no-color"]) {
+        expect(r.stdout).toContain(word);
+      }
+    }
+    const bad = sati(dir, "completion", "tcsh");
+    expect(bad.code).toBe(2);
+    expect(bad.stderr).toContain("bash");
+  });
+
+  it.skipIf(process.platform === "win32")("completes commands and flags in bash", async () => {
+    const dir = await tempRepo();
+    const script = sati(dir, "completion", "bash").stdout;
+    const complete = (...words: string[]) =>
+      spawnSync(
+        "bash",
+        [
+          "-c",
+          `${script}\nCOMP_WORDS=(sati "$@"); COMP_CWORD=$#; _sati; echo "\${COMPREPLY[@]}"`,
+          "bash",
+          ...words,
+        ],
+        { encoding: "utf8" },
+      ).stdout.trim();
+    expect(complete("ta")).toBe("task");
+    expect(complete("task", "cl")).toBe("claim");
+    expect(complete("task", "create", "A title", "--pri")).toBe("--priority");
+    // A word that is no subcommand (an argument) falls back to the command's own flags.
+    expect(complete("recall", "question", "--js")).toBe("--json");
   });
 });

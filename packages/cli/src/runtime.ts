@@ -58,7 +58,7 @@ import { watchedSha256 } from "./file-hash.js";
 import { defaultBase, samePath } from "./git.js";
 import { runHint } from "./install.js";
 import { loadFolder, markSeen } from "./shared-folder.js";
-import { cleanDeep, errorText, polish } from "./term.js";
+import { cleanDeep, errorText, pager, polish } from "./term.js";
 
 export interface Runtime {
   ctx: ServiceContext;
@@ -778,6 +778,22 @@ export async function exportWritten(
   return result.written;
 }
 
+/** Shows text taller than the window in the pager. False when it was not shown that way. */
+async function paged(text: string): Promise<boolean> {
+  const use = pager(text.split("\n").length);
+  if (use === null) return false;
+  const { spawnSync } = await import("node:child_process");
+  // The pager is the user's own setting, run as git runs it: through the shell.
+  const r = spawnSync(use.command, {
+    shell: true,
+    input: `${text}\n`,
+    stdio: ["pipe", "inherit", "inherit"],
+    env: { ...process.env, ...use.env },
+  });
+  // A pager that is not installed (127) or could not start leaves the text to print as usual.
+  return r.error === undefined && r.status !== 127 && r.status !== 126;
+}
+
 /** Like `execute`, for commands that run before a project exists (`init`). */
 export async function output<T>(
   json: boolean | undefined,
@@ -790,7 +806,7 @@ export async function output<T>(
     // escapes them itself.
     const text = json ? JSON.stringify(value, withoutStamps, 2) : polish(render(cleanDeep(value)));
     // An empty rendering prints nothing at all (a quiet git hook), not a blank line.
-    if (text !== "") process.stdout.write(`${text}\n`);
+    if (text !== "" && !(await paged(text))) process.stdout.write(`${text}\n`);
   } catch (err) {
     process.exitCode = printError(err, json ?? false);
   } finally {

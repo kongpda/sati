@@ -1,5 +1,5 @@
 import { CLI_NAME } from "@sati/core/name";
-import { defineCommand } from "citty";
+import { type CommandDef, defineCommand } from "citty";
 import pkg from "../package.json" with { type: "json" };
 import { main } from "./main.js";
 
@@ -19,10 +19,11 @@ if (major < needMajor || (major === needMajor && minor < needMinor)) {
 const lazy = (load: () => Promise<{ default: unknown }>) => () =>
   load().then((m) => m.default as ReturnType<typeof defineCommand>);
 
-const root = defineCommand({
+const root: CommandDef = defineCommand({
   meta: { name: CLI_NAME, version: pkg.version, description: pkg.description },
   subCommands: {
     init: lazy(() => import("./commands/init.js")),
+    upgrade: lazy(() => import("./commands/upgrade.js")),
     brief: lazy(() => import("./commands/brief.js")),
     task: lazy(() => import("./commands/task.js")),
     feature: lazy(() => import("./commands/feature.js")),
@@ -60,17 +61,19 @@ const root = defineCommand({
     review: lazy(() => import("./commands/review.js")),
     scan: lazy(() => import("./commands/scan.js")),
     serve: lazy(() => import("./commands/serve.js")),
+    completion: () =>
+      import("./commands/completion.js").then((m) => m.completionCommand(() => root)),
   },
 });
 
 await main(root, {
   groups: {
-    Start: ["init", "brief", "next", "doctor"],
+    Start: ["init", "upgrade", "brief", "next", "doctor"],
     Work: ["task", "feature", "milestone", "plan", "template", "handoff", "wait"],
     Memory: ["note", "comment", "decision", "card", "recall", "search"],
     "Work together": ["lock", "guard", "review", "scan"],
     History: ["activity", "changes", "undo"],
-    Project: ["settings", "projects", "ui", "rules", "sync", "export", "import"],
+    Project: ["settings", "projects", "ui", "rules", "sync", "export", "import", "completion"],
     "Run by tools": ["mcp", "serve", "nudge", "merge-driver"],
   },
   aliases: { context: "card", app: "ui" },

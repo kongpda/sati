@@ -6,6 +6,7 @@ import {
   cleanDeep,
   detect,
   markdown,
+  pager,
   polish,
   setTerm,
   type Term,
@@ -139,6 +140,35 @@ describe("layout", () => {
     expect(out[1]).toBe("tsk_22  in_progress  short");
     expect(out[0]?.startsWith("tsk_1   todo         xxx")).toBe(true);
     expect(width(out[0] ?? "")).toBeLessThanOrEqual(40);
+  });
+
+  // A tab moves the cursor by an amount only the terminal knows; the next column would shift.
+  it("keeps the columns in line when a cell holds a tab", () => {
+    setTerm(person);
+    const out = table([
+      ["a\tb", "x"],
+      ["abc", "y"],
+    ]).split("\n");
+    expect(out).toEqual(["a b  x", "abc  y"]);
+  });
+
+  // Paging is for a person at a real terminal: never into a pipe, never for a short answer.
+  it("pages only output taller than a real terminal, and PAGER can turn it off", () => {
+    const screen = { isTTY: true, rows: 30 };
+    setTerm(person);
+    expect(pager(100, {}, screen, "darwin")).toEqual({ command: "less", env: { LESS: "FRX" } });
+    expect(pager(100, { PAGER: "more", LESS: "R" }, screen, "darwin")).toEqual({
+      command: "more",
+      env: {},
+    });
+    expect(pager(100, { PAGER: "more", SATI_PAGER: "bat" }, screen, "darwin")?.command).toBe("bat");
+    expect(pager(10, {}, screen, "darwin")).toBeNull();
+    expect(pager(100, { PAGER: "cat" }, screen, "darwin")).toBeNull();
+    expect(pager(100, { PAGER: "" }, screen, "darwin")).toBeNull();
+    expect(pager(100, {}, screen, "win32")).toBeNull();
+    expect(pager(100, {}, { isTTY: false, rows: 30 }, "darwin")).toBeNull();
+    setTerm(piped);
+    expect(pager(100, {}, screen, "darwin")).toBeNull();
   });
 
   it("shows local time to a person and the stored ISO time to a pipe", () => {

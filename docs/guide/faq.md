@@ -57,7 +57,7 @@ tarball as in the [quick start](quick-start.md#install). After the first publish
 
 For a project install, update the dev dependency (`npm install -D @kongpda/sati@latest`) and
 commit the lockfile. The git hooks start `node_modules/.bin/sati`, so they pick up the new
-version. For a global install, run `npm install -g @kongpda/sati@latest`. Then run `sati init --upgrade`
+version. For a global install, run `npm install -g @kongpda/sati@latest`. Then run `sati upgrade`
 in each project: it refreshes the git hooks, the merge driver, the rules block and the agent
 configs in one step. A newer sati upgrades the database on first use and backs it up first.
 
@@ -69,7 +69,7 @@ files"). Nothing is lost: update sati on that machine and import again.
 
 ## I switched from a global to a project install. What do I rerun?
 
-`npx sati init --upgrade` moves the git hooks, the merge driver, the MCP configs and the Claude
+`npx sati upgrade` moves the git hooks, the merge driver, the MCP configs and the Claude
 Code hooks to `node_modules/.bin/sati`. Entries you wrote by hand are left alone.
 
 ## How do I back up or move a project?

@@ -1,7 +1,8 @@
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import pkg from "../package.json" with { type: "json" };
-import { run, sati, satiJson, tempRepo } from "./helpers.js";
+import { bin, run, sati, satiJson, tempRepo } from "./helpers.js";
 
 const ESC = "\x1b";
 /**
@@ -199,6 +200,56 @@ describe("task claim --pick", () => {
     const r = sati(dir, "task", "claim", "--pick");
     expect(r.code).toBe(2);
     expect(r.stderr).toContain("task list --ready");
+  });
+});
+
+/**
+ * Runs a command inside a pseudo-terminal 100 columns wide, types the keys once the prompt shows,
+ * and prints what the terminal showed. Python ships a pty module; Node has none without a native
+ * add-on. The script gives up after 30 s, so a prompt that never shows fails instead of hanging.
+ */
+const PTY = fileURLToPath(new URL("./support/pty-run.py", import.meta.url));
+
+describe("task claim --pick in a terminal", () => {
+  interface Task {
+    id: string;
+    status: string;
+  }
+  const python =
+    process.platform !== "win32" &&
+    spawnSync("python3", ["-c", "import pty, os; os.waitstatus_to_exitcode"]).status === 0;
+  const pick = (dir: string, keys: string) =>
+    spawnSync(
+      "python3",
+      [PTY, "Claim which task?", keys, process.execPath, bin, "task", "claim", "--pick"],
+      {
+        cwd: dir,
+        encoding: "utf8",
+        env: { ...process.env, SATI_ACTOR: "tester", CLAUDECODE: "", AI_AGENT: "" },
+      },
+    );
+
+  // The picker exists so a person can take a task that is not the top one. If the choice did not
+  // reach the claim, `--pick` would be `task claim` with extra steps.
+  it.skipIf(!python)("claims the task the person moved to, not the top one", async () => {
+    const dir = await tempRepo({ init: true });
+    const first = satiJson<Task>(dir, "task", "create", "First", "--priority", "high").data;
+    const second = satiJson<Task>(dir, "task", "create", "Second").data;
+
+    const r = pick(dir, "\\x1b[B\\r");
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("Claimed");
+    expect(satiJson<Task>(dir, "task", "show", second.id).data.status).toBe("in_progress");
+    expect(satiJson<Task>(dir, "task", "show", first.id).data.status).toBe("todo");
+  });
+
+  it.skipIf(!python)("claims nothing when the person cancels", async () => {
+    const dir = await tempRepo({ init: true });
+    const only = satiJson<Task>(dir, "task", "create", "Only").data;
+    const r = pick(dir, "\\x03");
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("Nothing claimed.");
+    expect(satiJson<Task>(dir, "task", "show", only.id).data.status).toBe("todo");
   });
 });
 

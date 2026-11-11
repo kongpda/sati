@@ -960,6 +960,11 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 - [x] `task show`, `task complete`, `task release` and `handoff` with no id act on the one task the caller holds. With none, or with several, they refuse (exit 2) and list them; they never guess
 - [x] Validation errors name the field and the allowed values once (`Invalid input: priority: expected one of low, medium, high, urgent`), for the CLI and MCP alike
 
+**9m — Tests that were skipped (owner asked 2026-11-12)**
+
+- [x] The `task claim --pick` prompt is tested in a pseudo-terminal: arrow down and Enter claims the second task, Ctrl-C claims nothing
+- [x] CI installs fish on one Ubuntu cell, so the fish completion test runs there
+
 **Not in Phase 9:** registry collisions (two folders with one slug, a copied folder sharing a database) are fixed under task `tsk_01M74P…VB2MP62GRN1XC90AKCE` by another agent.
 
 **Gate:** the Phase 8 gate folder, on a machine with no git, driven through MCP by a client that sets no agent variable: the caller is recorded as an agent, cards with anchors go stale when the file changes, and Khmer questions recall Khmer cards. `pnpm lint && pnpm typecheck && pnpm test` pass and the performance budgets are unchanged.

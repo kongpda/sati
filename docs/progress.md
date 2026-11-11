@@ -2146,3 +2146,8 @@ Task `tsk_fevjbr`.
 - Not turned on: required status checks on `main`. With them a direct push to `main` is refused, so every change would need a pull request. That changes how the owner and the agents work, so it stays the owner's choice.
 - The step cannot be run from here: the release workflow is manual. The `gh run list --workflow ci.yml --commit` query it uses was run by hand against a green commit and returned one passed run.
 
+## 2026-11-12 — 9m: tests that were skipped
+
+- The picker test uses Python's `pty` module (`packages/cli/test/support/pty-run.py`), not a Node pty package: those are native add-ons, and a new dependency needs an ADR. The test skips on Windows and where `python3` is missing. The script sets the terminal to 100 columns (a new pty has none, and the prompt then wraps one letter per line) and gives up after 30 s.
+- fish in CI: the completion script passed on fish 3.7.1 and 4.9.3 locally. Ubuntu 24.04 ships 3.7. Installed on the `ubuntu-latest` / Node 24 cell only. Not seen in CI yet when this was written.
+

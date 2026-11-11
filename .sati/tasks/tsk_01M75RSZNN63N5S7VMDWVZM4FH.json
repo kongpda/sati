@@ -1,14 +1,35 @@
 {
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "89c72f7fd00193f3935897546eec8e2b05b350b8",
+    "completedAt": "2026-11-11T17:15:26.692Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/cli/test/output.test.ts",
+      "packages/cli/test/support/pty-run.py",
+      ".github/workflows/ci.yml",
+      "PLAN.md",
+      "docs/progress.md"
+    ],
+    "summary": "task claim --pick is tested in a pseudo-terminal (Python pty, support/pty-run.py): down+Enter claims the second task, Ctrl-C claims nothing. CI installs fish on the ubuntu/Node 24 cell so the fish completion test runs; the script passed locally on fish 3.7.1 and 4.9.3. Standard gate green."
+  },
   "createdAt": "2026-11-11T16:59:37.525Z",
   "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
   "id": "tsk_01M75RSZNN63N5S7VMDWVZM4FH",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "*": "2026-11-11T16:59:37.528Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+    "*": "2026-11-11T16:59:37.528Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-11T17:15:26.184Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-11T17:15:26.695Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-11T17:15:26.695Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-11T17:15:26.695Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-11T17:15:26.184Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
   },
-  "status": "todo",
+  "status": "review",
   "title": "Test the task claim --pick prompt through a pseudo-terminal; run the fish completion test in CI",
-  "updatedAt": "2026-11-11T16:59:37.525Z",
-  "version": 1
+  "updatedAt": "2026-11-11T17:15:26.698Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

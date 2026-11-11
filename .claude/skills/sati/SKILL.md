@@ -39,9 +39,9 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
 
 ## While working
 - `task_update` to record progress or change status. Any write you make renews your lease.
-- If you stop without finishing, write `sati handoff <task> --next "…"` (add `--to <actor>` for
-  one agent), then move the task back to `todo`. The next claimer gets the handoff with its
-  `task_claim` result, and that counts as read.
+- If you stop without finishing, call `handoff_write` or run `sati handoff <task> --next "…"`
+  (add `to` or `--to <actor>` for one agent), then move the task back to `todo`. The next
+  claimer gets the handoff with its `task_claim` result, and that counts as read.
 - Stuck on a person: `task_update` with `needsInput: "the question"` (or `sati wait "…"`). The
   task shows under "Needs you" for people until your next write. Moving a task to `blocked`
   takes a `reason` saying what it waits on.

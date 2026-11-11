@@ -52,6 +52,9 @@ file and field, so pre-commit stops until you remove the secret.
 
 ## How do I update sati?
 
+`@kongpda/sati` is not on npm yet: until it is, pull the source, build, pack and install the new
+tarball as in the [quick start](quick-start.md#install). After the first publish:
+
 For a project install, update the dev dependency (`npm install -D @kongpda/sati@latest`) and
 commit the lockfile. The git hooks start `node_modules/.bin/sati`, so they pick up the new
 version. For a global install, run `npm install -g @kongpda/sati@latest`. Then run `sati init --upgrade`

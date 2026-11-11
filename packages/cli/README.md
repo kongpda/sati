@@ -23,7 +23,8 @@ same task, edit each other's files or delete code that already ships.
 
 ## Install
 
-Node.js 24.15 or newer:
+Node.js 24.15 or newer. Until the first publish to npm, install the packed tarball as the
+[repository README](https://github.com/kongpda/sati#install-from-source) shows.
 
 ```bash
 cd my-project

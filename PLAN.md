@@ -173,7 +173,7 @@ my-app/
 │  ├─ features/feat_01JC….json
 │  ├─ tasks/tsk_01JC….json
 │  ├─ milestones/  decisions/  notes/  context/
-│  └─ .gitattributes             # *.json merge=sati
+│  └─ .gitattributes             # .sati/*/*.json merge=sati
 ├─ .mcp.json                     # registers `sati mcp` for Claude Code (others: printed snippet)
 ├─ AGENTS.md / CLAUDE.md         # appended block: how agents must use sati
 └─ .git/sati/sati.db           # live DB (never committed)
@@ -185,7 +185,7 @@ Activity and locks are **not** exported to `.sati/`: they are high-churn and mac
 
 Agents use sati through a small MCP toolset, with the CLI as a fallback. Hooks enforce the important steps, because agents forget instructions but cannot skip hooks.
 
-**MCP tools (19, kept small to save context)**
+**MCP tools (20, kept small to save context)**
 
 | Tool | What it does |
 | --- | --- |
@@ -216,11 +216,13 @@ MCP **resources**: `sati://workflow` (the rules agents follow), `sati://project/
 
 | Hook | Runs | Effect |
 | --- | --- | --- |
-| Claude Code `SessionStart` | `sati brief --format=agent` | Brief is injected into the agent's context automatically |
-| Claude Code `PreToolUse` (Edit / Write) | `sati guard --paths <file>` | Warns or blocks an edit inside another agent's lock or a protected feature |
+| Claude Code `SessionStart` | `sati brief --format=agent` (`--format=short` after resume and compaction) | Brief is injected into the agent's context automatically |
+| Claude Code `PreToolUse` (Edit / MultiEdit / Write / NotebookEdit, Bash) | `sati guard --hook` | Warns or blocks an edit inside another agent's lock or a protected feature, and a shell command that deletes such files or skips the git hooks |
 | Claude Code `Stop` | `sati nudge` | Reminds the agent to complete or update its claimed task |
-| git `pre-commit` | `sati guard --staged` | Blocks commits that delete or gut a shipped feature without a Decision |
-| git `post-merge`, `post-checkout`, `post-rewrite` | `sati sync import` | Pulls teammates' snapshot changes into the live DB |
+| Claude Code `Notification`, `UserPromptSubmit` | `sati wait --hook` | Marks a claimed task as waiting on a person, and clears the mark at the next prompt |
+| git `pre-commit` | `sati guard --staged`, then `sati sync export` | Blocks commits that delete or gut a shipped feature without a Decision; stages the `.sati/` snapshot |
+| git `pre-push` | `sati guard --range` | The same check over the commits being pushed |
+| git `post-merge`, `post-checkout`, `post-rewrite` | `sati sync import --quiet` | Pulls teammates' snapshot changes into the live DB |
 
 For Codex, Cursor and Gemini CLI, `sati init` writes their MCP config and an `AGENTS.md` block. Git hooks protect them even without editor hooks.
 
@@ -315,7 +317,7 @@ Live coordination happens in the shared DB. Git only carries the durable record 
 
 **Merge driver (`sati merge-driver %O %A %B`)**
 
-- Registered through `.gitattributes` (`.sati/**/*.json merge=sati`) and local git config at init.
+- Registered through `.gitattributes` (`.sati/*/*.json merge=sati`, the record folders only) and local git config at init.
 - Three-way merge per field: if only one side changed a field, take that side. If both changed it, the newer `updatedAt` wins for scalars, arrays are unioned (`labels`, `paths`, `dependsOn`), and Markdown bodies use a line-level three-way merge.
 - If a body conflict remains, keep both versions under conflict markers inside the JSON string and flag the record `needsReview`. The merge never fails, and the UI highlights the record.
 - Tested with property-based fuzzing: merging is deterministic, and merge(A, B) equals merge(B, A) for non-conflicting edits.
@@ -411,7 +413,7 @@ The biggest risks are a local server that any website can reach, secrets leaking
 
 ## Performance budgets
 
-Agents call sati dozens of times per session, so the CLI must feel instant. The plan is a CI benchmark per budget that fails the build on a regression of more than 20%. **Not built yet:** there is no benchmark suite; the brief and board budgets are checked by tests, the rest by hand (moved to Phase 6).
+Agents call sati dozens of times per session, so the CLI must feel instant. `pnpm bench` measures the CLI budgets (brief, a read command, `recall`, `task_claim` under 10 agents) and exits 1 when one is missed; the brief and board budgets are also checked by tests. **Not built yet:** CI does not run the benchmark, so a regression is found only when someone runs it (moved to Phase 6).
 
 | Measure | Budget | How we hit it |
 | --- | --- | --- |
@@ -911,7 +913,7 @@ A second pass over this plan found 12 gaps that would cause real bugs in product
 | --- | --- | --- |
 | Agents ignore sati and just edit code | Guards never trigger; tracking is incomplete | Hooks inject the brief and run the guard regardless; `pre-commit` is the backstop |
 | `node:sqlite` is a release candidate, so its API may change in a Node minor | Store breaks on a Node update | Only `packages/store-sqlite` imports it; CI runs the newest Node 24 and 26 (ADR 0003) |
-| Merge driver not registered on a teammate's clone (git config is local) | Raw JSON conflicts | `sati doctor` and every CLI run re-register it; conflicts still resolve with `sati sync resolve` |
+| Merge driver not registered on a teammate's clone (git config is local) | Raw JSON conflicts | `sati doctor` and every CLI run re-register it; conflicts still resolve by hand, and `sati sync import` reports a record it cannot read |
 | Guard too strict, so developers turn it off | Protection lost | Clear messages, `warn` by default for unprotected features, logged one-off overrides |
 | Brief grows too big as projects grow | Wasted agent context | Hard token cap, ranking by relevance to the claimed task, compaction of old done tasks |
 | Overlap with Beads / Backlog.md | Less reason to switch | Differentiate on feature guard, locks, context cache, roadmap and hosted multi-project |

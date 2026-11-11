@@ -1886,3 +1886,13 @@ Status: **done, waiting for the owner's review** (2026-11-11). Task `tsk_82snym`
 - Everything else is in `docs/review-followups.md` under "Found in the full-project audit (2026-11-11)". Nothing there was changed; several items are GitHub settings or doc promises that only the owner can decide.
 - Not read by any reviewer: most test bodies, `styles.css` in full, ADRs 0000-0004. No Playwright run was part of the review itself.
 - Changeset: `audit-fixes.md` (patch).
+
+## 2026-11-11 — Audit follow-ups: fixes, speed, recall ranking, docs
+
+Status: **done, waiting for the owner's review**. Task `tsk_cf1r96`. The owner asked to take the good ideas from `fff`, fix the open findings and make the app fast, complete and secure.
+
+- Store and sync (A), CLI (B), core (C), board (D): the open bugs from `docs/review-followups.md`, each with a test that fails on the old code unless listed below. Changesets `audit-store`, `audit-cli`, `audit-core`, `audit-board`.
+- Speed and ranking (E): `recall` lifts recent records and cards of files being edited (ADR 0007, the idea taken from `fff`; no dependency). The branch is read from the `HEAD` file: about 10 ms saved per command (measured: 9.6 ms for `git rev-parse`, 0.02 ms for the file read). `gitRepoIndex` finds changed files by map. An unborn branch now reports its name where it reported none. Changeset `recall-ranking` (minor).
+- Docs and dependencies (F): install text for the private v0.1.0 tarball; `PLAN.md` tool count, hooks table, `.gitattributes` pattern and benchmark wording; 15 minor and patch dependency updates.
+- No direct test: `scan` and `review` paging (the shared `listAll` has one), the two shutdown `.catch` handlers, the Settings saving state, the avatar colour tokens, the `removeStaleTemps` race, FTS trigger speed (no benchmark was run). The "being edited" lift is asserted, but only the recency lift was shown to fail the test when removed.
+- Left open: the small leftovers line, the majors (`vite` 8, `@vitejs/plugin-react` 6), pruning `docs/ideas.md`, and every owner decision listed under "Open, docs and repo" in `docs/review-followups.md`.

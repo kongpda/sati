@@ -15,8 +15,9 @@ same task, edit each other's files or delete code that already ships.
 ![Node.js 24.15+](https://img.shields.io/badge/node-%E2%89%A524.15-informational.svg)
 ![Local-first](https://img.shields.io/badge/data-local--first-informational.svg)
 
-> **Status:** pre-release. `@kongpda/sati` is not on npm yet; install it
-> [from source](#install-from-source) until the first release.
+> **Status:** v0.1.0, private. `@kongpda/sati` is not on npm yet; install it
+> [from source](#install-from-source). The `npm install` lines below work after the first
+> publish.
 
 ## Why
 
@@ -74,6 +75,15 @@ ln -s "$PWD/packages/cli/dist/index.mjs" ~/.local/bin/sati   # any directory on 
 ```
 
 Then run `sati init` in your project, without `npx`.
+
+For a project install that teammates and CI can share, pack the CLI and install the tarball:
+
+```bash
+(cd packages/cli && npm pack --pack-destination ~/sati-pkg)
+cd my-project
+npm install -D ~/sati-pkg/kongpda-sati-*.tgz
+npx sati init
+```
 
 ## How an agent session works
 

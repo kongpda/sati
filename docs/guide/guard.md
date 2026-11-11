@@ -113,6 +113,7 @@ guard:
     - uses: actions/setup-node@v4
       with:
         node-version: 24
+    # Until @kongpda/sati is on npm, use the project's own copy: `npm ci`, then `npx sati`.
     - run: npm install -g @kongpda/sati
     - shell: bash
       env:

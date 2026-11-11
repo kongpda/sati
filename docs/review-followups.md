@@ -736,9 +736,9 @@ Open, code (likely bugs; each needs a test before a fix):
 Open, docs and repo (owner decisions):
 
 - [ ] `SECURITY.md` points to GitHub's private vulnerability reporting, which is off (`gh api` returns `enabled: false`). Secret scanning, push protection and Dependabot security updates are off too, and no Renovate PR exists.
-- [ ] Install text that cannot work while nothing is on npm: README Quick start, `docs/guide/quick-start.md`, `faq.md`, `guard.md`, `packages/cli/README.md`. No doc describes the tarball install from ADR 0006.
+- [x] Install text that cannot work while nothing is on npm: README Quick start, `docs/guide/quick-start.md`, `faq.md`, `guard.md`, `packages/cli/README.md`. No doc describes the tarball install from ADR 0006. Done (2026-11-11): the README shows the tarball install, and the quick start, FAQ, guard guide and CLI README say that npm is not available yet and point to it.
 - [ ] `release.yml` run by hand still calls `changeset publish`.
-- [ ] `PLAN.md`: line 914 names `sati sync resolve`, which does not exist; the MCP tool count says 15 and 19 where the server has 20; the Phase 3 `.gitattributes` line and the hooks table are out of date; "no benchmark suite" where `pnpm bench` exists.
+- [x] `PLAN.md`: line 914 names `sati sync resolve`, which does not exist; the MCP tool count says 15 and 19 where the server has 20; the Phase 3 `.gitattributes` line and the hooks table are out of date; "no benchmark suite" where `pnpm bench` exists. Done (2026-11-11). The counts inside ticked checklist lines stay: they record the state at that time.
 - [ ] `docs/ideas.md` has items from 2026-11-10 that are done; `AGENT_KICKOFF.md` is history; the remote branch `changeset-release/main` is stale.
 - [ ] CI runs lint and typecheck on all 7 matrix cells and shares no build output between jobs.
-- [ ] Dependencies behind: majors `vite` 7→8, `@vitejs/plugin-react` 5→6, `@types/node` 24→26; about a dozen minor and patch updates.
+- [ ] Dependencies behind: majors `vite` 7→8, `@vitejs/plugin-react` 5→6, `@types/node` 24→26 (keep `@types/node` at 24 while Node 24 is the minimum). Done (2026-11-11): the 15 minor and patch updates, among them React 19.3, Tailwind 4.3, TanStack Query 5.107 and Playwright 1.65.

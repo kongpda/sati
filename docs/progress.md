@@ -1981,3 +1981,11 @@ Task `tsk_fevjbq`.
 - A card is "gone" only when its file is not on disk and, in a git repo, on no local or remote branch. A card for a file on another branch is kept. Glob cards are never counted. If the branches cannot be read, nothing is called gone.
 - Choice: finished tasks older than 90 days are counted, not removed. A deleted record stays in `.sati/` as a tombstone (the merge needs it), so deleting them frees nothing and loses the history `changes` reads. Dropping old tombstones is in `docs/ideas.md`.
 - Core does no I/O: `leanReport` returns the cards, the command checks the disk, `leanCleanup` takes the ids.
+
+## 2026-11-11 — Phase 9g: small core fixes
+
+Task `tsk_fevjbr`.
+
+- Claim by id now applies the ready list's rule: a `todo` task with a dependency that is missing, or not done, cancelled or deleted, is refused with `INVALID_TRANSITION` and the ids it waits for. A task already in progress can still be renewed or taken over.
+- The brief's stale-path warning treats `docs` and `docs/` as covering `docs/**`.
+- A person may edit a task whose claim has expired, with no token. Choice: the expired claim is left for the sweep to release, so the edit keeps the version the person saw; an agent still has to claim. `task complete` is unchanged.

@@ -1,5 +1,16 @@
 {
   "body": "task.ts applyClaim and checkToken; brief.ts unmatched-paths check.",
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "heartbeatAt": "2026-11-11T07:44:15.764Z",
+    "holder": {
+      "host": "h:001065b26af48df5",
+      "pid": 67720
+    },
+    "leaseUntil": "2026-11-11T09:44:15.764Z",
+    "token": 2
+  },
   "createdAt": "2026-11-11T07:10:09.040Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
   "id": "tsk_01M74Q2M4A3TR1CVPMAGFEVJBR",
@@ -7,10 +18,15 @@
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "*": "2026-11-11T07:10:09.040Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+    "*": "2026-11-11T07:10:09.040Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "branch": "2026-11-11T07:44:15.765Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T07:44:15.765Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T07:44:15.765Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "worktree": "2026-11-11T07:44:15.765Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "todo",
+  "status": "in_progress",
   "title": "9g Small core fixes: claim checks dependencies, brief folder-path warning, expired-claim edits",
-  "updatedAt": "2026-11-11T07:10:09.040Z",
-  "version": 1
+  "updatedAt": "2026-11-11T07:44:15.765Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

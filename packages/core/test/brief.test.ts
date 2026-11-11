@@ -172,13 +172,19 @@ describe("buildBrief", () => {
       paths: ["src/gone/**"],
     });
     const present = await createFeature(ctx, { title: "Here", paths: ["src/here.ts"] });
+    // A plain folder name was reported as stale although the folder is full of files.
+    const folder = await createFeature(ctx, { title: "Folder", paths: ["docs/", "assets"] });
     ctx.repo = {
-      files: async () => [{ path: "src/here.ts", blob: "abc" }],
+      files: async () => [
+        { path: "src/here.ts", blob: "abc" },
+        { path: "docs/a.md", blob: "abc" },
+      ],
       head: async () => "abc",
     };
     const md = (await buildBrief(ctx)).markdown;
     expect(md).toContain(`${shortHandle(missing.id)} Gone: src/gone/**`);
     expect(md).not.toContain(`${shortHandle(present.id)} Here`);
+    expect(md).not.toContain(`${shortHandle(folder.id)} Folder`);
     const noRepo = await setup();
     await createFeature(noRepo.ctx, { title: "Anywhere", paths: ["src/x.ts"] });
     expect((await buildBrief(noRepo.ctx)).markdown).not.toContain("matching no tracked file");

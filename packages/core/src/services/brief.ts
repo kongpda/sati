@@ -229,7 +229,10 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
   const matcher = (glob: string) => {
     let m = globMatchers.get(glob);
     if (!m) {
-      m = micromatch.matcher(glob, { dot: true });
+      // A folder path covers what is beneath it, as it does for cards and the guard.
+      const exact = micromatch.matcher(glob, { dot: true });
+      const beneath = micromatch.matcher(`${glob.replace(/\/+$/u, "")}/**`, { dot: true });
+      m = (file) => exact(file) || beneath(file);
       globMatchers.set(glob, m);
     }
     return m;

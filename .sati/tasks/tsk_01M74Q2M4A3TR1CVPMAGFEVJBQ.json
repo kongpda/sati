@@ -1,15 +1,25 @@
 {
   "body": "Old done tasks, cards whose file is gone, expired locks. Owner asked on 2026-11-11 that sati not bloat with tasks or tests.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "heartbeatAt": "2026-11-11T07:40:38.774Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 67720
-    },
-    "leaseUntil": "2026-11-11T09:40:38.774Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "09bf6aebef02cf5b41b349e9c143a25ba92121e9",
+    "completedAt": "2026-11-11T07:44:15.254Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "packages/core/src/services/doctor.ts",
+      "packages/cli/src/commands/doctor.ts",
+      "packages/cli/test/hardening.test.ts",
+      "packages/core/test/lock-service.test.ts",
+      "README.md",
+      "docs/guide/quick-start.md",
+      "docs/ideas.md",
+      "docs/progress.md",
+      "PLAN.md",
+      ".changeset/lean-check.md"
+    ],
+    "releaseNote": "sati doctor shows a lean line; sati doctor --fix releases expired locks and removes cards whose file is gone.",
+    "summary": "Commit 09bf6ae. doctor prints an informational lean line: cards whose file is gone (not on disk and on no git branch; glob cards skipped) and finished tasks older than 90 days. doctor --fix releases expired locks and removes those cards in one logged transaction (core leanReport, leanCleanup). Finished tasks are counted, not removed: tombstones stay in .sati/, so deleting frees nothing. Tests: CLI doctor --fix (gone card removed, other-branch card and anchored card kept), core lock cleanup. Full suite passes."
   },
   "createdAt": "2026-11-11T07:10:09.039Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
@@ -20,13 +30,14 @@
   "stamps": {
     "*": "2026-11-11T07:10:09.039Z#000001#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "branch": "2026-11-11T07:40:38.774Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "claim": "2026-11-11T07:40:38.774Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "status": "2026-11-11T07:40:38.774Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T07:44:15.254Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T07:44:15.254Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T07:44:15.254Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "worktree": "2026-11-11T07:40:38.774Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "9f Lean check: doctor reports bloat and a cleanup command removes it",
-  "updatedAt": "2026-11-11T07:40:38.774Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T07:44:15.255Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

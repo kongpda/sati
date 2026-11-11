@@ -10,6 +10,7 @@ import {
   listTasks,
   releaseExpiredClaims,
   type ServiceContext,
+  shortHandle,
   updateSettings,
   updateTask,
 } from "../src/index.js";
@@ -426,6 +427,38 @@ describe("claimTask", () => {
 });
 
 describe("fencing tokens", () => {
+  // An agent crashed and its lease ran out. The owner could not fix the task's title until a
+  // brief happened to release the claim. An agent must still claim before it writes.
+  it("lets a person, not an agent, edit a task whose claim has expired", async () => {
+    const { ctx, clock } = await setup();
+    const t = await createTask(ctx, { title: "x" });
+    await claimTask(ctx, t.id, { leaseMinutes: 10 });
+    const person = await ensureActor(ctx, { name: "dara", kind: "human" });
+    const dara = { ...ctx, actorId: person.id };
+    await expect(updateTask(dara, t.id, { title: "live" })).rejects.toMatchObject({
+      code: "CONFLICT",
+    });
+    clock.advance(11 * 60_000);
+    expect((await updateTask(dara, t.id, { title: "fixed" })).title).toBe("fixed");
+    await expect(updateTask(await otherActor(ctx), t.id, { title: "bot" })).rejects.toMatchObject({
+      code: "CONFLICT",
+    });
+  });
+
+  // `task_claim` with no id skips a waiting task, but naming the id started it before the work
+  // it depends on was finished.
+  it("refuses to claim by id a task that waits for an unfinished one", async () => {
+    const { ctx } = await setup();
+    const first = await createTask(ctx, { title: "first" });
+    const second = await createTask(ctx, { title: "second", dependsOn: [first.id] });
+    await expect(claimTask(ctx, second.id)).rejects.toMatchObject({
+      code: "INVALID_TRANSITION",
+      message: expect.stringContaining(shortHandle(first.id)),
+    });
+    await updateTask(ctx, first.id, { status: "cancelled" });
+    expect((await claimTask(ctx, second.id)).status).toBe("in_progress");
+  });
+
   // PLAN review fix 2: a paused agent loses its lease, another claims the task, then the first
   // resumes. Its late write must be refused, or it overwrites the new holder's work.
   it("refuses a late write from an agent whose lease expired and was taken over", async () => {

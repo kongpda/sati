@@ -897,9 +897,9 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 
 **9g — Small core fixes**
 
-- [ ] A task with unfinished dependencies cannot be claimed by id
-- [ ] The brief's "feature path matches no file" warning treats a folder path as covering what is beneath it
-- [ ] A person can edit a task whose claim has expired without waiting for a sweep
+- [x] A task with unfinished dependencies cannot be claimed by id
+- [x] The brief's "feature path matches no file" warning treats a folder path as covering what is beneath it
+- [x] A person can edit a task whose claim has expired without waiting for a sweep
 
 **Needs the owner's decision before any work**
 

@@ -119,7 +119,8 @@ describe("buildBrief globs", () => {
     // Both globs match none of the files, so the feature is reported as stale.
     expect(md).toContain(`${shortHandle(f.id)} F: src/**, lib/**`);
     expect(slow).not.toHaveBeenCalled();
-    expect(spy).toHaveBeenCalledTimes(2);
+    // Two per glob (the path itself, and what is beneath it), whatever the number of files.
+    expect(spy).toHaveBeenCalledTimes(4);
     spy.mockRestore();
     slow.mockRestore();
   });

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
+import { shortHandle } from "../domain/ids.js";
 import { findDependencyCycle, PRIORITY_RANK } from "../domain/rules.js";
 import {
   BodyText,
@@ -266,7 +267,14 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
       : false;
   return ctx.store.write(async (w) => {
     const before = await mustGet(w, ctx, "task", id);
-    checkToken(before, token, ctx.actorId);
+    // A claim whose lease ran out protects nobody's work. A person may edit the task without
+    // waiting for the next brief to release it; an agent still claims first.
+    const lapsed =
+      token === undefined &&
+      before.claim != null &&
+      before.claim.leaseUntil <= nowIso(ctx) &&
+      (await w.get("actor", ctx.actorId))?.kind === "human";
+    if (!lapsed) checkToken(before, token, ctx.actorId);
     // Only newly added assignees must exist here: actors are not in the snapshot, so a task
     // from a teammate's clone may keep someone this database has never seen.
     const added = patch.assigneeIds?.filter((a) => !before.assigneeIds?.includes(a));
@@ -446,6 +454,25 @@ async function applyClaim(
       `Only todo tasks can be claimed; ${before.id} is ${before.status}.`,
       { details: { from: before.status } },
     );
+  }
+  if (before.status === "todo") {
+    // The same rule as the ready list: a done, cancelled or deleted dependency no longer blocks.
+    const waiting: string[] = [];
+    for (const id of before.dependsOn) {
+      const dep = await w.get("task", id);
+      const finished = dep?.status === "done" || dep?.status === "cancelled";
+      if (!dep || (dep.deletedAt === null && !finished)) waiting.push(shortHandle(id));
+    }
+    if (waiting.length > 0) {
+      throw new SatiError(
+        "INVALID_TRANSITION",
+        `Task ${before.id} waits for ${waiting.join(", ")}.`,
+        {
+          hint: `Finish those first, or change what it waits for with \`${CLI_NAME} task update ${before.id} --depends-on\`.`,
+          details: { waitingFor: before.dependsOn },
+        },
+      );
+    }
   }
   const claim = { ...(await lease(w, ctx, leaseMinutes)), token: before.version + 1 };
   await renewTaskLocks(w, ctx, before.id, claim.leaseUntil);

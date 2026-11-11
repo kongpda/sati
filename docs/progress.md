@@ -2081,3 +2081,8 @@ Task `tsk_fevjbr`.
 - Mentions for agents: `mentionsOf` in core follows the board's rule (the shown name, its first word, or the user part of `user@worktree`; done once you comment on the same record after it; gone after 14 days). The brief has a "Mentions" section with up to 5, for any actor. This reverses the earlier line "Agents do not get mentions in their brief": a person can now call an agent on a task it does not hold. All sessions of one agent tool share the handle, so each sees the mention until one of them answers; an answer by one session does not clear it for the others. The board keeps its own copy of the rule, because the UI package does not import core.
 - A short brief with no claimed task reads no notes, so it shows no mentions. The full brief at session start does.
 - Lost claim: `ActivityQuery` has `verb`. SQLite filters with `json_extract(data, '$.verb')`; the verb is not a column, and the query is bounded by one day of rows through the `(project_id, at)` index. The brief asks for up to 500 imports of the last day.
+
+## 2026-11-11 — 9h: one agent, many sessions
+
+- Each agent session is an actor of its own (`claude-code@sati#<session>`), so "done once you answer" never held past one session: the next session got the same mention for 14 days. The brief now counts every agent actor with the same user part of the name as the same agent, for the answer and for who wrote the comment. This replaces the line above that an answer by one session does not clear it for the others.
+- People are not grouped: `ann@laptop` and `ann@office` stay two actors, as on the board.

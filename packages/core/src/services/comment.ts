@@ -98,7 +98,10 @@ export function mentionsOf(
   notes: readonly Note[],
   actor: { id: string; name: string; displayName?: string | undefined },
   now: Date,
+  /** Other actors that are the same one: every session of an agent is an actor of its own. */
+  selves: ReadonlySet<string> = new Set(),
 ): Note[] {
+  const mine = (id: string) => id === actor.id || selves.has(id);
   const shown = actor.displayName ?? actor.name;
   const names = [shown, shown.split(/\s+/u)[0] ?? "", actor.name.split("@")[0] ?? ""]
     .filter((n) => n.length > 0)
@@ -111,14 +114,14 @@ export function mentionsOf(
   const answered = new Map<string, string>();
   for (const n of comments) {
     const on = n.links[0];
-    if (on && n.createdBy === actor.id && n.createdAt > (answered.get(on) ?? "")) {
+    if (on && mine(n.createdBy) && n.createdAt > (answered.get(on) ?? "")) {
       answered.set(on, n.createdAt);
     }
   }
   return comments
     .filter(
       (n) =>
-        n.createdBy !== actor.id &&
+        !mine(n.createdBy) &&
         n.createdAt >= since &&
         n.createdAt > (answered.get(n.links[0] ?? "") ?? "") &&
         calls.test(n.body),

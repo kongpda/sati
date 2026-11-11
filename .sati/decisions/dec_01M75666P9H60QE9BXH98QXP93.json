@@ -1,0 +1,15 @@
+{
+  "consequences": "A new command needs a line in the groups map in packages/cli/src/index.ts, or it shows under OTHER. A renderer that wants layout must check term().rich and keep its plain branch unchanged. Shell completions, a pager and interactive pickers were not built (docs/ideas.md).",
+  "context": "Owner asked 2026-11-11 for a production-ready redesign of CLI output. Output had no colour, alignment or width handling; citty's help printed colour codes into a pipe and listed 37 commands on one usage line; record text from teammates and agents was printed raw.",
+  "createdAt": "2026-11-11T11:34:14.982Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "1. Two layouts chosen by stdout.isTTY (or FORCE_COLOR): aligned, coloured, wrapped for a person; the previous compact lines, byte for byte, for a pipe. Rejected: one rich layout everywhere, because agents and scripts read piped output and pay for every character. 2. No colour or table dependency: packages/cli/src/term.ts holds the SGR codes, width, wrap and table. Rejected: adding picocolors/cli-table, which would be a tech-stack change for about 300 lines. 3. citty still parses arguments, but help is rendered by packages/cli/src/help.ts and main.ts no longer calls citty's runMain/showUsage. 4. Text output passes through cleanDeep() in output(): escape sequences, C0/C1 controls and bidirectional overrides are removed. --json is not cleaned. 5. Brief fit() trims to a per-section floor (2; Ready 5) before trimming any section to nothing.",
+  "id": "dec_01M75666P9H60QE9BXH98QXP93",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T11:34:14.992Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "CLI output: rich layout for a terminal, compact lines for a pipe; own help renderer; stored text cleaned",
+  "updatedAt": "2026-11-11T11:34:14.982Z",
+  "version": 1
+}

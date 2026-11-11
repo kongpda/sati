@@ -921,6 +921,7 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 - [x] The brief and the board's Memory page say when an approved file changed or is gone since its approval
 - [x] A comment that calls an agent by name (`@claude-code`) shows in that agent's brief until it answers
 - [x] The brief finds a lost claim by asking for the day's imports, not by reading the newest 200 activity rows
+- [x] A mention of an agent ends when any session of that agent answers, not only the session that read it
 
 **Not in Phase 9:** registry collisions (two folders with one slug, a copied folder sharing a database) are fixed under task `tsk_01M74P…VB2MP62GRN1XC90AKCE` by another agent.
 

@@ -1,0 +1,37 @@
+{
+  "body": "Each agent session is its own actor (claude-code@sati#<session>). A mention answered by one session came back in every later session's brief for 14 days. An answer by any agent actor with the same handle should end it.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "4de9d1d40df72021758e0be5d6664906fe78dbb7",
+    "completedAt": "2026-11-11T12:50:41.762Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "packages/core/src/services/comment.ts",
+      "packages/core/src/services/brief.ts",
+      "packages/core/test/workspace.test.ts",
+      "PLAN.md",
+      "docs/progress.md",
+      ".changeset/person-approval-mentions.md"
+    ],
+    "summary": "mentionsOf takes a set of actor ids that count as the same actor. The brief passes every agent actor with the same user part of the name, so an answer by any session of an agent ends the mention. People are not grouped. Test covers a later session, another agent's answer, and a new call after the answer. Lint, typecheck, 773 unit tests pass (2 skipped, as before)."
+  },
+  "createdAt": "2026-11-11T12:49:38.391Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "id": "tsk_01M75AG82QJMGTPA61VV3W8ERY",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T12:49:38.394Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "branch": "2026-11-11T12:49:39.925Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T12:50:41.762Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T12:50:41.762Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T12:50:41.762Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "worktree": "2026-11-11T12:49:39.925Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "status": "review",
+  "title": "Agent mention ends when any session of that agent answers",
+  "updatedAt": "2026-11-11T12:50:41.763Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -111,6 +111,25 @@ describe("daily workspace", () => {
     clock.advance(1000);
     await addComment(ada, { on: task.id, body: "Thanks @Claude-Code, one more: the venue" });
     expect((await buildBrief(ctx)).markdown).toContain("one more: the venue");
+    // Each session of an agent is its own actor. The next session sees the call too, and an
+    // answer by either session ends it for both; another agent's answer does not.
+    const session = async (name: string) => ({
+      ...ctx,
+      actorId: (await ensureActor(ctx, { name, kind: "agent", tool: "claude-code" })).id,
+    });
+    const later = await session("claude-code@main#2");
+    const codex = await session("codex@main#1");
+    expect((await buildBrief(later)).markdown).toContain("one more: the venue");
+    clock.advance(1000);
+    await addComment(codex, { on: task.id, body: "Not mine to say." });
+    expect((await buildBrief(later)).markdown).toContain("one more: the venue");
+    clock.advance(1000);
+    await addComment(later, { on: task.id, body: "Venue is booked." });
+    expect((await buildBrief(ctx)).markdown).not.toContain("## Mentions");
+    expect((await buildBrief(later)).markdown).not.toContain("## Mentions");
+    clock.advance(1000);
+    await addComment(ada, { on: task.id, body: "@claude-code last thing: the venue" });
+    expect((await buildBrief(ctx)).markdown).toContain("last thing: the venue");
     // Unanswered, it leaves after two weeks.
     clock.advance(15 * 24 * 60 * 60 * 1000);
     expect((await buildBrief(ctx)).markdown).not.toContain("## Mentions");

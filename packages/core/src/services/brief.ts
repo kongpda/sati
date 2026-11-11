@@ -159,9 +159,19 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
     }
     // Comments that call me by name on any record: `@claude-code` reaches the agent as `@ann`
     // reaches Ann on the board, whether or not the task is mine.
+    // An agent's sessions are one agent: an answer by an earlier session ends the mention, or
+    // every new session would get it again for two weeks.
+    const handle = actor?.name.split("@")[0];
+    const selves = new Set(
+      actor?.kind === "agent" && notes.length > 0
+        ? (await listAll(r, ctx, "actor"))
+            .filter((a) => a.kind === "agent" && a.name.split("@")[0] === handle)
+            .map((a) => a.id)
+        : [],
+    );
     const called = [];
     for (const note of actor
-      ? mentionsOf(notes, actor, ctx.clock.now()).slice(0, MENTION_LINES)
+      ? mentionsOf(notes, actor, ctx.clock.now(), selves).slice(0, MENTION_LINES)
       : []) {
       called.push({ note, from: await actorName(r, note.createdBy) });
     }

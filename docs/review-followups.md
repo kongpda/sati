@@ -742,3 +742,31 @@ Open, docs and repo (owner decisions):
 - [ ] `docs/ideas.md` has items from 2026-11-10 that are done; `AGENT_KICKOFF.md` is history; the remote branch `changeset-release/main` is stale. Done in part (2026-11-11): the finished 2026-11-10 list in `docs/ideas.md` is replaced by a pointer to this file; the remote branch `changeset-release/main` is deleted. `AGENT_KICKOFF.md` stays: `AGENTS.md` keeps it as history.
 - [ ] CI runs lint and typecheck on all 7 matrix cells and shares no build output between jobs.
 - [x] Dependencies behind. Done (2026-11-11): minor and patch updates, then `vite` 8 and `@vitejs/plugin-react` 6 (ADR 0008). Each is pinned to the newest version at least 14 days old, as `renovate.json` asks; a first pass (`cc73aea`) had taken younger versions and was corrected. `@types/node` stays at 24 on purpose. Open: `minimumReleaseAge` in `pnpm-workspace.yaml` broke the install on pnpm 10.18 (ADR 0008); try again later.
+
+## Board offers actions the server refuses (2026-11-11)
+
+Owner's report: the board shows an action, lets the user do it, and the server then refuses it.
+An audit of every write on the board against core found the items below. Rule for the fixes: the
+board hides or disables what core will refuse and says why before the click, not after.
+
+- [ ] B1. Drag-and-drop and the bulk "Move to" menu accept every column. Core refuses moves outside `TASK_TRANSITIONS` (backlog to in progress, done to anything but to do, any move to review). The card moves, snaps back and shows raw status names.
+- [ ] B2. The status select in the task panel lists all statuses for every task, with the same refusals. "Waiting for approval" is offered on every task and never works.
+- [ ] B3. Sending a review task back to To do needs a reason. Drag, the panel and bulk move have no place to enter one.
+- [ ] B4. A task claimed by someone else refuses every save (move, panel Save, checklist, "Looks right"), also after the claim's time ran out. The panel still offers Save and the card still drags.
+- [ ] B5. "Take over" is offered on a claimed task that is blocked or in review, where core can only release the claim.
+- [ ] B6. Approve, Take over, Release of another's claim, "I answered" and Edit person need a person. A board started from an agent terminal acts as an agent and every one of them fails after the click.
+- [ ] B7. A bulk move reports only the first reason for all failed tasks.
+- [ ] B8. The title field in the task panel has no `required` and no length limit; an empty title shows raw Zod text after Save.
+- [ ] B9. The note form accepts the tag `comment`, which core refuses.
+- [ ] B10. Refusals show core's text as sent: raw status names (`in_progress`), record ids, and no hint when the hint has a backtick.
+
+Found on the way:
+
+- [ ] R1. `sati projects` printed `ready -1` for a project whose database does not open.
+- [ ] R2. The owner's `~/.sati/projects.json` held 2,087 projects; 2,085 were temp repos from test runs before the registry was isolated (WP5). `--prune` kept 1,316 of them because their folders still existed.
+- [ ] R3. Test runs never delete their temp folders: `/private/tmp` held about 12,000 `sati-*` folders.
+
+Still open from earlier lists, to settle here:
+
+- [ ] O1. `release.yml` run by hand still calls `changeset publish` (ADR 0006: nothing is published).
+- [ ] O2. CI runs lint and typecheck on all 7 matrix cells.

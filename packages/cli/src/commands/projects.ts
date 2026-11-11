@@ -65,9 +65,11 @@ export default defineCommand({
       (rows) =>
         rows.length
           ? rows
-              .map(
-                (p) =>
-                  `${p.slug}  ready ${p.ready}  in_progress ${p.inProgress}  review ${p.review}  ${p.root}`,
+              .map((p) =>
+                // `ready` is -1 in JSON when the database did not open. A person gets the reason.
+                p.ready < 0
+                  ? `${p.slug}  database not readable, \`${CLI_NAME} projects --prune\` forgets it  ${p.root}`
+                  : `${p.slug}  ready ${p.ready}  in_progress ${p.inProgress}  review ${p.review}  ${p.root}`,
               )
               .join("\n")
           : `No projects yet. Run \`${CLI_NAME} init\`.`,

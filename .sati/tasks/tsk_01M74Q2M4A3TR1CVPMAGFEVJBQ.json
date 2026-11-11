@@ -1,0 +1,16 @@
+{
+  "body": "Old done tasks, cards whose file is gone, expired locks. Owner asked on 2026-11-11 that sati not bloat with tasks or tests.",
+  "createdAt": "2026-11-11T07:10:09.039Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "id": "tsk_01M74Q2M4A3TR1CVPMAGFEVJBQ",
+  "parentId": "tsk_01M74Q2M3Y79RXGYN5MNR2G02D",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T07:10:09.039Z#000001#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "status": "todo",
+  "title": "9f Lean check: doctor reports bloat and a cleanup command removes it",
+  "updatedAt": "2026-11-11T07:10:09.039Z",
+  "version": 1
+}

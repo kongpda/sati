@@ -1,0 +1,18 @@
+{
+  "body": "Parent for the work packages in PLAN.md Phase 9. Source: the 2026-11-11 deep review (core, store/sync, CLI/MCP). One task per work package; tests only where they fail on the old code. The registry collisions (same slug, copied folder) belong to tsk_01M74PVVB2MP62GRN1XC90AKCE.",
+  "createdAt": "2026-11-11T07:10:09.022Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "id": "tsk_01M74Q2M3Y79RXGYN5MNR2G02D",
+  "labels": [
+    "phase-9"
+  ],
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T07:10:09.028Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "status": "todo",
+  "title": "Phase 9: office-ready fixes from the 2026-11-11 deep review",
+  "updatedAt": "2026-11-11T07:10:09.022Z",
+  "version": 1
+}

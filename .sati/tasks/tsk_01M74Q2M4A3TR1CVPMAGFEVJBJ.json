@@ -1,0 +1,16 @@
+{
+  "body": "actor.ts detectTool + MCP clientInfo; domain/locks.ts comparison; card put / lock acquire relative to cwd; init --yes outside git defaults to general and refuses the home folder or /.",
+  "createdAt": "2026-11-11T07:10:09.034Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "id": "tsk_01M74Q2M4A3TR1CVPMAGFEVJBJ",
+  "parentId": "tsk_01M74Q2M3Y79RXGYN5MNR2G02D",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T07:10:09.034Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "status": "todo",
+  "title": "9a Identity and paths: MCP callers are agents, case and Unicode in lock paths, CLI paths from a subfolder, general kind outside git",
+  "updatedAt": "2026-11-11T07:10:09.034Z",
+  "version": 1
+}

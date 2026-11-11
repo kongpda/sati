@@ -410,7 +410,9 @@ describe("small", () => {
       home,
     );
     const r = run(root, ["projects"], { HOME: home });
-    expect(r.stdout).toContain("ghost  ready -1");
+    // A count of -1 told a person nothing: the line names the cause and the way out.
+    expect(r.stdout).toContain("ghost  database not readable, `sati projects --prune` forgets it");
+    expect(r.stdout).not.toContain("ready -1");
     expect(existsSync(db)).toBe(false);
   });
 

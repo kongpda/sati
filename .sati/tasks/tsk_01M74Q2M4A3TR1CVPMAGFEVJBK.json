@@ -1,0 +1,16 @@
+{
+  "body": "core sync.ts isNewer/joinTies; snapshot.ts BOM and stray conflicted-copy names; atomic.ts fsync; remote.ts abort after failed COMMIT; fs-kind.ts fuseblk and synced-folder detection.",
+  "createdAt": "2026-11-11T07:10:09.035Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "id": "tsk_01M74Q2M4A3TR1CVPMAGFEVJBK",
+  "parentId": "tsk_01M74Q2M3Y79RXGYN5MNR2G02D",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T07:10:09.035Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "status": "todo",
+  "title": "9b Sync and store safety: merge diverged stamps on import, tolerant snapshot reader, fsync, abort timeout, fuseblk, cloud-folder warning",
+  "updatedAt": "2026-11-11T07:10:09.035Z",
+  "version": 1
+}

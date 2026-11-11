@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { dueLabel, phoneColumn, type Snapshot, type Task } from "../src/api.js";
-import { myWork, weekEnd } from "../src/my-work.js";
+import { inboxCount, mentionsOf, myWork, weekEnd } from "../src/my-work.js";
 
 const you = "actr_you";
 const other = "actr_other";
@@ -88,6 +88,54 @@ describe("myWork", () => {
     expect(lists.needs.map((t) => t.title)).toEqual(["asks first", "asks later", "blocked"]);
     // In review and asking: it shows under Needs you only.
     expect(lists.approval).toEqual([]);
+  });
+});
+
+// PLAN Phase 7d: a person with no terminal learns that a teammate called them from the board
+// alone. A mention must not need "mark as read" state, and must not nag once it is answered.
+describe("mentions", () => {
+  const actors = [
+    { id: you, name: "ann@laptop", kind: "human", displayName: "Ann Lee" },
+    { id: other, name: "bob@desk", kind: "human" },
+  ];
+  let c = 0;
+  const comment = (body: string, at: string, by = other, on = "tsk_a") => ({
+    id: `nte_${++c}`,
+    title: "",
+    body,
+    tags: ["comment"],
+    links: [on],
+    pinned: false,
+    createdAt: at,
+    createdBy: by,
+    updatedAt: at,
+    version: 1,
+  });
+  const now = new Date("2026-11-11T12:00:00.000Z");
+  const board = (notes: ReturnType<typeof comment>[], tasks: Task[] = []) =>
+    ({ you, tasks, actors, notes, decisions: [] }) as unknown as Snapshot;
+
+  it("lists comments that call you by name, until you answer on that record", () => {
+    const notes = [
+      comment("@ann can you check the budget?", "2026-11-10T09:00:00.000Z"),
+      comment("cc @Ann Lee", "2026-11-10T10:00:00.000Z", other, "tsk_b"),
+      comment("mail bob@ann.com, ask @annette", "2026-11-10T11:00:00.000Z"),
+      comment("@ann old news", "2026-10-01T09:00:00.000Z"),
+      comment("note to self @ann", "2026-11-10T12:00:00.000Z", you, "tsk_c"),
+    ];
+    expect(mentionsOf(board(notes), now).map((n) => n.body)).toEqual([
+      "cc @Ann Lee",
+      "@ann can you check the budget?",
+    ]);
+    // Ann replies on tsk_a: that mention is done, the other still waits.
+    notes.push(comment("Checked, fine.", "2026-11-10T13:00:00.000Z", you));
+    expect(mentionsOf(board(notes), now).map((n) => n.body)).toEqual(["cc @Ann Lee"]);
+  });
+
+  it("counts mentions, questions and approvals next to My work, not plain assigned tasks", () => {
+    const tasks = [task({ status: "review" }), task({ assigneeIds: [you], dueDate: "2026-11-12" })];
+    const notes = [comment("@ann please look", "2026-11-11T09:00:00.000Z")];
+    expect(inboxCount(board(notes, tasks), now)).toBe(2);
   });
 });
 

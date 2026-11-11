@@ -1,7 +1,8 @@
 import { type ReactNode, useState } from "react";
-import { dueLabel, type Snapshot, type Task, today, waitingOn } from "./api.js";
+import { dueLabel, type Note, type Snapshot, type Task, today, waitingOn } from "./api.js";
 import { answerRefusal, moveRefusal } from "./moves.js";
-import { holderName, knownName } from "./people.js";
+import { holderName, knownName, nameOf, personName } from "./people.js";
+import { COMMENT_TAG } from "./thread.js";
 import { capital, statusWord } from "./words.js";
 
 const CLOSED = new Set(["done", "cancelled"]);
@@ -19,6 +20,52 @@ function byDue(a: Task, b: Task): number {
   const right = b.dueDate ?? "9999";
   if (left !== right) return left < right ? -1 : 1;
   return (RANK[a.priority] ?? 9) - (RANK[b.priority] ?? 9);
+}
+
+/** A mention older than this no longer asks for attention. */
+const MENTION_DAYS = 14;
+
+/**
+ * Comments that call you by name (`@ann`), newest first. You are called by your shown name, its
+ * first word, or the user part of `user@worktree`. A mention is done once you comment on the same
+ * record after it, so nothing is stored about what you have read; one nobody answers leaves after
+ * two weeks.
+ */
+export function mentionsOf(data: Snapshot, now = new Date()): Note[] {
+  const me = (data.actors ?? []).find((a) => a.id === data.you);
+  if (!me) return [];
+  const shown = personName(me);
+  const names = [shown, shown.split(/\s+/u)[0] ?? "", me.name.split("@")[0] ?? ""]
+    .filter((n) => n.length > 0)
+    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"));
+  if (names.length === 0) return [];
+  // Not inside a word or an email address: `x@ann.com` and `@annette` do not call Ann.
+  const calls = new RegExp(`(?<![\\p{L}\\p{N}_.])@(?:${names.join("|")})(?![\\p{L}\\p{N}_])`, "iu");
+  const since = new Date(now.getTime() - MENTION_DAYS * 86_400_000).toISOString();
+  const comments = (data.notes ?? []).filter((n) => n.tags.includes(COMMENT_TAG));
+  // The latest comment of yours on each record.
+  const answered = new Map<string, string>();
+  for (const n of comments) {
+    const on = n.links[0];
+    if (on && n.createdBy === data.you && n.createdAt > (answered.get(on) ?? "")) {
+      answered.set(on, n.createdAt);
+    }
+  }
+  return comments
+    .filter(
+      (n) =>
+        n.createdBy !== data.you &&
+        n.createdAt >= since &&
+        n.createdAt > (answered.get(n.links[0] ?? "") ?? "") &&
+        calls.test(n.body),
+    )
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/** How many things wait for you: the number next to "My work". Assigned and due tasks are plans, not calls. */
+export function inboxCount(data: Snapshot, now = new Date()): number {
+  const { needs, approval, mentions } = myWork(data, now);
+  return needs.length + approval.length + mentions.length;
 }
 
 /**
@@ -45,7 +92,7 @@ export function myWork(data: Snapshot, now = new Date()) {
   const due = open
     .filter((t) => !shown.has(t.id) && t.dueDate != null && t.dueDate <= end)
     .sort(byDue);
-  return { needs, approval, assigned, due, end };
+  return { needs, approval, assigned, due, end, mentions: mentionsOf(data, now) };
 }
 
 export function MyWork({
@@ -63,7 +110,7 @@ export function MyWork({
   /** Rejects when refused, so the reason typed stays in the box. */
   onSendBack: (task: Task, reason: string) => Promise<unknown>;
 }) {
-  const { needs, approval, assigned, due, end } = myWork(data);
+  const { needs, approval, assigned, due, end, mentions } = myWork(data);
   const [y, m, d] = end.split("-").map(Number);
   const sunday = new Date(y ?? 0, (m ?? 1) - 1, d ?? 1).toLocaleDateString([], {
     weekday: "long",
@@ -77,6 +124,13 @@ export function MyWork({
         <Section title="Needs you" count={needs.length} empty="">
           {needs.map((t) => (
             <Needs key={t.id} data={data} task={t} onOpen={onOpen} onAnswered={onAnswered} />
+          ))}
+        </Section>
+      ) : null}
+      {mentions.length ? (
+        <Section title="Mentions" count={mentions.length} empty="">
+          {mentions.map((n) => (
+            <Mention key={n.id} data={data} note={n} onOpen={onOpen} />
           ))}
         </Section>
       ) : null}
@@ -182,6 +236,42 @@ function Row({
         {steps.length ? ` · ${steps.filter((c) => c.done).length}/${steps.length} steps` : ""}
       </div>
       {children}
+    </article>
+  );
+}
+
+/** A comment that names you: who wrote it, on what, and its text. Replying there clears it. */
+function Mention({
+  data,
+  note,
+  onOpen,
+}: {
+  data: Snapshot;
+  note: Note;
+  onOpen: (id: string) => void;
+}) {
+  const on = note.links[0] ?? "";
+  const task = data.tasks.find((t) => t.id === on);
+  const other =
+    data.notes.find((n) => n.id === on)?.title ?? data.decisions.find((d) => d.id === on)?.title;
+  const page = on.startsWith("dec_") ? "/decisions" : "/notes";
+  return (
+    <article className="row">
+      {task ? (
+        <button type="button" className="row-link" onClick={() => onOpen(task.id)}>
+          {task.title}
+        </button>
+      ) : (
+        <a className="row-link" href={page}>
+          {other ?? "A record"}
+        </a>
+      )}
+      <p className="asking">
+        <strong>{nameOf(data, note.createdBy)} mentioned you</strong>
+        {/* A comment is data: shown as text here; the thread renders it in full. */}
+        <span className="quote">{note.body}</span>
+      </p>
+      <p className="hint">Reply in the comments there and it leaves this list.</p>
     </article>
   );
 }

@@ -28,6 +28,17 @@ async function dragOver(page: Page, title: string, to: string): Promise<void> {
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
   await page.mouse.down();
   await page.mouse.move(target.x + target.width / 2, target.y + 80, { steps: 12 });
+  // The board scrolls sideways while a card is held near its edge, which moves the column from
+  // under the pointer. Follow the column until it rests.
+  const width = page.viewportSize()?.width ?? 1280;
+  let at = target.x;
+  for (let i = 0; i < 20; i++) {
+    await page.waitForTimeout(100);
+    const now = await column(page, to).boundingBox();
+    if (!now || Math.abs(now.x - at) < 1) break;
+    at = now.x;
+    await page.mouse.move(Math.min(now.x + now.width / 2, width - 4), now.y + 80, { steps: 4 });
+  }
 }
 
 test.describe("a board run by a person", () => {

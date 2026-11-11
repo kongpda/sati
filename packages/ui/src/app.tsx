@@ -14,7 +14,7 @@ import { Changes } from "./changes.js";
 import { NewTask, SendBack } from "./forms.js";
 import { Memory } from "./memory.js";
 import { heldByOther, moveRefusal, moveTargets, needsReason, personOnly } from "./moves.js";
-import { MyWork } from "./my-work.js";
+import { inboxCount, MyWork } from "./my-work.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
 import { holderName } from "./people.js";
 import { Settings } from "./settings.js";
@@ -543,13 +543,16 @@ export function App() {
   }, [general]);
   const pageLabel = pages.find(([href]) => href === path)?.[1];
   const projectName = data?.project?.name;
+  // What waits for this person: shown next to "My work" on every page, and in the tab's title.
+  const inbox = useMemo(() => (data ? inboxCount(data) : 0), [data]);
   // Each page names itself in the tab, and on a phone the nav bar scrolls to the current page.
   useEffect(() => {
-    document.title = [pageLabel, projectName ?? __PRODUCT_NAME__].filter(Boolean).join(" · ");
+    const title = [pageLabel, projectName ?? __PRODUCT_NAME__].filter(Boolean).join(" · ");
+    document.title = inbox ? `(${inbox}) ${title}` : title;
     document
       .querySelector('.nav a[aria-current="page"]')
       ?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [pageLabel, projectName]);
+  }, [pageLabel, projectName, inbox]);
   // Filtering reads every title and body: deferred, so typing stays quick on a big board.
   const lookFor = useDeferredValue(filter).toLowerCase();
   const tasks = useMemo(
@@ -624,14 +627,26 @@ export function App() {
             key={href}
             href={href}
             aria-current={path === href ? "page" : undefined}
+            // The link keeps its name; the count is its description, read after it.
+            aria-describedby={href === "/my-work" && inbox ? "inbox-count" : undefined}
             onClick={(e) => {
               e.preventDefault();
               go(href);
             }}
           >
             {label}
+            {href === "/my-work" && inbox ? (
+              <span className="nav-count" aria-hidden="true">
+                {inbox > 99 ? "99+" : inbox}
+              </span>
+            ) : null}
           </a>
         ))}
+        {inbox ? (
+          <span id="inbox-count" hidden>
+            {inbox === 1 ? "1 thing waits for you" : `${inbox} things wait for you`}
+          </span>
+        ) : null}
       </nav>
       <main className="main" inert={modal} data-modal={modal ? "" : undefined}>
         <div className="top">

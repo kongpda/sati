@@ -2042,3 +2042,12 @@ Task `tsk_fevjbr`.
 - A failed load warns and the command still runs: the file may be half synced.
 - Known limits, also in the ADR: claims can collide inside the sync window, file locks are not shared, one unreadable record file holds back the other changed files of that load, and every machine needs a sati that knows `share`.
 - Checked through the built CLI with two home folders on one folder, on macOS. Not run against a real Dropbox, OneDrive or iCloud folder: the conflict names are from their documentation and the existing `RECORD_COPY` pattern.
+
+## 2026-11-11 — Owner items: the in-app inbox
+
+- No new page and no new record type. "My work" already listed what needs you, what waits for approval, what is assigned and what is due; the inbox is that page plus mentions and a count.
+- A mention is `@name` in a comment, matched against the person's display name and id. Nothing stores "read": a mention goes away when you comment on the same record after it, or after 14 days. So nothing is written to show a count, and two browsers agree.
+- The count next to "My work" and in the tab title is needs-you + waiting-for-approval + mentions. Assigned and due tasks are plans, not calls, and are not counted. It is capped at "99+", and a screen reader hears "n things wait for you" on the link.
+- No email, push or desktop notification: those need the hosted server (Phase 6) or an OS permission, and are not in the plan line.
+- Agents do not get mentions in their brief. They already read the comments of the task they claim.
+- `e2e/ui/refusals.spec.ts`: the drag helper now follows the column. The board scrolls sideways while a card is held near its edge, so a fixed drop point could land one column off. The test failed 5 of 5 runs with and without the inbox change; the board itself was right.

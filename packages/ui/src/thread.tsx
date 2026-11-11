@@ -124,7 +124,7 @@ export function Thread({
           maxLength={COMMENT_MAX}
           value={draft}
           aria-label="Add a comment"
-          placeholder="Add a comment. Agents read it in their brief."
+          placeholder="Add a comment. @name puts it in that person's My work. Agents read it in their brief."
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {

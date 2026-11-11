@@ -1,5 +1,17 @@
 {
   "body": "Parent for the work packages in PLAN.md Phase 9. Source: the 2026-11-11 deep review (core, store/sync, CLI/MCP). One task per work package; tests only where they fail on the old code. The registry collisions (same slug, copied folder) belong to tsk_01M74PVVB2MP62GRN1XC90AKCE.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "41cb7fa794ffe4118b0c33dcfd4d17b67e75a52c",
+    "completedAt": "2026-11-11T07:48:09.761Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "PLAN.md",
+      "docs/progress.md"
+    ],
+    "summary": "Phase 9 work packages 9a to 9g are committed locally (6cc3d35, 93a3628, f6f8de9, 24b57b6, 8d7e5a2, 09bf6ae, fe3808b) and the gate passed (41cb7fa, docs/progress.md \"Phase 9 gate\"). Typecheck, tests and the performance budgets pass. Open: the four owner decisions in PLAN Phase 9 (folder-sync mode, hash-protected deliverables, one-click installer, card keys for outside files). Not pushed."
+  },
   "createdAt": "2026-11-11T07:10:09.022Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
   "id": "tsk_01M74Q2M3Y79RXGYN5MNR2G02D",
@@ -9,10 +21,16 @@
   "priority": "high",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "*": "2026-11-11T07:10:09.028Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+    "*": "2026-11-11T07:10:09.028Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "branch": "2026-11-11T07:48:05.794Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T07:48:09.762Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T07:48:09.762Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T07:48:09.762Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "worktree": "2026-11-11T07:48:05.794Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "todo",
+  "status": "review",
   "title": "Phase 9: office-ready fixes from the 2026-11-11 deep review",
-  "updatedAt": "2026-11-11T07:10:09.022Z",
-  "version": 1
+  "updatedAt": "2026-11-11T07:48:09.762Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

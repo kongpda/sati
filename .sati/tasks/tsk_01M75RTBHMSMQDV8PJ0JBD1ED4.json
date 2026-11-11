@@ -1,0 +1,40 @@
+{
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "e9f94b65d8681782bc3e2401536b76abc677b3a4",
+    "completedAt": "2026-11-11T17:02:00.279Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "packages/cli/src/version.ts",
+      "packages/cli/src/build-check.ts",
+      "packages/cli/src/main.ts",
+      "packages/cli/src/commands/doctor.ts",
+      "packages/cli/tsdown.config.ts",
+      "packages/cli/test/version.test.ts",
+      "PLAN.md",
+      "README.md",
+      "docs/progress.md",
+      ".changeset/build-stamp.md"
+    ],
+    "summary": "`sati --version` (and -v, -V) prints `sati 0.1.0 (<sha7>[-dirty] <commit date>)`; the date comes from a second tsdown define. `VERSION` (`0.1.0+sha`) stays for the MCP server info and the help title. `sati doctor` leads with the environment (version line, node, system, install kind and bundle path, store path); `doctor --json` has it under `environment`. Tests in version.test.ts."
+  },
+  "createdAt": "2026-11-11T16:59:49.684Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "id": "tsk_01M75RTBHMSMQDV8PJ0JBD1ED4",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T16:59:49.684Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "branch": "2026-11-11T17:00:01.313Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T17:02:00.285Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T17:02:00.285Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T17:02:00.285Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "worktree": "2026-11-11T17:00:01.313Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "status": "review",
+  "title": "Version line in the rustc form with the commit date; `sati doctor` shows the environment (node, OS, install, paths)",
+  "updatedAt": "2026-11-11T17:02:00.285Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { buildCheck } from "../src/build-check.js";
+import { versionLine } from "../src/version.js";
+import { sati, satiJson, tempRepo } from "./helpers.js";
 
 const bin = fileURLToPath(new URL("../dist/index.mjs", import.meta.url));
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
@@ -27,15 +29,35 @@ const git = (cwd: string, ...args: string[]) =>
 
 describe("sati --version", () => {
   // Phase 0 gate: the published binary must start and report the package version. Every build
-  // of one version said the same number, so the commit it was built from follows after `+`.
-  it("prints the package version and the commit the bundle was built from", () => {
-    const out = run("--version");
-    const [version, build] = out.split("+");
-    expect(version).toBe(pkg.version);
+  // of one version said the same number, so the commit and its date follow in brackets.
+  it("prints the name, the package version, and the commit and date the bundle was built from", () => {
+    const here = fileURLToPath(new URL("..", import.meta.url));
+    const m = /^sati (\S+) \(([0-9a-f]{7,})(-dirty)? (\d{4}-\d{2}-\d{2})\)$/u.exec(
+      run("--version"),
+    );
+    expect(m?.[1]).toBe(pkg.version);
     // This test runs from a checkout, so the build is stamped; the bundle was built from HEAD.
-    const head = git(fileURLToPath(new URL("..", import.meta.url)), "rev-parse", "HEAD");
-    expect(build).toMatch(/^[0-9a-f]{7,}(\.dirty)?$/u);
-    expect(head.startsWith((build ?? "").split(".")[0] ?? "x")).toBe(true);
+    expect(git(here, "rev-parse", "HEAD").startsWith(m?.[2] ?? "x")).toBe(true);
+    // The commit's date, so the same commit gives the same line on every machine and day.
+    expect(m?.[4]).toBe(git(here, "show", "-s", "--format=%cs", "HEAD"));
+  });
+
+  it("marks uncommitted changes, and prints the plain version for a build made outside git", () => {
+    expect(versionLine("sati", "1.2.3", "a8104c0", "2026-11-11")).toBe(
+      "sati 1.2.3 (a8104c0 2026-11-11)",
+    );
+    expect(versionLine("sati", "1.2.3", "a8104c0.dirty", "2026-11-11")).toBe(
+      "sati 1.2.3 (a8104c0-dirty 2026-11-11)",
+    );
+    expect(versionLine("sati", "1.2.3", "", "")).toBe("sati 1.2.3");
+  });
+
+  // The MCP server info and the help title take a version, not a sentence: semver with the
+  // commit as build metadata.
+  it("keeps the semver form in the help title", () => {
+    expect(run("--help")).toMatch(
+      new RegExp(`^sati ${pkg.version.replaceAll(".", "\\.")}\\+[0-9a-f]{7,}(\\.dirty)?\\b`, "u"),
+    );
   });
 
   // node, npm and pnpm answer `-v`; many other tools answer `-V`. Neither means anything else here.
@@ -97,5 +119,27 @@ describe("the build check in doctor", () => {
     // No stamp (built outside git), or a bundle that is not inside the source: nothing to say.
     expect(buildCheck("", dist)).toBeUndefined();
     expect(buildCheck(sha, join(root, "elsewhere", "node_modules", "pkg", "dist"))).toBeUndefined();
+  });
+});
+
+// A bug report needs more than the version: which node, which system, an installed package or a
+// source checkout, and where the records are. `--version` stays one line; doctor carries the rest.
+describe("the environment in doctor", () => {
+  it("leads the report with the version line, node, the system, the install and the store", async () => {
+    const dir = await tempRepo({ init: true });
+    const env = satiJson<{ environment: Record<string, string> }>(dir, "doctor").data.environment;
+    expect(env).toMatchObject({
+      version: run("--version"),
+      node: process.version,
+      os: `${process.platform} ${process.arch}`,
+      // The tests run the bundle inside this checkout.
+      install: "source",
+      bin,
+    });
+    expect(env.store).toMatch(/sati\.db$/u);
+    const lines = sati(dir, "doctor").stdout.split("\n");
+    expect(lines[0]).toBe(run("--version"));
+    expect(lines[1]).toBe(`node ${process.version}, ${process.platform} ${process.arch}`);
+    expect(lines[3]).toBe(`store: ${env.store}`);
   });
 });

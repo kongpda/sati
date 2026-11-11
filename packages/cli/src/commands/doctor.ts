@@ -21,12 +21,13 @@ import {
 import { SqliteStore } from "@sati/store-sqlite";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { buildCheck } from "../build-check.js";
+import { buildCheck, sourceRoot } from "../build-check.js";
 import { defaultBase, samePath } from "../git.js";
 import { installedSelf } from "../hooks.js";
 import { runHint } from "../install.js";
 import { checks } from "../render.js";
 import { closeRuntime, execute, openRuntime, output, worktreePaths } from "../runtime.js";
+import { versionLine } from "../version.js";
 import { pendingUpgrade, syncedDbWarning } from "./init.js";
 
 /**
@@ -214,6 +215,36 @@ async function leanCheck(
   return { name: "lean", ok: true, detail: parts.join(" ") || "Nothing to clean up." };
 }
 
+/** What a bug report needs beside the checks: which build, on what, installed how, storing where. */
+interface Environment {
+  version: string;
+  node: string;
+  os: string;
+  /** `source` runs the bundle inside a checkout of the code; `package` is an installed copy. */
+  install: "source" | "package";
+  bin: string;
+  store: string;
+}
+
+function environment(store: string): Environment {
+  return {
+    version: versionLine(CLI_NAME),
+    node: process.version,
+    os: `${process.platform} ${process.arch}`,
+    install: sourceRoot() === undefined ? "package" : "source",
+    bin: process.argv[1] ?? "",
+    store,
+  };
+}
+
+const environmentText = (e: Environment): string =>
+  [
+    e.version,
+    `node ${e.node}, ${e.os}`,
+    `install: ${e.install === "source" ? "source checkout" : "package"}, ${e.bin}`,
+    `store: ${e.store}`,
+  ].join("\n");
+
 export default defineCommand({
   meta: {
     name: "doctor",
@@ -271,12 +302,13 @@ export default defineCommand({
           const ok = checks.every((c) => c.ok);
           // A failed check fails the command, or CI and scripts read a broken project as healthy.
           if (!ok) process.exitCode = ERROR_EXIT_CODES.VALIDATION;
-          return { ok, checks };
+          return { ok, environment: environment(rt.location.path), checks };
         } finally {
           await closeRuntime();
         }
       },
-      (report: { ok: boolean; checks: DoctorCheck[] }) => checks(report.checks),
+      (report: { ok: boolean; environment: Environment; checks: DoctorCheck[] }) =>
+        `${environmentText(report.environment)}\n\n${checks(report.checks)}`,
     );
   },
 });

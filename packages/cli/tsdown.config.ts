@@ -66,18 +66,22 @@ function thirdPartyLicenses(): Plugin {
  * the source has changes that are not committed. Empty outside git (a source archive). The paths
  * are the ones `buildCheck` in src/version.ts compares.
  */
-function buildStamp(): string {
+function buildStamp(): { build: string; date: string } {
   const root = fileURLToPath(new URL("../..", import.meta.url));
   const git = (...args: string[]) =>
     execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
   try {
     const sha = git("rev-parse", "--short=7", "HEAD").trim();
     const dirty = git("status", "--porcelain", "--", "packages", "pnpm-lock.yaml").trim() !== "";
-    return dirty ? `${sha}.dirty` : sha;
+    // The commit's date, not the time of the build: one commit always gives one version line.
+    const date = git("show", "-s", "--format=%cs", "HEAD").trim();
+    return { build: dirty ? `${sha}.dirty` : sha, date };
   } catch {
-    return "";
+    return { build: "", date: "" };
   }
 }
+
+const stamp = buildStamp();
 
 // Every runtime package is a devDependency, so tsdown bundles it and `npm install` fetches only
 // this package: about 3 MB instead of 29. Only the code used ends up in the bundle, split per
@@ -89,6 +93,9 @@ export default defineConfig({
   banner: { js: "#!/usr/bin/env node" },
   // A binary, not a library: no type declarations to ship.
   dts: false,
-  define: { __SATI_BUILD__: JSON.stringify(buildStamp()) },
+  define: {
+    __SATI_BUILD__: JSON.stringify(stamp.build),
+    __SATI_BUILD_DATE__: JSON.stringify(stamp.date),
+  },
   plugins: [thirdPartyLicenses()],
 });

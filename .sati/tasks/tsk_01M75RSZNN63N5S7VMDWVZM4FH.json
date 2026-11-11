@@ -1,0 +1,14 @@
+{
+  "createdAt": "2026-11-11T16:59:37.525Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M75RSZNN63N5S7VMDWVZM4FH",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T16:59:37.528Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "todo",
+  "title": "Test the task claim --pick prompt through a pseudo-terminal; run the fish completion test in CI",
+  "updatedAt": "2026-11-11T16:59:37.525Z",
+  "version": 1
+}

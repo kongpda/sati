@@ -251,8 +251,8 @@ sati decision record "Drop the v1 API" --decision "…"
 sati recall "webhooks"         # best cards, notes, decisions and open tasks on a topic
 sati changes --since 7d        # what changed, as a digest or changelog
 sati undo <activity-id>        # revert one change if nothing changed since
-sati -v                        # version and commit, e.g. 0.1.0+48a630b (.dirty: uncommitted changes)
-sati doctor                    # leases, locks, integrity, hooks, and a build older than its source
+sati -v                        # sati 0.1.0 (48a630b 2026-11-11): version, commit, commit date
+sati doctor                    # node, system, install and store paths; then leases, locks, integrity, hooks, a stale build
 sati doctor --fix              # release expired locks, remove cards whose file is gone
 sati card approve deck.pptx    # sign off a file (a person only); the guard blocks a change to it
                                # (or Approve on the board's Memory page)

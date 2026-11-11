@@ -2133,3 +2133,10 @@ Task `tsk_fevjbr`.
 - `Missing <id>` no longer shows for those four commands; the answer is `You hold no task, so say which one.`
 - Validation text changed in the core (`parseInput`), not in the CLI, so MCP callers read the same words. Zod's `Invalid option:` and `Invalid input:` labels are dropped from each issue, option lists read `a, b, c`, an array index is dropped from the field name (`status.0` is `status`), and an empty string says `must not be empty`. The `Invalid input: ` prefix, the `VALIDATION` code, exit 5 and `details.issues` are unchanged.
 - Not done: a test that drives the `task claim --pick` prompt needs a pseudo-terminal, which the test setup does not have; the refusal paths are tested. The fish completion test still skips in CI: installing fish there was not tried, because the script is verified on fish 4.9 only and Ubuntu ships 3.x.
+
+## 2026-11-12 — 9k: version line, environment in doctor
+
+- `--version` prints `sati 0.1.0 (48a630b 2026-11-11)`, the form rustc uses. The date is the commit's date (`git show -s --format=%cs`), not the time of the build, so one commit gives one line everywhere. A dirty build shows `48a630b-dirty`. A script that wants the number takes the second word.
+- The machine form `0.1.0+48a630b` stays for the MCP server info and the help title, which take a version and not a sentence.
+- `--version` stays one line. What a bug report also needs is in `sati doctor`, before the checks: node, system, whether sati runs from a source checkout or an installed package, the path of the bundle, the path of the store. `doctor --json` has the same under `environment`. The paths hold the home folder's name; that is what makes them useful, and doctor is run on purpose.
+

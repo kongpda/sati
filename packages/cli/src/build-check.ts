@@ -13,6 +13,16 @@ export interface BuildCheck {
   detail: string;
 }
 
+/** The checkout this bundle runs from (`packages/cli/dist` inside it), or `undefined`. */
+export function sourceRoot(
+  dist: string = dirname(fileURLToPath(import.meta.url)),
+): string | undefined {
+  const root = join(dist, "..", "..", "..");
+  return existsSync(join(root, ".git")) && existsSync(join(root, "packages", "cli", "src"))
+    ? root
+    : undefined;
+}
+
 /**
  * Whether this bundle is behind the source it runs from. Only for a bundle inside a checkout of
  * the source (`packages/cli/dist`), which is how a source install runs: after `git pull`,
@@ -24,10 +34,8 @@ export function buildCheck(
   dist: string = dirname(fileURLToPath(import.meta.url)),
 ): BuildCheck | undefined {
   if (build === "") return undefined;
-  const root = join(dist, "..", "..", "..");
-  if (!existsSync(join(root, ".git")) || !existsSync(join(root, "packages", "cli", "src"))) {
-    return undefined;
-  }
+  const root = sourceRoot(dist);
+  if (root === undefined) return undefined;
   const [sha = ""] = build.split(".");
   if (build.endsWith(".dirty")) {
     return {

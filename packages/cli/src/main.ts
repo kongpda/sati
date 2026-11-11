@@ -3,6 +3,7 @@ import { CLI_NAME } from "@sati/core/name";
 import { type CommandDef, runCommand } from "citty";
 import { type HelpLayout, usage } from "./help.js";
 import { errorText, setTerm } from "./term.js";
+import { versionLine } from "./version.js";
 
 const HELP = new Set(["--help", "-h"]);
 /** `-v` as node, npm and pnpm print it; `-V` as many other tools do. No command has a verbose flag. */
@@ -204,8 +205,7 @@ export async function main(root: CommandDef, layout: HelpLayout): Promise<void> 
     argv.push("--help");
   }
   if (argv.length === 1 && VERSION_FLAGS.has(argv[0] ?? "")) {
-    const meta = (await resolveValue(root.meta ?? {})) as { version?: string };
-    process.stdout.write(`${meta.version ?? ""}\n`);
+    process.stdout.write(`${versionLine(CLI_NAME)}\n`);
     return;
   }
   if (argv.length === 0 || argv.some((a) => HELP.has(a))) {

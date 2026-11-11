@@ -943,6 +943,8 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 
 - [x] `sati --version` shows the commit the build was made from (`0.1.0+48a630b`, `.dirty` for uncommitted changes); `-v` and `-V` print the same line
 - [x] `sati doctor`, when sati runs from a source checkout, says when the source has newer code than the build
+- [x] The version line has the form rustc uses, with the commit's date: `sati 0.1.0 (48a630b 2026-11-11)`; the MCP server info keeps `0.1.0+48a630b`
+- [x] `sati doctor` leads with the environment a bug report needs: version line, node, system, install kind and path, store path
 
 **9k — Command-line review (owner asked 2026-11-11)**
 

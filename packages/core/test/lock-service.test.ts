@@ -6,6 +6,7 @@ import {
   completeTask,
   createTask,
   ensureActor,
+  leanCleanup,
   listLocks,
   releaseLock,
   SatiError,
@@ -105,6 +106,18 @@ describe("acquireLock", () => {
     await acquireLock(other, { paths: ["src/a.ts"] });
     expect(store.activity.at(-2)).toMatchObject({ verb: "release", entityId: old.lock.id });
     expect((await listLocks(ctx)).map((l) => l.paths)).toEqual([["src/a.ts"]]);
+  });
+
+  // Until the next lock is taken, an expired lock stays and `doctor` fails on it. The cleanup
+  // must release it, leave live locks alone, and log the release.
+  it("the lean cleanup releases expired locks only, and logs each", async () => {
+    const { ctx, clock, store } = await setup();
+    await acquireLock(ctx, { paths: ["docs"], leaseMinutes: 60 });
+    const old = await acquireLock(ctx, { paths: ["src"], leaseMinutes: 5 });
+    clock.advance(5 * 60_000);
+    expect(await leanCleanup(ctx, [])).toEqual({ locks: 1, cards: [] });
+    expect(store.activity.at(-1)).toMatchObject({ verb: "release", entityId: old.lock.id });
+    expect((await listLocks(ctx)).map((l) => l.paths)).toEqual([["docs"]]);
   });
 
   it("rejects paths outside the repo and unknown tasks", async () => {

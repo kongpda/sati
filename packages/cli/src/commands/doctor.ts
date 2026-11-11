@@ -3,10 +3,15 @@ import { existsSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import {
   CLI_NAME,
+  type ContextEntry,
+  cardFile,
   type DoctorCheck,
   doctorChecks,
   ERROR_EXIT_CODES,
+  LEAN_DONE_DAYS,
   type LinkedWorktree,
+  leanCleanup,
+  leanReport,
   markReviewed,
   removableWorktrees,
   type ServiceContext,
@@ -130,14 +135,90 @@ async function worktreesCheck(ctx: ServiceContext, root: string): Promise<Doctor
   };
 }
 
+const GLOB = /[*?[\]{}]/u;
+
+/**
+ * Cards whose file is gone: not on disk and, in a git repo, on no branch. A card for a file that
+ * lives on another branch is not bloat. A glob card is never counted.
+ */
+function goneCards(root: string, git: boolean, cards: ContextEntry[]): ContextEntry[] {
+  const missing = cards.filter(
+    (c) =>
+      !GLOB.test(c.path) &&
+      !existsSync(resolve(root, c.path)) &&
+      !existsSync(resolve(root, cardFile(c.path))),
+  );
+  if (missing.length === 0 || !git) return missing;
+  const known = new Set<string>();
+  try {
+    const big = { cwd: root, encoding: "utf8", maxBuffer: 1 << 28 } as const;
+    const refs = execFileSync(
+      "git",
+      ["for-each-ref", "--format=%(refname)", "refs/heads", "refs/remotes"],
+      big,
+    );
+    for (const ref of refs.split("\n").filter(Boolean)) {
+      const files = execFileSync("git", ["ls-tree", "-r", "--name-only", "-z", ref], big);
+      for (const f of files.split("\0")) known.add(f);
+    }
+  } catch {
+    // The branches cannot be read, so no card can be called gone.
+    return [];
+  }
+  const names = [...known];
+  return missing.filter((c) => {
+    const file = cardFile(c.path);
+    return !known.has(c.path) && !known.has(file) && !names.some((f) => f.startsWith(`${file}/`));
+  });
+}
+
+/** Informational: what could be cleaned up, and how. With `fix`, cleans it up first. */
+async function leanCheck(
+  ctx: ServiceContext,
+  root: string,
+  git: boolean,
+  fix: boolean,
+): Promise<DoctorCheck> {
+  const report = await leanReport(ctx);
+  const gone = goneCards(root, git, report.cards);
+  const parts: string[] = [];
+  if (fix) {
+    const done = await leanCleanup(
+      ctx,
+      gone.map((c) => c.id),
+    );
+    if (done.locks > 0) parts.push(`Released ${done.locks} expired lock(s).`);
+    if (done.cards.length > 0) {
+      parts.push(
+        `Removed ${done.cards.length} card(s) whose file is gone: ${done.cards.join(", ")}.`,
+      );
+    }
+  } else if (gone.length > 0) {
+    const names = gone.slice(0, 8).map((c) => c.path);
+    parts.push(
+      `${gone.length} card(s) describe a file that is gone: ${names.join(", ")}${gone.length > 8 ? ", …" : ""}. Remove them with \`${CLI_NAME} doctor --fix\`.`,
+    );
+  }
+  if (report.oldDone > 0) {
+    parts.push(
+      `${report.oldDone} finished task(s) are older than ${LEAN_DONE_DAYS} days. They are kept as history and stay out of the brief.`,
+    );
+  }
+  return { name: "lean", ok: true, detail: parts.join(" ") || "Nothing to clean up." };
+}
+
 export default defineCommand({
   meta: {
     name: "doctor",
     description:
-      "Check leases, locks, integrity, hooks, setup files and finished worktrees. Exit 5 if a check fails",
+      "Check leases, locks, integrity, hooks, setup files, finished worktrees and bloat. Exit 5 if a check fails",
   },
   args: {
     vacuum: { type: "boolean", description: "Run VACUUM after the checks" },
+    fix: {
+      type: "boolean",
+      description: "Release expired locks and remove cards whose file is gone; each is logged",
+    },
     reviewed: {
       type: "string",
       description: "Clear needsReview on the record with this id, once you have looked at it",
@@ -158,7 +239,11 @@ export default defineCommand({
       async () => {
         const rt = await openRuntime();
         try {
+          const git = rt.location.mode !== "standalone";
+          // Before the checks, so the report shows the project as the cleanup left it.
+          const lean = await leanCheck(rt.ctx, rt.location.root, git, args.fix === true);
           const checks: DoctorCheck[] = await doctorChecks(rt.ctx);
+          checks.push(lean);
           const store = rt.ctx.store;
           if (store instanceof SqliteStore) {
             const integrity = await store.integrityCheck();
@@ -167,7 +252,7 @@ export default defineCommand({
           }
           const synced = syncedDbWarning(rt.location.path);
           if (synced) checks.push({ name: "synced folder", ok: false, detail: synced });
-          if (rt.location.mode !== "standalone") {
+          if (git) {
             const hooks = hooksCheck(rt.location.root);
             checks.push(hooks);
             if (hooks.ok) checks.push(await upgradeCheck(rt.location.root));

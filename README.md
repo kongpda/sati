@@ -225,6 +225,7 @@ sati recall "webhooks"         # best cards, notes, decisions and open tasks on 
 sati changes --since 7d        # what changed, as a digest or changelog
 sati undo <activity-id>        # revert one change if nothing changed since
 sati doctor                    # leases, locks, integrity, hooks
+sati doctor --fix              # release expired locks, remove cards whose file is gone
 sati ui                        # the web board
 ```
 

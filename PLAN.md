@@ -893,7 +893,7 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 
 **9f — Lean check**
 
-- [ ] `sati doctor` reports bloat: done tasks older than the compaction age, cards whose file is gone, expired locks; `sati doctor --fix` (or the named cleanup command) removes what is safe, logged like every write
+- [x] `sati doctor` reports bloat: done tasks older than the compaction age, cards whose file is gone, expired locks; `sati doctor --fix` (or the named cleanup command) removes what is safe, logged like every write
 
 **9g — Small core fixes**
 

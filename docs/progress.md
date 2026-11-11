@@ -1972,3 +1972,12 @@ Task `tsk_fevjbp`.
 - `splitWords` in core uses `Intl.Segmenter` for runs in Han, Hiragana, Katakana, Thai, Khmer, Lao and Myanmar script. `recall`, the store's search and similar-task matching share it. A runtime without the segmenter keeps the run whole, as before.
 - Similar tasks: a word in these scripts counts from two characters (three for other scripts).
 - Not done: stop words for these languages; a rebuilt index with word-level tokens, which would bring ranking back.
+
+## 2026-11-11 — Phase 9f: lean check
+
+Task `tsk_fevjbq`.
+
+- `sati doctor` prints a `lean` line (informational, never fails the command). `sati doctor --fix` releases expired locks and removes cards whose file is gone, in one transaction, each logged.
+- A card is "gone" only when its file is not on disk and, in a git repo, on no local or remote branch. A card for a file on another branch is kept. Glob cards are never counted. If the branches cannot be read, nothing is called gone.
+- Choice: finished tasks older than 90 days are counted, not removed. A deleted record stays in `.sati/` as a tombstone (the merge needs it), so deleting them frees nothing and loses the history `changes` reads. Dropping old tombstones is in `docs/ideas.md`.
+- Core does no I/O: `leanReport` returns the cards, the command checks the disk, `leanCleanup` takes the ids.

@@ -1,7 +1,7 @@
 import { SatiError } from "../domain/errors.js";
 import { ID_PREFIXES, shortHandle } from "../domain/ids.js";
 import { findDependencyCycle } from "../domain/rules.js";
-import type { Task } from "../domain/schemas.js";
+import type { ContextEntry, Task } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
 import type { StorageReader } from "../ports/storage.js";
 import { listAll, mustGet, nowIso, type ServiceContext, updateWithLog } from "./context.js";
@@ -188,6 +188,53 @@ export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> 
     },
   );
   return checks;
+}
+
+/** A finished task this old is reported as bloat. */
+export const LEAN_DONE_DAYS = 90;
+
+export interface LeanReport {
+  /** Done and cancelled tasks not touched for `LEAN_DONE_DAYS`. */
+  oldDone: number;
+  /** Every card. The caller knows which files still exist; core does no I/O. */
+  cards: ContextEntry[];
+}
+
+/** What may be bloat: old finished tasks, and the cards for the caller to check against disk. */
+export async function leanReport(ctx: ServiceContext): Promise<LeanReport> {
+  const cutoff = new Date(ctx.clock.now().getTime() - LEAN_DONE_DAYS * 86_400_000).toISOString();
+  return ctx.store.read(async (r) => {
+    const finished = await listAll(r, ctx, "task", { status: ["done", "cancelled"] });
+    return {
+      oldDone: finished.filter((t) => t.updatedAt < cutoff).length,
+      cards: await listAll(r, ctx, "context"),
+    };
+  });
+}
+
+/**
+ * Removes expired locks and the given cards (those whose file is gone) in one transaction. Each
+ * removal is logged like any other write. Finished tasks are never removed: a deleted record
+ * stays in `.sati/` as a tombstone, so deleting them would lose history and free nothing.
+ */
+export async function leanCleanup(
+  ctx: ServiceContext,
+  cardIds: readonly string[],
+): Promise<{ locks: number; cards: string[] }> {
+  return ctx.store.write(async (w) => {
+    const now = nowIso(ctx);
+    const expired = (await listAll(w, ctx, "lock")).filter((l) => l.leaseUntil <= now);
+    for (const l of expired) {
+      await updateWithLog(w, ctx, "lock", l, { deletedAt: now }, { verb: "release" });
+    }
+    const cards: string[] = [];
+    for (const id of cardIds) {
+      const card = await mustGet(w, ctx, "context", id);
+      await updateWithLog(w, ctx, "context", card, { deletedAt: now }, { verb: "delete" });
+      cards.push(card.path);
+    }
+    return { locks: expired.length, cards };
+  });
 }
 
 /** A linked git worktree as the CLI reads it. */

@@ -275,6 +275,31 @@ describe("commands", () => {
     expect(doctor.code).not.toBe(0);
   });
 
+  // Owner, 2026-11-11: the memory must not fill with dead records. A card outlives its file
+  // forever otherwise. A file that lives on another branch is not gone, so its card must stay.
+  it("doctor --fix removes a card whose file is gone, and keeps one for another branch", async () => {
+    const dir = await tempRepo({ init: true });
+    git(dir, "commit", "-q", "--allow-empty", "-m", "root");
+    git(dir, "checkout", "-qb", "feat");
+    writeFileSync(join(dir, "plan.md"), "x\n");
+    git(dir, "add", "plan.md");
+    git(dir, "commit", "-qm", "plan");
+    git(dir, "checkout", "-q", "-");
+    writeFileSync(join(dir, "budget.xlsx"), "x");
+    for (const path of ["plan.md", "old.docx", "budget.xlsx#Sheet2"]) {
+      expect(sati(dir, "card", "put", path, "--summary", "s").code).toBe(0);
+    }
+    const lean = (...flags: string[]) =>
+      sati(dir, "doctor", ...flags)
+        .stdout.split("\n")
+        .find((l) => l.startsWith("ok lean"));
+    expect(lean()).toContain("1 card(s) describe a file that is gone: old.docx.");
+    expect(lean("--fix")).toContain("Removed 1 card(s) whose file is gone: old.docx.");
+    const left = satiJson<{ path: string }[]>(dir, "card", "get").data.map((c) => c.path);
+    expect(left.sort()).toEqual(["budget.xlsx#Sheet2", "plan.md"]);
+    expect(lean()).toContain("Nothing to clean up.");
+  });
+
   // Why: running `scan --apply` twice created every feature twice.
   it("scan --apply is idempotent and skips build output folders", async () => {
     const dir = await tempRepo({ init: true });

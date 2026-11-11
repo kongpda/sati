@@ -494,7 +494,11 @@ async function ensurePersonal(): Promise<DbLocation> {
 }
 
 /** Opens this project's DB and identifies the caller. Fails with NOT_INITIALIZED before init. */
-export async function openRuntime(cwd: string = process.cwd()): Promise<Runtime> {
+export async function openRuntime(
+  cwd: string = process.cwd(),
+  /** Set by `sati mcp`: the caller is an agent, named `mcp` until the client says who it is. */
+  mcpClient?: string,
+): Promise<Runtime> {
   const location = await resolveLocation(cwd);
   if (!existsSync(location.path)) {
     throw new SatiError("NOT_INITIALIZED", `This project has no ${CLI_NAME} yet.`, {
@@ -525,7 +529,12 @@ export async function openRuntime(cwd: string = process.cwd()): Promise<Runtime>
     ids: createIdFactory(),
     branch: currentBranch(location),
   };
-  const identity = actorIdentity({ env: process.env, worktree: location.root, user: osUser() });
+  const identity = actorIdentity({
+    env: process.env,
+    worktree: location.root,
+    user: osUser(),
+    mcpClient,
+  });
   const actor = await ensureActor({ ...deps, projectId: project.id }, identity);
   const ctx: ServiceContext = {
     ...deps,

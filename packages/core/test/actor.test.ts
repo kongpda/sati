@@ -39,6 +39,25 @@ describe("actorIdentity", () => {
     expect(id).toEqual({ name: "dara@main", kind: "human", tool: null, worktree: "/x/main" });
     expect(actorIdentity({ env: {}, worktree: null, user: "os" }).name).toBe("os@local");
   });
+
+  // Claude Desktop and Cowork set no agent variable. Recorded as a person, an agent could
+  // approve its own work and pass every check meant for people.
+  it("treats an MCP caller as an agent named after its client", () => {
+    const id = actorIdentity({ env: { USER: "dara" }, worktree: wt, mcpClient: "Claude Desktop" });
+    expect(id).toMatchObject({
+      name: "claude-desktop@feature-a",
+      kind: "agent",
+      tool: "claude-desktop",
+    });
+    // Before the client says its name, the caller is still an agent.
+    expect(actorIdentity({ env: {}, worktree: wt, mcpClient: "" })).toMatchObject({
+      kind: "agent",
+      tool: "mcp",
+    });
+    // A tool named by the environment carries the session id, so it wins.
+    const known = actorIdentity({ env: { CLAUDECODE: "1" }, worktree: wt, mcpClient: "x" });
+    expect(known.tool).toBe("claude-code");
+  });
 });
 
 describe("updateProfile", () => {

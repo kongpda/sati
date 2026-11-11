@@ -9,6 +9,7 @@ import {
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { execute, int, list, parseJson } from "../runtime.js";
+import { projectPath } from "./guard.js";
 
 const state = (e: ContextView) =>
   e.stale === null
@@ -55,7 +56,10 @@ const get = defineCommand({
   run: ({ args }) =>
     execute(
       args.json,
-      async ({ ctx }) => getContext(ctx, { path: args.path }),
+      async (rt) =>
+        getContext(rt.ctx, {
+          path: args.path === undefined ? undefined : projectPath(rt, args.path),
+        }),
       (entries: ContextView[]) =>
         entries.length
           ? entries.map(render).join("\n")
@@ -92,9 +96,9 @@ const put = defineCommand({
   run: ({ args }) =>
     execute(
       args.json,
-      async ({ ctx }) =>
-        putContext(ctx, {
-          path: args.path,
+      async (rt) =>
+        putContext(rt.ctx, {
+          path: projectPath(rt, args.path),
           summary: args.summary,
           keyFiles: list(args["key-files"]),
           facts: facts(args.facts),

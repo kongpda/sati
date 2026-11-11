@@ -60,6 +60,16 @@ function inRepo(root: string, cwd: string, path: string): string | undefined {
   return rel.split(sep).join("/");
 }
 
+/**
+ * A path typed in a subfolder, or an absolute one, as the project-relative form core expects.
+ * From the project root a relative path is already that. One outside the project is passed on
+ * unchanged, so core refuses it by name.
+ */
+export function projectPath(rt: Runtime, path: string, cwd: string = process.cwd()): string {
+  if (!isAbsolute(path) && relative(realish(rt.location.root), realish(cwd)) === "") return path;
+  return inRepo(rt.location.root, cwd, path) ?? path;
+}
+
 /** True when `path`, relative to `cwd`, is the repo root itself. */
 const isRepoRoot = (root: string, cwd: string, path: string) =>
   relative(realish(root), realish(resolve(cwd, path))) === "";

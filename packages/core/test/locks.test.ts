@@ -24,6 +24,9 @@ describe("pathsOverlap", () => {
     ["src/*.ts", "src/*.tsx"], // two globs in one segment: assumed to overlap
     ["src/*", "src/a/b.ts"], // `src/*` matches the directory src/a, so covers what is inside
     [".github/workflows/ci.yml", ".github/**"],
+    // macOS and Windows open one file under either spelling, so two locks on it must collide.
+    ["Docs/Report.docx", "docs/report.docx"],
+    ["r\u00e9sum\u00e9.xlsx", "re\u0301sume\u0301.xlsx"], // one name, composed and decomposed
   ])("%s overlaps %s", (a, b) => {
     expect(pathsOverlap(a, b)).toBe(true);
     expect(pathsOverlap(b, a)).toBe(true);

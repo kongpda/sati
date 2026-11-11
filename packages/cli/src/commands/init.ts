@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import {
@@ -92,6 +92,14 @@ function slugify(name: string): string {
   return slug || "project";
 }
 
+function sameFolder(a: string, b: string): boolean {
+  try {
+    return realpathSync.native(a) === realpathSync.native(b);
+  } catch {
+    return a === b;
+  }
+}
+
 function where(cwd: string): DbLocation | undefined {
   try {
     return locateDb(cwd);
@@ -153,10 +161,22 @@ async function plan(
     });
   }
   const root = loc?.root ?? cwd;
+  // Every folder below would then belong to this one project, and its agent files would land
+  // in the home folder.
+  if (mode === "standalone" && (dirname(root) === root || sameFolder(root, homedir()))) {
+    throw new SatiError(
+      "USAGE",
+      "This is your home folder or the top of the disk, not a project.",
+      {
+        hint: `Open the folder that holds the project's files, then run \`${CLI_NAME} init\` there.`,
+      },
+    );
+  }
   const configPath = join(root, CONFIG_DIR, CONFIG_FILE);
   // A committed config (e.g. in a fresh clone) keeps its project id and kind.
   const existing = readProjectConfig(root);
-  const kind = (args.kind ?? existing?.kind ?? "code") as ProjectKind;
+  // A folder outside git is rarely software: plans, documents and notes need no features or guard.
+  const kind = (args.kind ?? existing?.kind ?? (inGit ? "code" : "general")) as ProjectKind;
   if (!PROJECT_KINDS.includes(kind)) {
     throw new SatiError("USAGE", `Unknown project kind "${args.kind}".`, {
       hint: "Use code for software, or general for plans, todos and notes.",
@@ -424,7 +444,7 @@ async function wizard(cwd: string, args: Parameters<typeof plan>[1]): Promise<In
     // A clone of a general project starts on general, so Enter keeps what teammates chose.
     initialValue: (args.kind ??
       readProjectConfig(where(cwd)?.root ?? cwd)?.kind ??
-      "code") as ProjectKind,
+      (where(cwd)?.mode === "git" ? "code" : "general")) as ProjectKind,
     options: [
       { value: "code", label: "code", hint: "software: features, file locks and the guard" },
       { value: "general", label: "general", hint: "plans, todos and notes, such as an event" },
@@ -515,6 +535,7 @@ function render(r: InitResult | UpgradeResult | DryRun | null): string {
     const p = r.dryRun;
     const head = p.upgrade ? `Upgrade "${p.upgrade.slug}" would write:` : "Init would write:";
     const lines = [head, `  mode      ${p.mode}`];
+    if (!p.upgrade) lines.push(`  kind      ${p.kind}`);
     for (const f of p.files) lines.push(`  ${f.action.padEnd(9)} ${f.path}`);
     lines.push(`  tools     ${p.tools.length ? p.tools.join(", ") : "none detected"}`);
     lines.push("Dry run: nothing was written.");
@@ -550,7 +571,8 @@ export default defineCommand({
     },
     kind: {
       type: "string",
-      description: "code (default) | general: plans, todos and notes without features or locks",
+      description:
+        "code (default in a repo) | general (default outside git): plans, todos and notes without features or locks",
     },
     name: { type: "string", description: "Project name (default: folder name)" },
     slug: {

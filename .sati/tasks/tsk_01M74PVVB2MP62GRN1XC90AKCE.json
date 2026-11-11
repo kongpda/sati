@@ -1,10 +1,11 @@
 {
+  "body": "Move rule wired into drag, bulk menu, send-back dialog. Panel, claim box and agent-run board next.",
   "branch": "main",
   "claim": {
     "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "heartbeatAt": "2026-11-11T07:06:27.158Z",
-    "leaseUntil": "2026-11-11T07:36:27.158Z",
-    "token": 2
+    "heartbeatAt": "2026-11-11T07:15:19.665Z",
+    "leaseUntil": "2026-11-11T07:45:19.665Z",
+    "token": 3
   },
   "createdAt": "2026-11-11T07:06:27.041Z",
   "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
@@ -13,14 +14,15 @@
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
     "*": "2026-11-11T07:06:27.047Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "body": "2026-11-11T07:15:19.671Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "branch": "2026-11-11T07:06:27.160Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "claim": "2026-11-11T07:06:27.160Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-11T07:15:19.671Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "status": "2026-11-11T07:06:27.160Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "worktree": "2026-11-11T07:06:27.160Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
   "status": "in_progress",
   "title": "Board offers actions the server refuses; registry pollution; remaining open items",
-  "updatedAt": "2026-11-11T07:06:27.162Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T07:15:19.682Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

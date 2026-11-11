@@ -1,8 +1,15 @@
 import { join } from "node:path";
-import { adoptClaims, CONFIG_DIR, readSettings, type ServiceContext } from "@sati/core";
+import {
+  actorIdentity,
+  adoptClaims,
+  CONFIG_DIR,
+  ensureActor,
+  readSettings,
+  type ServiceContext,
+} from "@sati/core";
 import { defineCommand } from "citty";
 import pkg from "../../package.json" with { type: "json" };
-import { exportWritten, openRuntime, printError, processProbe } from "../runtime.js";
+import { exportWritten, openRuntime, osUser, printError, processProbe } from "../runtime.js";
 import { readTemplateFiles } from "../templates.js";
 
 /**
@@ -27,8 +34,21 @@ export default defineCommand({
   meta: { name: "mcp", description: "Serve the MCP tools over stdio (started by your agent)" },
   run: async () => {
     try {
-      const rt = await openRuntime();
+      const rt = await openRuntime(process.cwd(), "");
       const { project, location } = rt;
+      // No variable named the tool, so the client's own name does: Cursor and Claude Desktop in
+      // one folder are then two actors, and neither is taken for the person.
+      const named = async (c: ServiceContext, client: string) => {
+        if (rt.actor.tool !== "mcp" || process.env.SATI_ACTOR?.trim()) return;
+        const who = actorIdentity({
+          env: process.env,
+          worktree: location.root,
+          user: osUser(),
+          mcpClient: client,
+        });
+        c.actorId = (await ensureActor(c, who)).id;
+        await adoptClaims(c);
+      };
       // The MCP server lives as long as the agent session, so its claims name it as the holder.
       const ctx = { ...rt.ctx, processes: processProbe(true) };
       // A reloaded server takes over the claims its exited predecessor held for this actor.
@@ -41,7 +61,7 @@ export default defineCommand({
       if (project.mode !== "git") {
         try {
           await adopt(ctx);
-          await serveStdio(ctx, pkg.version, kind, location.root, templates);
+          await serveStdio(ctx, pkg.version, kind, location.root, templates, named);
         } finally {
           await ctx.store.close();
         }
@@ -66,6 +86,7 @@ export default defineCommand({
           kind,
           location.root,
           templates,
+          named,
         );
       } finally {
         await synced.flush();

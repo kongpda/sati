@@ -1907,3 +1907,14 @@ Task `tsk_qmns5a`. The owner approved `tsk_82snym` and `tsk_cf1r96` ("approve an
 - GitHub, at the owner's word: private vulnerability reporting, secret scanning, push protection, Dependabot alerts and security updates turned on; remote branch `changeset-release/main` deleted (it was at `c171f0f`, PR #1 closed).
 - Not done, with the reason: required CI checks on `main` (they would block the direct pushes this repo and its agents use; needs a PR workflow first); npm publish (ADR 0006 stands, and there is no `NPM_TOKEN`); `AGENT_KICKOFF.md` (kept as history, `AGENTS.md` says so); the manual screen-reader pass (needs a person); Renovate (the owner must install the app).
 - The owner approved `tsk_qmns5a` ("do it"); the agent ran the approval as `kongpda@sati`. Dependabot alert 1 (`GHSA-67mh-4wv8-2f99`, esbuild through drizzle-kit) dismissed as a tolerable risk, the same acceptance already written in `docs/security-review.md`, `osv-scanner.toml` and `pnpm.auditConfig`.
+
+## 2026-11-11 — Phase 9a: identity and paths
+
+Task `tsk_fevjbj`, from the 2026-11-11 deep review (PLAN Phase 9).
+
+- MCP caller identity: `sati mcp` starts as the agent `mcp@<folder>` and takes the client's name from `clientInfo` once the client has initialised. `SATI_ACTOR` and a tool named by the environment (`CLAUDECODE`, `AI_AGENT`) still win, because those carry the session id. Choice: a tool call that arrives before the name is known runs as `mcp@<folder>`, still an agent.
+- `pathsOverlap` folds both paths to NFC and lower case. Choice: on a case-sensitive disk two files that differ only by case now count as one; a false overlap is the safe direction for a lock or a guard.
+- CLI `card put|get` and `lock acquire` resolve paths as `guard --paths` does. A relative path given at the project root is passed through unchanged, so globs keep working.
+- `sati init`: kind defaults to `general` outside git; `--dry-run` prints the kind; standalone init refuses the home folder and the filesystem root.
+- Tests: each new test fails on the old code. Not tested: the filesystem-root refusal (a test cannot run there), and the live rename through a real MCP client (the identity function and the `oninitialized` wiring are covered apart, not together).
+- Seen while testing, not from this work: `packages/ui` has lint errors from the other agent's work in progress; two git-hook CLI tests (`sync.test.ts`, `init.test.ts` fresh clone) failed once each under a loaded machine and passed on the rerun.

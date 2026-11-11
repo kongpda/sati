@@ -125,6 +125,8 @@ function segmentsOverlap(a: readonly string[], b: readonly string[]): boolean {
   return true;
 }
 
+const foldPath = (p: string) => p.normalize("NFC").toLowerCase();
+
 const cache = new Map<string, boolean>();
 const CACHE_LIMIT = 10_000;
 
@@ -134,7 +136,11 @@ const CACHE_LIMIT = 10_000;
  * in the same segment count as overlapping. That errs towards a false overlap, which only costs a
  * warning or a refused lock, never a missed one.
  */
-export function pathsOverlap(a: string, b: string): boolean {
+export function pathsOverlap(rawA: string, rawB: string): boolean {
+  // macOS and Windows treat `Docs/Report.docx` and `docs/report.docx` as one file, and a name can
+  // arrive composed or decomposed. Folding both errs towards an overlap, the safe direction.
+  const a = foldPath(rawA);
+  const b = foldPath(rawB);
   const key = a < b ? `${a}\0${b}` : `${b}\0${a}`;
   const hit = cache.get(key);
   if (hit !== undefined) return hit;

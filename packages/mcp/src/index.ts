@@ -11,8 +11,18 @@ export async function serveStdio(
   kind?: ProjectKind,
   root?: string,
   templates?: () => TemplateFile[],
+  /** Called once with the client's name from `clientInfo`; it may set `ctx.actorId`. */
+  onClient?: (ctx: ServiceContext, name: string) => Promise<void>,
 ): Promise<void> {
   const server = createServer(ctx, version, kind, root, templates);
+  server.server.oninitialized = () => {
+    const name = server.server.getClientVersion()?.name;
+    if (name && onClient) {
+      onClient(ctx, name).catch((err: unknown) => {
+        process.stderr.write(`warning: ${err instanceof Error ? err.message : String(err)}\n`);
+      });
+    }
+  };
   let stop: () => void = () => undefined;
   const closed = new Promise<void>((resolve) => {
     stop = resolve;

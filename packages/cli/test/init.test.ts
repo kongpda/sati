@@ -289,6 +289,47 @@ describe("sati init", () => {
     expect(stale()).toEqual({ venue: false, "budget.xlsx": false });
   });
 
+  // An office folder has no git; code rules (features, guard) there confuse the agent.
+  it("outside git the project kind defaults to general, and --dry-run says so", () => {
+    const dir = tempDir();
+    const env = { HOME: tempDir() };
+    expect(run(dir, ["init", "--dry-run", "--tools", ""], env).stdout).toMatch(/kind\s+general/u);
+    const r = run(dir, ["init", "--yes", "--tools", "", "--json"], env);
+    expect(r.code, r.stderr).toBe(0);
+    expect((JSON.parse(r.stdout) as Init).project.settings).toMatchObject({ kind: "general" });
+  });
+
+  it("refuses to make the home folder a project", () => {
+    const home = tempDir();
+    const r = run(home, ["init", "--yes", "--tools", "", "--json"], { HOME: home });
+    expect(r.code).not.toBe(0);
+    expect((JSON.parse(r.stdout) as { error: { message: string } }).error.message).toContain(
+      "home folder",
+    );
+    expect(existsSync(join(home, "AGENTS.md"))).toBe(false);
+  });
+
+  // People run commands from the folder they are in; a path must mean the same file from there.
+  it("card and lock paths given from a subfolder are stored relative to the project", () => {
+    const dir = tempDir();
+    const env = { HOME: tempDir() };
+    expect(run(dir, ["init", "--yes", "--kind", "general", "--tools", ""], env).code).toBe(0);
+    mkdirSync(join(dir, "venue"));
+    writeFileSync(join(dir, "venue", "quote.pdf"), "total 2,870");
+    writeFileSync(join(dir, "budget.xlsx"), "7,500");
+    const sub = join(dir, "venue");
+    const put = (path: string) => run(sub, ["card", "put", path, "--summary", "read"], env);
+    expect(put("quote.pdf").code).toBe(0);
+    expect(put("../budget.xlsx").code).toBe(0);
+    const cards = JSON.parse(run(dir, ["card", "get", "--json"], env).stdout) as { path: string }[];
+    expect(cards.map((c) => c.path).sort()).toEqual(["budget.xlsx", "venue/quote.pdf"]);
+    const lock = run(sub, ["lock", "acquire", join(dir, "budget.xlsx"), "--json"], env);
+    expect(lock.code, lock.stderr).toBe(0);
+    expect((JSON.parse(lock.stdout) as { lock: { paths: string[] } }).lock.paths).toEqual([
+      "budget.xlsx",
+    ]);
+  });
+
   it("--kind general sets up a project without feature, lock or guard rules", () => {
     const dir = tempDir();
     const home = tempDir();

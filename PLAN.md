@@ -852,6 +852,66 @@ Added 2026-11-07 at the owner's request. sati is the memory, not a file reader: 
 
 **Gate:** an agent answers 20 questions about a folder of real Office and PDF files, saving cards; in a fresh session it answers them again from memory, re-reading only changed files, with at least 70% fewer tokens by the agent tool's own usage report. No private item appears in `.sati/` or git. All existing budgets pass.
 
+### Phase 9 — Office-ready: fixes and gaps from the 2026-11-11 deep review
+
+Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sqlite` with `sync`, and `cli` with `mcp`, and a walkthrough ran sati in a folder of Word, Excel, PowerPoint and PDF files with no git. One person can use sati there today; the items below are what was wrong or missing. The Phase 8 rule stands: sati never opens, parses or watches the user's files.
+
+**Keep it lean (owner, 2026-11-11).** One sati task per work package, not per finding. A test is added only when it fails on the old code.
+
+**9a — Identity and paths**
+
+- [x] An MCP caller is an agent unless the environment says otherwise: the name comes from the client's `clientInfo` when no agent variable is set, so Cursor, Codex and Claude Desktop no longer act as the person and pass the review gate
+- [x] Lock, guard and feature paths compare without case and in Unicode NFC, so `Docs/Report.docx` and `docs/report.docx` are one file
+- [x] CLI `card put|get` and `lock acquire` accept a path relative to the current folder or an absolute path inside the project, as `guard --paths` and MCP do
+- [x] `sati init` outside a git repo defaults to kind `general`, says the kind in `--dry-run`, and refuses the home folder and the filesystem root
+
+**9b — Sync and store safety**
+
+- [ ] Import merges field by field whenever the stored record and the file changed apart, not only at equal versions, so a pull never drops a local edit that was not exported yet
+- [ ] The snapshot reader accepts a UTF-8 byte-order mark and skips, with a warning, files a sync client made (`name (1).json`, conflicted copies) instead of refusing the whole import
+- [ ] Snapshot files are flushed to disk before the rename
+- [ ] A remote `abort` after a failed commit gets an answer, and every remote request has a timeout
+- [ ] `fuseblk` (NTFS and exFAT external disks on Linux) counts as a local disk
+- [ ] A project database inside a cloud-synced folder (OneDrive, Dropbox, Google Drive, iCloud) is detected by path, and `doctor` and `init` warn
+
+**9c — Cards**
+
+- [ ] `card get` and `context_get` take the file version the caller sees now and compare it with `sourceSeen`, so staleness works where sati has no file list
+- [ ] A card saved while its file had uncommitted changes does not turn stale when that same content is committed
+- [ ] A card path may end in an anchor (`budget.xlsx#Sheet2`, `deck.pptx#slide-12`, `contract.pdf#p4`); staleness uses the file part
+
+**9d — Office wiring**
+
+- [ ] `sati mcp --project <folder>` and an `init` option that prints the Claude Desktop entry with it, because desktop apps start servers outside the project folder
+- [ ] The general rules block and skill say how to work with Office and PDF files: read with the agent's own tools, then save a card with facts, an anchor and `sourceSeen`
+- [ ] Four more starter templates: content calendar, monthly report, proposal, meeting notes
+- [ ] MCP parity with the CLI for handoff and the task checklist
+
+**9e — Languages without spaces**
+
+- [ ] `recall` and similar-task matching split Khmer, Thai, Chinese and Japanese text into words with `Intl.Segmenter`
+
+**9f — Lean check**
+
+- [ ] `sati doctor` reports bloat: done tasks older than the compaction age, cards whose file is gone, expired locks; `sati doctor --fix` (or the named cleanup command) removes what is safe, logged like every write
+
+**9g — Small core fixes**
+
+- [ ] A task with unfinished dependencies cannot be claimed by id
+- [ ] The brief's "feature path matches no file" warning treats a folder path as covering what is beneath it
+- [ ] A person can edit a task whose claim has expired without waiting for a sweep
+
+**Needs the owner's decision before any work**
+
+- [ ] Sharing without git: a folder-sync mode (snapshot in the shared folder, database always outside it, reader tolerant of conflicted copies) as an interim before Phase 6. Live claims and locks across people still need the server. Needs an ADR
+- [ ] Protected deliverables in a general project: an approved file is protected by its hash. This makes sati read file bytes, which the Phase 8 rule forbids; today sati already hashes changed files in git mode
+- [ ] A one-click installer for people with no terminal (Phase 7d "Desktop launcher"); needs code signing
+- [ ] Card keys for files outside the project folder and for SharePoint or Drive links
+
+**Not in Phase 9:** registry collisions (two folders with one slug, a copied folder sharing a database) are fixed under task `tsk_01M74P…VB2MP62GRN1XC90AKCE` by another agent.
+
+**Gate:** the Phase 8 gate folder, on a machine with no git, driven through MCP by a client that sets no agent variable: the caller is recorded as an agent, cards with anchors go stale when the file changes, and Khmer questions recall Khmer cards. `pnpm lint && pnpm typecheck && pnpm test` pass and the performance budgets are unchanged.
+
 ## Testing, CI and release
 
 The riskiest code is concurrency and merging, so those get the heaviest testing: real processes, real git worktrees and randomised scenarios, not mocks.

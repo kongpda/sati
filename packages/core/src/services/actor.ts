@@ -12,6 +12,11 @@ export interface IdentityEnv {
   worktree: string | null;
   /** OS user name, used for humans when `USER` is not set. */
   user?: string | undefined;
+  /**
+   * Set by the MCP server: the client's name from `clientInfo`, or "" before it is known. Only an
+   * agent tool starts an MCP server, so the caller is an agent even when no variable says which.
+   */
+  mcpClient?: string | undefined;
 }
 
 /**
@@ -25,6 +30,16 @@ function detectTool(env: IdentityEnv["env"]): string | null {
   return null;
 }
 
+/** An MCP client name as a tool name: `Claude Desktop` is `claude-desktop`; unnamed is `mcp`. */
+function clientTool(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return slug || "mcp";
+}
+
 function sessionId(env: IdentityEnv["env"]): string | null {
   const raw = env.CLAUDE_CODE_SESSION_ID ?? env.SATI_SESSION_ID;
   return raw ? raw.replace(/[^0-9a-z]/gi, "").slice(0, 8) || null : null;
@@ -35,8 +50,8 @@ function sessionId(env: IdentityEnv["env"]): string | null {
  * `<tool>@<worktree>#<session>` so parallel sessions in different worktrees stay distinct,
  * and a human is `<user>@<worktree>`.
  */
-export function actorIdentity({ env, worktree, user }: IdentityEnv): ActorIdentity {
-  const tool = detectTool(env);
+export function actorIdentity({ env, worktree, user, mcpClient }: IdentityEnv): ActorIdentity {
+  const tool = detectTool(env) ?? (mcpClient === undefined ? null : clientTool(mcpClient));
   const kind = tool ? "agent" : "human";
   const forced = env.SATI_ACTOR?.trim();
   if (forced) return { name: forced, kind, tool, worktree };

@@ -11,6 +11,7 @@ import {
 import { defineCommand } from "citty";
 import { id, json } from "../args.js";
 import { execute, int, list, ref } from "../runtime.js";
+import { projectPath } from "./guard.js";
 
 const line = (l: Lock) =>
   `${shortHandle(l.id)}  ${l.mode}  ${l.paths.join(", ")}  by ${shortHandle(l.actorId)} until ${l.leaseUntil}`;
@@ -32,14 +33,16 @@ const acquire = defineCommand({
   run: ({ args }) =>
     execute(
       args.json,
-      async ({ ctx }) =>
-        acquireLock(ctx, {
-          paths: list(args.paths),
+      async (rt) => {
+        const { ctx } = rt;
+        return acquireLock(ctx, {
+          paths: list(args.paths)?.map((p) => projectPath(rt, p)),
           mode: args.shared ? "shared" : "exclusive",
           taskId: await ref(ctx, "task", args.task),
           reason: args.reason,
           leaseMinutes: int(args.lease, "lease"),
-        }),
+        });
+      },
       ({ lock, warnings }: AcquireLockResult) =>
         [
           `Locked ${line(lock)}`,

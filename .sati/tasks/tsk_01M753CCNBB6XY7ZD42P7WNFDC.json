@@ -1,15 +1,28 @@
 {
   "body": "Owner asked on 2026-11-11 to fix the recommendations. (1) A claim replaced by another machine's claim is reported and shown in the loser's brief. (2) One unreadable record file is skipped, the rest of the load goes on. (4) A config written by a newer sati says \"update sati\", not only \"Invalid\".",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "heartbeatAt": "2026-11-11T10:45:15.520Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 26060
-    },
-    "leaseUntil": "2026-11-11T12:45:15.520Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "3b95031276d17235443c0a114620007079502fb9",
+    "completedAt": "2026-11-11T10:47:55.555Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "packages/core/src/services/sync.ts",
+      "packages/core/src/services/brief.ts",
+      "packages/core/src/domain/schemas.ts",
+      "packages/sync/src/snapshot.ts",
+      "packages/cli/src/shared-folder.ts",
+      "packages/cli/src/runtime.ts",
+      "packages/store-sqlite/src/locate.ts",
+      "packages/core/test/sync.test.ts",
+      "packages/cli/test/shared-folder.test.ts",
+      "packages/store-sqlite/test/locate.test.ts",
+      "docs/decisions/0009-shared-folder.md",
+      "docs/progress.md",
+      "PLAN.md",
+      ".changeset/shared-folder-fixes.md"
+    ],
+    "summary": "Commit 3b95031. Import reports a live claim replaced by another actor's (activity row lostClaim, problems line, brief \"Watch out\" for a day). Shared folder skips a record file that cannot be read and loads the rest (skipBad; git mode unchanged). Config with unknown field or version says a newer version wrote it. Tests added in core sync, CLI shared-folder, store locate. lint, typecheck, test pass."
   },
   "createdAt": "2026-11-11T10:45:11.979Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
@@ -22,13 +35,14 @@
   "stamps": {
     "*": "2026-11-11T10:45:11.980Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "branch": "2026-11-11T10:45:15.521Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "claim": "2026-11-11T10:45:15.521Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "status": "2026-11-11T10:45:15.521Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T10:47:55.556Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T10:47:55.556Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T10:47:55.556Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "worktree": "2026-11-11T10:45:15.521Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Shared folder follow-ups: lost-claim warning, bad file no longer blocks, newer-config message",
-  "updatedAt": "2026-11-11T10:45:15.521Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T10:47:55.556Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

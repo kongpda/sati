@@ -914,7 +914,7 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 - [x] Shared folder: a live claim that another machine's claim replaces is reported at the load and in the loser's next brief
 - [x] Shared folder: a record file that cannot be read is left out with a warning; the other changed files still load
 - [x] A config file with a field or version this sati does not know says a newer version wrote it
-- [ ] The board's lint warnings are cleared, so a new one stands out
+- [x] The board's lint warnings are cleared, so a new one stands out
 - [ ] The board can approve a file and take the approval away (the CLI was the only way)
 - [ ] Writing `@` in a comment offers the names of the people and agents in the project
 

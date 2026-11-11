@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { type Actor, api, type ProjectKind, type Snapshot } from "./api.js";
 import { FormDialog } from "./forms.js";
 import { personOnly } from "./moves.js";

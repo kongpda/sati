@@ -2058,3 +2058,8 @@ Task `tsk_fevjbr`.
 - This applies to every import, git mode too: a merge that replaces a live claim is the same event.
 - Bad file: only in folder mode (`skipBad`). Git mode still refuses the whole import, because there a bad file is a bad commit and should be fixed, not skipped. A file that parses but is not a valid record is found by the import's own validation and left out the same way.
 - Newer config: the hint is given for an unknown field or an unknown `version`. Nothing was published before `share` existed, so no released version shows the old bare "Invalid".
+
+## 2026-11-11 — 9h: lint warnings
+
+- 14 warnings, all in `packages/ui`. One was an unused import; removed.
+- 13 were `noDescendingSpecificity` in `styles.css`. Each pair names two unrelated components (`.badge` after `.card .meta-text .badge`, `.thread-head button` after a palette button). Nothing is drawn wrong, and moving rules in a 1,500-line stylesheet to please the rule could change what wins. The rule is off for CSS in `biome.json`; every other CSS rule stays on.

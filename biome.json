@@ -7,5 +7,11 @@
     "enabled": true,
     "rules": { "preset": "recommended", "suspicious": { "noExplicitAny": "error" } }
   },
+  "overrides": [
+    {
+      "includes": ["**/*.css"],
+      "linter": { "rules": { "style": { "noDescendingSpecificity": "off" } } }
+    }
+  ],
   "javascript": { "formatter": { "quoteStyle": "double", "semicolons": "always" } }
 }

@@ -1,0 +1,15 @@
+{
+  "consequences": "Lint output is clean, so a new warning stands out. A real specificity bug must be caught by the Playwright and axe tests, not by lint.",
+  "context": "It gave 13 warnings in packages/ui/src/styles.css, each between two unrelated components. Nothing rendered wrong. Rejected: reordering the stylesheet to satisfy it, which risks changing which rule wins for no user benefit.",
+  "createdAt": "2026-11-11T10:48:21.801Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "decision": "The rule style/noDescendingSpecificity is turned off for **/*.css in biome.json. All other rules stay on.",
+  "id": "dec_01M753J619JRCP0PS2YFVKTRAH",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T10:48:21.802Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "title": "Biome's noDescendingSpecificity is off for CSS",
+  "updatedAt": "2026-11-11T10:48:21.801Z",
+  "version": 1
+}

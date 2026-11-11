@@ -1,11 +1,25 @@
 {
   "body": "All checklist items in docs/review-followups.md are implemented. Final gate rerun (build, typecheck, knip, browser suite) is in progress. Commit waits on it. PLAN.md line is left out of the commit: lck_da1g64 holds PLAN.md until 09:10Z.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "heartbeatAt": "2026-11-11T07:28:37.541Z",
-    "leaseUntil": "2026-11-11T07:58:37.541Z",
-    "token": 3
+  "completion": {
+    "branch": "main",
+    "commit": "f6483a638432c005f84df09b8d2011b68b62b663",
+    "completedAt": "2026-11-11T07:31:10.770Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/ui/src/moves.ts",
+      "packages/ui/src/app.tsx",
+      "packages/ui/src/board.tsx",
+      "packages/ui/src/pages.tsx",
+      "packages/ui/src/forms.tsx",
+      "packages/ui/src/my-work.tsx",
+      "packages/ui/src/settings.tsx",
+      "packages/ui/src/words.ts",
+      "e2e/ui/refusals.spec.ts",
+      "scripts/test-tmp.ts",
+      "docs/review-followups.md"
+    ],
+    "summary": "Board offers only what core accepts (packages/ui/src/moves.ts): refused drops, status lists, send-back reason, held-task lock, agent-run board banner, plain refusal words. Test runs remove their temp folders. Release workflow publishes only when asked; CI lints on one cell. Gate: lint, typecheck, build, knip, test, test:ui (95) pass. Open: PLAN.md line waits on lck_da1g64; Windows sh syntax in MCP config and hooks; CI build sharing; screen-reader pass; /tmp leftovers not deleted."
   },
   "createdAt": "2026-11-11T07:06:27.041Z",
   "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
@@ -16,13 +30,14 @@
     "*": "2026-11-11T07:06:27.047Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "body": "2026-11-11T07:28:37.542Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "branch": "2026-11-11T07:06:27.160Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "claim": "2026-11-11T07:28:37.542Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-11T07:06:27.160Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-11T07:31:10.771Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-11T07:31:10.771Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-11T07:31:10.771Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "worktree": "2026-11-11T07:06:27.160Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Board offers actions the server refuses; registry pollution; remaining open items",
-  "updatedAt": "2026-11-11T07:28:37.545Z",
-  "version": 6,
+  "updatedAt": "2026-11-11T07:31:10.774Z",
+  "version": 7,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

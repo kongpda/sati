@@ -14,6 +14,7 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 permissions:
+  actions: read # the CI result of the commit being released
   contents: write
   pull-requests: write
   id-token: write # npm provenance
@@ -29,6 +30,18 @@ jobs:
           node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
+      # This job tests on Linux only. CI also runs macOS, Windows, the e2e shards, the board and
+      # the audit, and `main` takes pushes without waiting for it: a red commit must not ship.
+      - name: CI passed on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          passed=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" \
+            --json conclusion --jq 'map(select(.conclusion == "success")) | length')
+          if [ "$passed" -eq 0 ]; then
+            echo "::error::CI has not passed on $GITHUB_SHA. Wait for it, or fix it, then run the release again."
+            exit 1
+          fi
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint && pnpm typecheck && pnpm test
       - run: pnpm build

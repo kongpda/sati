@@ -1,0 +1,33 @@
+{
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "939866e3a48485ec8eb0bf48781ff4ac519fd0f4",
+    "completedAt": "2026-11-11T17:07:26.162Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      ".github/workflows/release.yml",
+      "docs/review-followups.md",
+      "docs/progress.md"
+    ],
+    "summary": "release.yml gets `actions: read` and a first step that asks GitHub for the CI runs of the commit being released and stops when none passed. The query returned 0 for a red commit and 1 for a green one when run by hand; the workflow itself is manual and was not run. Required checks on `main` stay the owner's choice: they would refuse direct pushes."
+  },
+  "createdAt": "2026-11-11T17:06:28.813Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "id": "tsk_01M75S6HAEFGWG8AH98V7EAZ8Z",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T17:06:28.815Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "branch": "2026-11-11T17:06:30.611Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T17:07:26.200Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T17:07:26.200Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T17:07:26.200Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "worktree": "2026-11-11T17:06:30.611Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "status": "review",
+  "title": "Release refuses to run unless CI passed on the commit being released",
+  "updatedAt": "2026-11-11T17:07:26.200Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

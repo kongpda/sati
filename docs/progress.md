@@ -2140,3 +2140,9 @@ Task `tsk_fevjbr`.
 - The machine form `0.1.0+48a630b` stays for the MCP server info and the help title, which take a version and not a sentence.
 - `--version` stays one line. What a bug report also needs is in `sati doctor`, before the checks: node, system, whether sati runs from a source checkout or an installed package, the path of the bundle, the path of the store. `doctor --json` has the same under `environment`. The paths hold the home folder's name; that is what makes them useful, and doctor is run on purpose.
 
+## 2026-11-12 — release waits for CI
+
+- `main` was red for four commits on 2026-11-11 and nothing stopped a release from one of them: the release job tests on Linux only. It now asks GitHub for the CI runs of the commit it was started on and stops when none passed.
+- Not turned on: required status checks on `main`. With them a direct push to `main` is refused, so every change would need a pull request. That changes how the owner and the agents work, so it stays the owner's choice.
+- The step cannot be run from here: the release workflow is manual. The `gh run list --workflow ci.yml --commit` query it uses was run by hand against a green commit and returned one passed run.
+

@@ -247,6 +247,11 @@ export interface ImportOptions {
    * Without git there is no merge driver, so the copy is the only place the other edit lives.
    */
   mergeCopies?: boolean;
+  /**
+   * Leave out a record file that cannot be read or is not valid, and import the rest. A file-sync
+   * app may still be writing it; one such file must not hold back everyone else's changes.
+   */
+  skipBad?: boolean;
 }
 
 /** The size and modified time of a record file; a file-sync app that replaces it changes both. */
@@ -280,11 +285,12 @@ type Scanned = ImportRecordsInput[number];
 function scanSnapshot(
   dir: string,
   opts: ImportOptions = {},
-): { records: Scanned[]; copies: Scanned[]; skipped: string[] } {
+): { records: Scanned[]; copies: Scanned[]; skipped: string[]; bad: string[] } {
   refuseLinkedFolders(dir);
   const out: Scanned[] = [];
   const copies: Scanned[] = [];
   const skipped: string[] = [];
+  const bad: string[] = [];
   let count = 0;
   let total = 0;
   for (const entity of SNAPSHOT_ENTITIES) {
@@ -324,7 +330,12 @@ function scanSnapshot(
       const source = posix.join(SNAPSHOT_DIRS[entity], name);
       if (opts.only && !opts.only.has(source)) continue;
       if (!RECORD_COPY.test(name)) {
-        out.push(load(name, source, name.slice(0, -".json".length)));
+        try {
+          out.push(load(name, source, name.slice(0, -".json".length)));
+        } catch (err) {
+          if (!opts.skipBad || !isSatiError(err)) throw err;
+          bad.push(source);
+        }
         continue;
       }
       if (!opts.mergeCopies) {
@@ -339,7 +350,7 @@ function scanSnapshot(
       }
     }
   }
-  return { records: out, copies, skipped };
+  return { records: out, copies, skipped, bad };
 }
 
 /**
@@ -351,8 +362,24 @@ export async function importSnapshot(
   dir: string,
   opts: ImportOptions = {},
 ): Promise<ImportResult & { skipped: string[] }> {
-  const { records, copies, skipped } = scanSnapshot(dir, opts);
-  const result = await importRecords(ctx, await joinTies(ctx, records));
+  const { records, copies, skipped, bad } = scanSnapshot(dir, opts);
+  let result: ImportResult;
+  try {
+    result = await importRecords(ctx, await joinTies(ctx, records));
+  } catch (err) {
+    // The file parsed but is not a whole record. Leave those out and import the others.
+    const details = opts.skipBad && isSatiError(err) ? err.details : undefined;
+    const invalid = isObj(details) ? details.invalid : undefined;
+    if (!Array.isArray(invalid)) throw err;
+    const sources = new Set(records.map((r) => r.source));
+    const named = invalid
+      .map((line) => String(line).split(": ")[0] ?? "")
+      .filter((source) => sources.has(source));
+    if (named.length === 0) throw err;
+    bad.push(...named);
+    const rest = records.filter((r) => !named.includes(r.source));
+    result = await importRecords(ctx, await joinTies(ctx, rest));
+  }
   // After the record itself, and one at a time: each copy meets what the ones before it left.
   for (const copy of copies) {
     try {
@@ -370,7 +397,12 @@ export async function importSnapshot(
       `${path} is not a record file and was skipped (a copy made by a file-sync app?). Delete it.`,
     );
   }
-  return { ...result, skipped };
+  for (const path of bad) {
+    result.problems.push(
+      `${path} could not be read and was left out; the other files were loaded. It is tried again next time. If this stays, fix or delete the file.`,
+    );
+  }
+  return { ...result, skipped: [...skipped, ...bad] };
 }
 
 /** True when each side holds a field the other wrote earlier: both were edited since they met. */

@@ -1,4 +1,11 @@
-import { copyFileSync, mkdtempSync, readdirSync, realpathSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -52,5 +59,33 @@ describe("a project shared through a synced folder (ADR 0009)", () => {
     // The merged record went back to the folder, so Ann gets Bob's edit too.
     const back = JSON.parse(ann("task", "show", id, "--json").stdout) as Task;
     expect(back).toMatchObject({ title: "Book hall A", priority: "high" });
+  });
+  // A sync app writes files in pieces, and one person's broken file is not the others' fault.
+  // Stopping the whole load on it held back every other change in the folder until someone
+  // found and fixed that one file.
+  it("a half-synced file is left out with a warning, and the other changes still arrive", () => {
+    const folder = temp();
+    const annHome = temp();
+    const bobHome = temp();
+    const ann = (...args: string[]) => run(folder, args, { HOME: annHome, SATI_ACTOR: "ann" });
+    const bob = (...args: string[]) => run(folder, args, { HOME: bobHome, SATI_ACTOR: "bob" });
+
+    expect(ann("init", "--yes", "--share").code).toBe(0);
+    const a = JSON.parse(ann("task", "create", "Book the venue", "--json").stdout) as Task;
+    const b = JSON.parse(ann("task", "create", "Print the flyers", "--json").stdout) as Task;
+    expect(bob("init", "--yes").code).toBe(0);
+
+    expect(ann("task", "update", a.id, "--title", "Book hall A").code).toBe(0);
+    expect(ann("task", "update", b.id, "--title", "Print 200 flyers").code).toBe(0);
+    const half = join(folder, ".sati", "tasks", `${b.id}.json`);
+    writeFileSync(half, readFileSync(half, "utf8").slice(0, 40));
+
+    const shown = bob("task", "show", a.id, "--json");
+    expect(JSON.parse(shown.stdout)).toMatchObject({ title: "Book hall A" });
+    expect(shown.stderr).toContain(`tasks/${b.id}.json could not be read`);
+    // Bob keeps the version he had, and the file is tried again on every command.
+    expect(JSON.parse(bob("task", "show", b.id, "--json").stdout)).toMatchObject({
+      title: "Print the flyers",
+    });
   });
 });

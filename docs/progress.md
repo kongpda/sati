@@ -2051,3 +2051,10 @@ Task `tsk_fevjbr`.
 - No email, push or desktop notification: those need the hosted server (Phase 6) or an OS permission, and are not in the plan line.
 - Agents do not get mentions in their brief. They already read the comments of the task they claim.
 - `e2e/ui/refusals.spec.ts`: the drag helper now follows the column. The board scrolls sideways while a card is held near its edge, so a fixed drop point could land one column off. The test failed 5 of 5 runs with and without the inbox change; the board itself was right.
+
+## 2026-11-11 — 9h: shared folder follow-ups
+
+- Lost claim: `importRecords` sees a stored live claim replaced by another actor's and adds `lostClaim` to the import's activity row and a line to `problems`. The brief reads the last day of activity (newest 200 rows) and puts "Your claim on … was replaced" under "Watch out" until the task is yours again or closed. No new record type. A project with more than 200 writes after the import within that day would lose the line; the warning at the load still shows.
+- This applies to every import, git mode too: a merge that replaces a live claim is the same event.
+- Bad file: only in folder mode (`skipBad`). Git mode still refuses the whole import, because there a bad file is a bad commit and should be fixed, not skipped. A file that parses but is not a valid record is found by the import's own validation and left out the same way.
+- Newer config: the hint is given for an unknown field or an unknown `version`. Nothing was published before `share` existed, so no released version shows the old bare "Invalid".

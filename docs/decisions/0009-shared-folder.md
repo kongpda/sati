@@ -43,12 +43,13 @@ what the project is, and every place that asks "is there git here" stays right.
 
 - Changes arrive as fast as the sync app moves files: seconds to minutes, not live.
 - A task claim travels with the task record, so two people can claim one task inside that
-  window. The merge keeps the later claim. File locks are not in the snapshot at all. Live
-  claims and locks across people need the server (Phase 6).
-- Every machine needs the same sati version or newer to read the files; an older one stops with
-  "Invalid config" because it does not know `share`.
-- One unreadable record file holds back the other changed files of that import until it is fixed
-  or deleted. The warning names it.
+  window. The merge keeps the later claim, and the person who lost theirs is told: a warning at
+  the load, and a line in their next brief for a day. File locks are not in the snapshot at
+  all. Live claims and locks across people need the server (Phase 6).
+- Every machine needs the same sati version or newer to read the files; an older one stops on
+  the config and says a newer version wrote it.
+- A record file that cannot be read is left out, with a warning that names it, and tried again
+  at every load. The other changed files load.
 
 ## Rejected
 

@@ -99,6 +99,15 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
     const active = await listAll(r, ctx, "task", { status: ["in_progress", "review", "blocked"] });
     const mine = active.filter((t) => t.claim?.actorId === ctx.actorId && t.claim.leaseUntil > now);
     const ready = await r.readyTasks(ctx.projectId, now, short ? 3 : 5);
+    // A claim of mine that an import replaced with someone else's in the last day (two machines
+    // claimed before their files met). Shown until I hold the task again or it is closed.
+    const lost: Task[] = [];
+    const dayAgo = new Date(ctx.clock.now().getTime() - DAY_MS).toISOString();
+    for (const row of await r.listActivity(ctx.projectId, { since: dayAgo, limit: 200 })) {
+      if (row.verb !== "import" || row.diff.lostClaim !== ctx.actorId) continue;
+      const t = active.find((a) => a.id === row.entityId);
+      if (t && t.claim?.actorId !== ctx.actorId && !lost.includes(t)) lost.push(t);
+    }
     const featureIds = [...new Set(mine.map((t) => t.featureId).filter((id) => id !== null))];
     const features = new Map<string, Feature>();
     for (const id of featureIds) {
@@ -208,6 +217,7 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       pinned,
       linkedCards,
       mine,
+      lost,
       ready,
       features,
       decisions,
@@ -227,6 +237,11 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
     code && data.mine.length > 0 && data.actor?.kind === "agent"
       ? warningLines(await worktreeWarnings(ctx))
       : [];
+  for (const t of data.lost) {
+    warnings.unshift(
+      `Your claim on ${shortHandle(t.id)} was replaced by a claim made on another machine. Stop work on it, or claim it again when it is free.`,
+    );
+  }
   const drift = await reviewDrift(ctx, data.waiting);
 
   // A glob that matches nothing is a stale feature path. `sati doctor` repeats this in Phase 5.

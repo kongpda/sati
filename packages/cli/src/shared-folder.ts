@@ -24,7 +24,7 @@ function readSeen(db: string): Record<string, string> {
  * Loads the record files that changed since this machine last looked: the ones a file-sync app
  * brought from another person. Copies the app made of a record are merged into it. A failure is
  * reported and the files are tried again next time; it never stops the command, because a file
- * may simply be half synced.
+ * may simply be half synced. One file that cannot be read is left out and the rest are loaded.
  */
 export async function loadFolder(
   ctx: ServiceContext,
@@ -39,7 +39,11 @@ export async function loadFolder(
     const now = snapshotStamps(dir);
     const changed = new Set(Object.keys(now).filter((path) => seen[path] !== now[path]));
     if (changed.size === 0) return;
-    const result = await importSnapshot(ctx, dir, { only: changed, mergeCopies: true });
+    const result = await importSnapshot(ctx, dir, {
+      only: changed,
+      mergeCopies: true,
+      skipBad: true,
+    });
     for (const p of result.problems) process.stderr.write(`warning: ${p}\n`);
     // A record merged from two edits is a version past both files; write it for the others.
     const { written } = await exportSnapshot(ctx, dir, { only: result.imported });

@@ -25,6 +25,7 @@ import {
   ensureActor,
   getProject,
   initProject,
+  invalidConfig,
   isSatiError,
   listAll,
   type ProcessProbe,
@@ -831,7 +832,7 @@ export function readProjectConfig(root: string): SatiConfig | undefined {
   const file = join(root, CONFIG_DIR, CONFIG_FILE);
   if (!existsSync(file)) return undefined;
   const parsed = SatiConfigSchema.safeParse(parseJson(readFileSync(file, "utf8"), file));
-  if (!parsed.success) throw new SatiError("VALIDATION", `Invalid ${file}.`);
+  if (!parsed.success) throw invalidConfig(file, parsed.error);
   return parsed.data;
 }
 

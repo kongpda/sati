@@ -1,0 +1,15 @@
+{
+  "createdAt": "2026-11-11T10:45:11.985Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "id": "tsk_01M753CCNGSKTAQBM1Z42TJWG0",
+  "parentId": "tsk_01M753CCNBB6XY7ZD42P7WNFDC",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T10:45:11.985Z#000001#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "status": "todo",
+  "title": "Board: approve a file from its card, and @name suggestions in comments",
+  "updatedAt": "2026-11-11T10:45:11.985Z",
+  "version": 1
+}

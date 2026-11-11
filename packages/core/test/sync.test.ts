@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildBrief,
   claimTask,
   createNote,
   createTask,
@@ -160,5 +161,19 @@ describe("timestamps", () => {
     expect(stored).toMatchObject({ claim: { leaseUntil: "2026-11-03T12:00:00.000Z" } });
     clock.advance(500);
     expect((await claimTask(ctx, task.id)).claim?.actorId).toBe(ctx.actorId);
+  });
+  // ADR 0009: without a server two people can claim one task before their files meet. The merge
+  // keeps one claim; the person who lost it would go on working on a task someone else holds.
+  it("tells the holder when an import replaces their live claim with another person's", async () => {
+    const { ctx } = await setup();
+    const other = await ensureActor(ctx, { name: "bob", kind: "human" });
+    const task = await createTask(ctx, { title: "Book the venue" });
+    const mine = await claimTask(ctx, task.id);
+    const claim = { ...mine.claim, actorId: other.id, token: mine.version + 1 };
+    const record = { ...mine, claim, version: mine.version + 1, updatedAt: LATER };
+    const r = await importRecords(ctx, [{ entity: "task", source: "tasks/a.json", record }]);
+    expect(r.problems).toEqual([expect.stringContaining("claimed on two machines")]);
+    const brief = await buildBrief(ctx);
+    expect(brief.markdown).toContain("Your claim on");
   });
 });

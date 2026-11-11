@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SatiError } from "./errors.js";
 import { globBraceError, normalizeLockPath } from "./locks.js";
 import { FEATURE_STATUSES, MILESTONE_STATUSES, TASK_STATUSES } from "./status.js";
 
@@ -570,5 +571,22 @@ export const SatiConfigSchema = z.strictObject({
     .optional(),
 });
 export type SatiConfig = z.infer<typeof SatiConfigSchema>;
+
+/**
+ * The error for a config file that does not parse. A field or a version this sati does not know
+ * means a newer sati wrote it (a teammate's machine, a shared folder): say so, because "invalid"
+ * sends the person to look for a mistake that is not there.
+ */
+export function invalidConfig(file: string, error: z.ZodError): SatiError {
+  const newer = error.issues.some(
+    (i) => i.code === "unrecognized_keys" || (i.path[0] === "version" && i.path.length === 1),
+  );
+  return new SatiError("VALIDATION", `Invalid ${file}.`, {
+    ...(newer
+      ? { hint: "A newer version wrote this file. Update on this machine, then try again." }
+      : {}),
+    details: { issues: error.issues },
+  });
+}
 export const CONFIG_DIR = ".sati";
 export const CONFIG_FILE = "sati.config.json";

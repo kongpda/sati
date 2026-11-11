@@ -2,7 +2,14 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { CLI_NAME, CONFIG_DIR, CONFIG_FILE, SatiConfigSchema, SatiError } from "@sati/core";
+import {
+  CLI_NAME,
+  CONFIG_DIR,
+  CONFIG_FILE,
+  invalidConfig,
+  SatiConfigSchema,
+  SatiError,
+} from "@sati/core";
 
 export interface DbLocation {
   /** Absolute path of the live SQLite file. */
@@ -114,9 +121,7 @@ function fromStandalone(cwd: string, home: string): DbLocation | undefined {
     if (existsSync(file)) {
       const parsed = SatiConfigSchema.safeParse(readJson(file));
       if (!parsed.success) {
-        throw new SatiError("VALIDATION", `Invalid ${file}.`, {
-          details: { issues: parsed.error.issues },
-        });
+        throw invalidConfig(file, parsed.error);
       }
       if (parsed.data.mode !== "standalone") return undefined;
       return { path: standaloneDbPath(home, parsed.data.projectId), mode: "standalone", root: dir };

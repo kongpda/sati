@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
-import { ENTITY_SCHEMAS, type EntityMap, LIMITS } from "../domain/schemas.js";
-import { listAll, logActivity, parseInput, type ServiceContext } from "./context.js";
+import { shortHandle } from "../domain/ids.js";
+import { ENTITY_SCHEMAS, type EntityMap, LIMITS, type Task } from "../domain/schemas.js";
+import { listAll, logActivity, nowIso, parseInput, type ServiceContext } from "./context.js";
 import { linkProblems } from "./doctor.js";
 
 /** The records the git snapshot carries. Actors, locks and activity stay machine-local. */
@@ -82,6 +83,19 @@ function isNewer(incoming: { version: number; updatedAt: string }, stored: typeo
 }
 
 /**
+ * The actor whose live claim an imported task replaces with someone else's. Without a server two
+ * people can claim one task before their files meet; the one who lost must hear of it.
+ */
+function lostClaim(stored: Task, incoming: Task, now: string): string | undefined {
+  const mine = stored.claim;
+  const theirs = incoming.claim;
+  if (!mine || !theirs || mine.leaseUntil <= now || mine.actorId === theirs.actorId) {
+    return undefined;
+  }
+  return mine.actorId;
+}
+
+/**
  * Upserts snapshot records into the DB in one transaction: new records are inserted, and stored
  * ones are replaced when the incoming copy is newer. Every record is validated first; one bad
  * record rejects the whole import. Each imported record writes an `import` activity row.
@@ -115,6 +129,8 @@ export async function importRecords(ctx: ServiceContext, input: unknown): Promis
 
   return ctx.store.write(async (w) => {
     const result: ImportResult = { imported: [], unchanged: 0, problems: [] };
+    const now = nowIso(ctx);
+    const lost: string[] = [];
     for (const { entity, record } of parsed) {
       const stored = await w.get(entity, record.id);
       // A file never replaces a private record, and a file marked private is not memory to take
@@ -129,14 +145,24 @@ export async function importRecords(ctx: ServiceContext, input: unknown): Promis
       }
       if (stored) await w.update(entity, record, stored.version);
       else await w.insert(entity, record);
+      const loser =
+        entity === "task" && stored ? lostClaim(stored as Task, record, now) : undefined;
       await logActivity(w, ctx, "import", entity, record.id, {
         version: record.version,
         from: stored?.version ?? null,
+        ...(loser ? { lostClaim: loser } : {}),
       });
+      if (loser && entity === "task") {
+        const name = (await w.get("actor", loser))?.name ?? "someone";
+        lost.push(
+          `${shortHandle(record.id)} "${record.title}" was claimed on two machines before their files met. The later claim was kept; ${name} no longer holds the task.`,
+        );
+      }
       result.imported.push({ entity, id: record.id, version: record.version });
     }
     const tasks = result.imported.filter((i) => i.entity === "task").map((i) => i.id);
     if (tasks.length > 0) result.problems = await linkProblems(w, ctx, tasks);
+    result.problems.push(...lost);
     return result;
   });
 }

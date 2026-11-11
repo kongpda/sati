@@ -68,6 +68,25 @@ describe("locateDb", () => {
     );
   });
 
+  // A shared folder is opened by machines with different versions. "Invalid config" alone sent
+  // the person to look for a mistake in a file that a newer version wrote correctly.
+  it("says a newer version wrote a config with a field it does not know", () => {
+    const dir = tmp();
+    mkdirSync(join(dir, ".sati"));
+    writeFileSync(
+      join(dir, ".sati", "sati.config.json"),
+      JSON.stringify({
+        version: 1,
+        projectId: "prj_01JC0000000000000000000000",
+        mode: "standalone",
+        fromTheFuture: true,
+      }),
+    );
+    expect(() => locateDb(dir, { home: tmp() })).toThrow(
+      expect.objectContaining({ code: "VALIDATION", hint: expect.stringContaining("newer") }),
+    );
+  });
+
   it("ignores a non-standalone config outside git", () => {
     const dir = tmp();
     writeConfig(dir, "git");

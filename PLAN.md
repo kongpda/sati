@@ -202,7 +202,7 @@ Agents use sati through a small MCP toolset, with the CLI as a fallback. Hooks e
 | `decision_record` | Logs why something changed or was rejected |
 | `context_get` / `context_put` | Cards: what an agent learned about a file or folder (summary, facts, tags, the version read), so nobody reads it twice; `get` flags stale entries by hash; `private` keeps one on this machine |
 | `search` | Full-text search across tasks, features, notes, decisions and cards (comments are notes) |
-| `recall` | The best cards, notes, decisions and open tasks for a question, with ids and sources, capped at 1,000 tokens |
+| `recall` | The best cards, notes, decisions and open tasks for a question, with ids and sources, capped at 1,000 tokens. Recent records and cards of files being edited rank higher (ADR 0007) |
 | `note_upsert` | Create a note (no id) or update one (id, `expectedVersion`): title, Markdown body, tags, pinned, private; a new note tagged `comment` with one link is a comment on that task, note or decision |
 | `note_get` | Read one note in full by id or short handle |
 | `roadmap_upsert` | Create or update a milestone; with `template`, the whole plan (milestone and staged tasks) |

@@ -1,6 +1,8 @@
+import micromatch from "micromatch";
 import { z } from "zod";
 import { shortHandle } from "../domain/ids.js";
 import type { ContextEntry, Decision, Note, Task } from "../domain/schemas.js";
+import type { RepoFile } from "../ports/repo.js";
 import type { SearchableEntity, SearchHit } from "../ports/storage.js";
 import { estimateTokens } from "./brief.js";
 import { COMMENT_TAG } from "./comment.js";
@@ -106,6 +108,27 @@ function shared(words: readonly string[], text: string): number {
   ).length;
 }
 
+const DAY = 86_400_000;
+
+/**
+ * Places a record moves up within its group of matches. Text match (BM25) sets the base order;
+ * this only breaks near-ties, the way a file finder ranks by recent use and git status:
+ * what was written this week, and the card of a file being edited now, is more often the answer.
+ * Records that hold every word of the question still come before those that hold some.
+ */
+function lift(updatedAt: string, now: number, editing: boolean): number {
+  const age = now - Date.parse(updatedAt);
+  return (age <= 7 * DAY ? 2 : age <= 30 * DAY ? 1 : 0) + (editing ? 3 : 0);
+}
+
+/** Whether a file the card's path covers has uncommitted changes. */
+function beingEdited(path: string, files: readonly RepoFile[] | undefined): boolean {
+  if (!files) return false;
+  const exact = micromatch.matcher(path, { dot: true });
+  const beneath = micromatch.matcher(`${path}/**`, { dot: true });
+  return files.some((f) => f.dirty === true && (exact(f.path) || beneath(f.path)));
+}
+
 /** Facts that mention a subject word come first, so the answer is usually the first fact. */
 function rankFacts(facts: readonly string[], words: readonly string[]): string[] {
   const score = (f: string) => words.filter((w) => f.toLowerCase().includes(w)).length;
@@ -135,21 +158,34 @@ export async function recall(ctx: ServiceContext, input: unknown): Promise<Recal
         if (!all.has(h.id)) hits.push(h);
       }
     }
-    const records: { hit: SearchHit; record: ContextEntry | Note | Decision | Task }[] = [];
+    const records: {
+      hit: SearchHit;
+      record: ContextEntry | Note | Decision | Task;
+      /** Holds every subject word. */
+      whole: boolean;
+    }[] = [];
     for (const hit of hits) {
       const record = await r.get(hit.entity as (typeof KINDS)[number], hit.id);
       if (!record || record.deletedAt !== null) continue;
       if (hit.entity === "task" && !OPEN.has((record as Task).status)) continue;
       // A record holding only one word of a longer question ("b", "per") is noise, not memory.
       if (!all.has(hit.id) && shared(words, textOf(record)) < needed(words)) continue;
-      records.push({ hit, record });
+      records.push({ hit, record, whole: all.has(hit.id) });
     }
     return records;
   });
 
   const cards = found.filter((f) => f.hit.entity === "context");
   const files = cards.length > 0 && ctx.repo ? await ctx.repo.files() : undefined;
-  const items: RecallItem[] = found.map(({ hit, record }) => {
+  const now = ctx.clock.now().getTime();
+  const ranked = found
+    .map((f, i) => {
+      const editing =
+        f.hit.entity === "context" && beingEdited((f.record as ContextEntry).path, files);
+      return { ...f, i, score: i - lift(f.record.updatedAt, now, editing) };
+    })
+    .sort((a, b) => Number(b.whole) - Number(a.whole) || a.score - b.score || a.i - b.i);
+  const items: RecallItem[] = ranked.map(({ hit, record }) => {
     const base = {
       id: record.id,
       updatedAt: record.updatedAt,

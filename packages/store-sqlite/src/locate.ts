@@ -10,6 +10,8 @@ export interface DbLocation {
   mode: "git" | "standalone";
   /** Worktree root (git) or the folder holding `.sati/` (standalone). */
   root: string;
+  /** This worktree's own git folder, where its `HEAD` file is. Only in git mode. */
+  gitDir?: string;
 }
 
 export interface LocateOptions {
@@ -60,7 +62,8 @@ export function clearLocateCache(): void {
 function fromGit(cwd: string): DbLocation | undefined {
   let out: string;
   try {
-    out = execFileSync("git", ["rev-parse", "--show-toplevel", "--git-common-dir"], {
+    const asked = ["--show-toplevel", "--git-common-dir", "--absolute-git-dir"];
+    out = execFileSync("git", ["rev-parse", ...asked], {
       cwd,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
@@ -81,10 +84,15 @@ function fromGit(cwd: string): DbLocation | undefined {
       details: { gitDir, cause },
     });
   }
-  const [top, common] = out.trim().split(/\r?\n/);
+  const [top, common, gitDir] = out.trim().split(/\r?\n/);
   if (!top || !common) return undefined;
   // `--git-common-dir` may be relative to cwd. git prints `/` on Windows; resolve() gives native paths.
-  return { path: join(resolve(cwd, common), "sati", "sati.db"), mode: "git", root: resolve(top) };
+  return {
+    path: join(resolve(cwd, common), "sati", "sati.db"),
+    mode: "git",
+    root: resolve(top),
+    ...(gitDir ? { gitDir: resolve(gitDir) } : {}),
+  };
 }
 
 /** The nearest `.git` folder or file at or above `cwd`, if any. */

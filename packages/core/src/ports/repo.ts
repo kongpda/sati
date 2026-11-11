@@ -3,6 +3,8 @@ export interface RepoFile {
   path: string;
   /** The blob hash git stores for the staged content. */
   blob: string;
+  /** True when the working tree differs from HEAD: someone is editing this file now. */
+  dirty?: boolean;
 }
 
 /** Files of the current branch that conflict with the base branch it will merge into. */

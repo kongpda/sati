@@ -65,8 +65,29 @@ export interface Runtime {
 
 let opened: StorageAdapter | undefined;
 
+/**
+ * The branch named in a `HEAD` file, null when HEAD is detached, undefined when the file does
+ * not say (missing, or the placeholder a reftable repository keeps there).
+ */
+export function branchInHead(head: string): string | null | undefined {
+  const ref = /^ref: (.+)$/mu.exec(head)?.[1]?.trim();
+  if (ref === undefined) return /^[0-9a-f]{40,64}\s*$/u.test(head) ? null : undefined;
+  if (!ref.startsWith("refs/heads/") || ref === "refs/heads/.invalid") return undefined;
+  return ref.slice("refs/heads/".length);
+}
+
 export function currentBranch(location: DbLocation): string | null {
   if (location.mode !== "git") return null;
+  // Every command needs the branch for its activity rows. Reading the HEAD file costs
+  // microseconds; starting git for it cost several milliseconds each time.
+  if (location.gitDir !== undefined) {
+    try {
+      const named = branchInHead(readFileSync(join(location.gitDir, "HEAD"), "utf8"));
+      if (named !== undefined) return named;
+    } catch {
+      // Ask git below.
+    }
+  }
   try {
     const out = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
       cwd: location.root,
@@ -107,12 +128,18 @@ export function gitRepoIndex(root: string): RepoIndex {
   return {
     files: async () => {
       const out: RepoFile[] = [];
+      // Where each path sits in `out`: a scan per dirty file was slow with many of both.
+      const at = new Map<string, number>();
       // Each record: "<mode> <blob> <stage>\t<path>", NUL-terminated so any path is safe.
       for (const rec of git("ls-files", "-s", "-z").split("\0")) {
         const tab = rec.indexOf("\t");
         if (tab < 0) continue;
         const blob = rec.slice(0, tab).split(" ")[1];
-        if (blob) out.push({ path: rec.slice(tab + 1), blob });
+        if (!blob) continue;
+        const path = rec.slice(tab + 1);
+        // A file in a merge conflict is listed once per stage; the first entry stood before too.
+        if (!at.has(path)) at.set(path, out.length);
+        out.push({ path, blob });
       }
       let status: string | undefined;
       try {
@@ -134,9 +161,12 @@ export function gitRepoIndex(root: string): RepoIndex {
             continue; // vanished or unreadable: one file must not drop every other dirty hash
           }
         }
-        const at = out.findIndex((f) => f.path === change.path);
-        if (at >= 0) out[at] = { path: change.path, blob };
-        else out.push({ path: change.path, blob });
+        const index = at.get(change.path);
+        if (index !== undefined) out[index] = { path: change.path, blob, dirty: true };
+        else {
+          at.set(change.path, out.length);
+          out.push({ path: change.path, blob, dirty: true });
+        }
       }
       return out;
     },

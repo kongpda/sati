@@ -10,8 +10,9 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { locateDb } from "@sati/store-sqlite";
 import { describe, expect, it } from "vitest";
-import { gitRepoIndex } from "../src/runtime.js";
+import { branchInHead, currentBranch, gitRepoIndex } from "../src/runtime.js";
 import { bin, run, sati, satiJson, tempRepo } from "./helpers.js";
 
 const git = (dir: string, ...args: string[]) =>
@@ -352,6 +353,41 @@ describe("gitRepoIndex", () => {
     const after = (await gitRepoIndex(dir).files()).find((f) => f.path === "a.txt");
     expect(after?.blob).toMatch(/^wt:/);
     expect(after?.blob).not.toBe(before?.blob);
+    // Recall lifts the card of a file being edited; it reads this flag.
+    expect(before?.dirty).toBeUndefined();
+    expect(after?.dirty).toBe(true);
+  });
+});
+
+describe("currentBranch", () => {
+  // Why: every command stamps its activity rows with the branch. It is read from the HEAD file
+  // to save a git start per command; a wrong answer there would file work under the wrong branch.
+  it("reads the branch of the checkout it runs in, also in a linked worktree", async () => {
+    const dir = await tempRepo();
+    expect(currentBranch(locateDb(dir))).toBe("main");
+    writeFileSync(join(dir, "a.txt"), "one\n");
+    git(dir, "add", ".");
+    git(dir, "commit", "-qm", "a");
+    git(dir, "switch", "-qc", "feat/login");
+    expect(currentBranch(locateDb(dir))).toBe("feat/login");
+
+    const tree = join(mkdtempSync(join(tmpdir(), "sati-tree-")), "wt");
+    git(dir, "worktree", "add", "-qb", "side", tree);
+    const side = locateDb(tree);
+    expect(side.path).toBe(locateDb(dir).path);
+    expect(currentBranch(side)).toBe("side");
+    expect(currentBranch(locateDb(dir))).toBe("feat/login");
+
+    git(dir, "checkout", "-q", "--detach");
+    expect(currentBranch(locateDb(dir))).toBeNull();
+  });
+
+  it("tells a branch, a detached HEAD and an unreadable HEAD apart", () => {
+    expect(branchInHead("ref: refs/heads/feat/x\n")).toBe("feat/x");
+    expect(branchInHead(`${"a".repeat(40)}\n`)).toBeNull();
+    // A reftable repository keeps a placeholder here: the caller must ask git.
+    expect(branchInHead("ref: refs/heads/.invalid\n")).toBeUndefined();
+    expect(branchInHead("")).toBeUndefined();
   });
 });
 

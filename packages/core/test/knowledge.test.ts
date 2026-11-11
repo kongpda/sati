@@ -266,6 +266,43 @@ describe("recall", () => {
     expect(subjectWords("what is it")).toEqual(["what", "is", "it"]);
   });
 
+  // Ranking idea taken from file finders (frecency and git status): among records that match
+  // the question about equally, the one written this week or about a file being edited now is
+  // more often the answer. Without it an old note outranks the fresh one on text score alone.
+  it("lifts a fresh record and the card of a file being edited over older matches", async () => {
+    const { ctx: base, clock } = await setup();
+    const files: RepoFile[] = [
+      { path: "menu/old.md", blob: "a1" },
+      { path: "menu/draft.md", blob: "b2" },
+    ];
+    const ctx = { ...base, repo: { files: async () => [...files], head: async () => "c0ffee" } };
+    const old = await createNote(ctx, { title: "Catering menu", body: "Catering menu from 2025." });
+    await putContext(ctx, { path: "menu/old.md", summary: "Catering menu, last year." });
+    const draft = await putContext(ctx, { path: "menu/draft.md", summary: "Catering menu draft." });
+    clock.advance(90 * 86_400_000);
+    const fresh = await createNote(ctx, {
+      title: "Menu",
+      body: "New catering menu from the cook.",
+    });
+
+    const order = async () => (await recall(ctx, { question: "catering menu" })).items;
+    const before = await order();
+    expect(before.findIndex((i) => i.id === fresh.id)).toBeLessThan(
+      before.findIndex((i) => i.id === old.id),
+    );
+
+    // The draft is being edited: its card moves to the top, marked as changed.
+    files[1] = { path: "menu/draft.md", blob: "wt:c3", dirty: true };
+    const during = await order();
+    expect(during[0]).toMatchObject({ id: draft.id, stale: true });
+    // Match quality still wins: a record holding every word stays ahead of one holding some.
+    const part = await createNote(ctx, { title: "Menu", body: "Dessert only." });
+    const mixed = await order();
+    expect(mixed.findIndex((i) => i.id === part.id)).toBeGreaterThan(
+      mixed.findIndex((i) => i.id === old.id),
+    );
+  });
+
   // Trial: "What does Menu B cost per head?" brought back 14 records, most sharing only "b".
   it("leaves out records that share only one word of a longer question", async () => {
     const { ctx } = await setup();

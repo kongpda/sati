@@ -1963,3 +1963,12 @@ Task `tsk_fevjbn`.
 - MCP: `handoff_write` is a new tool; `task_update` takes `tick` (step numbers from 1) and `addSteps`. Untick and remove stay with replacing the whole `checklist`, to keep the schema small.
 - The general rules block grew by one sentence (budget in the test raised from 1219 to 1305 characters); the detail is in the workflow page.
 - Starters added: `content-calendar`, `monthly-report`, `proposal`, `meeting-notes`. The UI comment in `packages/ui/src/forms.tsx` still lists three; that file is in another agent's work.
+
+## 2026-11-11 — Phase 9e: languages without spaces
+
+Task `tsk_fevjbp`.
+
+- Measured first: the FTS5 `unicode61` index keeps a Chinese or Japanese sentence as one token and cuts Thai and Khmer words at their marks, so splitting only the question would still find nothing. Choice: a query that holds one of these scripts skips `MATCH` and scans the indexed title and body for each word (`LIKE`, wildcards escaped); every other query runs as before. No migration and no new index. Cost: no BM25 order for these queries (ordered by words matched, then newest) and a full scan of the project's indexed text, which is small for a project memory.
+- `splitWords` in core uses `Intl.Segmenter` for runs in Han, Hiragana, Katakana, Thai, Khmer, Lao and Myanmar script. `recall`, the store's search and similar-task matching share it. A runtime without the segmenter keeps the run whole, as before.
+- Similar tasks: a word in these scripts counts from two characters (three for other scripts).
+- Not done: stop words for these languages; a rebuilt index with word-level tokens, which would bring ranking back.

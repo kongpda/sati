@@ -7,6 +7,7 @@ import {
   type EntityMap,
   HANDOFF_TAG,
   type ListQuery,
+  NO_SPACE_SCRIPT,
   type Note,
   PRIORITY_RANK,
   type Project,
@@ -18,6 +19,7 @@ import {
   type StorageReader,
   type StorageWriter,
   type StoredEntity,
+  splitWords,
   type Task,
 } from "@sati/core";
 import { and, asc, desc, eq, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
@@ -399,9 +401,39 @@ export class SqliteStore implements StorageAdapter {
     },
 
     search: async (projectId: string, query: string, opts: SearchOptions = {}) => {
+      const entities = opts.entities?.length ? opts.entities : SEARCHABLE;
+      if (NO_SPACE_SCRIPT.test(query)) {
+        // The index splits on spaces and marks: a Chinese sentence is one token there and a
+        // Thai word is cut at its tone marks, so MATCH finds neither. These queries scan the
+        // indexed text for each word instead; a project's memory is small enough for that.
+        const words = [...new Set(splitWords(query))].slice(0, 32);
+        if (words.length === 0) return [];
+        const holds = "(title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')";
+        const like = words.flatMap((w) => {
+          const p = `%${w.replace(/[\\%_]/gu, "\\$&")}%`;
+          return [p, p];
+        });
+        const count = words.map(() => holds).join(" + ");
+        const rows = this.db
+          .prepare(
+            `SELECT entity, id, title, substr(body, 1, 120) AS snippet, -(${count}) AS rank
+             FROM search_fts
+             WHERE project_id = ? AND entity IN (${entities.map(() => "?").join(",")})
+               AND (${count}) >= ?
+             ORDER BY rank, rowid DESC LIMIT ?`,
+          )
+          .all(
+            ...like,
+            projectId,
+            ...entities,
+            ...like,
+            (opts.match ?? "all") === "all" ? words.length : 1,
+            clampLimit(opts.limit),
+          );
+        return rows.map((r) => ({ ...r }) as unknown as SearchHit);
+      }
       const match = buildFtsQuery(query, opts.match ?? "all");
       if (!match) return [];
-      const entities = opts.entities?.length ? opts.entities : SEARCHABLE;
       const rows = this.db
         .prepare(
           `SELECT entity, id, title,

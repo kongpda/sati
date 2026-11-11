@@ -8,7 +8,7 @@ import { estimateTokens } from "./brief.js";
 import { COMMENT_TAG } from "./comment.js";
 import { parseInput, type ServiceContext } from "./context.js";
 import { staleness } from "./context-cache.js";
-import { clip, inert } from "./text.js";
+import { clip, inert, splitWords } from "./text.js";
 
 /** PLAN Phase 8: a recall answer stays under 1,000 tokens, so asking is cheaper than reading. */
 export const RECALL_TOKEN_CAP = 1_000;
@@ -70,10 +70,7 @@ export interface Recall {
 
 /** The question's subject words, lowercased; all words when every one is a stop word. */
 export function subjectWords(question: string): string[] {
-  const words = question
-    .toLowerCase()
-    .split(/[^\p{L}\p{N}\p{M}]+/u)
-    .filter(Boolean);
+  const words = splitWords(question);
   const kept = words.filter((w) => !STOP.has(w));
   return kept.length > 0 ? kept : words;
 }
@@ -100,7 +97,7 @@ function textOf(record: ContextEntry | Note | Decision | Task): string {
  * One- and two-letter words must match exactly, so "b" matches "Menu B" but not "budget".
  */
 function shared(words: readonly string[], text: string): number {
-  const tokens = text.toLowerCase().split(/[^\p{L}\p{N}\p{M}]+/u);
+  const tokens = splitWords(text);
   return words.filter((w) =>
     tokens.some((t) =>
       w.length <= 2 ? t === w : t.startsWith(w) || (t.length >= 4 && w.startsWith(t)),

@@ -280,6 +280,29 @@ describe("search", () => {
     expect(onlyNotes.map((h) => h.entity)).toEqual(["note"]);
   });
 
+  // PLAN Phase 9e: the index keeps a Chinese sentence as one token and cuts a Thai word at its
+  // tone marks, so a question in those languages found nothing a teammate had written down.
+  it.each([
+    ["Thai", "ราคาห้องประชุม 2400 บาท", "ห้องประชุมราคาเท่าไร", "ประชุม"],
+    ["Khmer", "តម្លៃបន្ទប់ប្រជុំ ២៤០០ ដុល្លារ", "បន្ទប់ប្រជុំតម្លៃប៉ុន្មាន", "ប្រជុំ"],
+    ["Chinese", "会议室的报价是2400美元", "会议室报价多少", "报价"],
+    ["Japanese", "会議室の見積もりは2400ドルです", "会議室の見積もりはいくら", "見積もり"],
+  ])("finds a %s note by a word inside an unspaced sentence", async (_, body, question, word) => {
+    await store.write(async (w) => {
+      await w.insert("note", note({ title: "Venue", body }));
+      await w.insert("note", note({ title: "Catering", body: "Lunch for 40" }));
+    });
+    const titles = async (q: string, match: "all" | "any") =>
+      (await store.read((r) => r.search(PROJECT_ID, q, { match }))).map((h) => h.title);
+    expect(await titles(word, "all")).toEqual(["Venue"]);
+    // The question has a word the note lacks ("how much"), so only an any-word search finds it.
+    expect(await titles(question, "all")).toEqual([]);
+    expect(await titles(question, "any")).toEqual(["Venue"]);
+    // LIKE wildcards in a query are text, not patterns.
+    expect(await titles(`${word}%_`, "all")).toEqual(["Venue"]);
+    expect(await titles("%", "all")).toEqual([]);
+  });
+
   // PLAN Phase 5b: punctuation inside a word splits it the way the index does, so a version, a
   // file name or a date finds the record, and a different one does not.
   it("finds words with punctuation inside them, such as v1.2 and auth.ts", async () => {

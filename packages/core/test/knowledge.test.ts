@@ -191,6 +191,20 @@ describe("recall", () => {
     expect(r.tokens).toBeLessThanOrEqual(200);
   });
 
+  // PLAN Phase 9e: a question written without spaces was one "word", so it matched only a
+  // record holding the whole sentence. An office in Phnom Penh or Bangkok got an empty recall.
+  it.each([
+    ["Thai", "ราคาห้องประชุม 2400 บาท", "ห้องประชุมราคาเท่าไร"],
+    ["Khmer", "តម្លៃបន្ទប់ប្រជុំ ២៤០០ ដុល្លារ", "បន្ទប់ប្រជុំតម្លៃប៉ុន្មាន"],
+    ["Chinese", "会议室的报价是2400美元", "会议室报价多少"],
+  ])("answers a %s question from a note that shares its words", async (_, body, question) => {
+    const { ctx } = await setup();
+    const venue = await createNote(ctx, { title: "Venue", body });
+    await createNote(ctx, { title: "Catering", body: "Lunch for 40" });
+    const r = await recall(ctx, { question });
+    expect(r.items.map((i) => i.id)).toEqual([venue.id]);
+  });
+
   // Why: chars / 4 is fair for English, but Khmer and Chinese take about a token a character,
   // so a brief or recall in those scripts ran up to four times over its cap.
   it("counts characters outside ASCII as a token each", () => {

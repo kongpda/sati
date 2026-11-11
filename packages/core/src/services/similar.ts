@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Task } from "../domain/schemas.js";
 import { parseInput, type ServiceContext } from "./context.js";
+import { NO_SPACE_SCRIPT, splitWords } from "./text.js";
 
 /** Words too common in task titles to say two tasks are about the same thing. */
 const STOPWORDS = new Set(
@@ -29,8 +30,9 @@ export interface SimilarTask {
 const SimilarInput = z.strictObject({ title: z.string().trim().min(1).max(300) });
 
 function words(title: string): Set<string> {
-  const all = title.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
-  return new Set(all.filter((w) => w.length >= 3 && !STOPWORDS.has(w)));
+  // A Chinese or Japanese word is often two characters; a two-letter Latin word says little.
+  const long = (w: string) => w.length >= (NO_SPACE_SCRIPT.test(w) ? 2 : 3);
+  return new Set(splitWords(title).filter((w) => long(w) && !STOPWORDS.has(w)));
 }
 
 /**

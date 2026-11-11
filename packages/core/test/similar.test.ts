@@ -16,6 +16,20 @@ describe("findSimilarTasks", () => {
     expect(similar[0]?.score).toBeGreaterThanOrEqual(0.5);
   });
 
+  // PLAN Phase 9e: a title without spaces was one word, so a reworded duplicate scored 0.
+  it("flags a reworded Thai or Chinese title", async () => {
+    const { ctx } = await setup();
+    const thai = await createTask(ctx, { title: "จองห้องประชุมสำหรับงานเปิดตัว" });
+    const chinese = await createTask(ctx, { title: "预订发布会的会议室" });
+    await createTask(ctx, { title: "ส่งใบแจ้งหนี้" });
+    expect(
+      (await findSimilarTasks(ctx, { title: "จองห้องประชุมงานเปิดตัว" })).map((s) => s.id),
+    ).toEqual([thai.id]);
+    expect((await findSimilarTasks(ctx, { title: "发布会会议室预订" })).map((s) => s.id)).toEqual([
+      chinese.id,
+    ]);
+  });
+
   it("keeps done tasks (redoing them is duplicate work) but skips cancelled ones", async () => {
     const { ctx } = await setup();
     const a = await createTask(ctx, { title: "Export tasks to CSV" });

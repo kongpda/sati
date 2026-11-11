@@ -889,7 +889,7 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 
 **9e — Languages without spaces**
 
-- [ ] `recall` and similar-task matching split Khmer, Thai, Chinese and Japanese text into words with `Intl.Segmenter`
+- [x] `recall` and similar-task matching split Khmer, Thai, Chinese and Japanese text into words with `Intl.Segmenter`
 
 **9f — Lean check**
 

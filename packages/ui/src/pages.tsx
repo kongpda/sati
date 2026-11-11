@@ -958,7 +958,8 @@ export function TaskSheet({
 /**
  * What the task waits on and what came with it: the agent's question, why it is blocked, the
  * handoff left on it, and whether its branch moved after it was sent for approval. Agent text
- * is rendered as plain text, never as Markdown, because it is data.
+ * here is rendered as plain text, never as Markdown, because it is data. (The task body and
+ * the completion summary above are Markdown, through a renderer that never parses HTML.)
  */
 /** An actor's name; actors are machine-local, so a record from a teammate's clone carries a fallback. */
 const nameOr = (data: Snapshot, id: string, fallback: string | undefined) =>

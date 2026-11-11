@@ -17,7 +17,7 @@ import { MyWork } from "./my-work.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
 import { holderName } from "./people.js";
 import { Settings } from "./settings.js";
-import { threadOf } from "./thread.js";
+import { COMMENT_TAG, threadOf } from "./thread.js";
 import { kindLabel, plainError, statusWord } from "./words.js";
 
 const PAGES = [
@@ -98,6 +98,8 @@ export function App() {
   const [expired, setExpired] = useState(false);
   /** Board moves waiting for the server; live refetches wait too, or a card would jump back. */
   const moving = useRef(0);
+  /** The last move of each task still in flight; the next move of that task waits for it. */
+  const moveQueue = useRef(new Map<string, Promise<boolean>>());
   /** The task j/k steps from: the open one, or the last one opened. */
   const cursor = useRef<string | null>(null);
   /** The cards as the board shows them, set on each render for the key handler. */
@@ -271,7 +273,7 @@ export function App() {
   const saved = useCallback(
     (message: string) => {
       setToast(message);
-      void client.invalidateQueries({ queryKey: ["snapshot"] });
+      return client.invalidateQueries({ queryKey: ["snapshot"] });
     },
     [client, setToast],
   );
@@ -310,8 +312,23 @@ export function App() {
 
   const closePalette = useCallback(() => setPalette(false), []);
 
-  /** Resolves true when the task moved. Pass `onFail` to report the reason yourself. */
-  async function move(
+  /**
+   * Resolves true when the task moved. Pass `onFail` to report the reason yourself. A second
+   * move of the same card waits for the first: sent at once, it carried the version from
+   * before the first move and the server refused it as a conflict.
+   */
+  function move(id: string, status: string, onFail?: (reason: string) => void): Promise<boolean> {
+    const run = (moveQueue.current.get(id) ?? Promise.resolve(true)).then(() =>
+      moveNow(id, status, onFail),
+    );
+    moveQueue.current.set(id, run);
+    void run.finally(() => {
+      if (moveQueue.current.get(id) === run) moveQueue.current.delete(id);
+    });
+    return run;
+  }
+
+  async function moveNow(
     id: string,
     status: string,
     onFail?: (reason: string) => void,
@@ -334,11 +351,22 @@ export function App() {
       snap ? { ...snap, tasks: snap.tasks.map((t) => (t.id === id ? { ...t, status } : t)) } : snap,
     );
     try {
-      await api.patchTask(id, {
+      const updated = await api.patchTask(id, {
         status,
         expectedVersion: item.version,
         ...(status === "done" && current ? approvedCommit(current, id) : {}),
       });
+      // The refetch waits for the other moves; a queued move of this card needs the version now.
+      client.setQueryData<Snapshot>(["snapshot"], (snap) =>
+        snap
+          ? {
+              ...snap,
+              tasks: snap.tasks.map((t) =>
+                t.id === id ? { ...t, status: updated.status, version: updated.version } : t,
+              ),
+            }
+          : snap,
+      );
       moving.current--;
       // Refetch once the last move lands: an earlier refetch would bring back the old status of
       // the cards still in flight, and they would jump back.
@@ -377,7 +405,11 @@ export function App() {
     const failed = ids.filter((_, i) => !results[i]);
     setSelected(new Set(failed));
     if (failed.length > 0) {
-      setToast(`${failed.length} of ${ids.length} tasks did not move. ${reason}`.trim());
+      // An error toast stays until it is closed; the plain one is gone after 6 seconds.
+      setToastState({
+        message: `${failed.length} of ${ids.length} tasks did not move. ${reason}`.trim(),
+        error: true,
+      });
     }
   }
 
@@ -430,13 +462,15 @@ export function App() {
         const item = list[index];
         if (item) go("/", item.id);
       }
-      if (event.key === "Enter" && task) go("/", task);
+      // Enter and x act on the board's cards; on other pages they would jump to the board or
+      // select a card that is not shown.
+      if (event.key === "Enter" && task && path === "/") go("/", task);
       if (event.key === "c") {
         // Keep the "c" from being typed into the title field the dialog focuses.
         event.preventDefault();
         setCreating(true);
       }
-      if (event.key === "x" && task) {
+      if (event.key === "x" && task && path === "/") {
         setSelected((cur) => {
           const next = new Set(cur);
           if (next.has(task)) next.delete(task);
@@ -495,7 +529,7 @@ export function App() {
   );
   // The brand kit or event brief one click from the board; the brief gives agents the same 3.
   const pinned = (data?.notes ?? [])
-    .filter((n) => n.pinned && !threadOf(n) && !n.tags.includes("comment"))
+    .filter((n) => n.pinned && !threadOf(n) && !n.tags.includes(COMMENT_TAG))
     .slice(0, 3);
 
   // Stable handlers, so a memoised card re-renders only when its own task changes.
@@ -1041,7 +1075,9 @@ function Palette({
             .search(text)
             .then((res) => {
               if (run !== searchRun.current) return;
-              setHits(res.hits);
+              // A general project has no Features page to open a feature on.
+              const general = data?.project?.kind === "general";
+              setHits(res.hits.filter((h) => !(general && h.entity === "feature")));
               setSearched(true);
             })
             .catch((err: unknown) => {

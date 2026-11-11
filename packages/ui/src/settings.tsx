@@ -40,16 +40,12 @@ export function Settings({
   onError,
 }: {
   data: Snapshot;
-  onSaved: (message: string) => void;
+  /** Resolves when the board has reloaded. */
+  onSaved: (message: string) => Promise<void>;
   onError: (err: unknown) => void;
 }) {
   const kind = data.project?.kind ?? "code";
   const [saving, setSaving] = useState<ProjectKind | null>(null);
-  // The choice stays shown until the reloaded board has it; clearing it when the request
-  // returned showed the old kind for a moment.
-  useEffect(() => {
-    if (saving === kind) setSaving(null);
-  }, [saving, kind]);
   const [editing, setEditing] = useState<Actor | null>(null);
   const people = data.actors
     .filter((a) => a.kind === "human")
@@ -81,11 +77,12 @@ export function Settings({
                   setSaving(value);
                   api
                     .setKind(value)
+                    // The choice stays shown until the board has reloaded, so the old kind
+                    // does not show for a moment. It is cleared even when the reload fails:
+                    // waiting for the new kind to arrive left the radios locked for good.
                     .then(() => onSaved(`This is now a ${label.toLowerCase()}.`))
-                    .catch((err: unknown) => {
-                      setSaving(null);
-                      onError(err);
-                    });
+                    .catch(onError)
+                    .finally(() => setSaving(null));
                 }}
               />
               <span>

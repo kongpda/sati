@@ -112,7 +112,8 @@ test("creates, edits, filters and bulk-moves tasks", async ({ page }) => {
   for (const title of titles) await pick(title);
   await expect(page.getByText("2 selected")).toBeVisible();
   await page.getByLabel("Move selected").selectOption("review");
-  await expect(page.getByRole("status").locator(".toast")).toContainText(
+  // An error, so it stays until it is closed; the plain toast left after 6 seconds.
+  await expect(page.getByRole("alert").locator(".toast")).toContainText(
     "2 of 2 tasks did not move.",
   );
   const todo = column(page, "To do");
@@ -621,6 +622,14 @@ test("a general project hides features and the Agents page, and switches back", 
   await expect(page.locator("article").filter({ hasText: "Spring launch" })).toContainText(
     "0/1 tasks done",
   );
+
+  // Search does not offer the feature: its page is hidden here, so the hit opened a dead end.
+  await page.keyboard.press("Control+k");
+  const palette = page.getByRole("dialog", { name: "Search" });
+  await palette.getByRole("textbox", { name: "Search" }).fill("Ticketing");
+  await palette.getByRole("textbox", { name: "Search" }).press("Enter");
+  await expect(palette.getByRole("status")).toHaveText("No results");
+  await page.keyboard.press("Escape");
 
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await page.getByRole("radio", { name: /Software project/u }).check();
@@ -1244,6 +1253,68 @@ test("the palette clears hits when the text changes and says when results stop a
   await input.fill("lanterns and candles");
   await expect(palette.getByRole("button", { name: /Lantern/u })).toHaveCount(0);
   await expect(palette.getByRole("status")).toHaveText("Press Enter to search.");
+});
+
+// Audit 2026-11-11: the second move of a card went out with the version from before the first,
+// so the server refused it and the card jumped back with a conflict message.
+test("moving one card twice before the first move lands keeps both moves", async ({ page }) => {
+  const problems = await watch(page);
+  const task = await ui.api<{ id: string }>("POST", "/api/tasks", { title: "Osprey twice" });
+  await page.goto(ui.signIn);
+  await page.getByLabel("Filter tasks").fill("Osprey twice");
+  // Hold every save for a moment, so the second move starts while the first is in flight.
+  await page.route(`**/api/tasks/${task.id}`, async (route) => {
+    await new Promise((done) => setTimeout(done, 300));
+    await route.continue();
+  });
+  const box = page.locator(".card", {
+    has: page.getByRole("button", { name: "Osprey twice", exact: true }),
+  });
+  await box.getByRole("button", { name: "select" }).click();
+  await page.getByLabel("Move selected").selectOption("in_progress");
+  await page.getByLabel("Move selected").selectOption("todo");
+  const status = async () =>
+    (
+      await ui.api<{ tasks: { id: string; status: string; version: number }[] }>(
+        "GET",
+        "/api/snapshot",
+      )
+    ).tasks.find((t) => t.id === task.id);
+  // Version 3: both moves were saved, in order.
+  await expect.poll(status).toMatchObject({ status: "todo", version: 3 });
+  await expect(page.getByRole("alert").locator(".toast")).toHaveCount(0);
+  await expect(
+    column(page, "To do").getByRole("button", { name: "Osprey twice", exact: true }),
+  ).toBeVisible();
+  expect(await problems()).toEqual([]);
+});
+
+// Audit 2026-11-11: Esc was handled on the form, so it did nothing once focus had left it.
+test("Esc closes a form dialog when focus is outside its form", async ({ page }) => {
+  await page.goto(ui.signIn);
+  await page.getByRole("button", { name: "New task" }).click();
+  const form = page.getByRole("dialog", { name: "New task" });
+  await form.getByLabel("Title").fill("Typed and then abandoned");
+  // A click on the backdrop keeps typed text, and leaves focus on the backdrop.
+  await page.locator(".palette-dismiss").click({ position: { x: 4, y: 4 } });
+  await expect(form).toBeVisible();
+  page.once("dialog", (ask) => void ask.accept());
+  await page.keyboard.press("Escape");
+  await expect(form).toHaveCount(0);
+});
+
+// Audit 2026-11-11: x and Enter are board keys. On another page x selected a card nobody saw,
+// and the next bulk move on the board took it along.
+test("x on a page other than the board selects nothing", async ({ page }) => {
+  const task = await ui.api<{ id: string }>("POST", "/api/tasks", { title: "Plover unseen" });
+  await page.goto(ui.signIn);
+  await page.goto(`${ui.origin}/notes?task=${task.id}`);
+  // A click on plain text takes focus out of the task panel, as reading the page does.
+  await page.getByRole("heading", { name: "Notes", level: 1 }).click();
+  await page.keyboard.press("x");
+  await page.getByRole("link", { name: "Board", exact: true }).click();
+  await expect(page.getByLabel("Filter tasks")).toBeVisible();
+  await expect(page.getByText("1 selected")).toHaveCount(0);
 });
 
 // Review WP6.2: "just now" stayed until a write refreshed the page.

@@ -110,6 +110,17 @@ export function FormDialog({
     if (!dirty.current) onClose();
     else if (via === "escape" && window.confirm("Discard what you typed?")) onClose();
   };
+  const onEscape = useRef(dismiss);
+  onEscape.current = dismiss;
+  // On the window, not the form: after a click on the backdrop the focus is outside the form,
+  // and Esc did nothing.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onEscape.current("escape");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   useEffect(() => {
     const previous = document.activeElement;
@@ -145,11 +156,6 @@ export function FormDialog({
         onInput={(e) => {
           dirty.current = true;
           setReady(filled(e.currentTarget));
-        }}
-        onKeyDown={(e) => {
-          if (e.key !== "Escape") return;
-          e.stopPropagation();
-          dismiss("escape");
         }}
         onSubmit={(e) => {
           e.preventDefault();

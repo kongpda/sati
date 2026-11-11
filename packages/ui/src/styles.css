@@ -14,6 +14,16 @@
   --clay-on-ink: #e7a598;
   --live: #9a4a14;
   --focus: #1b6a44;
+  /* Avatar backgrounds. White initials on each pass 4.5:1, so both schemes share them. */
+  --avatar-moss: #1b6a44;
+  --avatar-teal: #0f6466;
+  --avatar-sky: #1d5c8c;
+  --avatar-plum: #6a3d8a;
+  --avatar-rose: #9b2c58;
+  --avatar-clay: #8a3b2c;
+  --avatar-sun: #7d5200;
+  --avatar-slate: #48535f;
+  --avatar-ink: #fff;
   accent-color: var(--moss);
   color-scheme: light;
   font-family:
@@ -1046,7 +1056,7 @@ button.danger {
   place-items: center;
   flex: none;
   border-radius: 999px;
-  color: #fff;
+  color: var(--avatar-ink);
   font-weight: 650;
   line-height: 1;
 }
@@ -1063,28 +1073,28 @@ button.danger {
   height: 16px;
 }
 .c-moss {
-  background: #1b6a44;
+  background: var(--avatar-moss);
 }
 .c-teal {
-  background: #0f6466;
+  background: var(--avatar-teal);
 }
 .c-sky {
-  background: #1d5c8c;
+  background: var(--avatar-sky);
 }
 .c-plum {
-  background: #6a3d8a;
+  background: var(--avatar-plum);
 }
 .c-rose {
-  background: #9b2c58;
+  background: var(--avatar-rose);
 }
 .c-clay {
-  background: #8a3b2c;
+  background: var(--avatar-clay);
 }
 .c-sun {
-  background: #7d5200;
+  background: var(--avatar-sun);
 }
 .c-slate {
-  background: #48535f;
+  background: var(--avatar-slate);
 }
 .meta .avatars {
   margin-left: 6px;

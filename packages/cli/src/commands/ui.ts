@@ -1,9 +1,11 @@
 import { execFile } from "node:child_process";
-import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CLI_NAME, CONFIG_DIR, type ProjectKind, SatiError } from "@sati/core";
 import { defineCommand } from "citty";
+import { selfCommand } from "../hooks.js";
+import { launcherFile } from "../launcher.js";
 import {
   closeRuntime,
   exportWritten,
@@ -54,6 +56,11 @@ export default defineCommand({
       default: true,
       description: "Open a browser (--no-open prints the URL only)",
     },
+    shortcut: {
+      type: "string",
+      description:
+        "Write a file into this folder (such as ~/Desktop) that opens the board on a double click, then exit",
+    },
   },
   run: async ({ args }) => {
     try {
@@ -63,6 +70,25 @@ export default defineCommand({
         throw new SatiError("USAGE", "Port must be between 1 and 65535.");
       }
       const rt = await openRuntime();
+      if (args.shortcut !== undefined) {
+        const dir = resolve(args.shortcut);
+        if (!existsSync(dir) || !statSync(dir).isDirectory()) {
+          throw new SatiError("USAGE", `${dir} is not a folder.`);
+        }
+        const self = selfCommand(rt.location.root);
+        const made = launcherFile(process.platform, self, rt.location.root, rt.project.name);
+        const file = join(dir, made.file);
+        writeFileSync(file, made.body, { mode: made.mode });
+        process.stdout.write(`Wrote ${file}. Double-click it to open the board.\n`);
+        // A copy fetched by npx lives in a cache that is cleared; the launcher would then fail.
+        if (self.some((w) => /[\\/]_npx[\\/]/u.test(w))) {
+          process.stderr.write(
+            `hint: this ${CLI_NAME} runs from the npx cache. Install it (npm install -g) and write the launcher again.\n`,
+          );
+        }
+        await closeRuntime();
+        return;
+      }
       const token = sessionToken();
       // Git mode keeps `.sati/` current after UI writes, as CLI commands and the MCP server do.
       let flush = async () => {};

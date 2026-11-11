@@ -2012,3 +2012,10 @@ Task `tsk_fevjbr`.
   - `doctor --fix` never removes such a card as "file is gone".
   - `~/…` is not a key: shells and agent tools give the full path.
 - Checked through the built CLI from a subfolder of a standalone project.
+
+## 2026-11-11 — Owner items: launcher
+
+- `sati ui` already starts the local board and opens it, so `sati app` is the same command. What was missing for a person with no terminal is something to click: `--shortcut <folder>` writes a launcher file for this project.
+- The file holds full paths of the project and the binary (as the git hooks do), so it works from any folder. It is not signed.
+- Not done, and the Phase 9 line "A one-click installer … needs code signing" stays open: installing Node and sati still needs a terminal once. A signed installer needs a certificate only the owner can buy.
+- The launcher was run on macOS only. The Windows and Linux files are checked as text.

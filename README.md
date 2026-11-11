@@ -227,6 +227,7 @@ sati undo <activity-id>        # revert one change if nothing changed since
 sati doctor                    # leases, locks, integrity, hooks
 sati doctor --fix              # release expired locks, remove cards whose file is gone
 sati ui                        # the web board
+sati app --shortcut ~/Desktop  # a file that opens the board on a double click
 ```
 
 `sati <command> --help` lists every option.

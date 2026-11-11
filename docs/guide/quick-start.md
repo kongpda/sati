@@ -104,6 +104,18 @@ sati ui
 `sati ui` serves a board on `127.0.0.1` and opens a browser. Use `--no-open` to print the
 sign-in URL only. The URL holds a one-time token; do not share it.
 
+For a person who does not use a terminal, write a launcher once:
+
+```bash
+sati app --shortcut ~/Desktop
+```
+
+It writes a file named after the project (`.command` on macOS, `.cmd` on Windows, a desktop entry
+on Linux). A double click starts the board of that project and opens the browser; closing its
+window stops the board. The file is not signed, so macOS may ask to confirm the first time.
+`sati app` alone is the same as `sati ui`. Install sati first (`npm install -g @kongpda/sati`): a
+copy fetched by `npx` is removed from its cache later and the launcher would stop working.
+
 ## Health and backups
 
 ```bash

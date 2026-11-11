@@ -1,11 +1,16 @@
 {
   "body": "Badge style and changeset written. lint, typecheck, build, pnpm test pass. Browser suite is running; commit waits on it.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "heartbeatAt": "2026-11-11T07:53:56.622Z",
-    "leaseUntil": "2026-11-11T08:23:56.622Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "1e659ba65e9d6edc88c091cbf61d68d13eac5bf0",
+    "completedAt": "2026-11-11T07:58:51.265Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/ui/src/styles.css",
+      ".changeset/held-badge.md"
+    ],
+    "summary": "Held-by badge on cards has a border and muted colour. Gate and browser suite (95) pass."
   },
   "createdAt": "2026-11-11T07:52:31.342Z",
   "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
@@ -16,13 +21,14 @@
     "*": "2026-11-11T07:52:31.344Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "body": "2026-11-11T07:53:56.623Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "branch": "2026-11-11T07:52:44.801Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "claim": "2026-11-11T07:53:56.623Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-11T07:52:44.801Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-11T07:58:51.268Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-11T07:58:51.268Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-11T07:58:51.268Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "worktree": "2026-11-11T07:52:44.801Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Style the held-by badge on board cards",
-  "updatedAt": "2026-11-11T07:53:56.627Z",
-  "version": 3,
+  "updatedAt": "2026-11-11T07:58:51.272Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

@@ -41,6 +41,7 @@ const root = defineCommand({
     "merge-driver": lazy(() => import("./commands/merge-driver.js")),
     mcp: lazy(() => import("./commands/mcp.js")),
     ui: lazy(() => import("./commands/ui.js")),
+    app: lazy(() => import("./commands/ui.js")),
     next: lazy(() => import("./commands/next.js")),
     handoff: lazy(() => import("./commands/handoff.js")),
     wait: lazy(() => import("./commands/wait.js")),

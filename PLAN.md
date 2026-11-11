@@ -831,7 +831,7 @@ A capability is not done until both ways have it, with tests on both. sati itsel
 - [ ] Team server: the Phase 6 Docker image serves the UI to signed-in teammates, with email sign-in for people who have no GitHub account
 - [ ] Remote MCP (Streamable HTTP) with a per-person token, so Claude Desktop, ChatGPT and other assistants can use the team brain from a laptop with no repo
 - [ ] Notifications: an in-app inbox for mentions, assignments, approvals and due dates
-- [ ] Desktop launcher: a signed app or `npx sati app` that starts the local server and opens it, for one-person use without a terminal
+- [x] Desktop launcher: a signed app or `npx sati app` that starts the local server and opens it, for one-person use without a terminal
 
 **Gate:** a person plans a 20-task launch from the `release` template half in the UI and half by asking their agent, and both views show the same plan. Agents complete the tasks with release notes. A person asks their agent "what changed this week?" and gets the right list, and generates a changelog and a feature list from the UI and from the CLI that match. The developer flows (claims, locks, guard, brief size, all performance budgets) still pass unchanged.
 

@@ -179,6 +179,22 @@ describe("git hooks", () => {
     );
   });
 
+  // Why: only the script was checked. With `node <script>` and node removed (an nvm version
+  // deleted), the hook exited 127 and every commit was blocked instead of let through.
+  it("lets git go on when the recorded node is gone but the script is there", async () => {
+    const dir = await tempRepo();
+    writeFileSync(join(dir, "cli.mjs"), "");
+    const hook = planHooks(dir, "git", ["/nonexistent/node", join(dir, "cli.mjs")]).find((h) =>
+      h.path.split(sep).join("/").endsWith("sati/hooks/pre-commit"),
+    );
+    if (!hook) throw new Error("no pre-commit runner planned");
+    const r = spawnSync("sh", ["-c", hook.content], { cwd: dir, encoding: "utf8" });
+    expect(r.status).toBe(0);
+    expect(r.stderr).toContain(
+      "sati is no longer at /nonexistent/node, so its git hooks did not run.",
+    );
+  });
+
   // lefthook rewrites the hooks in .git/hooks, and merges lefthook-local.yml into its config.
   it("chains into lefthook through lefthook-local.yml and leaves .git/hooks alone", async () => {
     const dir = await tempRepo();

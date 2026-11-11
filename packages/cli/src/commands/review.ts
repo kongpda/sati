@@ -1,6 +1,5 @@
 import {
   CLI_NAME,
-  checkChanges,
   type Decision,
   listRecords,
   listTasks,
@@ -14,6 +13,7 @@ import micromatch from "micromatch";
 import { json } from "../args.js";
 import { defaultBase, rangeChanges, rangeStart } from "../git.js";
 import { execute } from "../runtime.js";
+import { projectVerdict } from "./guard.js";
 
 const SNAPSHOT = ".sati/";
 
@@ -71,9 +71,7 @@ export default defineCommand({
         const changes = rangeChanges(rt.location.root, span);
         // The `.sati/` snapshot changes with every write; it is not the code under review.
         const paths = changes.map((c) => c.path).filter((p) => !p.startsWith(SNAPSHOT));
-        const guard = changes.length
-          ? await checkChanges(rt.ctx, { changes })
-          : { verdict: "ok" as const, findings: [] };
+        const guard = await projectVerdict(rt, changes);
         const features = await listRecords(rt.ctx, "feature", { limit: 500 });
         const touched = features.filter((f) =>
           paths.some((path) => micromatch.isMatch(path, f.paths, { dot: true })),

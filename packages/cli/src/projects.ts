@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { CLI_NAME, SatiError } from "@sati/core";
 import type { DbLocation } from "@sati/store-sqlite";
-import { writeFileAtomic } from "./atomic.js";
+import { writeFileAtomic } from "@sati/sync";
 import { parseJson } from "./runtime.js";
 
 interface KnownProject {

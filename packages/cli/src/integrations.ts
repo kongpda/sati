@@ -9,8 +9,8 @@ import {
   SatiError,
   WORKFLOW,
 } from "@sati/core";
+import { writeFileAtomic } from "@sati/sync";
 import { z } from "zod";
-import { writeFileAtomic } from "./atomic.js";
 import { isLocalInstall, LOCAL_BIN } from "./install.js";
 
 /** What init or `rules sync` does to one file. `skip`: stealth mode leaves existing files alone. */

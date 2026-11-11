@@ -1,13 +1,4 @@
-import {
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join, posix } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import {
@@ -24,6 +15,7 @@ import {
   scanRecord,
   snapshotRecords,
 } from "@sati/core";
+import { writeFileAtomic } from "./atomic.js";
 import type { WrittenRecord } from "./debounce.js";
 import { decodeRecord, encodeRecord, snapshotEntityOf } from "./format.js";
 import { mergeByStamps } from "./merge.js";
@@ -100,21 +92,10 @@ function removeStaleTemps(dir: string, now: number): void {
     for (const name of readdirSync(folder)) {
       if (!name.endsWith(".tmp")) continue;
       const file = join(folder, name);
-      const info = lstatSync(file);
-      if (info.isFile() && now - info.mtimeMs > STALE_TMP_MS) rmSync(file, { force: true });
+      // Another export may remove the same file between the listing and this look.
+      const info = lstatSync(file, { throwIfNoEntry: false });
+      if (info?.isFile() && now - info.mtimeMs > STALE_TMP_MS) rmSync(file, { force: true });
     }
-  }
-}
-
-/** Writes through a temp file and a rename, so readers never see a half-written file. */
-function writeAtomic(file: string, content: string): void {
-  const tmp = `${file}.${process.pid}.tmp`;
-  try {
-    writeFileSync(tmp, content);
-    renameSync(tmp, file);
-  } catch (err) {
-    rmSync(tmp, { force: true });
-    throw err;
   }
 }
 
@@ -218,7 +199,7 @@ export async function exportSnapshot(
       continue;
     }
     mkdirSync(join(dir, SNAPSHOT_DIRS[rec.entity]), { recursive: true });
-    writeAtomic(file, content);
+    writeFileAtomic(file, content);
     result.written.push(rel);
   }
   return result;

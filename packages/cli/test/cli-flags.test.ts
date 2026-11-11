@@ -201,6 +201,40 @@ describe("review", () => {
     expect(r.stdout).toMatch(/- blocked: .*src\/billing\/invoice\.ts/u);
   });
 
+  // Why: review ran the guard without the project's `maxRemovalRatio`, so it called a change
+  // blocked that `guard` and the pre-push hook let through.
+  it("gives the verdict guard gives, with the project's removal ratio", async () => {
+    const dir = await reviewRepo();
+    writeFileSync(join(dir, "src/billing/invoice.ts"), "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n");
+    sati(dir, "feature", "create", "Billing", "--status", "shipped", "--paths", "src/billing/**");
+    const feature = satiJson<(Rec & { projectId: string })[]>(dir, "feature", "list").data[0];
+    if (!feature) throw new Error("no feature");
+    expect(sati(dir, "feature", "update", feature.id, "--protected").code).toBe(0);
+    mkdirSync(join(dir, ".sati"), { recursive: true });
+    writeFileSync(
+      join(dir, ".sati", "sati.config.json"),
+      JSON.stringify({
+        version: 1,
+        projectId: feature.projectId,
+        mode: "git",
+        guard: { maxRemovalRatio: 0.95 },
+      }),
+    );
+    git(dir, "add", "-f", ".");
+    git(dir, "commit", "-qm", "ten lines");
+    git(dir, "checkout", "-qb", "feat");
+    writeFileSync(join(dir, "src/billing/invoice.ts"), "1\n2\n");
+    execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "trim"], {
+      cwd: dir,
+      env: { ...process.env, SATI_GUARD: "off" },
+      stdio: "ignore",
+    });
+    const guard = satiJson<{ verdict: string }>(dir, "guard", "--range", "main...HEAD").data;
+    const review = satiJson<{ guard: { verdict: string } }>(dir, "review", "main...HEAD").data;
+    expect(guard.verdict).not.toBe("blocked");
+    expect(review.guard.verdict).toBe(guard.verdict);
+  });
+
   // Why: review listed the 20 oldest decisions whatever the range, and counted `.sati/` files,
   // which change with every write, as code under review.
   it("lists only decisions from the range or its features, and leaves out .sati/", async () => {

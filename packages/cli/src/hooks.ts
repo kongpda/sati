@@ -61,15 +61,18 @@ const UPGRADE = `Run \`${CLI_NAME} init --upgrade\` from the new install.`;
 
 /** A hook runner in `<git-common-dir>/sati/hooks/`. Only this file holds the binary's path. */
 function runner(self: string[], purpose: string, body: string): string {
-  const bin = self[self.length - 1] ?? "";
+  // Every word is a path (node and the script, or the binary). All are checked: with only the
+  // script checked, a removed node exits 127 and blocks each commit instead of the soft exit.
   return `#!/bin/sh
 ${OWNER}: ${purpose}
 # Rewritten by \`${CLI_NAME} init --upgrade\`; do not edit.
 ${CLI_NAME}() { ${self.map(sh).join(" ")} "$@"; }
-if [ ! -e ${sh(bin)} ]; then
-  echo ${sh(`${CLI_NAME} is no longer at ${bin}, so its git hooks did not run. ${UPGRADE}`)} >&2
-  exit 0
-fi
+for bin in ${self.map(sh).join(" ")}; do
+  if [ ! -e "$bin" ]; then
+    echo ${sh(`${CLI_NAME} is no longer at `)}"$bin"${sh(`, so its git hooks did not run. ${UPGRADE}`)} >&2
+    exit 0
+  fi
+done
 ${body}
 `;
 }

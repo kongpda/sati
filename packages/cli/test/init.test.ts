@@ -181,6 +181,14 @@ describe("sati init", () => {
     expect(hooks()?.ok).toBe(true);
   });
 
+  // Why: `init --upgrade --kind general` printed a normal upgrade and changed nothing.
+  it("refuses flags an upgrade would ignore", async () => {
+    const dir = await tempRepo({ init: true });
+    const r = sati(dir, "init", "--upgrade", "--yes", "--kind", "general");
+    expect(r.code).toBe(2);
+    expect(r.stderr).toContain("--upgrade does not change --kind");
+  });
+
   // After `npm update`, hooks and rules blocks lag behind until someone upgrades. doctor is the
   // one place that says so, and it names the files and the fix.
   it("doctor flags an out-of-date setup and passes after init --upgrade", async () => {

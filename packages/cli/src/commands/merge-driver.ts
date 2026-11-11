@@ -1,6 +1,13 @@
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { CLI_NAME } from "@sati/core";
-import { decodeRecord, encodeRecord, mergeRecord, parseRecord, stableJson } from "@sati/sync";
+import {
+  decodeRecord,
+  encodeRecord,
+  mergeRecord,
+  parseRecord,
+  stableJson,
+  writeFileAtomic,
+} from "@sati/sync";
 import { defineCommand } from "citty";
 
 /**
@@ -34,9 +41,7 @@ export default defineCommand({
         throw new Error("not a record file, so git merges it as text");
       }
       const { record, conflict } = mergeRecord(base, ours, theirs);
-      const tmp = `${args.ours}.${process.pid}.tmp`;
-      writeFileSync(tmp, stableJson(encodeRecord(record)));
-      renameSync(tmp, args.ours);
+      writeFileAtomic(args.ours, stableJson(encodeRecord(record)));
       if (conflict) {
         process.stderr.write(
           `${CLI_NAME}: merged ${String(record.id)} with conflicts; flagged needsReview.\n`,

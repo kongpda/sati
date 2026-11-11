@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import { type ChangeKind, SatiError } from "@sati/core";
 
@@ -220,4 +221,16 @@ export function defaultBase(root: string): string | undefined {
 }
 
 /** Whether two paths name the same folder. Git prints `C:/repo/wt` on Windows where Node has `C:\repo\wt`. */
-export const samePath = (a: string, b: string): boolean => resolve(a) === resolve(b);
+export function samePath(a: string, b: string): boolean {
+  // Through realpath, so `/tmp/x` equals `/private/tmp/x` on macOS; a missing path stays as given.
+  const real = (p: string) => {
+    try {
+      return realpathSync.native(p);
+    } catch {
+      return resolve(p);
+    }
+  };
+  // The drive letter's case differs between git and Node on Windows.
+  const fold = (p: string) => (process.platform === "win32" ? p.toLowerCase() : p);
+  return fold(real(a)) === fold(real(b));
+}

@@ -67,13 +67,19 @@ const isRepoRoot = (root: string, cwd: string, path: string) =>
 /** A general project has no features or file locks to protect, so the guard has nothing to do. */
 const guardOff = (rt: Runtime) => readSettings(rt.project.settings).kind === "general";
 
-async function check(rt: Runtime, changes: Change[], record: boolean): Promise<GuardResult> {
+/** The guard's verdict on `changes` with this project's settings; `review` shows the same one. */
+export async function projectVerdict(rt: Runtime, changes: Change[]): Promise<GuardResult> {
   if (changes.length === 0 || guardOff(rt)) return { verdict: "ok", findings: [] };
   const ratio = maxRemovalRatio(rt.location.root);
-  const result = await checkChanges(rt.ctx, {
+  return checkChanges(rt.ctx, {
     changes,
     ...(ratio === undefined ? {} : { maxRemovalRatio: ratio }),
   });
+}
+
+async function check(rt: Runtime, changes: Change[], record: boolean): Promise<GuardResult> {
+  if (changes.length === 0 || guardOff(rt)) return { verdict: "ok", findings: [] };
+  const result = await projectVerdict(rt, changes);
   const override = result.verdict === "blocked" && overridden();
   if (record || override) await recordGuard(rt.ctx, result, { override });
   return result;

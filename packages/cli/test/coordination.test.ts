@@ -65,7 +65,7 @@ describe("worktree coordination through git", () => {
   }, 30_000);
 
   it("pins a review to the branch commit and lists finished worktrees in doctor", async () => {
-    const { main, a } = await twoWorktrees();
+    const { main, a, b } = await twoWorktrees();
     const id = json<{ id: string }>(main, ["task", "create", "Ship A"], {}).data.id;
     run(a, ["task", "claim", id], agent("codex-a"));
     writeFileSync(join(a, "a.ts"), "1\n");
@@ -103,6 +103,8 @@ describe("worktree coordination through git", () => {
     const doctor = run(main, ["doctor"], {}).stdout;
     expect(doctor).toMatch(/git worktree remove '.*-b'/);
     expect(doctor).not.toMatch(/git worktree remove '.*-a'/);
+    // Run inside B, doctor must not offer to remove the worktree it is running in.
+    expect(run(b, ["doctor"], {}).stdout).not.toMatch(/git worktree remove '.*-b'/);
   }, 30_000);
 
   it("marks held tasks waiting from the Notification hook and clears them on the next prompt", async () => {

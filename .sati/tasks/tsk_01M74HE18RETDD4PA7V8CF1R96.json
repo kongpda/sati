@@ -1,0 +1,27 @@
+{
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "heartbeatAt": "2026-11-11T05:31:37.636Z",
+    "leaseUntil": "2026-11-11T06:01:37.636Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-11T05:31:31.479Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "effort": "deep",
+  "id": "tsk_01M74HE18RETDD4PA7V8CF1R96",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T05:31:31.482Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-11T05:31:37.638Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-11T05:31:37.638Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-11T05:31:37.638Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-11T05:31:37.638Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "in_progress",
+  "title": "Audit follow-ups: fix open bugs, speed, recall ranking, docs",
+  "updatedAt": "2026-11-11T05:31:37.641Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import {
   CLI_NAME,
@@ -13,7 +13,8 @@ import {
 import { SqliteStore } from "@sati/store-sqlite";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { defaultBase } from "../git.js";
+import { defaultBase, samePath } from "../git.js";
+import { installedSelf } from "../hooks.js";
 import { runHint } from "../install.js";
 import { closeRuntime, openRuntime, output, worktreePaths } from "../runtime.js";
 import { pendingUpgrade } from "./init.js";
@@ -37,13 +38,15 @@ function hooksCheck(root: string): DoctorCheck {
   if (!existsSync(runner)) {
     return { name: "hooks", ok: false, detail: `This clone has no ${CLI_NAME} git hooks. ${fix}` };
   }
-  // The runner checks for its binary with `[ ! -e '<path>' ]`.
-  const bin = readFileSync(runner, "utf8").match(/^if \[ ! -e '(.+)' \]; then$/m)?.[1];
-  if (bin !== undefined && !existsSync(bin)) {
+  // Every word of the command the hooks start is a path: node and the script, or the binary.
+  const self = installedSelf(root) ?? [];
+  const bin = self.at(-1);
+  const gone = self.find((word) => !existsSync(resolve(root, word)));
+  if (gone !== undefined) {
     return {
       name: "hooks",
       ok: false,
-      detail: `The git hooks start ${bin}, which is gone. ${fix}`,
+      detail: `The git hooks start ${gone}, which is gone. ${fix}`,
     };
   }
   return { name: "hooks", ok: true, detail: `The git hooks start ${bin ?? CLI_NAME}.` };
@@ -85,7 +88,11 @@ async function worktreesCheck(ctx: ServiceContext, root: string): Promise<Doctor
   const base = defaultBase(root);
   let linked: { path: string; branch: string | null }[];
   try {
-    [, ...linked] = worktreePaths(root);
+    // The first entry is the main worktree. The one doctor runs in is in use, so it is left out
+    // too: inside a linked worktree it is not the first.
+    linked = worktreePaths(root)
+      .slice(1)
+      .filter((w) => !samePath(w.path, root));
   } catch {
     // `git worktree list -z` needs git 2.36; older git just skips this check.
     return null;

@@ -22,10 +22,9 @@ import {
   systemClock,
 } from "@sati/core";
 import { type DbLocation, locateDb, SqliteStore, standaloneDbPath } from "@sati/store-sqlite";
-import { importSnapshot } from "@sati/sync";
+import { importSnapshot, writeFileAtomic } from "@sati/sync";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { writeFileAtomic } from "../atomic.js";
 import { selectTools } from "../detect.js";
 import {
   applyMergeDriver,
@@ -166,6 +165,21 @@ async function plan(
   const projectId = existing?.projectId ?? createIdFactory()("project");
   const db = mode === "standalone" ? standaloneDbPath(homedir(), projectId) : (loc?.path ?? "");
 
+  if (args.upgrade) {
+    // An upgrade keeps the project as it is; taking these and ignoring them would look like a change.
+    const ignored = (["mode", "kind", "name", "slug"] as const).filter(
+      (f) => args[f] !== undefined,
+    );
+    if (ignored.length > 0) {
+      throw new SatiError(
+        "USAGE",
+        `--upgrade does not change ${ignored.map((f) => `--${f}`).join(", ")}.`,
+        {
+          hint: `Run \`${CLI_NAME} init --upgrade\` without ${ignored.length === 1 ? "it" : "them"}.`,
+        },
+      );
+    }
+  }
   if (args.upgrade && mode === "standalone") {
     throw new SatiError("USAGE", "Standalone projects have no git hooks to upgrade.");
   }

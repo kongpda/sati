@@ -52,7 +52,7 @@ import {
   standaloneDbPath,
 } from "@sati/store-sqlite";
 import type { WrittenRecord } from "@sati/sync";
-import { writeFileAtomic } from "./atomic.js";
+import { writeFileAtomic } from "@sati/sync";
 import { defaultBase, samePath } from "./git.js";
 import { runHint } from "./install.js";
 

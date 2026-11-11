@@ -288,7 +288,9 @@ describe("sati init", () => {
     };
     const served = spawnSync(entry?.command ?? "", entry?.args ?? [], {
       cwd: home,
-      env: { ...process.env, HOME: home },
+      // Windows finds the home folder in USERPROFILE: with HOME alone the server looked in
+      // the runner's real home and found no project.
+      env: { ...process.env, HOME: home, USERPROFILE: home, SATI_REGISTRY: "" },
       input: `${JSON.stringify(hello)}\n`,
       encoding: "utf8",
       timeout: 20_000,

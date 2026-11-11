@@ -1,0 +1,26 @@
+{
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "heartbeatAt": "2026-11-11T09:16:20.431Z",
+    "leaseUntil": "2026-11-11T09:46:20.431Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-11T09:16:20.290Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "id": "tsk_01M74Y9NY2QZBKRSTYPV5PQQXA",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T09:16:20.294Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-11T09:16:20.432Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-11T09:16:20.432Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-11T09:16:20.432Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-11T09:16:20.432Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "in_progress",
+  "title": "Windows CI: Claude Desktop entry test passes only HOME to the server it starts",
+  "updatedAt": "2026-11-11T09:16:20.434Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

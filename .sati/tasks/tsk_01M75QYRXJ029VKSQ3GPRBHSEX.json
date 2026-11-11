@@ -1,0 +1,33 @@
+{
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "ee589132d7be487d4b756d662a176bcade6d17c2",
+    "completedAt": "2026-11-11T16:49:13.908Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "packages/cli/test/output.test.ts",
+      ".github/workflows/ci.yml",
+      "packages/cli/vitest.config.ts"
+    ],
+    "summary": "CI was red for four commits. Windows: the output test asked for the rich layout but not for a Unicode terminal, so the legacy-console fallback gave `...` and `ok`; the test env now sets WT_SESSION. Playwright job: apt could not resolve its host twice; the install step tries once more after 30 s. Local CLI test timeout 5 s to 15 s: the suite timed out in four runs while other work loaded the machine."
+  },
+  "createdAt": "2026-11-11T16:44:45.873Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "id": "tsk_01M75QYRXJ029VKSQ3GPRBHSEX",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T16:44:45.874Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "branch": "2026-11-11T16:45:44.198Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T16:49:13.915Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T16:49:13.915Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T16:49:13.915Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "worktree": "2026-11-11T16:45:44.198Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "status": "review",
+  "title": "CI red on Windows: output test expects Unicode symbols the legacy console detection replaces; Playwright install fails",
+  "updatedAt": "2026-11-11T16:49:13.915Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

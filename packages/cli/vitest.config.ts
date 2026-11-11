@@ -4,7 +4,8 @@ import { join } from "node:path";
 import { defineConfig } from "vitest/config";
 
 // Windows and the macOS CI runners spawn processes and open SQLite files several times slower
-// than Linux, so tests there get more time. Locally the default 5 s still catches hangs.
+// than Linux, so tests there get more time. Locally 15 s: several agents run this suite at the
+// same time on one machine, and under that load the tests that spawn git went past 5 s.
 // Tests run `sati init` in temp repos, which chains into `core.hooksPath`. Ignoring the global
 // and system git config keeps a developer's own hooks folder (and its hooks) out of the run;
 // the identity variables stand in for the `user.name` and `user.email` it would have supplied.
@@ -14,7 +15,7 @@ writeFileSync(emptyGitConfig, "");
 
 export default defineConfig({
   test: {
-    testTimeout: process.platform === "win32" || process.env.CI ? 30_000 : 5_000,
+    testTimeout: process.platform === "win32" || process.env.CI ? 30_000 : 15_000,
     setupFiles: ["test/setup-registry.ts"],
     globalSetup: ["../../scripts/test-tmp.ts"],
     env: {

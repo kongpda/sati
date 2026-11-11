@@ -139,7 +139,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm --filter @sati/e2e exec playwright install --with-deps chromium
+      # apt on the runner sometimes cannot resolve the package host; one more try after a pause.
+      - run: |
+          pnpm --filter @sati/e2e exec playwright install --with-deps chromium ||
+            (sleep 30 && pnpm --filter @sati/e2e exec playwright install --with-deps chromium)
       - run: pnpm test:ui
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()

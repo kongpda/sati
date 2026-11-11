@@ -4,8 +4,11 @@ import pkg from "../package.json" with { type: "json" };
 import { run, sati, satiJson, tempRepo } from "./helpers.js";
 
 const ESC = "\x1b";
-/** What a person sees: the layout for a terminal, 80 columns wide. */
-const rich = { FORCE_COLOR: "1", COLUMNS: "80" };
+/**
+ * What a person sees: the layout for a terminal, 80 columns wide. `WT_SESSION` is what Windows
+ * Terminal sets; without it a Windows run takes the legacy console and gets `...` and `ok`.
+ */
+const rich = { FORCE_COLOR: "1", COLUMNS: "80", WT_SESSION: "1" };
 
 describe("help", () => {
   // PLAN Terminal UX: colour only on a TTY. citty coloured help even into a pipe.

@@ -1,15 +1,23 @@
 {
   "body": "task.ts applyClaim and checkToken; brief.ts unmatched-paths check.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "heartbeatAt": "2026-11-11T07:44:15.764Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 67720
-    },
-    "leaseUntil": "2026-11-11T09:44:15.764Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "fe3808bcaae23b95ba2404287065200d8c754a66",
+    "completedAt": "2026-11-11T07:46:54.899Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "packages/core/src/services/task.ts",
+      "packages/core/src/services/brief.ts",
+      "packages/core/test/task-service.test.ts",
+      "packages/core/test/brief.test.ts",
+      "packages/core/test/review-fixes.test.ts",
+      "docs/progress.md",
+      "PLAN.md",
+      ".changeset/claim-waits.md"
+    ],
+    "releaseNote": "A task that waits for unfinished tasks cannot be claimed by id; a person can edit a task whose claim has expired.",
+    "summary": "Commit fe3808b. applyClaim refuses a todo task with an unfinished or missing dependency (INVALID_TRANSITION, names the ids), same rule as the ready list. Brief stale-path warning treats a folder path as covering what is beneath it. updateTask lets a person edit a task whose claim has expired without a token; agents still need to claim; complete unchanged. Tests added for each; full suite passes."
   },
   "createdAt": "2026-11-11T07:10:09.040Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
@@ -20,13 +28,14 @@
   "stamps": {
     "*": "2026-11-11T07:10:09.040Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "branch": "2026-11-11T07:44:15.765Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "claim": "2026-11-11T07:44:15.765Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "status": "2026-11-11T07:44:15.765Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T07:46:54.899Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T07:46:54.899Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T07:46:54.899Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "worktree": "2026-11-11T07:44:15.765Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "9g Small core fixes: claim checks dependencies, brief folder-path warning, expired-claim edits",
-  "updatedAt": "2026-11-11T07:44:15.765Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T07:46:54.900Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

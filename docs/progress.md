@@ -1989,3 +1989,15 @@ Task `tsk_fevjbr`.
 - Claim by id now applies the ready list's rule: a `todo` task with a dependency that is missing, or not done, cancelled or deleted, is refused with `INVALID_TRANSITION` and the ids it waits for. A task already in progress can still be renewed or taken over.
 - The brief's stale-path warning treats `docs` and `docs/` as covering `docs/**`.
 - A person may edit a task whose claim has expired, with no token. Choice: the expired claim is left for the sweep to release, so the edit keeps the version the person saw; an agent still has to claim. `task complete` is unchanged.
+
+## 2026-11-11 — Phase 9 gate
+
+- Run with a throwaway script (not kept): a folder `Q3 Launch` holding `budget.xlsx`, `PATH` with only `node` (no `git`), a fresh `HOME`, and an MCP client over stdio that sets no agent variable.
+  - `init` chose standalone mode and a general project.
+  - The caller was recorded as `gate@Q3 Launch`, kind `agent`.
+  - A card for `budget.xlsx#Sheet2` read fresh with the `seen` value it was saved with and stale with another.
+  - The Khmer question "បន្ទប់ប្រជុំតម្លៃប៉ុន្មាន" recalled the Khmer card.
+- `pnpm typecheck` and `pnpm test` pass (core 358, CLI 183 and 2 skipped, store 89, sync 57, MCP 31, UI 36). Biome is clean on core, cli, mcp, sync and store-sqlite; `packages/ui` was not checked here, another agent is working in it.
+- `pnpm bench` on 50,000 records: cold start 37 ms (80), read command 121 ms (150), search 40 ms (50), recall 43 ms (50), claim 3 ms (50). All inside the budgets.
+- Not measured: a Thai, Khmer or CJK search on 50,000 records. It scans instead of using the index (see 9e), so it will be slower than the 50 ms budget at that size.
+- Open, for the owner: the four items under "Needs the owner's decision before any work" in PLAN Phase 9.

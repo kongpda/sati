@@ -71,7 +71,7 @@ describe("sati sync", () => {
     sati(dir, "init", "--yes", "--mode", "stealth", "--tools", "");
     const r = sati(dir, "sync", "export");
     expect(r.code).toBe(2);
-    expect(r.stderr).toContain("needs git mode");
+    expect(r.stderr).toContain("keeps none");
   });
 });
 

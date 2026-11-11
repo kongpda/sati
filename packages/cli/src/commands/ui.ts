@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { existsSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CLI_NAME, CONFIG_DIR, type ProjectKind, SatiError } from "@sati/core";
+import { CLI_NAME, type ProjectKind, SatiError } from "@sati/core";
 import { defineCommand } from "citty";
 import { selfCommand } from "../hooks.js";
 import { launcherFile } from "../launcher.js";
@@ -12,8 +12,10 @@ import {
   int,
   openRuntime,
   printError,
+  sharedDir,
   writeConfigKind,
 } from "../runtime.js";
+import { markSeen, watchFolder } from "../shared-folder.js";
 import { readTemplateFiles } from "../templates.js";
 import { createUiApp, listenUi, sessionToken, type UiRuntime } from "../ui/server.js";
 
@@ -95,16 +97,23 @@ export default defineCommand({
       const onKind = (kind: ProjectKind) => writeConfigKind(rt.location.root, kind);
       const templates = () => readTemplateFiles(rt.location.root);
       let ui: UiRuntime = { ctx: rt.ctx, onKind, templates };
-      if (rt.project.mode === "git") {
+      const dir = sharedDir(rt);
+      if (dir) {
         const { afterWrites } = await import("@sati/sync");
-        const dir = join(rt.location.root, CONFIG_DIR);
         const report = (err: unknown) => printError(err, false);
+        // A shared folder has no git hooks: the board loads what the file-sync app brings.
+        const folder = rt.project.mode === "standalone";
+        const db = rt.location.path;
         const synced = afterWrites(
           rt.ctx.store,
           EXPORT_DEBOUNCE_MS,
-          (written) => exportWritten(rt.ctx, dir, written, report),
+          async (written) => {
+            const files = await exportWritten(rt.ctx, dir, written, report);
+            if (folder) await markSeen(dir, db, files);
+          },
           report,
         );
+        if (folder) watchFolder(rt.ctx, dir, db, report);
         flush = synced.flush;
         ui = {
           ctx: { ...rt.ctx, store: synced.store },

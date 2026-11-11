@@ -1,15 +1,21 @@
-import { join } from "node:path";
 import {
   actorIdentity,
   adoptClaims,
-  CONFIG_DIR,
   ensureActor,
   readSettings,
   type ServiceContext,
 } from "@sati/core";
 import { defineCommand } from "citty";
 import pkg from "../../package.json" with { type: "json" };
-import { exportWritten, openRuntime, osUser, printError, processProbe } from "../runtime.js";
+import {
+  exportWritten,
+  openRuntime,
+  osUser,
+  printError,
+  processProbe,
+  sharedDir,
+} from "../runtime.js";
+import { markSeen, watchFolder } from "../shared-folder.js";
 import { readTemplateFiles } from "../templates.js";
 
 /**
@@ -58,7 +64,8 @@ export default defineCommand({
       const { serveStdio } = await import("@sati/mcp");
       const { kind } = readSettings(project.settings);
       const templates = () => readTemplateFiles(location.root);
-      if (project.mode !== "git") {
+      const dir = sharedDir(rt);
+      if (!dir) {
         try {
           await adopt(ctx);
           await serveStdio(ctx, pkg.version, kind, location.root, templates, named);
@@ -69,15 +76,20 @@ export default defineCommand({
       }
       // Git mode keeps .sati/ current while the agent works; pre-commit exports again anyway.
       const { afterWrites } = await import("@sati/sync");
-      const dir = join(location.root, CONFIG_DIR);
       const report = (err: unknown) => printError(err, false);
+      // A shared folder has no git hooks: this process loads what the file-sync app brings.
+      const folder = project.mode === "standalone";
       const synced = afterWrites(
         ctx.store,
         EXPORT_DEBOUNCE_MS,
-        (written) => exportWritten(ctx, dir, written, report),
+        async (written) => {
+          const files = await exportWritten(ctx, dir, written, report);
+          if (folder) await markSeen(dir, location.path, files);
+        },
         report,
       );
       await syncAtStart(ctx, dir).catch(report);
+      const stop = folder ? watchFolder(ctx, dir, location.path, report) : () => {};
       try {
         await adopt({ ...ctx, store: synced.store });
         await serveStdio(
@@ -89,6 +101,7 @@ export default defineCommand({
           named,
         );
       } finally {
+        stop();
         await synced.flush();
         await ctx.store.close();
       }

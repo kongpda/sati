@@ -2032,3 +2032,13 @@ Task `tsk_fevjbr`.
 - Only the CLI can approve. There is no MCP tool for it, so an agent cannot approve its own change through MCP. The board has no approve button yet (another agent owns `packages/ui`); noted in `docs/ideas.md`.
 - A project with no git hook (standalone) is protected only when the agent asks (`feature_check`) and in `sati card get`, which shows a changed or missing approved file. Nothing watches the folder.
 - `doctor --fix` never removes the card of an approved file.
+
+## 2026-11-11 — Owner items: sharing through a synced folder (ADR 0009)
+
+- No new mode. A standalone project with `"share": true` in `.sati/sati.config.json` writes the same snapshot git mode commits. `mode` is read in many places to mean "git or not"; a flag left them all right.
+- The database was already outside the folder for standalone projects (`~/.sati/projects/`). Nothing moved.
+- No git hook says "files changed", so each command compares size and modified time of every record file with a list kept next to the database (`<db>.folder.json`) and imports only the files that differ. The board and the MCP server check every 5 seconds. No file watcher: one-shot commands cannot use one.
+- Conflicted copies were skipped with a warning before. In a shared folder the copy is the only place the other person's edit lives, so it is now merged with the record by stamps (the merge the git driver uses), the merged record is written, and the copy is deleted. Git mode still skips copies: there git has the other edit.
+- A failed load warns and the command still runs: the file may be half synced.
+- Known limits, also in the ADR: claims can collide inside the sync window, file locks are not shared, one unreadable record file holds back the other changed files of that load, and every machine needs a sati that knows `share`.
+- Checked through the built CLI with two home folders on one folder, on macOS. Not run against a real Dropbox, OneDrive or iCloud folder: the conflict names are from their documentation and the existing `RECORD_COPY` pattern.

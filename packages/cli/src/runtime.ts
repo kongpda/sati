@@ -55,6 +55,7 @@ import type { WrittenRecord } from "@sati/sync";
 import { writeFileAtomic } from "@sati/sync";
 import { defaultBase, samePath } from "./git.js";
 import { runHint } from "./install.js";
+import { loadFolder, markSeen } from "./shared-folder.js";
 
 export interface Runtime {
   ctx: ServiceContext;
@@ -723,18 +724,30 @@ export async function execute<T>(
  * pre-commit hook runs. A failed export (say, a secret in a record) warns but keeps the write.
  */
 export async function withExport<T>(rt: Runtime, fn: (rt: Runtime) => Promise<T>): Promise<T> {
-  if (rt.project.mode !== "git") return fn(rt);
+  const dir = sharedDir(rt);
+  if (!dir) return fn(rt);
   const { afterWrites } = await import("@sati/sync");
-  const dir = join(rt.location.root, CONFIG_DIR);
   const warn = (err: unknown) => {
     process.stderr.write("warning: the .sati/ snapshot was not updated.\n");
     printError(err, false);
   };
+  // No git hook loads a teammate's files in a shared folder, so each command looks first.
+  const folder = rt.project.mode === "standalone";
+  const db = rt.location.path;
+  if (folder) {
+    await loadFolder(rt.ctx, dir, db, (err) => {
+      process.stderr.write("warning: the shared .sati/ folder was not loaded.\n");
+      printError(err, false);
+    });
+  }
   const synced = afterWrites(
     rt.ctx.store,
     // Never fires: flush() below runs the export when the command ends.
     2 ** 31 - 1,
-    (written) => exportWritten(rt.ctx, dir, written, warn),
+    async (written) => {
+      const files = await exportWritten(rt.ctx, dir, written, warn);
+      if (folder) await markSeen(dir, db, files);
+    },
     warn,
   );
   try {
@@ -754,10 +767,11 @@ export async function exportWritten(
   dir: string,
   written: WrittenRecord[],
   report: (err: unknown) => void,
-): Promise<void> {
+): Promise<string[]> {
   const { exportSnapshot, refusedError } = await import("@sati/sync");
   const result = await exportSnapshot(ctx, dir, { only: written });
   if (result.refused.length > 0) report(refusedError(result.refused));
+  return result.written;
 }
 
 /** Like `execute`, for commands that run before a project exists (`init`). */
@@ -778,16 +792,32 @@ export async function output<T>(
   }
 }
 
-/** The `.sati/` folder. Only git mode has one: stealth and standalone commit nothing. */
+/**
+ * The `.sati/` folder of a project that keeps its records there as files: git mode, or a
+ * standalone project shared through a synced folder (ADR 0009). Stealth and a plain standalone
+ * project keep nothing outside the database.
+ */
+export function sharedDir(rt: Pick<Runtime, "project" | "location">): string | undefined {
+  const dir = join(rt.location.root, CONFIG_DIR);
+  if (rt.project.mode === "git") return dir;
+  if (rt.project.mode !== "standalone") return undefined;
+  return readProjectConfig(rt.location.root)?.share === true ? dir : undefined;
+}
+
+/** `sharedDir`, or a usage error for a project that has no snapshot. */
 export function snapshotDir(rt: Runtime): string {
-  if (rt.project.mode !== "git") {
-    throw new SatiError(
-      "USAGE",
-      `\`${CLI_NAME} sync\` needs git mode; this project is ${rt.project.mode}.`,
-      { hint: "Only git mode keeps a committed snapshot in .sati/." },
-    );
-  }
-  return join(rt.location.root, CONFIG_DIR);
+  const dir = sharedDir(rt);
+  if (dir) return dir;
+  throw new SatiError(
+    "USAGE",
+    `\`${CLI_NAME} sync\` needs a snapshot in .sati/; this ${rt.project.mode} project keeps none.`,
+    {
+      hint:
+        rt.project.mode === "standalone"
+          ? `Run \`${CLI_NAME} sync share\` to share this folder's project through a file-sync app.`
+          : "Only git mode keeps a committed snapshot in .sati/.",
+    },
+  );
 }
 
 /** Closes the DB opened by `openRuntime`, if any. */
@@ -810,6 +840,17 @@ export function readProjectConfig(root: string): SatiConfig | undefined {
  * project row itself is not in the snapshot). Always written, both values: a config without
  * `kind` (made before kinds existed) means "no opinion", never a switch. Stealth has no file.
  */
+/** Turns on sharing through the folder for a standalone project; false when it was on already. */
+export function writeConfigShare(root: string): boolean {
+  const config = readProjectConfig(root);
+  if (!config || config.share === true) return false;
+  writeFileAtomic(
+    join(root, CONFIG_DIR, CONFIG_FILE),
+    `${JSON.stringify({ ...config, share: true }, null, 2)}\n`,
+  );
+  return true;
+}
+
 export function writeConfigKind(root: string, kind: ProjectKind): void {
   const config = readProjectConfig(root);
   if (!config || config.kind === kind) return;

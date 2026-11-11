@@ -55,7 +55,25 @@ sati init --yes --mode git --tools claude-code,codex
 | --- | --- | --- |
 | `git` (default) | `<git-common-dir>/sati/sati.db` | A `.sati/` snapshot, merged by a git merge driver |
 | `stealth` | `<git-common-dir>/sati/sati.db` | Nothing. Rules go into git-ignored files. Use it for client repos. |
-| `standalone` | `~/.sati/projects/<project-id>.db` | Nothing. Use it outside git. |
+| `standalone` | `~/.sati/projects/<project-id>.db` | Nothing. Use it outside git. With `--share`, a `.sati/` snapshot in the folder for a file-sync app. |
+
+### Sharing a folder without git
+
+A team with no git can share a project through the folder it already shares (Dropbox, OneDrive,
+iCloud Drive, Google Drive, a file server):
+
+```bash
+sati init --share        # a new project in this folder
+sati sync share          # or: turn sharing on for an existing standalone project
+```
+
+The records are then also kept as small files in `.sati/`, which the sync app carries. The
+database stays in `~/.sati/` on each machine, never in the synced folder. Another person opens
+the folder once it has synced and runs `sati init`. When two people change the same record
+before the sync app meets, sati merges the "conflicted copy" the app leaves and deletes it.
+
+Changes travel as fast as the sync app moves files, not live: two people can claim one task
+inside that window, and file locks are not shared. Private notes and cards stay on your machine.
 
 The live database is shared by every worktree of the repository, so agents in parallel
 worktrees see the same tasks.

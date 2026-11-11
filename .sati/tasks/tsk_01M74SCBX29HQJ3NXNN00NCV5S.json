@@ -1,14 +1,32 @@
 {
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "heartbeatAt": "2026-11-11T08:01:41.950Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 67720
-    },
-    "leaseUntil": "2026-11-11T11:01:41.950Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "784b69e89a5de45db48990b44f0e7ef14d5218d1",
+    "completedAt": "2026-11-11T08:06:32.030Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "packages/core/src/domain/schemas.ts",
+      "packages/core/src/services/context-cache.ts",
+      "packages/core/src/services/guard.ts",
+      "packages/core/src/workflow.ts",
+      "packages/core/test/context-cache.test.ts",
+      "packages/cli/src/file-hash.ts",
+      "packages/cli/src/commands/context.ts",
+      "packages/cli/src/commands/guard.ts",
+      "packages/cli/src/commands/doctor.ts",
+      "packages/cli/test/guard.test.ts",
+      "packages/mcp/src/server.ts",
+      "docs/guide/agent-workflow-general.md",
+      "docs/guide/glossary.md",
+      "docs/progress.md",
+      "docs/ideas.md",
+      "README.md",
+      ".changeset/approved-files.md",
+      "PLAN.md"
+    ],
+    "releaseNote": "sati card approve signs off a file; the guard blocks changes to it until it is approved again.",
+    "summary": "sati card approve <file> stores the SHA-256 of the file's bytes on its card (approved: hash, by, at); --clear removes it (commit 784b69e). New guard rule approved-changed, always blocked: an intended edit is blocked whatever the bytes; a change already made passes when the file still has the approved hash. In a general project the guard now checks approved files only. card get shows approved / CHANGED / MISSING. doctor --fix never drops an approved card. No MCP tool approves, so an agent cannot approve its own change. General projects have no feature_check tool; the agent sees approved on the card from context_get. Limits: nothing watches a folder without git hooks; no board button (idea noted)."
   },
   "createdAt": "2026-11-11T07:50:25.443Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
@@ -19,13 +37,14 @@
   "stamps": {
     "*": "2026-11-11T07:50:25.443Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "branch": "2026-11-11T08:01:41.951Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "claim": "2026-11-11T08:01:41.951Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "status": "2026-11-11T08:01:41.951Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T08:06:32.031Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T08:06:32.031Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T08:06:32.031Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "worktree": "2026-11-11T08:01:41.951Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Protected deliverables in a general project: an approved file is protected by its hash",
-  "updatedAt": "2026-11-11T08:01:41.952Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T08:06:32.031Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

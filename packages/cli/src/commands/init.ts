@@ -142,6 +142,8 @@ async function plan(
     name?: string | undefined;
     tools?: string | undefined;
     upgrade?: boolean | undefined;
+    /** Standalone only: keep the records as files in `.sati/` for a file-sync app (ADR 0009). */
+    share?: boolean | undefined;
     /** Also chain into a global `core.hooksPath`, which every repo on the machine uses. */
     globalHooks?: boolean | undefined;
     /** The command hooks start, when not this binary (see `pendingUpgrade`). */
@@ -188,6 +190,14 @@ async function plan(
       hint: "Use code for software, or general for plans, todos and notes.",
     });
   }
+  if (args.share && mode !== "standalone") {
+    throw new SatiError(
+      "USAGE",
+      `--share is for folders outside git; ${mode} mode shares through git.`,
+    );
+  }
+  // A folder someone else shared keeps sharing for whoever joins it.
+  const share = mode === "standalone" && (args.share === true || existing?.share === true);
   const projectId = existing?.projectId ?? createIdFactory()("project");
   const db = mode === "standalone" ? standaloneDbPath(homedir(), projectId) : (loc?.path ?? "");
 
@@ -246,7 +256,7 @@ async function plan(
     agentFiles,
     hooks,
     mergeDriver,
-    config: { version: 1, projectId, mode, kind },
+    config: { version: 1, projectId, mode, kind, ...(share ? { share: true as const } : {}) },
     upgrade: undefined,
   };
 }
@@ -421,9 +431,10 @@ async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
       mode: project.mode,
       db: p.db,
     });
-    // A fresh clone already has teammates' records in .sati/; without this it starts empty.
+    // A fresh clone, or a shared folder someone else set up, already has teammates' records in
+    // .sati/; without this it starts empty.
     const imported =
-      p.mode === "git" && config?.action === "keep"
+      (p.mode === "git" || p.config.share === true) && config?.action === "keep"
         ? await importClone(p.root, { ...deps, projectId: project.id, actorId: actor.id })
         : 0;
     return {
@@ -665,6 +676,11 @@ export default defineCommand({
       description:
         "Update the git hooks, merge driver and agent files (as `rules sync` does) of an initialized project. Exit 6 if there is none",
     },
+    share: {
+      type: "boolean",
+      description:
+        "Outside git: share the project through this folder. Records are kept as files in .sati/ for a file-sync app (Dropbox, OneDrive, a file server) to carry; the database stays on this machine",
+    },
     "dry-run": { type: "boolean", description: "Show what init would write, and write nothing" },
     desktop: {
       type: "boolean",
@@ -691,6 +707,7 @@ export default defineCommand({
           slug: args.slug,
           tools: args.tools,
           upgrade: args.upgrade,
+          share: args.share,
           globalHooks: args["global-hooks"],
         };
         if (args["dry-run"]) return { dryRun: summary(await plan(cwd, opts)) };

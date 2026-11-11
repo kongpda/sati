@@ -152,7 +152,25 @@ Your own locks never block you. Details: [Guard rules](docs/guide/guard.md).
 | --- | --- | --- |
 | `git` (default) | `<git-common-dir>/sati/sati.db` | A `.sati/` JSON snapshot, merged by a git merge driver |
 | `stealth` | `<git-common-dir>/sati/sati.db` | Nothing. Rules go into git-ignored files. For client repos. |
-| `standalone` | `~/.sati/projects/<id>.db` | Nothing. For folders outside git. |
+| `standalone` | `~/.sati/projects/<id>.db` | Nothing. For folders outside git. With `--share`, a `.sati/` snapshot in the folder for a file-sync app. |
+
+### Sharing a folder without git
+
+A team with no git can share a project through the folder it already shares (Dropbox, OneDrive,
+iCloud Drive, Google Drive, a file server):
+
+```bash
+sati init --share        # a new project in this folder
+sati sync share          # or: turn sharing on for an existing standalone project
+```
+
+The records are then also kept as small files in `.sati/`, which the sync app carries. The
+database stays in `~/.sati/` on each machine, never in the synced folder. Another person opens
+the folder once it has synced and runs `sati init`. When two people change the same record
+before the sync app meets, sati merges the "conflicted copy" the app leaves and deletes it.
+
+Changes travel as fast as the sync app moves files, not live: two people can claim one task
+inside that window, and file locks are not shared. Private notes and cards stay on your machine.
 
 Every worktree of a repo shares one live database, so agents in parallel worktrees see the same
 tasks. Each clone runs `sati init` once; it loads the committed snapshot.

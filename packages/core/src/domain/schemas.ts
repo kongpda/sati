@@ -557,6 +557,11 @@ export const SatiConfigSchema = z.strictObject({
   mode: Mode,
   /** Present only for `general`, so every clone sets up the project the same way. */
   kind: ProjectKind.optional(),
+  /**
+   * A standalone project whose records are also kept as files under `.sati/`, so a file-sync app
+   * (Dropbox, OneDrive, a file server) carries them to other people. See ADR 0009.
+   */
+  share: z.literal(true).optional(),
   guard: z
     .strictObject({
       /** Share of a protected feature's changed lines a commit may remove before it is blocked. */

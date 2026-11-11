@@ -7,6 +7,7 @@ import {
   type ImportResult,
   importRecords,
   isPrivate,
+  isSatiError,
   SatiError,
   type ServiceContext,
   SNAPSHOT_DIRS,
@@ -231,32 +232,65 @@ export function refusedError(refused: readonly RefusedRecord[]): SatiError {
  * added, as in `tsk_… (1).json`, `tsk_… 2.json` or `tsk_… (conflicted copy).json`.
  */
 const RECORD_COPY = /^[a-z]+_[0-9A-HJKMNP-TV-Z]{26}.+\.json$/u;
+const RECORD_ID = /^[a-z]+_[0-9A-HJKMNP-TV-Z]{26}/u;
 
 /** Reads every record file under `dir`. Unparseable files fail the whole read. */
 export function readSnapshot(dir: string): ImportRecordsInput {
   return scanSnapshot(dir).records;
 }
 
+export interface ImportOptions {
+  /** Read only these files: paths under the snapshot folder, with `/`. All files when absent. */
+  only?: ReadonlySet<string>;
+  /**
+   * Merge the copies a file-sync app made of a record file into the record, then delete them.
+   * Without git there is no merge driver, so the copy is the only place the other edit lives.
+   */
+  mergeCopies?: boolean;
+}
+
+/** The size and modified time of a record file; a file-sync app that replaces it changes both. */
+export function fileStamp(file: string): string | undefined {
+  const info = lstatSync(file, { throwIfNoEntry: false });
+  return info?.isFile() ? `${info.mtimeMs}:${info.size}` : undefined;
+}
+
+/** `fileStamp` of every `.json` file in the snapshot, by its path under `dir`. No file is opened. */
+export function snapshotStamps(dir: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const entity of SNAPSHOT_ENTITIES) {
+    const folder = join(dir, SNAPSHOT_DIRS[entity]);
+    if (!existsSync(folder)) continue;
+    for (const name of readdirSync(folder)) {
+      if (!name.endsWith(".json")) continue;
+      const stamp = fileStamp(join(folder, name));
+      if (stamp !== undefined) out[posix.join(SNAPSHOT_DIRS[entity], name)] = stamp;
+    }
+  }
+  return out;
+}
+
+type Scanned = ImportRecordsInput[number];
+
 /**
  * As `readSnapshot`, and also names the files it left out: copies of record files a file-sync app
- * made. One of those must not stop every import. Any other odd file still fails the read.
+ * made. One of those must not stop every import. Any other odd file still fails the read. With
+ * `mergeCopies`, a copy that reads as the record its name starts with is returned in `copies`.
  */
-function scanSnapshot(dir: string): { records: ImportRecordsInput; skipped: string[] } {
+function scanSnapshot(
+  dir: string,
+  opts: ImportOptions = {},
+): { records: Scanned[]; copies: Scanned[]; skipped: string[] } {
   refuseLinkedFolders(dir);
-  const out: ImportRecordsInput = [];
+  const out: Scanned[] = [];
+  const copies: Scanned[] = [];
   const skipped: string[] = [];
   let count = 0;
   let total = 0;
   for (const entity of SNAPSHOT_ENTITIES) {
     const folder = join(dir, SNAPSHOT_DIRS[entity]);
     if (!existsSync(folder)) continue;
-    for (const name of readdirSync(folder).sort()) {
-      if (!name.endsWith(".json")) continue;
-      const source = posix.join(SNAPSHOT_DIRS[entity], name);
-      if (RECORD_COPY.test(name)) {
-        skipped.push(source);
-        continue;
-      }
+    const load = (name: string, source: string, expected: string): Scanned => {
       const file = join(folder, name);
       const fail = (why: string) => {
         throw new SatiError("VALIDATION", `Invalid snapshot file ${source}: ${why}`, {
@@ -274,31 +308,69 @@ function scanSnapshot(dir: string): { records: ImportRecordsInput; skipped: stri
       let record: unknown;
       try {
         // Some editors and sync tools add a byte-order mark; JSON.parse refuses it.
-        record = JSON.parse(readFileSync(file, "utf8").replace(/^\uFEFF/u, ""));
+        record = JSON.parse(readFileSync(file, "utf8").replace(/^﻿/u, ""));
       } catch {
         // The parser's message can quote the file's content; keep it out of the error.
         fail("not valid JSON");
       }
       const id = (record as { id?: unknown } | null)?.id;
-      if (`${String(id)}.json` !== name) fail("the file name does not match the record id");
+      if (String(id) !== expected) fail("the file name does not match the record id");
       // A record of another entity in this folder stays as it is, and validation names it.
       const full = snapshotEntityOf(record) === entity ? decodeRecord(record) : record;
-      out.push({ entity, source, record: full });
+      return { entity, source, record: full };
+    };
+    for (const name of readdirSync(folder).sort()) {
+      if (!name.endsWith(".json")) continue;
+      const source = posix.join(SNAPSHOT_DIRS[entity], name);
+      if (opts.only && !opts.only.has(source)) continue;
+      if (!RECORD_COPY.test(name)) {
+        out.push(load(name, source, name.slice(0, -".json".length)));
+        continue;
+      }
+      if (!opts.mergeCopies) {
+        skipped.push(source);
+        continue;
+      }
+      try {
+        copies.push(load(name, source, RECORD_ID.exec(name)?.[0] ?? ""));
+      } catch (err) {
+        if (!isSatiError(err)) throw err;
+        skipped.push(source);
+      }
     }
   }
-  return { records: out, skipped };
+  return { records: out, copies, skipped };
 }
 
-/** Imports the snapshot in `dir` into the DB; see `importRecords` for the rules. */
-export async function importSnapshot(ctx: ServiceContext, dir: string): Promise<ImportResult> {
-  const { records, skipped } = scanSnapshot(dir);
+/**
+ * Imports the snapshot in `dir` into the DB; see `importRecords` for the rules. `skipped` names
+ * the files left out, which are also in `problems`.
+ */
+export async function importSnapshot(
+  ctx: ServiceContext,
+  dir: string,
+  opts: ImportOptions = {},
+): Promise<ImportResult & { skipped: string[] }> {
+  const { records, copies, skipped } = scanSnapshot(dir, opts);
   const result = await importRecords(ctx, await joinTies(ctx, records));
+  // After the record itself, and one at a time: each copy meets what the ones before it left.
+  for (const copy of copies) {
+    try {
+      const more = await importRecords(ctx, await joinTies(ctx, [copy]));
+      result.imported.push(...more.imported);
+      result.problems.push(...more.problems);
+      rmSync(join(dir, copy.source), { force: true });
+    } catch (err) {
+      if (!isSatiError(err)) throw err;
+      skipped.push(copy.source);
+    }
+  }
   for (const path of skipped) {
     result.problems.push(
       `${path} is not a record file and was skipped (a copy made by a file-sync app?). Delete it.`,
     );
   }
-  return result;
+  return { ...result, skipped };
 }
 
 /** True when each side holds a field the other wrote earlier: both were edited since they met. */

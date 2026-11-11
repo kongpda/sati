@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  approveCard,
   buildBrief,
+  checkChanges,
   getContext,
   moduleHash,
   putContext,
@@ -174,6 +176,46 @@ describe("context cache", () => {
       "/Users/dara/../x",
     ]) {
       await expect(putContext(ctx, { path, summary: "s" })).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+    }
+  });
+
+  // PLAN Phase 9: a general project has no features, so nothing protected a signed-off file.
+  // An agent could overwrite the approved deck and no check would say so.
+  it("blocks a change to an approved file until the new version is approved", async () => {
+    const { ctx } = await withRepo([{ path: "deck.pptx", blob: "1" }]);
+    const v1 = "a".repeat(64);
+    const v2 = "b".repeat(64);
+    await putContext(ctx, { path: "deck.pptx", summary: "Launch deck", facts: ["12 slides"] });
+    const card = await approveCard(ctx, { path: "deck.pptx", hash: v1 });
+    expect(card).toMatchObject({ facts: ["12 slides"], approved: { hash: v1, by: ctx.actorId } });
+    const check = (change: object) =>
+      checkChanges(ctx, { changes: [{ path: "deck.pptx", ...change }], approvedOnly: true });
+    // An edit about to happen, a changed file and a removal are all blocked.
+    for (const change of [{}, { contentHash: v2 }, { kind: "deleted", contentHash: v1 }]) {
+      const result = await check(change);
+      expect(result.verdict).toBe("blocked");
+      expect(result.findings[0]).toMatchObject({ rule: "approved-changed", cardId: card.id });
+    }
+    // The same bytes are no change, and another file is not its business.
+    expect((await check({ contentHash: v1 })).verdict).toBe("ok");
+    expect(
+      (await checkChanges(ctx, { changes: [{ path: "notes.md" }], approvedOnly: true })).verdict,
+    ).toBe("ok");
+    // A new card for the file keeps the approval; approving the new version lets it through.
+    await putContext(ctx, { path: "deck.pptx", summary: "Launch deck v2" });
+    expect((await check({ contentHash: v2 })).verdict).toBe("blocked");
+    await approveCard(ctx, { path: "deck.pptx", hash: v2 });
+    expect((await check({ contentHash: v2 })).verdict).toBe("ok");
+    await approveCard(ctx, { path: "deck.pptx", hash: null });
+    expect((await check({})).verdict).toBe("ok");
+    // A file nobody read yet can be approved; a part or a wildcard cannot.
+    expect((await approveCard(ctx, { path: "contract.pdf", hash: v1 })).summary).toBe(
+      "Approved file.",
+    );
+    for (const path of ["deck.pptx#slide-2", "*.pptx"]) {
+      await expect(approveCard(ctx, { path, hash: v1 })).rejects.toMatchObject({
         code: "VALIDATION",
       });
     }

@@ -226,6 +226,7 @@ sati changes --since 7d        # what changed, as a digest or changelog
 sati undo <activity-id>        # revert one change if nothing changed since
 sati doctor                    # leases, locks, integrity, hooks
 sati doctor --fix              # release expired locks, remove cards whose file is gone
+sati card approve deck.pptx    # sign off a file; the guard blocks a change to it
 sati ui                        # the web board
 sati app --shortcut ~/Desktop  # a file that opens the board on a double click
 ```

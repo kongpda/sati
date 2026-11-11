@@ -2019,3 +2019,16 @@ Task `tsk_fevjbr`.
 - The file holds full paths of the project and the binary (as the git hooks do), so it works from any folder. It is not signed.
 - Not done, and the Phase 9 line "A one-click installer … needs code signing" stays open: installing Node and sati still needs a terminal once. A signed installer needs a certificate only the owner can buy.
 - The launcher was run on macOS only. The Windows and Linux files are checked as text.
+
+## 2026-11-11 — Owner items: approved files protected by their hash
+
+- The approval lives on the file's card (`approved: { hash, by, at }`), not in a new record type. A file with no card gets one on approval.
+- This is the one place sati reads a user's file: the CLI hashes the bytes in 1 MB pieces and keeps only the SHA-256. The glossary now says so. Core still does no I/O; it receives the hash.
+- Guard rule `approved-changed`, always `blocked`:
+  - An edit about to happen (`guard --paths`, the edit hook, MCP `feature_check`) is blocked whatever the bytes are.
+  - A general project has no `feature_check` tool (its tools are left out to save tokens), so there the agent learns it from the card: `context_get` returns `approved`, and the workflow says to ask first.
+  - A change already made (`--staged`, `--range`, `sati review`) passes when the file still has the approved hash.
+  - In a general project the guard checks approved files only; features and locks stay off there.
+- Only the CLI can approve. There is no MCP tool for it, so an agent cannot approve its own change through MCP. The board has no approve button yet (another agent owns `packages/ui`); noted in `docs/ideas.md`.
+- A project with no git hook (standalone) is protected only when the agent asks (`feature_check`) and in `sati card get`, which shows a changed or missing approved file. Nothing watches the folder.
+- `doctor --fix` never removes the card of an approved file.

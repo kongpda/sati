@@ -1,6 +1,7 @@
 import { readdirSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
+  approvedCards,
   CLI_NAME,
   checkChanges,
   ERROR_EXIT_CODES,
@@ -13,6 +14,7 @@ import {
 } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
+import { fileSha256 } from "../file-hash.js";
 import { type Change, rangeChanges, stagedChanges } from "../git.js";
 import {
   closeRuntime,
@@ -77,19 +79,40 @@ const isRepoRoot = (root: string, cwd: string, path: string) =>
 /** A general project has no features or file locks to protect, so the guard has nothing to do. */
 const guardOff = (rt: Runtime) => readSettings(rt.project.settings).kind === "general";
 
-/** The guard's verdict on `changes` with this project's settings; `review` shows the same one. */
-export async function projectVerdict(rt: Runtime, changes: Change[]): Promise<GuardResult> {
-  if (changes.length === 0 || guardOff(rt)) return { verdict: "ok", findings: [] };
+/**
+ * The guard's verdict on `changes` with this project's settings; `review` shows the same one.
+ * `made` says the changes are on disk already (a staged diff, a commit range) and not an edit
+ * about to happen: only then can an approved file be compared with its approved bytes.
+ */
+export async function projectVerdict(
+  rt: Runtime,
+  changes: Change[],
+  made = true,
+): Promise<GuardResult> {
+  if (changes.length === 0) return { verdict: "ok", findings: [] };
+  // An approved file that still has its approved bytes did not change, whatever touched it.
+  const approved = new Set((await approvedCards(rt.ctx)).map((c) => c.path));
+  if (approved.size === 0 && guardOff(rt)) return { verdict: "ok", findings: [] };
+  const hashed = changes.map((c): Change & { contentHash?: string } => {
+    if (!made || c.kind === "deleted" || !approved.has(c.path)) return c;
+    const contentHash = fileSha256(resolve(rt.location.root, c.path));
+    return contentHash === undefined ? c : { ...c, contentHash };
+  });
   const ratio = maxRemovalRatio(rt.location.root);
   return checkChanges(rt.ctx, {
-    changes,
+    changes: hashed,
+    approvedOnly: guardOff(rt),
     ...(ratio === undefined ? {} : { maxRemovalRatio: ratio }),
   });
 }
 
-async function check(rt: Runtime, changes: Change[], record: boolean): Promise<GuardResult> {
-  if (changes.length === 0 || guardOff(rt)) return { verdict: "ok", findings: [] };
-  const result = await projectVerdict(rt, changes);
+async function check(
+  rt: Runtime,
+  changes: Change[],
+  record: boolean,
+  made: boolean,
+): Promise<GuardResult> {
+  const result = await projectVerdict(rt, changes, made);
   const override = result.verdict === "blocked" && overridden();
   if (record || override) await recordGuard(rt.ctx, result, { override });
   return result;
@@ -104,7 +127,9 @@ function render(r: GuardResult): string {
     lines.push(
       overridden()
         ? "Blocked changes let through by SATI_GUARD=off; the override is logged."
-        : `Record a decision on the feature (\`${CLI_NAME} decision record --features <id>\`), ask the lock holder, or override once with SATI_GUARD=off (logged).`,
+        : r.findings.every((f) => f.level !== "blocked" || f.rule === "approved-changed")
+          ? "Ask the person who approved it, or override once with SATI_GUARD=off (logged)."
+          : `Record a decision on the feature (\`${CLI_NAME} decision record --features <id>\`), ask the lock holder, or override once with SATI_GUARD=off (logged).`,
     );
   }
   return lines.join("\n");
@@ -134,8 +159,8 @@ async function runHook(): Promise<void> {
     // Most Bash calls touch nothing we guard: skip opening the database for them.
     if (!bypass && shellChanges.length === 0 && typeof target !== "string") return;
     rt = await openRuntime(cwd);
-    if (guardOff(rt)) return;
-    if (bypass && !overridden()) {
+    // A general project guards approved files only; a commit that skips hooks is its own business.
+    if (bypass && !guardOff(rt) && !overridden()) {
       process.stderr.write(
         `blocked: ${bypass} Commit without it so the guard runs, or override once with SATI_GUARD=off (logged).\n`,
       );
@@ -166,7 +191,7 @@ async function runHook(): Promise<void> {
             ].filter((c) => c.path !== "")
           : [];
     if (changes.length === 0) return;
-    const result = await check(rt, changes, false);
+    const result = await check(rt, changes, false, false);
     if (result.verdict === "blocked" && !overridden()) {
       process.stderr.write(`${render(result)}\n`);
       process.exitCode = 2;
@@ -237,7 +262,7 @@ export default defineCommand({
               }
               return { path, kind: "modified" as const };
             });
-      const result = await check(rt, changes, args.staged ?? false);
+      const result = await check(rt, changes, args.staged ?? false, !args.paths);
       process.stdout.write(asJson ? `${JSON.stringify(result, null, 2)}\n` : `${render(result)}\n`);
       if (result.verdict === "blocked" && !overridden()) {
         process.exitCode = ERROR_EXIT_CODES.BLOCKED;

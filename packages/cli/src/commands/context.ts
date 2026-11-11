@@ -1,15 +1,35 @@
+import { resolve } from "node:path";
 import {
+  approveCard,
   CLI_NAME,
   type ContextEntry,
   type ContextView,
   getContext,
   putContext,
+  SatiError,
   shortHandle,
 } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
+import { fileSha256 } from "../file-hash.js";
 import { execute, int, list, parseJson, type Runtime } from "../runtime.js";
 import { projectPath } from "./guard.js";
+
+/** A card as shown: with how its file compares with the version a person approved. */
+type Shown = ContextView & { approval?: "kept" | "changed" | "missing" };
+
+function withApproval(rt: Runtime, e: ContextView): Shown {
+  if (e.approved === undefined) return e;
+  const hash = fileSha256(resolve(rt.location.root, e.path));
+  const approval = hash === undefined ? "missing" : hash === e.approved.hash ? "kept" : "changed";
+  return { ...e, approval };
+}
+
+const APPROVAL = {
+  kept: "approved",
+  changed: "CHANGED since it was approved",
+  missing: "approved file is MISSING",
+} as const;
 
 const state = (e: ContextView) =>
   e.stale === null
@@ -34,8 +54,8 @@ function facts(value: string | undefined): unknown {
     .filter(Boolean);
 }
 
-const render = (e: ContextView) => {
-  const lock = e.private ? "  (private)" : "";
+const render = (e: Shown) => {
+  const lock = `${e.approval ? `  [${APPROVAL[e.approval]}]` : ""}${e.private ? "  (private)" : ""}`;
   const lines = [`${shortHandle(e.id)}  ${e.path}  [${state(e)}]${lock}`, `  ${e.summary}`];
   for (const f of e.facts ?? []) lines.push(`  - ${f}`);
   if (e.tags?.length) lines.push(`  tags: ${e.tags.join(", ")}`);
@@ -65,12 +85,14 @@ const get = defineCommand({
   run: ({ args }) =>
     execute(
       args.json,
-      async (rt) =>
-        getContext(rt.ctx, {
+      async (rt) => {
+        const cards = await getContext(rt.ctx, {
           path: args.path === undefined ? undefined : cardPath(rt, args.path),
           seen: args.seen,
-        }),
-      (entries: ContextView[]) =>
+        });
+        return cards.map((e) => withApproval(rt, e));
+      },
+      (entries: Shown[]) =>
         entries.length
           ? entries.map(render).join("\n")
           : `No cards. Add one with \`${CLI_NAME} card put <path> --summary "…"\`.`,
@@ -126,11 +148,42 @@ const put = defineCommand({
     ),
 });
 
+const approve = defineCommand({
+  meta: {
+    name: "approve",
+    description:
+      "Sign off a file as it is now: the guard then blocks a change to it until it is approved again",
+  },
+  args: {
+    path: { type: "positional", required: true, description: "The file, inside the project" },
+    clear: { type: "boolean", description: "Take the approval away" },
+    ...json,
+  },
+  run: ({ args }) =>
+    execute(
+      args.json,
+      async (rt) => {
+        const path = projectPath(rt, args.path);
+        if (args.clear) return approveCard(rt.ctx, { path, hash: null });
+        // Hashed here and dropped: the bytes never reach the database.
+        const hash = fileSha256(resolve(rt.location.root, path));
+        if (hash === undefined) {
+          throw new SatiError("NOT_FOUND", `There is no file at ${args.path}.`);
+        }
+        return approveCard(rt.ctx, { path, hash });
+      },
+      (e: ContextEntry) =>
+        e.approved
+          ? `Approved ${shortHandle(e.id)}  ${e.path}  (sha256 ${e.approved.hash.slice(0, 12)})`
+          : `${e.path} is no longer approved.`,
+    ),
+});
+
 export default defineCommand({
   meta: {
     name: "card",
     description: "Cards: what agents learned about files and modules (also `sati context`)",
   },
   // `show` reads better for a person; `get` matches the MCP tool.
-  subCommands: { show: { ...get, meta: { ...getMeta, name: "show" } }, get, put },
+  subCommands: { show: { ...get, meta: { ...getMeta, name: "show" } }, get, put, approve },
 });

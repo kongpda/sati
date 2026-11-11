@@ -532,7 +532,7 @@ function registerTools(
     "context_get",
     {
       description:
-        "Cards: what agents learned about files, folders and modules (summary, facts, tags, sourceSeen). Before opening a file, get its card by path: stale: false means the file is unchanged since the card was saved, so use the card instead; stale: true means it changed: re-read it, then context_put. Pass seen (the file's modified time or hash now, in the form you saved as sourceSeen) to have it compared; do this for files outside the project. A path may name a part of a file: budget.xlsx#Sheet2, deck.pptx#slide-12, contract.pdf#p4. A path may also be a web link (SharePoint, Drive, a page) or the full path of a file outside the project; always pass seen for those. With no path, lists up to 50 card paths with a total.",
+        "Cards: what agents learned about files, folders and modules (summary, facts, tags, sourceSeen). Before opening a file, get its card by path: stale: false means the file is unchanged since the card was saved, so use the card instead; stale: true means it changed: re-read it, then context_put. Pass seen (the file's modified time or hash now, in the form you saved as sourceSeen) to have it compared; do this for files outside the project. A card with approved is a file a person signed off: ask before changing, moving or deleting it. A path may name a part of a file: budget.xlsx#Sheet2, deck.pptx#slide-12, contract.pdf#p4. A path may also be a web link (SharePoint, Drive, a page) or the full path of a file outside the project; always pass seen for those. With no path, lists up to 50 card paths with a total.",
       inputSchema: GetContextInput,
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -716,7 +716,7 @@ function registerCodeTools(
     "feature_check",
     {
       description:
-        "Before deleting, moving or rewriting code: returns the shipped features and other agents' locks the paths affect, with a verdict ok, warn or blocked. If blocked, stop and ask.",
+        "Before deleting, moving or rewriting code or a file: returns the shipped features, other agents' locks and the files a person approved that the paths affect, with a verdict ok, warn or blocked. If blocked, stop and ask.",
       inputSchema: z.strictObject({
         paths: z.array(z.string().min(1).max(LIMITS.path)).min(1).max(500),
         change: z

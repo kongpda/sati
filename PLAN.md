@@ -904,7 +904,7 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 **Needs the owner's decision before any work**
 
 - [ ] Sharing without git: a folder-sync mode (snapshot in the shared folder, database always outside it, reader tolerant of conflicted copies) as an interim before Phase 6. Live claims and locks across people still need the server. Needs an ADR
-- [ ] Protected deliverables in a general project: an approved file is protected by its hash. This makes sati read file bytes, which the Phase 8 rule forbids; today sati already hashes changed files in git mode
+- [x] Protected deliverables in a general project: an approved file is protected by its hash. This makes sati read file bytes, which the Phase 8 rule forbids; today sati already hashes changed files in git mode
 - [ ] A one-click installer for people with no terminal (Phase 7d "Desktop launcher"); needs code signing
 - [x] Card keys for files outside the project folder and for SharePoint or Drive links
 

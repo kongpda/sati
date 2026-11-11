@@ -1,14 +1,23 @@
 import { createHash } from "node:crypto";
 import micromatch from "micromatch";
 import { z } from "zod";
+import { SatiError } from "../domain/errors.js";
 import { pathsOverlap } from "../domain/locks.js";
-import { CardPath, ContextEntry, isExternalKey, LIMITS, RepoPath } from "../domain/schemas.js";
+import {
+  CardPath,
+  ContextEntry,
+  isExternalKey,
+  LIMITS,
+  RepoPath,
+  Sha256,
+} from "../domain/schemas.js";
 import { refuseSecrets } from "../domain/secrets.js";
 import type { RepoFile } from "../ports/repo.js";
 import {
   baseFields,
   insertWithLog,
   listAll,
+  nowIso,
   parseInput,
   type ServiceContext,
   updateWithLog,
@@ -182,4 +191,51 @@ export async function getContext(ctx: ServiceContext, input: unknown = {}): Prom
       return { ...e, stale: told ? stale === true || seen !== e.sourceSeen : stale };
     })
     .sort((a, b) => a.path.localeCompare(b.path));
+}
+
+export const ApproveCardInput = z.strictObject({
+  path: RepoPath,
+  /** SHA-256 of the file's bytes as it is now. `null` takes the approval away. */
+  hash: Sha256.nullable(),
+});
+export type ApproveCardInput = z.input<typeof ApproveCardInput>;
+
+/**
+ * Marks the file at `path` as approved in the version with this hash, or takes the approval away.
+ * The caller hashes the file: core does no I/O. A file with no card yet gets one, so approving
+ * needs no agent to have read it first. The guard then blocks a change to the file.
+ */
+export async function approveCard(ctx: ServiceContext, input: unknown): Promise<ContextEntry> {
+  const { path, hash } = parseInput(ApproveCardInput, input);
+  if (/[*?[\]{}]/u.test(path) || cardFile(path) !== path) {
+    throw new SatiError("VALIDATION", `Approve one whole file, not "${path}".`, {
+      hint: "Give the path of the file, without a wildcard or a `#part`.",
+    });
+  }
+  const files = ctx.repo && hash !== null ? await ctx.repo.files() : undefined;
+  const gitCommit = ctx.repo && hash !== null ? await ctx.repo.head() : null;
+  return ctx.store.write(async (w) => {
+    const existing = (await listAll(w, ctx, "context", { path })).find((e) => e.path === path);
+    if (hash === null) {
+      if (!existing?.approved) throw new SatiError("NOT_FOUND", `${path} is not approved.`);
+      return updateWithLog(w, ctx, "context", existing, {}, { clear: ["approved"] });
+    }
+    const approved = { hash, by: ctx.actorId, at: nowIso(ctx) };
+    if (existing) return updateWithLog(w, ctx, "context", existing, { approved });
+    return insertWithLog(w, ctx, "context", {
+      ...baseFields(ctx, "context"),
+      path,
+      summary: "Approved file.",
+      keyFiles: [],
+      contentHash: files ? moduleHash(path, files) : "",
+      gitCommit,
+      approved,
+    });
+  });
+}
+
+/** The approved cards, read without the file list: the guard asks on every commit. */
+export async function approvedCards(ctx: ServiceContext): Promise<ContextEntry[]> {
+  const all = await ctx.store.read((r) => listAll(r, ctx, "context"));
+  return all.filter((c) => c.approved !== undefined);
 }

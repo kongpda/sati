@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { normalizeLockPath, pathsOverlap } from "../domain/locks.js";
 import { isGuardedFeature } from "../domain/rules.js";
-import { type Feature, LIMITS, type Lock } from "../domain/schemas.js";
+import { type ContextEntry, type Feature, LIMITS, type Lock, Sha256 } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
 import { actorName, listAll, logActivity, parseInput, type ServiceContext } from "./context.js";
 import { othersLiveLocks } from "./lock.js";
@@ -34,6 +34,8 @@ const Change = z
     baseLines: z.number().int().min(0).optional(),
     /** Previous path. Required when `kind` is `renamed`. */
     from: RepoPath.optional(),
+    /** SHA-256 of the file as it is now. An approved file with this same hash did not change. */
+    contentHash: Sha256.optional(),
   })
   .refine((c) => c.kind !== "renamed" || c.from !== undefined, {
     message: "a rename needs from",
@@ -47,6 +49,8 @@ export const DEFAULT_MAX_REMOVAL_RATIO = 0.5;
 export const CheckChangesInput = z.strictObject({
   changes: z.array(Change).min(1).max(MAX_CHANGES),
   maxRemovalRatio: z.number().min(0).max(1).default(DEFAULT_MAX_REMOVAL_RATIO),
+  /** Check approved files only: a general project has no features or locks to protect. */
+  approvedOnly: z.boolean().default(false),
 });
 export type CheckChangesInput = z.input<typeof CheckChangesInput>;
 
@@ -57,7 +61,8 @@ export type GuardRule =
   | "protected-delete"
   | "protected-gutted"
   | "shipped-touched"
-  | "renamed-out";
+  | "renamed-out"
+  | "approved-changed";
 
 export interface GuardFinding {
   level: Exclude<GuardVerdict, "ok">;
@@ -67,6 +72,8 @@ export interface GuardFinding {
   paths: string[];
   featureId?: string;
   lockId?: string;
+  /** The card of an approved file. */
+  cardId?: string;
   /** A Decision on the feature that lets a removal through. */
   decisionId?: string;
 }
@@ -190,19 +197,45 @@ function featureFinding(
   };
 }
 
+function approvedFinding(card: ContextEntry, who: string, touched: ParsedChange[]): GuardFinding {
+  const day = card.approved?.at.slice(0, 10);
+  const gone = touched.some((c) => c.kind === "deleted" || c.kind === "renamed");
+  return {
+    level: "blocked",
+    rule: "approved-changed",
+    message: `${card.path} was approved by ${who} on ${day}; this ${gone ? "removes" : "changes"} it. Ask first. Once the change is agreed, a person approves the new version with \`${CLI_NAME} card approve ${card.path}\`.`,
+    paths: touched.map((c) => c.path),
+    cardId: card.id,
+  };
+}
+
 /**
  * Checks changed paths against shipped features and other agents' locks. Read-only.
  * - A path inside another actor's exclusive lock is blocked; a shared lock warns.
  * - Deleting a file of a shipped, protected feature, or removing more than `maxRemovalRatio` of
  *   its changed lines, is blocked unless a Decision lists that feature.
  * - Any other change to a shipped feature warns.
+ * - A change to a file a person approved is blocked, unless the file still has the approved hash.
  */
 export async function checkChanges(ctx: ServiceContext, input: unknown): Promise<GuardResult> {
-  const { changes, maxRemovalRatio } = parseInput(CheckChangesInput, input);
+  const { changes, maxRemovalRatio, approvedOnly } = parseInput(CheckChangesInput, input);
   return ctx.store.read(async (r) => {
     const findings: GuardFinding[] = [];
 
-    for (const lock of await othersLiveLocks(r, ctx)) {
+    for (const card of await listAll(r, ctx, "context")) {
+      const approved = card.approved;
+      if (approved === undefined) continue;
+      const touched = changes.filter(
+        (c) =>
+          touches([card.path], c) &&
+          (c.kind === "deleted" || c.kind === "renamed" || c.contentHash !== approved.hash),
+      );
+      if (touched.length > 0) {
+        findings.push(approvedFinding(card, await actorName(r, approved.by), touched));
+      }
+    }
+
+    for (const lock of approvedOnly ? [] : await othersLiveLocks(r, ctx)) {
       const paths = changes.filter((c) => touches(lock.paths, c)).map((c) => c.path);
       if (paths.length > 0)
         findings.push(lockFinding(lock, await actorName(r, lock.actorId), paths));
@@ -210,7 +243,7 @@ export async function checkChanges(ctx: ServiceContext, input: unknown): Promise
 
     // This runs on every commit: read shipped features by index, and decisions only when the
     // change touches one of them.
-    const shipped = await listAll(r, ctx, "feature", { status: ["shipped"] });
+    const shipped = approvedOnly ? [] : await listAll(r, ctx, "feature", { status: ["shipped"] });
     const hit = shipped
       .filter(isGuardedFeature)
       .map((f) => ({ f, touched: changes.filter((c) => touches(f.paths, c)) }))
@@ -249,7 +282,9 @@ export async function recordGuard(
     for (const f of result.findings) {
       const [entity, entityId] = f.featureId
         ? (["feature", f.featureId] as const)
-        : (["lock", f.lockId as string] as const);
+        : f.cardId
+          ? (["context", f.cardId] as const)
+          : (["lock", f.lockId as string] as const);
       await logActivity(w, ctx, "guard", entity, entityId, {
         rule: f.rule,
         level: f.level,

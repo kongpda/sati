@@ -72,6 +72,9 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
 - A file in SharePoint, Drive or another folder: use its web link or its full path as the card
   path. sati cannot see it change, so always pass `seen`. Leave access tokens out of a link. A
   card for a full path stays on this machine unless you pass `private: false`.
+- A person can approve a finished file (`sati card approve <file>`); its card then holds
+  `approved`. Before you change, move or delete a file, `context_get` its path. A card with
+  `approved` means stop and ask. Only a person approves the new version.
 - `private: true` on a card or note keeps it on this machine: never in `.sati/` or git. Use it
   for confidential material. A shared item cannot be made private later.
 - Pinned notes (brand voice, policies, contacts) reach every brief; pin only what everyone needs.

@@ -1,14 +1,23 @@
 {
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "heartbeatAt": "2026-11-11T07:58:49.431Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 67720
-    },
-    "leaseUntil": "2026-11-11T09:58:49.431Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "8b7ac5abb41ad0f1c297eee3fa2ec3b6a9bb1dca",
+    "completedAt": "2026-11-11T08:01:41.435Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "packages/cli/src/launcher.ts",
+      "packages/cli/src/commands/ui.ts",
+      "packages/cli/src/index.ts",
+      "packages/cli/test/launcher.test.ts",
+      "README.md",
+      "docs/guide/quick-start.md",
+      "docs/progress.md",
+      ".changeset/app-launcher.md",
+      "PLAN.md"
+    ],
+    "releaseNote": "sati app --shortcut writes a file that opens the board on a double click.",
+    "summary": "sati app is sati ui under the PLAN name; --shortcut <folder> writes a double-click launcher for this project (.command on macOS, .cmd on Windows, desktop entry on Linux) with full paths of project and binary (commit 8b7ac5a). Test runs the macOS launcher from another folder with a space and a quote in the names; Windows and Linux files are checked as text only. Not done: a signed one-click installer (needs the owner's certificate); that Phase 9 line stays open."
   },
   "createdAt": "2026-11-11T07:50:25.442Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
@@ -19,13 +28,14 @@
   "stamps": {
     "*": "2026-11-11T07:50:25.442Z#000002#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "branch": "2026-11-11T07:58:49.431Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "claim": "2026-11-11T07:58:49.431Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "status": "2026-11-11T07:58:49.431Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T08:01:41.435Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T08:01:41.435Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T08:01:41.435Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "worktree": "2026-11-11T07:58:49.431Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Desktop launcher: sati app starts the local board and opens it",
-  "updatedAt": "2026-11-11T07:58:49.432Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T08:01:41.436Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

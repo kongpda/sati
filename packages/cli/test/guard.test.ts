@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { locateDb, SqliteStore } from "@sati/store-sqlite";
 import { describe, expect, it } from "vitest";
@@ -79,6 +79,34 @@ describe("sati guard --staged", () => {
     expect(sati(dir, "guard", "--staged")).toMatchObject({ code: 0, stdout: "Guard: ok.\n" });
     sati(dir, "settings", "--kind", "code");
     expect(sati(dir, "guard", "--staged").code).toBe(10);
+  });
+
+  // PLAN Phase 9: the guard was off in a general project, so a signed-off deck had no protection.
+  it("guards an approved file in a general project by its bytes", async () => {
+    const { dir } = await billingRepo();
+    sati(dir, "settings", "--kind", "general");
+    writeFileSync(join(dir, "deck.pptx"), "version one");
+    expect(sati(dir, "card", "approve", "deck.pptx").stdout).toContain("Approved");
+    expect(sati(dir, "card", "get", "deck.pptx").stdout).toContain("[approved]");
+    // An agent asks before it edits: blocked, whatever the bytes are now.
+    const asked = sati(dir, "guard", "--paths", "deck.pptx");
+    expect(asked.code).toBe(10);
+    expect(asked.stdout).toContain("deck.pptx was approved by");
+    // Staged with the approved bytes it passes; with other bytes it does not.
+    git(dir, "add", "deck.pptx");
+    expect(sati(dir, "guard", "--staged")).toMatchObject({ code: 0, stdout: "Guard: ok.\n" });
+    writeFileSync(join(dir, "deck.pptx"), "version two");
+    git(dir, "add", "deck.pptx");
+    expect(sati(dir, "guard", "--staged").code).toBe(10);
+    expect(sati(dir, "card", "get", "deck.pptx").stdout).toContain("CHANGED since it was approved");
+    // The cleanup never drops the card of a missing approved file.
+    rmSync(join(dir, "deck.pptx"));
+    git(dir, "rm", "-q", "--cached", "deck.pptx");
+    sati(dir, "doctor", "--fix");
+    expect(sati(dir, "card", "get", "deck.pptx").stdout).toContain("approved file is MISSING");
+    expect(sati(dir, "card", "approve", "deck.pptx").code).toBe(3);
+    expect(sati(dir, "card", "approve", "deck.pptx", "--clear").code).toBe(0);
+    expect(sati(dir, "guard", "--paths", "deck.pptx").code).toBe(0);
   });
 
   it("blocks gutting a protected feature, warns on a small edit, passes unrelated files", async () => {

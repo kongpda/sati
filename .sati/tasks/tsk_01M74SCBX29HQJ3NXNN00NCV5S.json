@@ -1,4 +1,15 @@
 {
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "heartbeatAt": "2026-11-11T08:01:41.950Z",
+    "holder": {
+      "host": "h:001065b26af48df5",
+      "pid": 67720
+    },
+    "leaseUntil": "2026-11-11T11:01:41.950Z",
+    "token": 2
+  },
   "createdAt": "2026-11-11T07:50:25.443Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
   "id": "tsk_01M74SCBX29HQJ3NXNN00NCV5S",
@@ -6,10 +17,15 @@
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "*": "2026-11-11T07:50:25.443Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+    "*": "2026-11-11T07:50:25.443Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "branch": "2026-11-11T08:01:41.951Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T08:01:41.951Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T08:01:41.951Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "worktree": "2026-11-11T08:01:41.951Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "todo",
+  "status": "in_progress",
   "title": "Protected deliverables in a general project: an approved file is protected by its hash",
-  "updatedAt": "2026-11-11T07:50:25.443Z",
-  "version": 1
+  "updatedAt": "2026-11-11T08:01:41.952Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

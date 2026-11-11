@@ -147,6 +147,8 @@ function goneCards(root: string, git: boolean, cards: ContextEntry[]): ContextEn
   const missing = cards.filter(
     (c) =>
       !isExternalKey(c.path) &&
+      // A missing approved file is a lost deliverable, not bloat: `card get` reports it.
+      c.approved === undefined &&
       !GLOB.test(c.path) &&
       !existsSync(resolve(root, c.path)) &&
       !existsSync(resolve(root, cardFile(c.path))),

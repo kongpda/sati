@@ -58,6 +58,8 @@ const body = z.string().max(LIMITS.body);
 const shortText = z.string().max(LIMITS.shortText);
 const list = <T extends z.ZodType>(item: T) => z.array(item).max(LIMITS.array);
 const pathGlob = z.string().min(1).max(LIMITS.path);
+/** SHA-256 of a file's bytes, in lower-case hex. */
+export const Sha256 = z.string().regex(/^[0-9a-f]{64}$/u, "use a SHA-256 in lower-case hex");
 const label = z.string().trim().min(1).max(100);
 /**
  * A repo-relative path or glob from input, normalised (no `./`, no trailing `/`). Absolute paths
@@ -450,6 +452,11 @@ export const ContextEntry = z.strictObject({
   sourceTokens: z.number().int().min(0).max(100_000_000).optional(),
   /** Kept in this machine's database only, like a private note. */
   private: z.literal(true).optional(),
+  /**
+   * The version of the file a person signed off: the SHA-256 of its bytes, who and when. The
+   * guard blocks a change to the file until it is approved again.
+   */
+  approved: z.strictObject({ hash: Sha256, by: ActorId, at: ts }).optional(),
 });
 export type ContextEntry = z.infer<typeof ContextEntry>;
 

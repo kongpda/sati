@@ -1,3 +1,6 @@
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { checks, record, rows } from "../src/render.js";
 import {
@@ -5,8 +8,10 @@ import {
   clean,
   cleanDeep,
   detect,
+  LISTED,
   markdown,
   pager,
+  pipeTo,
   polish,
   setTerm,
   type Term,
@@ -171,6 +176,17 @@ describe("layout", () => {
     expect(pager(100, {}, screen, "darwin")).toBeNull();
   });
 
+  // The pager is the user's own command. One that is not installed must not swallow the answer.
+  it.skipIf(process.platform === "win32")(
+    "hands the text to the pager, and says so when the pager cannot start",
+    async () => {
+      const file = join(mkdtempSync(join(tmpdir(), "sati-pager-")), "out");
+      expect(await pipeTo({ command: `cat > '${file}'`, env: {} }, "one\ntwo")).toBe(true);
+      expect(readFileSync(file, "utf8")).toBe("one\ntwo\n");
+      expect(await pipeTo({ command: "sati-no-such-pager 2>/dev/null", env: {} }, "x")).toBe(false);
+    },
+  );
+
   it("shows local time to a person and the stored ISO time to a pipe", () => {
     const iso = "2026-01-02T03:04:05.000Z";
     setTerm(piped);
@@ -227,6 +243,8 @@ describe("rendering for a person and for a pipe", () => {
     expect(out).toBe("✖ locks  1 expired\n✔ links  sound\n\n1 failed, 1 passed.");
     expect(polish("Created tsk_1")).toBe("✔ Created tsk_1");
     expect(polish("No tasks.")).toBe("No tasks.");
+    // A list that opens with stored text says so: an author called "Created by hand" did nothing.
+    expect(polish(`${LISTED}Created by hand  now`)).toBe("Created by hand  now");
   });
 
   it("adds colour codes only when colour is on", () => {

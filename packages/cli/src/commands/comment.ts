@@ -10,7 +10,7 @@ import {
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { bodyText, execute } from "../runtime.js";
-import { bold, dim, term, when, wrap, yellow } from "../term.js";
+import { bold, dim, LISTED, term, when, wrap, yellow } from "../term.js";
 
 /** One comment: UTC time, author's name, and the body indented under it. */
 const line = (n: Note, names: Map<string, string>) => {
@@ -62,7 +62,9 @@ const ls = defineCommand({
       },
       (items: Note[]) =>
         items.length
-          ? items.map((n) => line(n, names)).join(term().rich ? "\n\n" : "\n")
+          ? term().rich
+            ? `${LISTED}${items.map((n) => line(n, names)).join("\n\n")}`
+            : items.map((n) => line(n, names)).join("\n")
           : `No comments. Add one with \`${CLI_NAME} comment add ${args.on} "text"\`.`,
     );
   },

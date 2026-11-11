@@ -175,7 +175,7 @@ describe("git hooks", () => {
     const r = spawnSync("sh", ["-c", hook.content], { cwd: dir, encoding: "utf8" });
     expect(r.status).toBe(0);
     expect(r.stderr).toBe(
-      "sati is no longer at /nonexistent/sati, so its git hooks did not run. Run `sati init --upgrade` from the new install.\n",
+      "sati is no longer at /nonexistent/sati, so its git hooks did not run. Run `sati upgrade` from the new install.\n",
     );
   });
 
@@ -238,7 +238,7 @@ describe("git hooks", () => {
     expect(first.files).toContainEqual({ path: `${folder}/pre-push`, action: "skip" });
     expect(first.files.some((f) => f.path.startsWith(".git/hooks/"))).toBe(false);
     expect(first.notes).toEqual([
-      `(${folder}/pre-commit: git uses the global core.hooksPath ${folder} for every repo on this machine, so sati did not write there and its git hooks will not run in this repo. To chain them into that folder (they do nothing in repos without sati), run \`sati init --upgrade --global-hooks\`)`,
+      `(${folder}/pre-commit: git uses the global core.hooksPath ${folder} for every repo on this machine, so sati did not write there and its git hooks will not run in this repo. To chain them into that folder (they do nothing in repos without sati), run \`sati upgrade --global-hooks\`)`,
     ]);
     expect(read(folder, "pre-commit")).toBe(theirs);
     expect(existsSync(join(folder, "post-merge"))).toBe(false);

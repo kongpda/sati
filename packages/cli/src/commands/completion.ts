@@ -1,3 +1,4 @@
+import { basename } from "node:path";
 import { CLI_NAME, SatiError } from "@sati/core";
 import { type CommandDef, defineCommand } from "citty";
 import { output } from "../runtime.js";
@@ -140,12 +141,12 @@ function fish(root: Node): string {
   const tops = root.subs.map((s) => s.name).join(" ");
   for (const s of root.subs) {
     lines.push(
-      `complete -c ${CLI_NAME} -n "not __fish_seen_subcommand_from ${tops}" -a ${s.name} -d '${plain(s.description)}'`,
+      `complete -c ${CLI_NAME} -n "not __fish_seen_subcommand_from ${tops}" -f -a ${s.name} -d '${plain(s.description)}'`,
     );
     const inner = s.subs.map((x) => x.name).join(" ");
     for (const x of s.subs) {
       lines.push(
-        `complete -c ${CLI_NAME} -n "__fish_seen_subcommand_from ${s.name}; and not __fish_seen_subcommand_from ${inner}" -a ${x.name} -d '${plain(x.description)}'`,
+        `complete -c ${CLI_NAME} -n "__fish_seen_subcommand_from ${s.name}; and not __fish_seen_subcommand_from ${inner}" -f -a ${x.name} -d '${plain(x.description)}'`,
       );
       for (const f of x.flags) {
         lines.push(
@@ -153,12 +154,11 @@ function fish(root: Node): string {
         );
       }
     }
-    if (s.subs.length === 0) {
-      for (const f of s.flags) {
-        lines.push(
-          `complete -c ${CLI_NAME} -n "__fish_seen_subcommand_from ${s.name}" -l ${f.name} -d '${plain(f.description)}'`,
-        );
-      }
+    const before = inner ? `; and not __fish_seen_subcommand_from ${inner}` : "";
+    for (const f of s.flags) {
+      lines.push(
+        `complete -c ${CLI_NAME} -n "__fish_seen_subcommand_from ${s.name}${before}" -l ${f.name} -d '${plain(f.description)}'`,
+      );
     }
   }
   return `${lines.join("\n")}\n`;
@@ -170,7 +170,9 @@ const SHELLS = { bash, zsh, fish } as const;
 export function script(shell: string, root: Node): string {
   const make = SHELLS[shell as keyof typeof SHELLS];
   if (make === undefined) {
-    throw new SatiError("USAGE", `No completion for the shell ${JSON.stringify(shell)}.`, {
+    const what =
+      shell === "" ? "Which shell?" : `No completion for the shell ${JSON.stringify(shell)}.`;
+    throw new SatiError("USAGE", what, {
       hint: `Run \`${CLI_NAME} completion bash\`, \`zsh\` or \`fish\`.`,
     });
   }
@@ -185,12 +187,17 @@ export const completionCommand = (root: () => CommandDef) =>
       description: `Print a tab-completion script: eval "$(${CLI_NAME} completion zsh)"`,
     },
     args: {
-      shell: { type: "positional", description: "bash, zsh or fish", required: true },
+      shell: {
+        type: "positional",
+        description: "bash, zsh or fish (default: your shell, from $SHELL)",
+        required: false,
+      },
     },
     run: ({ args }) =>
       output(
         false,
-        async () => script(String(args.shell), await tree(root(), CLI_NAME)),
+        async () =>
+          script(args.shell ?? basename(process.env.SHELL ?? ""), await tree(root(), CLI_NAME)),
         (text) => text,
       ),
   });

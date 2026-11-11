@@ -57,7 +57,7 @@ export function installedSelf(root: string): string[] | undefined {
   return words.length > 0 ? words : undefined;
 }
 
-const UPGRADE = `Run \`${CLI_NAME} init --upgrade\` from the new install.`;
+const UPGRADE = `Run \`${CLI_NAME} upgrade\` from the new install.`;
 
 /** A hook runner in `<git-common-dir>/sati/hooks/`. Only this file holds the binary's path. */
 function runner(self: string[], purpose: string, body: string): string {
@@ -65,7 +65,7 @@ function runner(self: string[], purpose: string, body: string): string {
   // script checked, a removed node exits 127 and blocks each commit instead of the soft exit.
   return `#!/bin/sh
 ${OWNER}: ${purpose}
-# Rewritten by \`${CLI_NAME} init --upgrade\`; do not edit.
+# Rewritten by \`${CLI_NAME} upgrade\`; do not edit.
 ${CLI_NAME}() { ${self.map(sh).join(" ")} "$@"; }
 for bin in ${self.map(sh).join(" ")}; do
   if [ ! -e "$bin" ]; then
@@ -360,7 +360,7 @@ export function planHooks(
   }
   const first = planned.find((h) => h.global);
   if (first && !globalHooks) {
-    first.note = `git uses the global core.hooksPath ${slashed(dir)} for every repo on this machine, so ${CLI_NAME} did not write there and its git hooks will not run in this repo. To chain them into that folder (they do nothing in repos without ${CLI_NAME}), run \`${runHint(root, "init --upgrade --global-hooks")}\``;
+    first.note = `git uses the global core.hooksPath ${slashed(dir)} for every repo on this machine, so ${CLI_NAME} did not write there and its git hooks will not run in this repo. To chain them into that folder (they do nothing in repos without ${CLI_NAME}), run \`${runHint(root, "upgrade --global-hooks")}\``;
   }
   return planned;
 }

@@ -13,6 +13,7 @@ import {
   restoreRecord,
   SatiError,
   type ServiceContext,
+  shortHandle,
   type Task,
   type TaskRow,
   takeOverTask,
@@ -23,7 +24,7 @@ import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
 import { bodyText, execute, int, list, parseJson, ref, refs } from "../runtime.js";
-import { when } from "../term.js";
+import { clean, when } from "../term.js";
 
 const token = {
   token: {
@@ -354,6 +355,38 @@ const checklist = defineCommand({
     ),
 });
 
+/**
+ * `task claim --pick`: a person chooses from the ready tasks, in the order `task claim` would
+ * take them. Null when they cancel.
+ */
+async function pickReady(ctx: ServiceContext, conflict: boolean): Promise<string | null> {
+  if (conflict || !process.stdin.isTTY || !process.stdout.isTTY) {
+    throw new SatiError(
+      "USAGE",
+      "--pick asks a question, so it needs a terminal and no id or --json.",
+      {
+        hint: `Run \`${CLI_NAME} task list --ready\`, then \`${CLI_NAME} task claim <id>\`.`,
+      },
+    );
+  }
+  const ready = await listTasks(ctx, { ready: true, limit: 50 });
+  if (ready.length === 0) {
+    throw new SatiError("NOT_FOUND", "No ready task.", {
+      hint: `Create one with \`${CLI_NAME} task create\`, or see \`${CLI_NAME} task list\`.`,
+    });
+  }
+  const clack = await import("@clack/prompts");
+  const chosen = await clack.select<string>({
+    message: "Claim which task?",
+    options: ready.map((t) => ({
+      value: t.id,
+      label: clean(t.title),
+      hint: `${shortHandle(t.id)} ${t.priority}`,
+    })),
+  });
+  return clack.isCancel(chosen) ? null : chosen;
+}
+
 const claim = defineCommand({
   meta: {
     name: "claim",
@@ -366,6 +399,7 @@ const claim = defineCommand({
       description: "Task id, or omit to claim the top ready task",
     },
     lease: { type: "string", description: "Lease length in minutes (default: project setting)" },
+    pick: { type: "boolean", description: "Choose from the ready tasks (needs a terminal)" },
     ...json,
   },
   run: ({ args }) =>
@@ -373,16 +407,22 @@ const claim = defineCommand({
       args.json,
       async ({ ctx }) => {
         const leaseMinutes = int(args.lease, "lease");
+        if (args.pick) {
+          const chosen = await pickReady(ctx, args.id !== undefined || args.json === true);
+          return chosen === null ? null : claimTask(ctx, chosen, { leaseMinutes });
+        }
         if (!args.id) {
           const next = await claimNext(ctx, { leaseMinutes });
           return { ...next.task, acceptance: next.acceptance };
         }
         return claimTask(ctx, await resolveId(ctx, "task", args.id), { leaseMinutes });
       },
-      (t: Task & { acceptance?: string[] }) =>
-        `Claimed ${row(t)} until ${when(t.claim?.leaseUntil)}, token ${t.claim?.token}${
-          t.acceptance?.length ? `\n${t.acceptance.map((a) => `- ${a}`).join("\n")}` : ""
-        }`,
+      (t: (Task & { acceptance?: string[] }) | null) =>
+        t === null
+          ? "Nothing claimed."
+          : `Claimed ${row(t)} until ${when(t.claim?.leaseUntil)}, token ${t.claim?.token}${
+              t.acceptance?.length ? `\n${t.acceptance.map((a) => `- ${a}`).join("\n")}` : ""
+            }`,
     ),
 });
 

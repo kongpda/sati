@@ -113,7 +113,9 @@ export async function usage(
         description?: string;
         hidden?: boolean;
       };
-      if (!m.hidden) described.set(sub, m.description ?? "");
+      // A list of commands is scanned, not read: the first sentence. The rest is in the
+      // command's own help.
+      if (!m.hidden) described.set(sub, (m.description ?? "").replace(/\. .*$/su, ""));
     }
     const label = (sub: string) =>
       atRoot

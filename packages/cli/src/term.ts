@@ -302,14 +302,21 @@ const code = (all: string, inner: string): string => (term().color ? cyan(inner)
 const DONE =
   /^(Created|Updated|Deleted|Restored|Claimed|Released|Completed|Recorded|Saved|Locked|Commented on|Took over|Imported|Exported|Synced|Initialized|Upgraded|Approved|Undid|Handoff|Read|Cleared|Forgot|Wrote|Sharing is on)\b/u;
 const LABEL = /^(\s*)(warning|blocked|hint|Note|Next):/u;
+/**
+ * A rich list whose first line starts with stored text (an author's name) begins with this, so a
+ * name such as "Created by hand" is not taken for a finished action. `polish` removes it.
+ */
+export const LISTED = "\u2060";
 
 /**
  * The last pass over every command's text for a person: a tick on the line that says what was
  * done, colour on `warning:`, `blocked:` and `hint:` labels, and on commands to run.
  */
-export function polish(text: string): string {
+export function polish(input: string): string {
   const t = term();
-  if (!t.rich || text === "") return text;
+  if (!t.rich || input === "") return input;
+  const listed = input.startsWith(LISTED);
+  const text = listed ? input.slice(LISTED.length) : input;
   const paint: Record<string, (s: string) => string> = {
     warning: yellow,
     Note: yellow,
@@ -327,7 +334,7 @@ export function polish(text: string): string {
         )
         .replace(CODE, code),
     );
-  if (DONE.test(lines[0] ?? "")) lines[0] = `${green(symbols().ok)} ${lines[0]}`;
+  if (!listed && DONE.test(lines[0] ?? "")) lines[0] = `${green(symbols().ok)} ${lines[0]}`;
   return lines.join("\n");
 }
 
@@ -357,4 +364,23 @@ export function pager(
   const command = (env.SATI_PAGER ?? env.PAGER)?.trim() ?? (platform === "win32" ? "" : "less");
   if (command === "" || command === "cat") return null;
   return { command, env: env.LESS === undefined ? { LESS: "FRX" } : {} };
+}
+
+/**
+ * Sends text through the pager and waits for it to close. False when the pager is not installed
+ * (127) or could not start (126), so the caller prints the text as usual.
+ */
+export async function pipeTo(
+  use: { command: string; env: Record<string, string> },
+  text: string,
+): Promise<boolean> {
+  const { spawnSync } = await import("node:child_process");
+  // The pager is the user's own setting, run as git runs it: through the shell.
+  const r = spawnSync(use.command, {
+    shell: true,
+    input: `${text}\n`,
+    stdio: ["pipe", "inherit", "inherit"],
+    env: { ...process.env, ...use.env },
+  });
+  return r.error === undefined && r.status !== 127 && r.status !== 126;
 }

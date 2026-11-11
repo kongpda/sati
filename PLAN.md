@@ -944,6 +944,15 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 - [x] `sati --version` shows the commit the build was made from (`0.1.0+48a630b`, `.dirty` for uncommitted changes); `-v` and `-V` print the same line
 - [x] `sati doctor`, when sati runs from a source checkout, says when the source has newer code than the build
 
+**9k — Command-line review (owner asked 2026-11-11)**
+
+- [x] A group typed alone (`sati task`) prints that group's help, exit 2. `sati help [command]` is `--help`
+- [x] A missing argument shows what to type (`Missing <id>: sati task show <id>`); `sati --bogus` says the option is unknown
+- [x] Command lists show the first sentence of each description; exit codes and flag lists stay in the command's own help
+- [x] `sati task claim --pick` lets a person choose from the ready tasks. `task claim` with no id still claims the top one
+- [x] `sati completion` with no shell follows `$SHELL`; fish offers no file names where a command goes
+- [x] Every hint that named `init --upgrade` names `sati upgrade`, the git hook runner's message too
+
 **Not in Phase 9:** registry collisions (two folders with one slug, a copied folder sharing a database) are fixed under task `tsk_01M74P…VB2MP62GRN1XC90AKCE` by another agent.
 
 **Gate:** the Phase 8 gate folder, on a machine with no git, driven through MCP by a client that sets no agent variable: the caller is recorded as an agent, cards with anchors go stale when the file changes, and Khmer questions recall Khmer cards. `pnpm lint && pnpm typecheck && pnpm test` pass and the performance budgets are unchanged.

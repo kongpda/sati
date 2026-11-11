@@ -2115,3 +2115,14 @@ Task `tsk_fevjbr`.
 - `-v` and `-V` both print the version. No command has a verbose flag, node, npm and pnpm use `-v`, and many other tools use `-V`. They work only as the single argument, like `--version`.
 - `turbo.json` turns the cache off for the CLI build only. A cached `dist` would come back with the stamp of an older commit. The other packages still cache; the CLI bundle builds in about a second.
 - `sati doctor` adds a `build` check only when the bundle sits inside a source checkout. It compares the stamped commit with `HEAD` for `packages/` and `pnpm-lock.yaml` only: task records and docs change with every piece of work and do not make a build old. A stale build fails the check in every project, with the folder and `pnpm build` in the message. A build with uncommitted changes passes and says so.
+
+## 2026-11-11 — 9k: command-line review
+
+- Walked every command as a new user in an empty repo and fixed what needed a second command to understand. Left alone: validation text from the core (`Invalid input: priority: …`), which MCP callers read too.
+- `task claim --pick` is a flag, not the default: scripts and agents rely on `task claim` with no id. It refuses without a terminal, with an id, or with `--json`.
+- The hook runner's text changed, so each project's hooks are out of date once until `sati upgrade` runs; `doctor` says so.
+- The pager's spawn moved to `pipeTo` in `term.ts` and is tested with a command that writes a file and one that does not exist.
+- fish: the script was run in fish 4.9.3 (a standalone copy, not installed). The fish test runs only where fish is on the PATH, so CI skips it.
+- The stray check mark: a rich list that opens with stored text starts with a marker (`LISTED`) that `polish` removes. Only the comment list needed it.
+- Not built, in `docs/ideas.md`: commands that take a task id defaulting to the task you hold.
+

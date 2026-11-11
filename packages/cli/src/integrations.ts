@@ -449,7 +449,7 @@ export function warnIfNotOnPath(tools: readonly string[], local = false): void {
   if (tools.length === 0 || local || onPath(CLI_NAME)) return;
   process.stderr.write(
     `warning: \`${CLI_NAME}\` is not on PATH, so the MCP server and hooks set up here will not start.\n` +
-      `hint: Add it to this project with \`npm install -D ${PACKAGE_NAME}\` then run \`npx ${CLI_NAME} init --upgrade\` and \`npx ${CLI_NAME} rules sync\`, or install it globally with \`npm install -g ${PACKAGE_NAME}\`.\n`,
+      `hint: Add it to this project with \`npm install -D ${PACKAGE_NAME}\` then run \`npx ${CLI_NAME} upgrade\` and \`npx ${CLI_NAME} rules sync\`, or install it globally with \`npm install -g ${PACKAGE_NAME}\`.\n`,
   );
 }
 

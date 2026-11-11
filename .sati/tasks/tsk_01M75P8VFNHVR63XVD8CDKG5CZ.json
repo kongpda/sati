@@ -1,14 +1,31 @@
 {
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
-    "heartbeatAt": "2026-11-11T16:15:56.366Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 23266
-    },
-    "leaseUntil": "2026-11-11T20:15:56.366Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "e6b13c1f40631e112369997f172e00ea81a0f292",
+    "completedAt": "2026-11-11T16:29:43.681Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/cli/src/commands/comment.ts",
+      "packages/cli/src/commands/completion.ts",
+      "packages/cli/src/commands/task.ts",
+      "packages/cli/src/help.ts",
+      "packages/cli/src/hooks.ts",
+      "packages/cli/src/integrations.ts",
+      "packages/cli/src/main.ts",
+      "packages/cli/src/runtime.ts",
+      "packages/cli/src/term.ts",
+      "packages/cli/test/hooks.test.ts",
+      "packages/cli/test/output.test.ts",
+      "packages/cli/test/term.test.ts",
+      "PLAN.md",
+      "README.md",
+      "docs/ideas.md",
+      "docs/progress.md",
+      ".changeset/cli-followups.md"
+    ],
+    "releaseNote": "`sati help <command>`, help for a group typed alone, clearer missing-argument errors, and `sati task claim --pick`.",
+    "summary": "Leftovers from 9j: fish completion run in fish 4.9.3 and fixed (no file names where a command goes, group flags), pager spawn moved to pipeTo and tested, hook runner and every hint name `sati upgrade`, `task claim --pick`, no check mark on a comment list that opens with a name. Review of the command line: a group typed alone prints its help, `sati help <command>`, missing arguments show what to type, `sati --bogus` is an unknown option, command lists show the first sentence, `sati completion` follows $SHELL. Tests pass with a 60 s timeout; the 5 s default timed out under machine load from other projects."
   },
   "createdAt": "2026-11-11T16:15:19.029Z",
   "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
@@ -18,13 +35,14 @@
   "stamps": {
     "*": "2026-11-11T16:15:19.030Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "branch": "2026-11-11T16:15:56.367Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "claim": "2026-11-11T16:15:56.367Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "status": "2026-11-11T16:15:56.367Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-11T16:29:43.682Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-11T16:29:43.682Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-11T16:29:43.682Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "worktree": "2026-11-11T16:15:56.367Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "CLI DX pass: leftovers from 9j (fish check, pager test, hook text, task picker, stray tick) and a review of every command's help, errors and hints",
-  "updatedAt": "2026-11-11T16:15:56.368Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T16:29:43.683Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

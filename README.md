@@ -228,7 +228,9 @@ If you are an agent working in a repo that uses sati:
 - **Output follows the reader.** In a terminal: colour, aligned columns and local times. In a
   pipe: compact lines without colour. `NO_COLOR=1` or `--no-color` turns colour off anywhere.
   Output taller than the terminal opens in your pager (`PAGER=cat` turns that off).
-- **Tab completion.** `eval "$(sati completion zsh)"` in your shell profile; also `bash` and `fish`.
+- **Tab completion.** `eval "$(sati completion)"` in your shell profile (bash, zsh; fish:
+  `sati completion | source`).
+- **Help anywhere.** `sati help task claim`, `sati task claim --help`, or a group alone (`sati task`).
 - **After you update sati**, run `sati upgrade` in each project.
 - **Never** edit `.sati/` by hand or commit with `--no-verify`.
 

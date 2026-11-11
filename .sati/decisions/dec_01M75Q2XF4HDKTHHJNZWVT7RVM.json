@@ -1,0 +1,16 @@
+{
+  "consequences": "Each project's hooks read as out of date once, until `sati upgrade` runs. The fish completion test runs only where fish is installed. Defaulting an omitted task id to the task the caller holds stays an idea.",
+  "context": "The owner asked for the items left after 9j and a review of the whole command line. The earlier decision rejected a picker because it would change `task claim` with no id; a flag avoids that.",
+  "createdAt": "2026-11-11T16:29:33.027Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "`task claim --pick` lets a person choose from the ready tasks; it is a flag, so `task claim` with no id still claims the top one. A group typed alone prints its help (exit 2) and `sati help <command>` is `--help`. Command lists show the first sentence of a description. The git hook runner's message names `sati upgrade`. Validation text from the core is not reworded for the CLI.",
+  "id": "dec_01M75Q2XF4HDKTHHJNZWVT7RVM",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T16:29:33.029Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "supersedes": "dec_01M75P1B01X5RQ7BA5ERJJYTMP",
+  "title": "Command-line review: `task claim --pick`, help for a group typed alone, hints name `sati upgrade`",
+  "updatedAt": "2026-11-11T16:29:33.027Z",
+  "version": 1
+}

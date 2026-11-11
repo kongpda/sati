@@ -48,7 +48,11 @@ async function unknownFlag(root: CommandDef, argv: readonly string[]): Promise<s
     const at = rest.findIndex((a) => !a.startsWith("-"));
     const name = rest[at];
     const next = name === undefined ? undefined : subs[name];
-    if (next === undefined) return undefined; // citty reports the unknown or missing command
+    if (next === undefined) {
+      // `sati --bogus`: with no command word, citty would only say that a command is missing.
+      const flag = name === undefined ? rest.find((a) => a.startsWith("-") && a !== "--json") : "";
+      return flag ? `Unknown option ${flag}.` : undefined; // citty reports the rest
+    }
     cmd = await resolveValue(next);
     rest = rest.slice(at + 1);
   }
@@ -194,6 +198,11 @@ export async function main(root: CommandDef, layout: HelpLayout): Promise<void> 
     process.exitCode = 2;
     return;
   }
+  // `sati help task claim` is `sati task claim --help`.
+  if (argv[0] === "help") {
+    argv.shift();
+    argv.push("--help");
+  }
   if (argv.length === 1 && VERSION_FLAGS.has(argv[0] ?? "")) {
     const meta = (await resolveValue(root.meta ?? {})) as { version?: string };
     process.stdout.write(`${meta.version ?? ""}\n`);
@@ -222,7 +231,20 @@ export async function main(root: CommandDef, layout: HelpLayout): Promise<void> 
       return;
     }
     // Anything else is a parsing error from citty.
-    const message = stripVTControlCharacters(err instanceof Error ? err.message : String(err));
+    const raw = stripVTControlCharacters(err instanceof Error ? err.message : String(err));
+    const typedPath = await commandWords(root, words(argv));
+    // A group typed alone (`sati task`) is a question, as a bare `sati` is: answer with its help.
+    if (raw === "No command specified." && !argv.includes("--json")) {
+      process.stdout.write(`${await usage(root, typedPath, layout)}\n`);
+      process.exitCode = 2;
+      return;
+    }
+    // "Missing required positional argument: ID" names citty's parts, not what to type.
+    const message = raw
+      .replace(/^Missing required positional argument: (\S+)$/u, (_, n: string) => {
+        return `Missing <${n.toLowerCase()}>: ${[CLI_NAME, ...typedPath].join(" ")} <${n.toLowerCase()}>`;
+      })
+      .replace(/^Missing required argument: (\S+)$/u, "Missing $1.");
     // An unknown subcommand is not worth repeating in the hint.
     const typed = words(argv);
     const unknown = /^Unknown command (\S+)/u.exec(message)?.[1];
@@ -232,7 +254,7 @@ export async function main(root: CommandDef, layout: HelpLayout): Promise<void> 
     const usageError = new SatiError(
       "USAGE",
       near === undefined
-        ? message
+        ? message.replace(/^(Unknown command \S+)$/u, "$1.")
         : `${message}. Did you mean \`${[CLI_NAME, ...known, near].join(" ")}\`?`,
       { hint: `Run \`${[CLI_NAME, ...known, "--help"].join(" ")}\` for usage.` },
     );

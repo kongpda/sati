@@ -140,6 +140,9 @@ describe("completion", () => {
         expect(r.stdout).toContain(word);
       }
     }
+    // With no shell named it follows $SHELL, so one line in a profile is enough.
+    expect(run(dir, ["completion"], { SHELL: "/bin/zsh" }).stdout).toContain("#compdef");
+    expect(run(dir, ["completion"], { SHELL: "" }).code).toBe(2);
     const bad = sati(dir, "completion", "tcsh");
     expect(bad.code).toBe(2);
     expect(bad.stderr).toContain("bash");
@@ -164,5 +167,64 @@ describe("completion", () => {
     expect(complete("task", "create", "A title", "--pri")).toBe("--priority");
     // A word that is no subcommand (an argument) falls back to the command's own flags.
     expect(complete("recall", "question", "--js")).toBe("--json");
+  });
+
+  const fish = spawnSync("fish", ["--version"]).status === 0;
+  it.skipIf(!fish)("completes commands and flags in fish, without offering files", async () => {
+    const dir = await tempRepo();
+    const script = sati(dir, "completion", "fish").stdout;
+    const complete = (line: string) =>
+      spawnSync("fish", ["--no-config", "-c", `${script}\ncomplete -C '${line}'`], {
+        encoding: "utf8",
+        cwd: dir,
+      })
+        .stdout.split("\n")
+        .filter(Boolean)
+        .map((l) => l.split("\t")[0]);
+    expect(complete("sati ta")).toEqual(["task"]);
+    expect(complete("sati task cl")).toEqual(["claim"]);
+    expect(complete("sati task create x --pri")).toEqual(["--priority"]);
+    expect(complete("sati task --he")).toEqual(["--help"]);
+  });
+});
+
+describe("task claim --pick", () => {
+  // The picker asks a question; without a terminal it must say what to run, not hang.
+  it("refuses without a terminal and names the two commands that do the same", async () => {
+    const dir = await tempRepo();
+    expect(sati(dir, "init", "--yes").code).toBe(0);
+    const r = sati(dir, "task", "claim", "--pick");
+    expect(r.code).toBe(2);
+    expect(r.stderr).toContain("task list --ready");
+  });
+});
+
+describe("usage errors teach the command", () => {
+  // Each of these used to answer "No command specified" or name citty's parts; a person had to
+  // run a second command to learn what to type.
+  it("answers a group typed alone, the help word and a missing argument", async () => {
+    const dir = await tempRepo();
+    const group = sati(dir, "task");
+    expect(group.code).toBe(2);
+    expect(group.stdout).toContain("sati task <command>");
+    expect(group.stdout).toContain("claim");
+    expect(sati(dir, "help", "task", "claim").stdout).toBe(
+      sati(dir, "task", "claim", "--help").stdout,
+    );
+    expect(sati(dir, "help").stdout).toBe(sati(dir, "--help").stdout);
+    expect(sati(dir, "task", "show").stderr).toContain("sati task show <id>");
+    expect(sati(dir, "task", "complete", "x").stderr).toContain("Missing --summary.");
+    expect(sati(dir, "--bogus").stderr).toContain("Unknown option --bogus.");
+    // Scripts keep the error as JSON.
+    const json = satiJson<{ error: { code: string } }>(dir, "task");
+    expect(json.code).toBe(2);
+    expect(json.data.error.code).toBe("USAGE");
+  });
+
+  // The root list is scanned; exit codes and flag lists belong in the command's own help.
+  it("lists commands by their first sentence and keeps the rest for the command's help", async () => {
+    const dir = await tempRepo();
+    expect(sati(dir, "--help").stdout).not.toContain("Exit 5 if a check fails");
+    expect(sati(dir, "doctor", "--help").stdout).toContain("Exit 5 if a check fails");
   });
 });

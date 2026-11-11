@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type Card, type RecallItem, type Snapshot } from "./api.js";
 import { FormDialog } from "./forms.js";
+import { personOnly } from "./moves.js";
 import { nameOf } from "./people.js";
 import { Ago } from "./time.js";
 import { kindLabel, plainError } from "./words.js";
@@ -329,7 +330,15 @@ export function Memory({
                 <h3 className="row-title">{c.path.slice(c.path.lastIndexOf("/") + 1) || c.path}</h3>
                 {c.private ? <span className="badge private">Private</span> : null}
                 {c.stale ? <span className="badge kind-late">Changed since</span> : null}
-                {c.approved ? <span className="badge kind-done">Approved</span> : null}
+                {c.approved ? (
+                  c.approval === "changed" ? (
+                    <span className="badge kind-late">Changed since approval</span>
+                  ) : c.approval === "missing" ? (
+                    <span className="badge kind-late">Approved file is gone</span>
+                  ) : (
+                    <span className="badge kind-done">Approved</span>
+                  )
+                ) : null}
                 <p className="summary">{c.summary}</p>
                 {c.facts?.length ? (
                   <ul className="facts">
@@ -353,7 +362,8 @@ export function Memory({
                   <button type="button" aria-label={`Edit ${c.path}`} onClick={() => setEditing(c)}>
                     Edit
                   </button>
-                  {oneFile(c.path) || c.approved ? (
+                  {/* Approval is a person's: a board run by an agent has no button to fail. */}
+                  {(oneFile(c.path) || c.approved) && personOnly(data) === null ? (
                     <button
                       type="button"
                       disabled={approving === c.path}

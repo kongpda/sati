@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
 import { afterAll, describe, expect, it } from "vitest";
+import { watchedSha256 } from "../src/file-hash.js";
 import { createUiApp, listenUi, sessionToken } from "../src/ui/server.js";
 
 const dir = mkdtempSync(join(tmpdir(), "sati-ui-"));
@@ -29,6 +30,8 @@ const ctx = {
   projectId: project.id,
   actorId: actor.id,
   branch: "main",
+  // As `sati ui` gives it: the board reads a file's hash to compare with the approved version.
+  repo: { files: async () => [], head: async () => null, sha256: watchedSha256(dir) },
 };
 await createTask(ctx, { title: "Paint the board" });
 const token = sessionToken();
@@ -199,6 +202,20 @@ describe("ui server", () => {
     const snapshot = await app.request("http://127.0.0.1/api/snapshot", { headers: { cookie } });
     const { cards } = (await snapshot.json()) as { cards: { path: string; approved?: object }[] };
     expect(cards.find((c) => c.path === "venue/quote.txt")?.approved).toBeDefined();
+
+    // The Memory page says when the file is no longer the approved one, with no commit needed.
+    const approvalNow = async () => {
+      const res = await app.request("http://127.0.0.1/api/snapshot", { headers: { cookie } });
+      const body = (await res.json()) as { cards: { path: string; approval?: string }[] };
+      return body.cards.find((c) => c.path === "venue/quote.txt")?.approval;
+    };
+    expect(await approvalNow()).toBe("kept");
+    writeFileSync(join(dir, "venue", "quote.txt"), "price: 9900 and more\n");
+    expect(await approvalNow()).toBe("changed");
+    rmSync(join(dir, "venue", "quote.txt"));
+    expect(await approvalNow()).toBe("missing");
+    writeFileSync(join(dir, "venue", "quote.txt"), "price: 2400\n");
+    expect(await approvalNow()).toBe("kept");
 
     const cleared = await post({ path: "venue/quote.txt", clear: true });
     expect(((await cleared.json()) as { approved?: object }).approved).toBeUndefined();

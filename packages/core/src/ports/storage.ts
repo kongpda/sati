@@ -62,6 +62,8 @@ export interface ActivityQuery {
   actorId?: string | undefined;
   /** Rows by any of these actors; an empty list matches none. */
   actorIds?: readonly string[] | undefined;
+  /** Rows with this verb only (`import`, `create`, …). */
+  verb?: string | undefined;
   /** Inclusive lower bound on `at` (UTC ISO). */
   since?: string | undefined;
   /**

@@ -271,6 +271,13 @@ test.describe("a board started from an agent's terminal", () => {
 
     await page.getByRole("link", { name: "Settings", exact: true }).click();
     await expect(page.getByRole("button", { name: "Edit sokha" })).toBeDisabled();
+
+    // Signing a file off is a person's too: the card can be edited, not approved.
+    ui.sati("card", "put", "notes/a.md", "--summary", "Folding notes.");
+    await page.reload();
+    await page.getByRole("link", { name: "Memory", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Edit notes/a.md" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Approve /u })).toHaveCount(0);
     expect(await problems()).toEqual([]);
   });
 });

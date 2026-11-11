@@ -168,6 +168,8 @@ export interface Card {
   private?: boolean;
   /** A person signed off the file in this version; the guard blocks a change to it. */
   approved?: { hash: string; by: string; at: string };
+  /** The approved file now: `unchecked` when it is too large to read on every refresh. */
+  approval?: "kept" | "changed" | "missing" | "unchecked";
   /** In git: the files changed since the card. `null` outside git. */
   stale: boolean | null;
   createdBy: string;

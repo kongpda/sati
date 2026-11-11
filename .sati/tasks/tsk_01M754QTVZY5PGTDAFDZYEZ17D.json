@@ -1,0 +1,31 @@
+{
+  "body": "Owner asked 2026-11-11. (1) approveCard refuses an agent. (2) Brief line and board badge when an approved file changed since its approval. (3) A comment that calls an actor by @name shows in that actor's brief. (4) Brief finds a lost claim by verb, not in the newest 200 rows.",
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "heartbeatAt": "2026-11-11T11:09:01.815Z",
+    "holder": {
+      "host": "h:001065b26af48df5",
+      "pid": 26060
+    },
+    "leaseUntil": "2026-11-11T14:09:01.815Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-11T11:08:55.551Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "id": "tsk_01M754QTVZY5PGTDAFDZYEZ17D",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T11:08:55.552Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "branch": "2026-11-11T11:09:01.815Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T11:09:01.815Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T11:09:01.815Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "worktree": "2026-11-11T11:09:01.815Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "status": "in_progress",
+  "title": "9h follow-ups 2: person-only file approval, changed-approval warning, agent mentions in brief, lost-claim query",
+  "updatedAt": "2026-11-11T11:09:01.816Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

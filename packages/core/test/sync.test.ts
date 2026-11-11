@@ -175,5 +175,8 @@ describe("timestamps", () => {
     expect(r.problems).toEqual([expect.stringContaining("claimed on two machines")]);
     const brief = await buildBrief(ctx);
     expect(brief.markdown).toContain("Your claim on");
+    // A busy day: the import is no longer among the newest 200 rows, and the warning must stay.
+    for (let i = 0; i < 210; i++) await createTask(ctx, { title: `Chair ${i}` });
+    expect((await buildBrief(ctx)).markdown).toContain("Your claim on");
   });
 });

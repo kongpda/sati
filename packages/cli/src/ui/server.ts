@@ -7,6 +7,7 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import {
   addComment,
   applyTemplate,
+  approvalStates,
   approveCard,
   availableTemplates,
   CLI_NAME,
@@ -292,7 +293,15 @@ async function snapshot(rt: UiRuntime, version: () => number) {
   });
   const project = await ctx.store.read((r) => r.getProject());
   // Cards with their git staleness; read after the snapshot, as the brief does.
-  const cards = await getContext(local);
+  const read = await getContext(local);
+  // How each approved file compares with the approved version, for the badge on the Memory page.
+  const approvals = new Map(
+    (await approvalStates(local, read)).map(({ card, state }) => [card.id, state]),
+  );
+  const cards = read.map((c) => {
+    const approval = approvals.get(c.id);
+    return approval ? { ...c, approval } : c;
+  });
   // Work waiting for approval whose branch moved on since it was sent, so a person looks again.
   const drift = Object.fromEntries(
     await reviewDrift(

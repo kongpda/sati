@@ -458,6 +458,8 @@ export class SqliteStore implements StorageAdapter {
         if (q.actorIds.length === 0) return [];
         where.push(inArray(a.actorId, [...q.actorIds]));
       }
+      // The verb is not a column: the few callers that ask also bound the rows by time.
+      if (q.verb) where.push(sql`json_extract(${a.data}, '$.verb') = ${q.verb}`);
       if (q.since) where.push(sql`${a.at} >= ${q.since}`);
       if (q.after !== undefined) {
         // Rows are appended inside the write transaction and writers queue, so rowid order is

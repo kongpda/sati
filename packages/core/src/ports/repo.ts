@@ -33,4 +33,9 @@ export interface RepoIndex {
   changedFiles?(worktree: string): Promise<string[] | null>;
   /** Conflicts between HEAD and the base branch; null when there is no base or git cannot tell. */
   baseConflicts?(): Promise<BaseConflicts | null>;
+  /**
+   * SHA-256 of a project file's bytes as it is now, to compare with an approved version. `null`
+   * when there is no file; `undefined` when it was not read (too large to hash on every brief).
+   */
+  sha256?(path: string): Promise<string | null | undefined>;
 }

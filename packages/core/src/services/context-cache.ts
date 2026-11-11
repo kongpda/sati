@@ -12,6 +12,7 @@ import {
   Sha256,
 } from "../domain/schemas.js";
 import { refuseSecrets } from "../domain/secrets.js";
+import { CLI_NAME } from "../name.js";
 import type { RepoFile } from "../ports/repo.js";
 import {
   baseFields,
@@ -215,6 +216,17 @@ export async function approveCard(ctx: ServiceContext, input: unknown): Promise<
   const files = ctx.repo && hash !== null ? await ctx.repo.files() : undefined;
   const gitCommit = ctx.repo && hash !== null ? await ctx.repo.head() : null;
   return ctx.store.write(async (w) => {
+    // The sign-off is a person's word that the file is right. An agent that could give or take
+    // it away could unlock any file it wants to change.
+    if ((await w.get("actor", ctx.actorId))?.kind !== "human") {
+      throw new SatiError(
+        "INVALID_TRANSITION",
+        "Only a person can approve a file or take its approval away.",
+        {
+          hint: `Ask a person to run \`${CLI_NAME} card approve ${path}\`, or to use Approve on the board.`,
+        },
+      );
+    }
     const existing = (await listAll(w, ctx, "context", { path })).find((e) => e.path === path);
     if (hash === null) {
       if (!existing?.approved) throw new SatiError("NOT_FOUND", `${path} is not approved.`);
@@ -232,6 +244,34 @@ export async function approveCard(ctx: ServiceContext, input: unknown): Promise<
       approved,
     });
   });
+}
+
+/** How an approved file compares with the version a person approved. */
+export type ApprovalState = "kept" | "changed" | "missing" | "unchecked";
+
+/**
+ * Each approved card with the state of its file now. `unchecked` when files cannot be read here
+ * (no `sha256` port) or the file is too large to hash each time; the guard still checks those.
+ */
+export async function approvalStates(
+  ctx: ServiceContext,
+  cards?: readonly ContextEntry[],
+): Promise<{ card: ContextEntry; state: ApprovalState }[]> {
+  const approved = (cards ?? (await approvedCards(ctx))).filter((c) => c.approved !== undefined);
+  const out: { card: ContextEntry; state: ApprovalState }[] = [];
+  for (const card of approved) {
+    const hash = ctx.repo?.sha256 ? await ctx.repo.sha256(card.path) : undefined;
+    const state =
+      hash === undefined
+        ? "unchecked"
+        : hash === null
+          ? "missing"
+          : hash === card.approved?.hash
+            ? "kept"
+            : "changed";
+    out.push({ card, state });
+  }
+  return out;
 }
 
 /** The approved cards, read without the file list: the guard asks on every commit. */

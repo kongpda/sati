@@ -1,0 +1,32 @@
+{
+  "body": "Owner asked 2026-11-11 (screenshot of `sati brief` and `sati doctor` in kory). On a TTY: colour, aligned columns cut to the terminal width, symbols, summaries, readable activity and record views, grouped root help. Piped output stays compact for agents and scripts. Strip terminal control characters from stored text before printing. Brief: a long review list must not push every ready task out. Work in worktree branch cli-output; another agent holds main.",
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "heartbeatAt": "2026-11-11T11:20:35.527Z",
+    "holder": {
+      "host": "h:001065b26af48df5",
+      "pid": 63734
+    },
+    "leaseUntil": "2026-11-11T15:20:35.527Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-11T11:20:30.996Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "effort": "deep",
+  "id": "tsk_01M755D20MTD1M3T3MQZ05CDA3",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T11:20:30.997Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-11T11:20:35.528Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-11T11:20:35.528Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-11T11:20:35.528Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-11T11:20:35.528Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "in_progress",
+  "title": "CLI output redesign: TTY styling, aligned tables, grouped help, safe text, brief budget",
+  "updatedAt": "2026-11-11T11:20:35.528Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

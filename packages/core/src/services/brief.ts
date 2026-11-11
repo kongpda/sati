@@ -13,9 +13,9 @@ import {
 import { CLI_NAME } from "../name.js";
 import type { StorageReader } from "../ports/storage.js";
 import { type ChangeItem, lastSession, readChanges } from "./changes.js";
-import { COMMENT_TAG, isThreadNote } from "./comment.js";
+import { COMMENT_TAG, isThreadNote, mentionsOf } from "./comment.js";
 import { actorName, listAll, nowIso, parseInput, type ServiceContext } from "./context.js";
-import { getContext } from "./context-cache.js";
+import { approvalStates, getContext } from "./context-cache.js";
 import { handoffFor, handoffNext, unreadHandoff } from "./handoff.js";
 import { warningLines, worktreeWarnings } from "./overlap.js";
 import { readSettings } from "./project.js";
@@ -33,6 +33,8 @@ const PINNED_NOTES = 3;
 const LINKED_CARDS = 3;
 /** PLAN: "Since your last session" lists up to 5 changes by others. */
 const SINCE_LINES = 5;
+/** Comments that call you by name, newest first. */
+const MENTION_LINES = 5;
 
 export const BriefInput = z.strictObject({
   /**
@@ -103,8 +105,13 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
     // claimed before their files met). Shown until I hold the task again or it is closed.
     const lost: Task[] = [];
     const dayAgo = new Date(ctx.clock.now().getTime() - DAY_MS).toISOString();
-    for (const row of await r.listActivity(ctx.projectId, { since: dayAgo, limit: 200 })) {
-      if (row.verb !== "import" || row.diff.lostClaim !== ctx.actorId) continue;
+    // By verb: the newest 200 rows of a busy day held few imports, and the warning went missing.
+    for (const row of await r.listActivity(ctx.projectId, {
+      since: dayAgo,
+      verb: "import",
+      limit: 500,
+    })) {
+      if (row.diff.lostClaim !== ctx.actorId) continue;
       const t = active.find((a) => a.id === row.entityId);
       if (t && t.claim?.actorId !== ctx.actorId && !lost.includes(t)) lost.push(t);
     }
@@ -149,6 +156,14 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
           (seen.createdAt.localeCompare(note.createdAt) || seen.id.localeCompare(note.id)) < 0;
         if (!seen || older) comments.set(link, note);
       }
+    }
+    // Comments that call me by name on any record: `@claude-code` reaches the agent as `@ann`
+    // reaches Ann on the board, whether or not the task is mine.
+    const called = [];
+    for (const note of actor
+      ? mentionsOf(notes, actor, ctx.clock.now()).slice(0, MENTION_LINES)
+      : []) {
+      called.push({ note, from: await actorName(r, note.createdBy) });
     }
     for (const note of unread) {
       if (short || !handoffFor(note, actor)) continue;
@@ -226,6 +241,7 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       allFeatures,
       handoffs,
       comments,
+      called,
       forMe,
       waiting,
       needs,
@@ -241,6 +257,17 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
     warnings.unshift(
       `Your claim on ${shortHandle(t.id)} was replaced by a claim made on another machine. Stop work on it, or claim it again when it is free.`,
     );
+  }
+  // The guard blocks a commit that changes an approved file; this tells before the work is done,
+  // and tells the person when a file changed with no commit at all (a shared folder).
+  for (const { card, state } of short ? [] : await approvalStates(ctx)) {
+    if (state === "changed") {
+      warnings.push(
+        `${card.path} changed since a person approved it. A person looks, then approves it again with \`${CLI_NAME} card approve ${card.path}\`.`,
+      );
+    } else if (state === "missing") {
+      warnings.push(`${card.path} was approved by a person and is no longer there.`);
+    }
   }
   const drift = await reviewDrift(ctx, data.waiting);
 
@@ -340,6 +367,14 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       items: data.forMe.map(
         ({ note, from }) =>
           `- ${shortHandle(note.id)} from ${clip(from, 60)} on ${note.links.map(shortHandle).join(", ")}\n  \`\`\`data\n  ${inert(clip(handoffNext(note.body) || note.title, 200))}\n  \`\`\``,
+      ),
+    },
+    {
+      title: "Mentions (comments that call you)",
+      empty: null,
+      items: data.called.map(
+        ({ note, from }) =>
+          `- ${shortHandle(note.id)} from ${clip(from, 60)} on ${note.links.map(shortHandle).join(", ")}\n  \`\`\`data\n  ${inert(clip(note.body, 200))}\n  \`\`\``,
       ),
     },
     {

@@ -85,6 +85,47 @@ export async function addComment(ctx: ServiceContext, input: unknown): Promise<N
   });
 }
 
+/** A mention older than this no longer asks for attention. Kept in step with the board. */
+const MENTION_DAYS = 14;
+
+/**
+ * Comments that call `actor` by name (`@ann`, `@claude-code`), newest first: by the shown name,
+ * its first word, or the user part of `user@worktree`. A mention is done once the actor comments
+ * on the same record after it, so nothing is stored about what was read; one nobody answers
+ * leaves after two weeks. The same rule as the board's My work.
+ */
+export function mentionsOf(
+  notes: readonly Note[],
+  actor: { id: string; name: string; displayName?: string | undefined },
+  now: Date,
+): Note[] {
+  const shown = actor.displayName ?? actor.name;
+  const names = [shown, shown.split(/\s+/u)[0] ?? "", actor.name.split("@")[0] ?? ""]
+    .filter((n) => n.length > 0)
+    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"));
+  if (names.length === 0) return [];
+  // Not inside a word or an email address: `x@ann.com` and `@annette` do not call Ann.
+  const calls = new RegExp(`(?<![\\p{L}\\p{N}_.])@(?:${names.join("|")})(?![\\p{L}\\p{N}_])`, "iu");
+  const since = new Date(now.getTime() - MENTION_DAYS * 86_400_000).toISOString();
+  const comments = notes.filter((n) => n.tags.includes(COMMENT_TAG) && n.deletedAt === null);
+  const answered = new Map<string, string>();
+  for (const n of comments) {
+    const on = n.links[0];
+    if (on && n.createdBy === actor.id && n.createdAt > (answered.get(on) ?? "")) {
+      answered.set(on, n.createdAt);
+    }
+  }
+  return comments
+    .filter(
+      (n) =>
+        n.createdBy !== actor.id &&
+        n.createdAt >= since &&
+        n.createdAt > (answered.get(n.links[0] ?? "") ?? "") &&
+        calls.test(n.body),
+    )
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+}
+
 /** True for the notes shown in a record's thread: comments and handoffs linked to it. */
 export function isThreadNote(note: Note, on?: string): boolean {
   const kind = note.tags.includes(COMMENT_TAG) || note.tags.includes(HANDOFF_TAG);

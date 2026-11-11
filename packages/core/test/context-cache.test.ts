@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  approvalStates,
   approveCard,
   buildBrief,
   checkChanges,
+  ensureActor,
   getContext,
   moduleHash,
   putContext,
@@ -22,6 +24,12 @@ async function withRepo(files: RepoFile[]) {
   const ctx: ServiceContext = { ...s.ctx, repo: fakeRepo(files) };
   return { ...s, ctx };
 }
+
+/** The same project as seen by a person: only a person signs a file off. */
+const asPerson = async (ctx: ServiceContext): Promise<ServiceContext> => ({
+  ...ctx,
+  actorId: (await ensureActor(ctx, { name: "dara@office", kind: "human" })).id,
+});
 
 describe("moduleHash", () => {
   // The hash must cover exactly the module's files: a change elsewhere must not mark it stale.
@@ -184,7 +192,8 @@ describe("context cache", () => {
   // PLAN Phase 9: a general project has no features, so nothing protected a signed-off file.
   // An agent could overwrite the approved deck and no check would say so.
   it("blocks a change to an approved file until the new version is approved", async () => {
-    const { ctx } = await withRepo([{ path: "deck.pptx", blob: "1" }]);
+    const { ctx: agent } = await withRepo([{ path: "deck.pptx", blob: "1" }]);
+    const ctx = await asPerson(agent);
     const v1 = "a".repeat(64);
     const v2 = "b".repeat(64);
     await putContext(ctx, { path: "deck.pptx", summary: "Launch deck", facts: ["12 slides"] });
@@ -219,6 +228,74 @@ describe("context cache", () => {
         code: "VALIDATION",
       });
     }
+  });
+
+  // The approval is a person's word. An agent that could approve its own new version, or clear
+  // the approval, would walk through the guard that the approval exists to hold.
+  it("lets only a person approve a file or take the approval away", async () => {
+    const { ctx: agent } = await withRepo([{ path: "deck.pptx", blob: "1" }]);
+    const person = await asPerson(agent);
+    const v1 = "a".repeat(64);
+    const refused = { code: "INVALID_TRANSITION", message: expect.stringContaining("person") };
+    await expect(approveCard(agent, { path: "deck.pptx", hash: v1 })).rejects.toMatchObject(
+      refused,
+    );
+    await approveCard(person, { path: "deck.pptx", hash: v1 });
+    await expect(
+      approveCard(agent, { path: "deck.pptx", hash: "b".repeat(64) }),
+    ).rejects.toMatchObject(refused);
+    await expect(approveCard(agent, { path: "deck.pptx", hash: null })).rejects.toMatchObject(
+      refused,
+    );
+    // Nothing the agent tried changed the approval.
+    const [kept] = await approvalStates(agent);
+    expect(kept?.card.approved).toMatchObject({ hash: v1, by: person.actorId });
+  });
+
+  // The guard speaks at commit time. In a shared folder a file changes with no commit, and an
+  // agent should hear before it builds on a version nobody approved.
+  it("tells in the brief when an approved file changed or went missing", async () => {
+    const { ctx: base } = await withRepo([]);
+    const now = new Map<string, string | null | undefined>();
+    const agent: ServiceContext = {
+      ...base,
+      repo: { ...fakeRepo([]), sha256: async (path) => now.get(path) ?? null },
+    };
+    const person = await asPerson(agent);
+    const v1 = "a".repeat(64);
+    for (const path of ["deck.pptx", "contract.pdf", "film.mov"]) {
+      now.set(path, v1);
+      await approveCard(person, { path, hash: v1 });
+    }
+    const states = async () =>
+      Object.fromEntries((await approvalStates(agent)).map((s) => [s.card.path, s.state]));
+    expect(await states()).toEqual({
+      "deck.pptx": "kept",
+      "contract.pdf": "kept",
+      "film.mov": "kept",
+    });
+    expect((await buildBrief(agent)).markdown).not.toContain("Watch out");
+
+    now.set("deck.pptx", "b".repeat(64));
+    now.set("contract.pdf", null);
+    // Too large to hash on every brief: not called changed, not called kept.
+    now.set("film.mov", undefined);
+    agent.repo = { ...fakeRepo([]), sha256: async (path) => now.get(path) };
+    expect(await states()).toEqual({
+      "deck.pptx": "changed",
+      "contract.pdf": "missing",
+      "film.mov": "unchecked",
+    });
+    const { markdown } = await buildBrief(agent);
+    expect(markdown).toContain("deck.pptx changed since a person approved it");
+    expect(markdown).toContain("contract.pdf was approved by a person and is no longer there");
+    expect(markdown).not.toContain("film.mov");
+    // With no way to read files (a store with no folder), nothing is claimed either way.
+    expect(await approvalStates({ ...agent, repo: fakeRepo([]) })).toEqual([
+      expect.objectContaining({ state: "unchecked" }),
+      expect.objectContaining({ state: "unchecked" }),
+      expect.objectContaining({ state: "unchecked" }),
+    ]);
   });
 
   it("rejects paths outside the repo and empty summaries", async () => {

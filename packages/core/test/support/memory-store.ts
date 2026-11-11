@@ -223,6 +223,7 @@ export class MemoryStore implements StorageAdapter {
           .filter((a) => (q.actorId ? a.actorId === q.actorId : true))
           .filter((a) => (q.actorIds ? q.actorIds.includes(a.actorId) : true))
           .filter((a) => (q.entityId ? a.entityId === q.entityId : true))
+          .filter((a) => (q.verb ? a.verb === q.verb : true))
           .filter((a) => (q.since ? a.at >= q.since : true));
         // Without a cursor, newest `at` first (then id), as SQL orders it; with one, commit order.
         const newest = (a: Activity, b: Activity) =>

@@ -54,6 +54,7 @@ import {
 } from "@sati/store-sqlite";
 import type { WrittenRecord } from "@sati/sync";
 import { writeFileAtomic } from "@sati/sync";
+import { watchedSha256 } from "./file-hash.js";
 import { defaultBase, samePath } from "./git.js";
 import { runHint } from "./install.js";
 import { loadFolder, markSeen } from "./shared-folder.js";
@@ -554,8 +555,10 @@ export async function openRuntime(
     actorId: actor.id,
     processes: processProbe(false),
   };
-  ctx.repo =
-    location.mode === "standalone" ? folderIndex(location.root) : gitRepoIndex(location.root);
+  ctx.repo = {
+    ...(location.mode === "standalone" ? folderIndex(location.root) : gitRepoIndex(location.root)),
+    sha256: watchedSha256(location.root),
+  };
   return { ctx, project, actor, location };
 }
 

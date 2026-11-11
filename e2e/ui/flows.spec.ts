@@ -1163,6 +1163,11 @@ test("Memory approves a file as it is now and takes the approval away", async ({
   // The file changes after the sign-off: the CLI tells, from the hash the board stored.
   writeFileSync(join(ui.repo, "brief.md"), "Final brief, v4.\n");
   expect(shown()?.approval).toBe("changed");
+  // And the board tells, the next time it loads: nobody has to run a command to find out.
+  await page.reload();
+  await page.getByRole("link", { name: "Memory", exact: true }).click();
+  await expect(row.getByText("Changed since approval", { exact: true })).toBeVisible();
+  await expect(row.getByText("Approved", { exact: true })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Remove the approval of brief.md" }).click();
   await expect(page.locator(".toast")).toContainText("brief.md is no longer approved.");

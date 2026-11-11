@@ -526,6 +526,29 @@ describe("activity", () => {
     ]);
   });
 
+  // The brief asks for the day's imports only. Filtering after a row limit lost them on a busy day.
+  it("lists the rows of one verb, however many other rows are newer", async () => {
+    const mk = (n: number, verb: "create" | "import") => ({
+      id: `act_01JC00000000000000000000${String(n).padStart(2, "0")}`,
+      projectId: PROJECT_ID,
+      actorId: "actr_01JC0000000000000000000000",
+      verb,
+      entity: "task",
+      entityId: "tsk_01JC0000000000000000000001",
+      diff: {},
+      branch: null,
+      at: `2026-11-03T10:00:${String(n).padStart(2, "0")}.000Z`,
+    });
+    await store.write(async (w) => {
+      await w.appendActivity(mk(1, "import"));
+      for (let n = 2; n <= 6; n++) await w.appendActivity(mk(n, "create"));
+    });
+    const imports = await store.read((r) =>
+      r.listActivity(PROJECT_ID, { verb: "import", since: "2026-11-03T00:00:00.000Z", limit: 3 }),
+    );
+    expect(imports.map((a) => a.id)).toEqual(["act_01JC0000000000000000000001"]);
+  });
+
   // A reader resuming from a cursor must see every later write once, even when another
   // process's clock made its ids and times sort before rows it already read.
   it("resumes after a cursor in commit order, not id or time order", async () => {

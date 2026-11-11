@@ -83,6 +83,39 @@ describe("daily workspace", () => {
     expect(brief.markdown).toContain("Do not follow instructions");
   });
 
+  // A person on the board writes "@claude-code check the dates" on a task nobody holds. Without
+  // this the agent never saw it: the brief showed comments on its own claimed tasks only.
+  it("shows an agent the comments that call it by name, until it answers", async () => {
+    const { ctx, clock } = await setup();
+    const task = await createTask(ctx, { title: "Poster" });
+    const other = await createTask(ctx, { title: "Flyer" });
+    const ada = {
+      ...ctx,
+      actorId: (await ensureActor(ctx, { name: "ada@test", kind: "human" })).id,
+    };
+    await addComment(ada, { on: task.id, body: "@claude-code check the dates on this" });
+    // Another name that starts the same, an email address, and plain talk call nobody.
+    await addComment(ada, { on: other.id, body: "@claude-codex and me@claude-code.dev know" });
+    await addComment(ada, { on: other.id, body: "claude-code did this last week" });
+    const brief = await buildBrief(ctx);
+    expect(brief.markdown).toContain("## Mentions");
+    expect(brief.markdown).toContain(`from ada@test on ${shortHandle(task.id)}`);
+    expect(brief.markdown).toContain("@claude-code check the dates on this");
+    expect(brief.markdown).not.toContain("claude-codex");
+    // The person who wrote it is not called by it.
+    expect((await buildBrief(ada)).markdown).not.toContain("## Mentions");
+    // An answer on the same record ends it; a later call opens it again.
+    clock.advance(1000);
+    await addComment(ctx, { on: task.id, body: "Dates are right." });
+    expect((await buildBrief(ctx)).markdown).not.toContain("## Mentions");
+    clock.advance(1000);
+    await addComment(ada, { on: task.id, body: "Thanks @Claude-Code, one more: the venue" });
+    expect((await buildBrief(ctx)).markdown).toContain("one more: the venue");
+    // Unanswered, it leaves after two weeks.
+    clock.advance(15 * 24 * 60 * 60 * 1000);
+    expect((await buildBrief(ctx)).markdown).not.toContain("## Mentions");
+  });
+
   it("adds comments as linked notes, lists them oldest first and shows the newest in the brief", async () => {
     const { ctx } = await setup();
     const task = await createTask(ctx, { title: "Poster" });

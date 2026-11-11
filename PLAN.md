@@ -359,6 +359,7 @@ The UI is keyboard-first, instant and calm, in the spirit of Linear: you run `sa
 - Live updates over SSE, with a subtle highlight when an agent changes something you are looking at.
 - Empty states that teach: each one shows the exact CLI or agent prompt to fill it.
 - Light and dark themes following the system setting, with design tokens in CSS variables.
+- The board offers only what core accepts: a move, save or button that core is certain to refuse (a status the task cannot take, a task someone else holds, an action only a person may do) is hidden or disabled with the reason, before the click.
 - Accessibility: WCAG 2.2 AA, full keyboard use, visible focus, screen-reader labels, keyboard drag and drop (dnd-kit), and `prefers-reduced-motion` respected.
 - Responsive down to 375 px wide; the board switches to a single-column list on phones.
 - Time shown as relative ("3 min ago") with the exact time on hover; all timestamps stored in UTC.

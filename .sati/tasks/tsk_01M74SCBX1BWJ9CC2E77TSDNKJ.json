@@ -1,5 +1,17 @@
 {
   "body": "Owner chose on 2026-11-11: build the launcher, inbox, cards for links, folder-sync mode and hash-protected files now. Phase 6 stays deferred until v1.0 is published and tried.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "d643a27aa948793755b85060f28ac306996041c9",
+    "completedAt": "2026-11-11T08:24:39.767Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "PLAN.md",
+      "docs/progress.md"
+    ],
+    "summary": "All five owner items built and committed locally: card links a734fa1, launcher 8b7ac5a, approved files 784b69e, shared folder bcd34e3 (ADR 0009), inbox d643a27. Verified at the end: lint, typecheck, unit tests (core 360, CLI 187 + 2 skipped, store 89, sync 57, MCP 31, UI 38), Playwright 95 of 95, bench 5 of 5 PASS. Not done: Phase 6 (deferred by owner), signed installer, board approve button, a run against a real Dropbox/OneDrive/iCloud folder, launcher on Windows and Linux, and the person-only items (screen-reader pass, one-week trial, npm publish, required checks, licence, code signing)."
+  },
   "createdAt": "2026-11-11T07:50:25.441Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
   "id": "tsk_01M74SCBX1BWJ9CC2E77TSDNKJ",
@@ -9,10 +21,16 @@
   "priority": "high",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "*": "2026-11-11T07:50:25.442Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+    "*": "2026-11-11T07:50:25.442Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "branch": "2026-11-11T08:24:35.827Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T08:24:39.767Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T08:24:39.767Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T08:24:39.767Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "worktree": "2026-11-11T08:24:35.827Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "todo",
+  "status": "review",
   "title": "Phase 9 owner items and 7d local items (owner approved 2026-11-11)",
-  "updatedAt": "2026-11-11T07:50:25.441Z",
-  "version": 1
+  "updatedAt": "2026-11-11T08:24:39.768Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

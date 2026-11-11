@@ -1,14 +1,23 @@
 {
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "heartbeatAt": "2026-11-11T08:12:58.865Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 67720
-    },
-    "leaseUntil": "2026-11-11T10:12:58.865Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "d643a27aa948793755b85060f28ac306996041c9",
+    "completedAt": "2026-11-11T08:24:34.274Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "packages/ui/src/my-work.tsx",
+      "packages/ui/src/app.tsx",
+      "packages/ui/src/thread.tsx",
+      "packages/ui/src/styles.css",
+      "packages/ui/test/my-work.test.ts",
+      "e2e/ui/refusals.spec.ts",
+      ".changeset/inbox.md",
+      "docs/progress.md",
+      "PLAN.md"
+    ],
+    "releaseNote": "My work is now the inbox: @name mentions and a count of what waits for you.",
+    "summary": "My work is the inbox. @name in a comment shows under Mentions for that person until they comment on the same record after it, or 14 days pass. The nav link and tab title show a count (needs-you + approvals + mentions, capped 99+, read to screen readers). No read state stored, no email or push. Also fixed the drag helper in e2e/ui/refusals.spec.ts: board auto-scroll moved the column from under a fixed drop point (failed 5 of 5 with and without this change). Verified: lint, typecheck, unit tests (UI 38), Playwright 95 of 95, bench all PASS. Commit d643a27."
   },
   "createdAt": "2026-11-11T07:50:25.445Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
@@ -19,13 +28,14 @@
   "stamps": {
     "*": "2026-11-11T07:50:25.445Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "branch": "2026-11-11T08:12:58.866Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "claim": "2026-11-11T08:12:58.866Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "status": "2026-11-11T08:12:58.866Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T08:24:34.275Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T08:24:34.275Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T08:24:34.275Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "worktree": "2026-11-11T08:12:58.866Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "In-app inbox for mentions, assignments, approvals and due dates",
-  "updatedAt": "2026-11-11T08:12:58.866Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T08:24:34.276Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

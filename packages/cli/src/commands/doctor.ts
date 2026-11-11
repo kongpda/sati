@@ -8,6 +8,7 @@ import {
   type DoctorCheck,
   doctorChecks,
   ERROR_EXIT_CODES,
+  isExternalKey,
   LEAN_DONE_DAYS,
   type LinkedWorktree,
   leanCleanup,
@@ -139,11 +140,13 @@ const GLOB = /[*?[\]{}]/u;
 
 /**
  * Cards whose file is gone: not on disk and, in a git repo, on no branch. A card for a file that
- * lives on another branch is not bloat. A glob card is never counted.
+ * lives on another branch is not bloat. A glob card is never counted, nor one for a web link or a
+ * file outside the project: that file may be on another machine.
  */
 function goneCards(root: string, git: boolean, cards: ContextEntry[]): ContextEntry[] {
   const missing = cards.filter(
     (c) =>
+      !isExternalKey(c.path) &&
       !GLOB.test(c.path) &&
       !existsSync(resolve(root, c.path)) &&
       !existsSync(resolve(root, cardFile(c.path))),

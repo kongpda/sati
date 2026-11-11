@@ -1,0 +1,18 @@
+{
+  "body": "Owner chose on 2026-11-11: build the launcher, inbox, cards for links, folder-sync mode and hash-protected files now. Phase 6 stays deferred until v1.0 is published and tried.",
+  "createdAt": "2026-11-11T07:50:25.441Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "id": "tsk_01M74SCBX1BWJ9CC2E77TSDNKJ",
+  "labels": [
+    "phase-9"
+  ],
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T07:50:25.442Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "status": "todo",
+  "title": "Phase 9 owner items and 7d local items (owner approved 2026-11-11)",
+  "updatedAt": "2026-11-11T07:50:25.441Z",
+  "version": 1
+}

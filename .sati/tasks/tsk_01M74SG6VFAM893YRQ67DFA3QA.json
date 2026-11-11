@@ -1,0 +1,28 @@
+{
+  "body": "Badge style and changeset written. lint, typecheck, build, pnpm test pass. Browser suite is running; commit waits on it.",
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "heartbeatAt": "2026-11-11T07:53:56.622Z",
+    "leaseUntil": "2026-11-11T08:23:56.622Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-11T07:52:31.342Z",
+  "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+  "id": "tsk_01M74SG6VFAM893YRQ67DFA3QA",
+  "priority": "low",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T07:52:31.344Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "body": "2026-11-11T07:53:56.623Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "branch": "2026-11-11T07:52:44.801Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-11T07:53:56.623Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-11T07:52:44.801Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "worktree": "2026-11-11T07:52:44.801Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
+  },
+  "status": "in_progress",
+  "title": "Style the held-by badge on board cards",
+  "updatedAt": "2026-11-11T07:53:56.627Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

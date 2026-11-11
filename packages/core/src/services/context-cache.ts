@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import micromatch from "micromatch";
 import { z } from "zod";
 import { pathsOverlap } from "../domain/locks.js";
-import { ContextEntry, LIMITS, RepoPath } from "../domain/schemas.js";
+import { CardPath, ContextEntry, isExternalKey, LIMITS, RepoPath } from "../domain/schemas.js";
 import { refuseSecrets } from "../domain/secrets.js";
 import type { RepoFile } from "../ports/repo.js";
 import {
@@ -17,7 +17,7 @@ import { alreadyShared } from "./note.js";
 
 const card = ContextEntry.shape;
 export const PutContextInput = z.strictObject({
-  path: RepoPath,
+  path: CardPath,
   summary: card.summary.min(1),
   keyFiles: z.array(RepoPath).max(LIMITS.array).optional(),
   facts: card.facts,
@@ -32,7 +32,7 @@ export type PutContextInput = z.input<typeof PutContextInput>;
 export const GetContextInput = z
   .strictObject({
     /** Only entries whose path overlaps this one. All entries when absent. */
-    path: RepoPath.optional(),
+    path: CardPath.optional(),
     /**
      * The version of the file at `path` the caller sees now (modified time or hash, in the form
      * it gave as `sourceSeen`). The card for `path` is stale when the two differ.
@@ -59,6 +59,8 @@ const ANCHORED = /^(.+\.[A-Za-z0-9]+)#[^/#]+$/u;
  * file list and kept whole.
  */
 export function cardFile(path: string, files?: readonly RepoFile[]): string {
+  // In a link the part is the fragment, wherever the query puts the file name.
+  if (/^https?:/iu.test(path)) return path.replace(/#[^#]*$/u, "");
   const file = ANCHORED.exec(path)?.[1];
   if (file === undefined || files?.some((f) => f.path === path)) return path;
   return file;
@@ -83,13 +85,19 @@ export function moduleHash(path: string, files: readonly RepoFile[]): string {
  * tags and the file version it read. sati keeps a hash of the module's tracked files, never their
  * contents, and never opens a file. Writing the same path again replaces the card (facts and tags
  * not given are cleared) and refreshes the hash; privacy is kept unless changed.
+ *
+ * A card for a web link or a file outside the project has no hash: sati cannot see it change, so
+ * only the caller's `seen` tells. A new card for an outside file is private unless the caller
+ * says otherwise, because its path names a folder on this machine.
  */
 export async function putContext(ctx: ServiceContext, input: unknown): Promise<ContextEntry> {
   const { private: hidden, ...data } = parseInput(PutContextInput, input);
   refuseSecrets("context", data);
   // git runs before the transaction, so the write lock is held only for the DB work.
-  const files = ctx.repo ? await ctx.repo.files() : undefined;
+  const outside = isExternalKey(data.path);
+  const files = ctx.repo && !outside ? await ctx.repo.files() : undefined;
   const gitCommit = ctx.repo ? await ctx.repo.head() : null;
+  const local = outside && !/^https?:/iu.test(data.path);
   const fields = {
     path: data.path,
     summary: data.summary,
@@ -125,7 +133,7 @@ export async function putContext(ctx: ServiceContext, input: unknown): Promise<C
     return insertWithLog(w, ctx, "context", {
       ...baseFields(ctx, "context"),
       ...fields,
-      ...(hidden ? { private: true } : {}),
+      ...((hidden ?? local) ? { private: true } : {}),
     });
   });
 }
@@ -140,7 +148,7 @@ export function staleness(
   files: readonly RepoFile[] | undefined,
 ) {
   // A card about one sheet or page goes stale with its file: sati cannot see inside it.
-  return files && contentHash !== ""
+  return files && contentHash !== "" && !isExternalKey(path)
     ? moduleHash(cardFile(path, files), files) !== contentHash
     : null;
 }
@@ -149,7 +157,9 @@ export function staleness(
 function cardsOverlap(a: string, b: string): boolean {
   const fa = cardFile(a);
   const fb = cardFile(b);
-  return pathsOverlap(fa, fb) && (fa === a || fb === b || a === b);
+  // A link or an outside file is one thing, matched whole: `?` in a link is not a wildcard.
+  const meet = isExternalKey(a) || isExternalKey(b) ? fa === fb : pathsOverlap(fa, fb);
+  return meet && (fa === a || fb === b || a === b);
 }
 
 /** Context entries with a `stale` flag, recomputed from the file list on every call. */

@@ -1,7 +1,13 @@
 import micromatch from "micromatch";
 import { z } from "zod";
 import { shortHandle } from "../domain/ids.js";
-import type { ContextEntry, Decision, Note, Task } from "../domain/schemas.js";
+import {
+  type ContextEntry,
+  type Decision,
+  isExternalKey,
+  type Note,
+  type Task,
+} from "../domain/schemas.js";
 import type { RepoFile } from "../ports/repo.js";
 import type { SearchableEntity, SearchHit } from "../ports/storage.js";
 import { estimateTokens } from "./brief.js";
@@ -120,7 +126,7 @@ function lift(updatedAt: string, now: number, editing: boolean): number {
 
 /** Whether a file the card's path covers has uncommitted changes. */
 function beingEdited(path: string, files: readonly RepoFile[] | undefined): boolean {
-  if (!files) return false;
+  if (!files || isExternalKey(path)) return false;
   const exact = micromatch.matcher(path, { dot: true });
   const beneath = micromatch.matcher(`${path}/**`, { dot: true });
   return files.some((f) => f.dirty === true && (exact(f.path) || beneath(f.path)));

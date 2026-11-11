@@ -8,7 +8,7 @@ import {
 } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { execute, int, list, parseJson } from "../runtime.js";
+import { execute, int, list, parseJson, type Runtime } from "../runtime.js";
 import { projectPath } from "./guard.js";
 
 const state = (e: ContextView) =>
@@ -21,6 +21,10 @@ const state = (e: ContextView) =>
       : "fresh";
 
 /** Facts as a JSON array of strings, or one fact per line: commas are common inside facts. */
+/** A web link is kept as typed: resolved like a file name it would land inside the project. */
+const cardPath = (rt: Runtime, path: string) =>
+  /^https?:\/\//iu.test(path.trim()) ? path : projectPath(rt, path);
+
 function facts(value: string | undefined): unknown {
   if (value === undefined) return undefined;
   if (value.trim().startsWith("[")) return parseJson(value, "--facts", "USAGE");
@@ -49,7 +53,7 @@ const get = defineCommand({
     path: {
       type: "positional",
       required: false,
-      description: "Only entries overlapping this path or glob",
+      description: "Only entries overlapping this path or glob, or the card for this link",
     },
     seen: {
       type: "string",
@@ -63,7 +67,7 @@ const get = defineCommand({
       args.json,
       async (rt) =>
         getContext(rt.ctx, {
-          path: args.path === undefined ? undefined : projectPath(rt, args.path),
+          path: args.path === undefined ? undefined : cardPath(rt, args.path),
           seen: args.seen,
         }),
       (entries: ContextView[]) =>
@@ -79,7 +83,12 @@ const put = defineCommand({
     description: "Save what you learned about a file, folder or module (a card, not its contents)",
   },
   args: {
-    path: { type: "positional", required: true, description: "Project-relative path or glob" },
+    path: {
+      type: "positional",
+      required: true,
+      description:
+        "Project-relative path or glob, a web link, or the full path of a file outside the project",
+    },
     summary: { type: "string", required: true, description: "What it is and what matters" },
     facts: {
       type: "string",
@@ -104,7 +113,7 @@ const put = defineCommand({
       args.json,
       async (rt) =>
         putContext(rt.ctx, {
-          path: projectPath(rt, args.path),
+          path: cardPath(rt, args.path),
           summary: args.summary,
           keyFiles: list(args["key-files"]),
           facts: facts(args.facts),

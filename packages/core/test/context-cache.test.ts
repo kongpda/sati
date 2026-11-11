@@ -140,6 +140,45 @@ describe("context cache", () => {
     expect(await paths("budget.xlsx#Sheet2", changed)).toEqual([["budget.xlsx#Sheet2", true]]);
   });
 
+  // Office work lives in SharePoint, Drive and other folders. Those keys were refused, so what
+  // an agent learned from them could not be saved at all.
+  it("keeps a card for a web link or an outside file, matched whole and private by default", async () => {
+    const { ctx } = await withRepo([{ path: "src/a.ts", blob: "1" }]);
+    const link = "https://acme.sharepoint.com/sites/q3/Budget.xlsx?web=1";
+    await putContext(ctx, { path: link, summary: "Q3 budget", sourceSeen: "v12" });
+    const outside = await putContext(ctx, {
+      path: "/Users/dara/Desktop/brief.docx",
+      summary: "Brief",
+    });
+    // Its path names a folder on this machine, so it stays here unless the caller shares it.
+    expect(outside.private).toBe(true);
+    const [card] = await getContext(ctx, { path: link });
+    expect(card).toMatchObject({ path: link, stale: null });
+    expect(card?.private).toBeUndefined();
+    // sati cannot see a link change: only the caller's own look tells.
+    expect((await getContext(ctx, { path: link, seen: "v13" }))[0]?.stale).toBe(true);
+    expect((await getContext(ctx, { path: link, seen: "v12" }))[0]?.stale).toBe(false);
+    // `?` is part of the link, not a wildcard, and a project glob does not reach outside.
+    expect(await getContext(ctx, { path: link.replace("web=1", "web=2") })).toEqual([]);
+    expect((await getContext(ctx, { path: "**" })).map((c) => c.path)).toEqual([]);
+    // A part of a linked file is its own card, found with the file.
+    await putContext(ctx, { path: `${link}#Sheet2`, summary: "Totals" });
+    expect((await getContext(ctx, { path: link })).map((c) => c.path)).toEqual([
+      link,
+      `${link}#Sheet2`,
+    ]);
+    for (const path of [
+      "https://dara:pw@acme.com/x",
+      "https://acme.com/x?sig=abc",
+      "ftp://acme.com/x",
+      "/Users/dara/../x",
+    ]) {
+      await expect(putContext(ctx, { path, summary: "s" })).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+    }
+  });
+
   it("rejects paths outside the repo and empty summaries", async () => {
     const { ctx } = await withRepo([]);
     await expect(putContext(ctx, { path: "../x", summary: "s" })).rejects.toMatchObject({

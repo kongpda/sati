@@ -3,7 +3,13 @@ import { z } from "zod";
 import { shortHandle } from "../domain/ids.js";
 import { pathsOverlap } from "../domain/locks.js";
 import { isGuardedFeature } from "../domain/rules.js";
-import type { Decision, Feature, Note, Task } from "../domain/schemas.js";
+import {
+  type Decision,
+  type Feature,
+  isExternalKey,
+  type Note,
+  type Task,
+} from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
 import type { StorageReader } from "../ports/storage.js";
 import { type ChangeItem, lastSession, readChanges } from "./changes.js";
@@ -157,7 +163,8 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
     const linkedCards = cards
       .filter(
         (c) =>
-          owned.some((p) => pathsOverlap(p, c.path)) || (c.tags ?? []).some((t) => labels.has(t)),
+          (!isExternalKey(c.path) && owned.some((p) => pathsOverlap(p, c.path))) ||
+          (c.tags ?? []).some((t) => labels.has(t)),
       )
       .slice(0, LINKED_CARDS);
     const person = actor?.kind === "human";

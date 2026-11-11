@@ -532,13 +532,17 @@ function registerTools(
     "context_get",
     {
       description:
-        "Cards: what agents learned about files, folders and modules (summary, facts, tags, sourceSeen). Before opening a file, get its card by path: stale: false means the file is unchanged since the card was saved, so use the card instead; stale: true means it changed: re-read it, then context_put. Pass seen (the file's modified time or hash now, in the form you saved as sourceSeen) to have it compared; do this for files outside the project. A path may name a part of a file: budget.xlsx#Sheet2, deck.pptx#slide-12, contract.pdf#p4. With no path, lists up to 50 card paths with a total.",
+        "Cards: what agents learned about files, folders and modules (summary, facts, tags, sourceSeen). Before opening a file, get its card by path: stale: false means the file is unchanged since the card was saved, so use the card instead; stale: true means it changed: re-read it, then context_put. Pass seen (the file's modified time or hash now, in the form you saved as sourceSeen) to have it compared; do this for files outside the project. A path may name a part of a file: budget.xlsx#Sheet2, deck.pptx#slide-12, contract.pdf#p4. A path may also be a web link (SharePoint, Drive, a page) or the full path of a file outside the project; always pass seen for those. With no path, lists up to 50 card paths with a total.",
       inputSchema: GetContextInput,
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     (input) =>
       run(async () => {
-        const cards = await getContext(ctx, input);
+        // A full path inside the project is that file's project path, not an outside key.
+        const cards = await getContext(ctx, {
+          ...input,
+          ...(input.path === undefined ? {} : { path: repoPath(input.path) }),
+        });
         if (input.path !== undefined) return cards;
         // Every card with all its facts is the largest result an agent can ask for (review 4.3).
         const list = cards.slice(0, CARD_LIST_MAX).map(({ path, stale }) => ({ path, stale }));
@@ -550,11 +554,15 @@ function registerTools(
     "context_put",
     {
       description:
-        "After reading a file, folder or module, save a card: path, short summary, up to 50 facts worth quoting, tags, sourceSeen (the file's modified time or hash you read) and sourceTokens (about what reading it cost). Never paste file contents or secrets. private: true keeps it on this machine. Replaces the card for the same path.",
+        "After reading a file, folder or module, save a card: path, short summary, up to 50 facts worth quoting, tags, sourceSeen (the file's modified time or hash you read) and sourceTokens (about what reading it cost). Never paste file contents or secrets. private: true keeps it on this machine. path may be a web link without access tokens, or the full path of a file outside the project (private unless private: false). Replaces the card for the same path.",
       inputSchema: PutContextInput,
       annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    (input) => run(async () => slim(await putContext(ctx, input), { path: input.path })),
+    (input) =>
+      run(async () => {
+        const path = repoPath(input.path);
+        return slim(await putContext(ctx, { ...input, path }), { path });
+      }),
   );
 
   server.registerTool(

@@ -165,6 +165,9 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
   \`deck.pptx#slide-12\`, \`contract.pdf#p4\`. Put the numbers, names and dates in \`facts\`. For
   \`sourceSeen\` use what tells you the file changed: its modified time and size. Pass the same
   value as \`seen\` to \`context_get\` next time; a different value means read the file again.
+- A file in SharePoint, Drive or another folder: use its web link or its full path as the card
+  path. ${CLI_NAME} cannot see it change, so always pass \`seen\`. Leave access tokens out of a link. A
+  card for a full path stays on this machine unless you pass \`private: false\`.
 - \`private: true\` on a card or note keeps it on this machine: never in \`.${CLI_NAME}/\` or git. Use it
   for confidential material. A shared item cannot be made private later.
 - Pinned notes (brand voice, policies, contacts) reach every brief; pin only what everyone needs.

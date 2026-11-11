@@ -81,6 +81,66 @@ export const RepoPath = z
     return p;
   });
 
+const LINK = /^https?:\/\//iu;
+const ABSOLUTE = /^(?:\/|\\\\|[A-Za-z]:[\\/])/u;
+const LINK_SECRET = /^(?:sig|signature|token|access_token|key|api_key|password|auth)$/iu;
+
+/**
+ * Whether a card path names something outside the project folder: a web link (a page, a
+ * SharePoint or Drive file) or an absolute path. Such a key is matched whole, never as a glob.
+ */
+export const isExternalKey = (path: string): boolean => LINK.test(path) || ABSOLUTE.test(path);
+
+/** The stored form of an external key, or why it is refused. */
+function externalKey(raw: string): { key: string } | { error: string } {
+  if (!LINK.test(raw)) {
+    if (raw.split(/[\\/]/u).includes("..")) return { error: `"${raw}" holds a \`..\` step` };
+    return { key: raw.length > 1 ? raw.replace(/[\\/]+$/u, "") || raw : raw };
+  }
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return { error: `"${raw}" is not a web link` };
+  }
+  if (url.username !== "" || url.password !== "") {
+    return { error: "Leave the user name and password out of the link" };
+  }
+  const secret = [...url.searchParams.keys()].find((k) => LINK_SECRET.test(k));
+  if (secret !== undefined) {
+    return { error: `Leave \`${secret}\` out of the link: it gives access to the file` };
+  }
+  return { key: url.href };
+}
+
+/**
+ * What a card is about: a project-relative path or glob (`RepoPath`), a web link, or an absolute
+ * path to a file outside the project folder.
+ */
+export const CardPath = z
+  .string()
+  .trim()
+  .min(1)
+  .max(LIMITS.path)
+  .transform((raw, c) => {
+    if (!isExternalKey(raw)) {
+      // `ftp://host/x` would otherwise be kept as a project path that names no file.
+      if (/^[a-z][a-z0-9+.-]*:\/\//iu.test(raw)) {
+        c.addIssue({ code: "custom", message: "A card link must start with http:// or https://" });
+        return z.NEVER;
+      }
+      const inside = RepoPath.safeParse(raw);
+      if (inside.success) return inside.data;
+      for (const issue of inside.error.issues)
+        c.addIssue({ code: "custom", message: issue.message });
+      return z.NEVER;
+    }
+    const outside = externalKey(raw);
+    if ("key" in outside) return outside.key;
+    c.addIssue({ code: "custom", message: outside.error });
+    return z.NEVER;
+  });
+
 /**
  * A calendar day, YYYY-MM-DD. Not `z.iso.date()`: its leap-year regex is 330 characters in the
  * JSON Schema every agent loads with the tools; the short pattern plus this check is the same rule.

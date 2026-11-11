@@ -1,0 +1,15 @@
+{
+  "consequences": "Hash-protected deliverables make sati read file bytes in a general project. This narrows the Phase 8 rule \"sati never opens your files\" to: sati never reads file contents into its memory; it may hash a file the owner marked as approved.",
+  "context": "PLAN Phase 9 listed four items as needing the owner's decision. Phase 7d listed the launcher and inbox under \"needs Phase 6\", but both work on one machine.",
+  "createdAt": "2026-11-11T07:50:28.769Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "decision": "On 2026-11-11 the owner chose to build now: card keys for outside files and links, the `sati app` launcher (unsigned), the in-app inbox, a folder-sync mode without git (ADR first), and hash-protected deliverables. Phase 6 (hosted mode) stays deferred until v1.0 is published and tried.",
+  "id": "dec_01M74SCF51W9TMV9DZZZDV74JC",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T07:50:28.769Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "title": "Owner approves the Phase 9 decision items; Phase 6 stays deferred",
+  "updatedAt": "2026-11-11T07:50:28.769Z",
+  "version": 1
+}

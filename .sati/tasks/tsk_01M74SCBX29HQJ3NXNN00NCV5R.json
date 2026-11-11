@@ -1,0 +1,15 @@
+{
+  "createdAt": "2026-11-11T07:50:25.442Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "id": "tsk_01M74SCBX29HQJ3NXNN00NCV5R",
+  "parentId": "tsk_01M74SCBX1BWJ9CC2E77TSDNKJ",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T07:50:25.442Z#000002#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "status": "todo",
+  "title": "Desktop launcher: sati app starts the local board and opens it",
+  "updatedAt": "2026-11-11T07:50:25.442Z",
+  "version": 1
+}

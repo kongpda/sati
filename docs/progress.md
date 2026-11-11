@@ -2001,3 +2001,14 @@ Task `tsk_fevjbr`.
 - `pnpm bench` on 50,000 records: cold start 37 ms (80), read command 121 ms (150), search 40 ms (50), recall 43 ms (50), claim 3 ms (50). All inside the budgets.
 - Not measured: a Thai, Khmer or CJK search on 50,000 records. It scans instead of using the index (see 9e), so it will be slower than the 50 ms budget at that size.
 - Open, for the owner: the four items under "Needs the owner's decision before any work" in PLAN Phase 9.
+
+## 2026-11-11 — Owner items: card keys for links and outside files
+
+- The owner approved the four decision items of Phase 9 and the Phase 7d launcher and inbox; Phase 6 stays deferred (decision `dec_…DV74JC`).
+- A card path may be a web link (`http` or `https`) or an absolute path. Choices made:
+  - Such a key is matched whole, never as a glob, and has no content hash: `stale` is `null` until the caller passes `seen`.
+  - A link with a user name, a password or a query key such as `sig`, `token` or `key` is refused. Other schemes (`ftp://`) are refused.
+  - A new card for an absolute path is private unless the caller passes `private: false`: the path names a folder on one machine.
+  - `doctor --fix` never removes such a card as "file is gone".
+  - `~/…` is not a key: shells and agent tools give the full path.
+- Checked through the built CLI from a subfolder of a standalone project.

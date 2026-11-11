@@ -1,0 +1,16 @@
+{
+  "createdAt": "2026-11-11T07:50:25.444Z",
+  "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+  "effort": "deep",
+  "id": "tsk_01M74SCBX29HQJ3NXNN00NCV5T",
+  "parentId": "tsk_01M74SCBX1BWJ9CC2E77TSDNKJ",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-11T07:50:25.444Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+  },
+  "status": "todo",
+  "title": "Folder-sync mode: share a project through a synced folder without git (ADR first)",
+  "updatedAt": "2026-11-11T07:50:25.444Z",
+  "version": 1
+}

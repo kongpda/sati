@@ -84,7 +84,7 @@ export async function listAll<E extends StoredEntity>(
   entity: E,
   opts: Pick<
     ListQuery,
-    "includeDeleted" | "handoff" | "status" | "path" | "taskId" | "anyLabel"
+    "includeDeleted" | "handoff" | "status" | "path" | "taskId" | "anyLabel" | "dueBy"
   > = {},
 ): Promise<EntityMap[E][]> {
   const out: EntityMap[E][] = [];

@@ -35,8 +35,11 @@ export default defineCommand({
           let ready = 0;
           let inProgress = 0;
           let review = 0;
+          let store: SqliteStore | undefined;
           try {
-            const store = await SqliteStore.open(project.db);
+            // Read-only: opening for writing creates an empty database where one is missing,
+            // and `--prune` then takes the project for a live one.
+            store = await SqliteStore.open(project.db, { readonly: true });
             const now = systemClock.now().toISOString();
             const ctx = {
               store,
@@ -50,9 +53,10 @@ export default defineCommand({
             ready = (await store.read((r) => r.readyTasks(project.projectId, now, 500))).length;
             inProgress = tasks.filter((t) => t.status === "in_progress").length;
             review = tasks.filter((t) => t.status === "review").length;
-            await store.close();
           } catch {
             ready = -1;
+          } finally {
+            await store?.close();
           }
           rows.push({ ...project, ready, inProgress, review });
         }

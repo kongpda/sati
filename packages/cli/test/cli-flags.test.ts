@@ -316,6 +316,21 @@ describe("small", () => {
     expect(r.stderr).toContain("Forgot 0 projects");
   });
 
+  // Why: `projects` opened each database for writing, which created an empty one where it was
+  // missing. The listing then showed zero tasks instead of a problem, and `--prune` kept it.
+  it("projects does not create a database for a project whose database is gone", () => {
+    const home = mkdtempSync(join(tmpdir(), "sati-home-"));
+    const root = mkdtempSync(join(tmpdir(), "sati-ghost-"));
+    const db = join(root, "sati.db");
+    rememberProject(
+      { slug: "ghost", name: "ghost", projectId: "prj_ghost", root, mode: "git", db },
+      home,
+    );
+    const r = run(root, ["projects"], { HOME: home });
+    expect(r.stdout).toContain("ghost  ready -1");
+    expect(existsSync(db)).toBe(false);
+  });
+
   // Why: about 1,400 temp repos from test runs had piled up in the owner's real registry.
   it("test runs register projects outside the real home", async () => {
     const registry = process.env.SATI_REGISTRY ?? "";

@@ -137,6 +137,19 @@ describe("listChanges", () => {
     expect(digest).not.toContain("Bump deps");
   });
 
+  // Why: blocked and overdue tasks were read with a cap of 500, so the "Blocked now (N)" count
+  // was wrong and the rest were dropped without a word.
+  it("lists every blocked and overdue task past 500", async () => {
+    const { ctx } = await setup();
+    for (let i = 0; i < 501; i++) {
+      const t = await createTask(ctx, { title: `Stuck ${i}`, dueDate: "2026-11-01" });
+      await updateTask(ctx, t.id, { status: "blocked" });
+    }
+    const c = await listChanges(ctx, {});
+    expect(c.blocked).toHaveLength(501);
+    expect(c.overdue).toHaveLength(501);
+  }, 30_000);
+
   it("filters by milestone and by who did it", async () => {
     const { ctx } = await setup();
     await updateSettings(ctx, { review: "none" });

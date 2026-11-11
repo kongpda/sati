@@ -1876,3 +1876,13 @@ Status: **done** (2026-11-10). Task `tsk_s4bdvr`. The owner chose to check them 
 - The release workflow now runs only by hand, so a push to `main` cannot start `changeset publish`.
 - Installed from the packed tarball with `npm install -g`.
 - Verified: lint, typecheck, knip clean, build, core 334, store-sqlite 72, sync 52, mcp 30, ui 25, cli 171 (+2 Windows-only, skipped). The first local run timed out in three CLI tests while the machine's load average was 157 from unrelated work; rerun with the CI timeout, all passed.
+
+## 2026-11-11 — Full-project audit
+
+Status: **done, waiting for the owner's review** (2026-11-11). Task `tsk_82snym`. The owner asked for everything broken, inconsistent, inefficient or unneeded: fix what is certain, list the rest.
+
+- Five read-only reviewers covered the packages, the board and the docs; a sixth evaluated `fff` (recommendation: not as a dependency; idea recorded in `docs/ideas.md`).
+- Fixed, each with a test that fails on the old code: the quadratic `.env` secret pattern, `.` segments in lock paths, `undefined` arguments and a non-array `args` over `sati serve`, `sati projects` creating a database, the 500 cap on blocked and overdue tasks, and the `init` PATH test. Two small efficiency fixes (`createMilestoneIn`, `buildBrief`) and the `knip.json` cleanup are covered by existing tests.
+- Everything else is in `docs/review-followups.md` under "Found in the full-project audit (2026-11-11)". Nothing there was changed; several items are GitHub settings or doc promises that only the owner can decide.
+- Not read by any reviewer: most test bodies, `styles.css` in full, ADRs 0000-0004. No Playwright run was part of the review itself.
+- Changeset: `audit-fixes.md` (patch).

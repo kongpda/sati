@@ -6,7 +6,7 @@ import { SatiError } from "@sati/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { LATEST_SCHEMA_VERSION, SqliteStore } from "../src/index.js";
 import { connectStore, listenStore, PROTOCOL, socketPath } from "../src/remote.js";
-import { project, task } from "./fixtures.js";
+import { NOW, PROJECT_ID, project, task } from "./fixtures.js";
 
 const frame = (value: unknown) => {
   const body = Buffer.from(JSON.stringify(value));
@@ -121,6 +121,23 @@ describe("daemon server", () => {
 });
 
 describe("daemon hardening", () => {
+  // Why: `{"args": 5}` was spread outside any promise. The throw stopped the server, and with it
+  // every agent that shares the database through it.
+  it("answers a call whose args are not an array and keeps serving", async () => {
+    const client = await connect();
+    client.write(frame({ id: 1, op: "begin", mode: "read", txn: 1, protocol: PROTOCOL }));
+    await nextFrame(client);
+    client.write(frame({ id: 2, op: "call", txn: 1, method: "getProject", args: 5 }));
+    expect(await within(nextFrame(client))).toMatchObject({
+      id: 2,
+      ok: false,
+      error: { code: "VALIDATION" },
+    });
+    client.write(frame({ id: 3, op: "call", txn: 1, method: "getProject", args: [] }));
+    expect(await within(nextFrame(client))).toMatchObject({ id: 3, ok: true });
+    client.destroy();
+  });
+
   // `access?.[method]` would resolve `constructor` or `toString` from the prototype chain.
   it("refuses methods that are not on the storage allowlist", async () => {
     const client = await connect();
@@ -158,6 +175,24 @@ describe("daemon hardening", () => {
 });
 
 describe("daemon client", () => {
+  // Why: JSON sends a trailing `undefined` argument as `null`. `readyTasks` then looked for a
+  // task with id null, so `task list --ready` failed for everyone on a shared database.
+  it("leaves off trailing undefined arguments, as a local call does", async () => {
+    await owner.write((w) => w.insert("task", task({ status: "todo" })));
+    const remote = connectStore(sock);
+    const viaServer = await remote.read(async (r) => ({
+      ready: await r.readyTasks(PROJECT_ID, NOW, 10, undefined),
+      listed: await r.list("task", PROJECT_ID, undefined),
+    }));
+    const local = await owner.read(async (r) => ({
+      ready: await r.readyTasks(PROJECT_ID, NOW, 10, undefined),
+      listed: await r.list("task", PROJECT_ID, undefined),
+    }));
+    expect(viaServer.ready).toHaveLength(1);
+    expect(viaServer).toEqual(local);
+    await remote.close();
+  });
+
   // If the daemon dies, callers need an error they can act on, not a promise that never settles.
   it("rejects pending requests with a SatiError when the daemon drops the connection", async () => {
     const dir = mkdtempSync(join(tmpdir(), "sati-remote-"));

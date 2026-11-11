@@ -54,6 +54,16 @@ describe("normalizeLockPath", () => {
     expect(normalizeLockPath("src\\a.ts")).toBe("src/a.ts");
   });
 
+  // Why: `src/./a.ts` kept its `.` segment, so a lock written that way did not cover `src/a.ts`
+  // and a second agent could lock and edit the same file.
+  it("drops `.` segments, so both spellings of one file overlap", () => {
+    expect(normalizeLockPath("src/./a.ts")).toBe("src/a.ts");
+    expect(normalizeLockPath("./././src/a.ts")).toBe("src/a.ts");
+    expect(pathsOverlap(normalizeLockPath("src/./a.ts") ?? "", "src/a.ts")).toBe(true);
+    // A dot inside a name is not a segment.
+    expect(normalizeLockPath("src/.env")).toBe("src/.env");
+  });
+
   // These could never match a repo-relative file, so a lock on them would protect nothing.
   it.each(["", ".", "/etc/passwd", "C:/x", "../other/repo", "src/../../x"])("rejects %j", (p) => {
     expect(normalizeLockPath(p)).toBeUndefined();

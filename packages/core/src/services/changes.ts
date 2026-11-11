@@ -231,10 +231,11 @@ export async function readChanges(
   }
 
   const open = ["backlog", "todo", "in_progress", "review", "blocked"];
-  const blockedTasks = await r.list("task", ctx.projectId, { status: ["blocked"], limit: 500 });
-  const dueTasks = (
-    await r.list("task", ctx.projectId, { status: open, dueBy: today, limit: 500 })
-  ).filter((t) => typeof t.dueDate === "string" && t.dueDate < today);
+  // Read in full: a cap of 500 dropped the rest without saying so and made the counts wrong.
+  const blockedTasks = await listAll(r, ctx, "task", { status: ["blocked"] });
+  const dueTasks = (await listAll(r, ctx, "task", { status: open, dueBy: today })).filter(
+    (t) => typeof t.dueDate === "string" && t.dueDate < today,
+  );
 
   const scope = opts.milestoneId;
   const inScope = (milestoneId: string | null) => scope === undefined || milestoneId === scope;

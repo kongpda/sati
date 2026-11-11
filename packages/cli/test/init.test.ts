@@ -27,12 +27,15 @@ interface Err {
 
 const HOOKS = ["pre-commit", "post-merge", "post-checkout", "post-rewrite", "pre-push"];
 
-// A PATH without sati that still finds node and git. Without git, init cannot see the repo
-// and falls back to standalone mode (on Windows git is not in /usr/bin).
+// A PATH without sati that still finds node and git. Without git, init cannot read the repo
+// and stops (on Windows git is not in /usr/bin). A globally installed sati sits next to node,
+// so a folder that holds one is left out.
 const gitBin = execFileSync(process.platform === "win32" ? "where" : "which", ["git"], {
   encoding: "utf8",
 }).split(/\r?\n/u)[0];
-const base = [dirname(process.execPath), dirname(gitBin ?? ""), "/usr/bin", "/bin"].join(delimiter);
+const base = [dirname(process.execPath), dirname(gitBin ?? ""), "/usr/bin", "/bin"]
+  .filter((dir) => !existsSync(join(dir, "sati")))
+  .join(delimiter);
 
 const tempDir = () => realpathSync.native(mkdtempSync(join(tmpdir(), "sati-init-")));
 

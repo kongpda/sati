@@ -45,8 +45,10 @@ export async function createMilestoneIn(
   refuseSecrets("milestone", data);
   {
     // max+1, not a count: gaps would otherwise hand out a duplicate order.
-    const all = await listAll(w, ctx, "milestone");
-    const order = data.order ?? Math.max(-1, ...all.map((m) => m.order)) + 1;
+    // Only when no order was given: a plan import passes one for each of its milestones.
+    const order =
+      data.order ??
+      (await listAll(w, ctx, "milestone")).reduce((max, m) => Math.max(max, m.order), -1) + 1;
     return insertWithLog(w, ctx, "milestone", {
       ...baseFields(ctx, "milestone"),
       goal: "",

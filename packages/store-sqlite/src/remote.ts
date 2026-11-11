@@ -261,8 +261,18 @@ export function listenStore(
           });
           return;
         }
+        const args: unknown = msg.args ?? [];
+        // Spreading a non-array throws outside any promise, which would stop the whole server.
+        if (!Array.isArray(args)) {
+          send({
+            id: msg.id,
+            ok: false,
+            error: { code: "VALIDATION", message: "`args` must be an array." },
+          });
+          return;
+        }
         const call = fn as (...args: unknown[]) => Promise<unknown>;
-        void call(...(msg.args ?? [])).then(
+        void call(...args).then(
           (result) => send({ id: msg.id, ok: true, result }),
           (err: unknown) =>
             send({
@@ -335,8 +345,13 @@ export function connectStore(socketPath: string): StorageAdapter {
     new Proxy({} as StorageWriter, {
       get:
         (_t, method) =>
-        (...args: unknown[]) =>
-          request({ op: "call", txn, method: String(method), args }),
+        (...args: unknown[]) => {
+          // JSON turns an `undefined` argument into `null`, which a default parameter and an
+          // `=== undefined` check both miss. Trailing ones are left off instead.
+          let end = args.length;
+          while (end > 0 && args[end - 1] === undefined) end--;
+          return request({ op: "call", txn, method: String(method), args: args.slice(0, end) });
+        },
     });
   const run = async <T>(
     mode: "read" | "write",

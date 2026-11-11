@@ -35,6 +35,19 @@ const fake = {
 };
 
 describe("detectSecret", () => {
+  // Why: every write runs this on the caller's thread. The `.env` pattern backtracked on a long
+  // run of spaces, so one 100 KB note froze the process (and a shared `serve`) for many seconds.
+  it("reads a line with a long run of spaces in linear time", () => {
+    const line = `PAGE_TITLE=x${" ".repeat(100_000)}y z`;
+    const started = performance.now();
+    expect(detectSecret(line)).toBeUndefined();
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+
+  it("still finds a .env secret followed by spaces", () => {
+    expect(detectSecret("DB_PASSWORD=correct-horse-battery   \nnext line")).toBeDefined();
+  });
+
   // PLAN Security: scan every exported record for API keys, tokens, private keys and .env lines.
   it.each(Object.entries(fake))("finds a %s secret inside prose", (_name, secret) => {
     expect(detectSecret(`Notes from today:\n${secret}\nthat is all`)).toBeDefined();

@@ -41,13 +41,15 @@ function urlSecret(value: string): boolean {
  * `.env`-style lines: an upper-case name that looks secret, `=`, and a value. Lower-case names
  * are left alone so code such as `token = getToken()` in a note does not match.
  */
-const ENV_LINE = /^[ \t]*(?:export[ \t]+)?([A-Z][A-Z0-9_]*)[ \t]*=[ \t]*(\S.*?)[ \t]*$/gm;
+// The value runs to the end of the line and is trimmed in code: a lazy `.*?` before `[ \t]*$`
+// took quadratic time on a line with a long run of spaces.
+const ENV_LINE = /^[ \t]*(?:export[ \t]+)?([A-Z][A-Z0-9_]*)[ \t]*=[ \t]*(\S.*)$/gm;
 const SECRET_NAME = /SECRET|PASSWORD|PASSWD|TOKEN|(?:^|_)KEY$|CREDENTIAL/;
 
 function envSecret(value: string): boolean {
   for (const [, name = "", raw = ""] of value.matchAll(ENV_LINE)) {
     if (!SECRET_NAME.test(name)) continue;
-    const v = raw.replace(/^["']|["']$/g, "");
+    const v = raw.trimEnd().replace(/^["']|["']$/g, "");
     if (v.length < 8 || placeholder(v)) continue;
     // `MAX_TOKENS=100000` and `SORT_KEY=created_at_desc` are settings, not credentials.
     if (/^\d+$/.test(v) || (/KEY$/.test(name) && /^[a-z][a-z0-9_.-]*$/.test(v))) continue;

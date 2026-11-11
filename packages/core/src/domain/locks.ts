@@ -1,14 +1,19 @@
 import micromatch from "micromatch";
 
 /**
- * Normalises a repo-relative path or glob: trims, drops a leading `./` and trailing `/`.
+ * Normalises a repo-relative path or glob: trims, drops `.` segments and a trailing `/`.
  * Returns undefined for paths that could never match a repo file (absolute, `..`, empty), so a
  * lock on them would silently protect nothing.
  */
 export function normalizeLockPath(raw: string): string | undefined {
-  let p = raw.trim().replaceAll("\\", "/");
-  while (p.startsWith("./")) p = p.slice(2);
-  p = p.replace(/\/+$/, "");
+  // `src/./a.ts` is `src/a.ts`: left in, the two would not overlap and a lock would not hold.
+  const p = raw
+    .trim()
+    .replaceAll("\\", "/")
+    .split("/")
+    .filter((segment) => segment !== ".")
+    .join("/")
+    .replace(/\/+$/, "");
   if (p === "" || p === "." || p.startsWith("/") || /^[a-zA-Z]:/.test(p)) return undefined;
   if (p.split("/").includes("..")) return undefined;
   return p;

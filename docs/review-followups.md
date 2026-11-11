@@ -693,3 +693,50 @@ Not built and not in PLAN. Raise with the owner before doing any: map Zod errors
 ## Found while making CI green on Windows (2026-11-10)
 
 - [x] Inside a git repository where `git` cannot run (not on PATH, or a broken install), `locateDb` treats the folder as non-git and `sati init` sets up a standalone project with no warning and no git hooks. Seen on the Windows CI runner when a test dropped git from PATH. Fixed on the owner's choice (2026-11-10): when `git rev-parse` fails and a `.git` entry exists at or above the folder, `locateDb` stops with an error that names git. Outside any repo, standalone projects still work without git.
+
+## Found in the full-project audit (2026-11-11)
+
+Five reviewers read `core`, `cli`, `store-sqlite` + `sync` + `mcp`, `ui` + `e2e`, and the docs, config and CI. Automated checks were clean (build, lint, typecheck, knip, `pnpm audit`). Fixed items are ticked; the rest wait for the owner. "Reproduced" means a reviewer or the fixing agent ran it; the others were found by reading.
+
+Fixed:
+
+- [x] `secrets.ts` `ENV_LINE` took quadratic time on a line with a long run of spaces (reproduced: 22.8 s for 100 KB). Every write runs it, so one note could freeze a shared `sati serve`.
+- [x] `normalizeLockPath` kept inner `.` segments, so a lock on `src/./a.ts` did not cover `src/a.ts` (reproduced).
+- [x] Through `sati serve`, a trailing `undefined` argument arrived as `null`: `readyTasks` failed with "No task with id null" and `list`/`search` with a null-property error (reproduced). The client now leaves trailing `undefined` arguments off.
+- [x] A `call` frame whose `args` is not an array stopped the `serve` process (reproduced). It now gets a VALIDATION reply.
+- [x] `sati projects` opened each database for writing, which created an empty one where it was missing (reproduced). It opens read-only and closes in `finally`.
+- [x] `readChanges` read blocked and overdue tasks with a cap of 500.
+- [x] `createMilestoneIn` listed every milestone even when an order was given (100 listings in one plan import); `buildBrief` read the caller's actor row twice.
+- [x] `init.test.ts` "warns when sati is not on PATH" failed on any machine with sati installed next to node.
+- [x] `knip.json`: the `entry` arrays were redundant (knip passes without them).
+
+Open, code (likely bugs; each needs a test before a fix):
+
+- [ ] `doctor` `hooksCheck` reads the hook's binary with its own regex, which breaks on a path with an apostrophe; `installedSelf` already parses it correctly.
+- [ ] `hooks.ts` `runner` only checks the last word of the command. With `node <script>` and a removed node binary, pre-commit exits 127 and blocks every commit.
+- [ ] `doctor` `worktreesCheck` drops the first entry of `git worktree list`, assuming it is the current worktree. Inside a linked worktree it is the main one.
+- [ ] `init --upgrade` accepts `--mode`, `--kind`, `--name` and `--slug` and ignores them.
+- [ ] `sati review` calls `checkChanges` without `maxRemovalRatio` and without the general-project switch, so it can disagree with `sati guard`.
+- [ ] `samePath` in `git.ts` has no realpath and no Windows case fold, unlike `isLocalInstall`.
+- [ ] `merge-driver.ts` writes with `writeFileSync` + `renameSync`, not `writeFileAtomic`; `sync/src/snapshot.ts` `writeAtomic` has no Windows rename retry either, and `removeStaleTemps` can throw ENOENT when two exports race.
+- [ ] `filesystemKind` on macOS runs `stat -f %T`, which prints a file-type mark, not the filesystem type (confirmed on this machine). The network-drive warning never fires on macOS.
+- [ ] A socket path over about 104 characters fails `sati serve` with a bare EINVAL (reproduced by a reviewer).
+- [ ] `locateDb`: git's stderr is thrown away, so the new INTERNAL error cannot say why git failed; inside `.git` or a bare repo the hint ("git is missing") is wrong; a broken `.git` above a standalone project now blocks it.
+- [ ] `needsReview` can be set by the merge driver on any record, but `doctor` counts only tasks, and a flagged milestone or decision has no way to be cleared.
+- [ ] Dry runs check less than real runs: `importPlan` (title length, secrets) and `applyTemplate` (duplicate milestone name).
+- [ ] MCP `fail()` returns error text unfenced; it can contain record text (a title, a holder's name).
+- [ ] `scan` and `review` read 500 records with no paging; `ensurePersonal` throws a raw EEXIST; `stop` in `ui.ts`/`serve.ts` has no `.catch`; the registry is rewritten with no lock.
+- [ ] `shell-changes`: `mv a dir/` reports the wrong target; `git commit -m -n` is blocked as `--no-verify`; removing a husky hook file is not seen.
+- [ ] Board: moving one card twice quickly can send a stale version and show a conflict; a partial bulk-move failure uses the 6-second toast; Enter and `x` act on a non-board page; a feature hit in the palette opens the hidden Features page in a general project; Esc does nothing when focus is outside the dialog's form; `saving` in Settings can stick; `completion.summary` renders as Markdown where the comment says plain text; avatar colours are literal hex outside the dark-mode tokens.
+- [ ] Efficiency: FTS triggers rewrite the row on every update (lease renewals too); no index on `milestone_id`; MCP `roadmap` loads every record; `openRuntime` runs `git rev-parse --abbrev-ref HEAD` for every command; `issueStamp` adds two statements per record in bulk imports; Notes, Decisions and Memory lists parse Markdown for every row on each refresh; `e2e/ui/flows.spec.ts:1155` waits on fixed timeouts.
+- [ ] Small leftovers: three `git()` helpers and three copies of the export debounce wiring in the CLI; the unreachable `C` (copy) branch in `git.ts`; `absFrom` exported for one file; the `copyFileSync` fallback in `migrate.ts`.
+
+Open, docs and repo (owner decisions):
+
+- [ ] `SECURITY.md` points to GitHub's private vulnerability reporting, which is off (`gh api` returns `enabled: false`). Secret scanning, push protection and Dependabot security updates are off too, and no Renovate PR exists.
+- [ ] Install text that cannot work while nothing is on npm: README Quick start, `docs/guide/quick-start.md`, `faq.md`, `guard.md`, `packages/cli/README.md`. No doc describes the tarball install from ADR 0006.
+- [ ] `release.yml` run by hand still calls `changeset publish`.
+- [ ] `PLAN.md`: line 914 names `sati sync resolve`, which does not exist; the MCP tool count says 15 and 19 where the server has 20; the Phase 3 `.gitattributes` line and the hooks table are out of date; "no benchmark suite" where `pnpm bench` exists.
+- [ ] `docs/ideas.md` has items from 2026-11-10 that are done; `AGENT_KICKOFF.md` is history; the remote branch `changeset-release/main` is stale.
+- [ ] CI runs lint and typecheck on all 7 matrix cells and shares no build output between jobs.
+- [ ] Dependencies behind: majors `vite` 7→8, `@vitejs/plugin-react` 5→6, `@types/node` 24→26; about a dozen minor and patch updates.

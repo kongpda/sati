@@ -121,7 +121,6 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
         ? await listAll(r, ctx, "note", { handoff: "unread" })
         : notes.filter(unreadHandoff);
     const handoffs = new Map<string, string>();
-    const me = await r.get("actor", ctx.actorId);
     // The newest comment by someone else on each record: a person's "use the blue logo" reaches
     // the agent. The caller's own replies are left out; they already know what they said.
     const comments = new Map<string, Note>();
@@ -137,12 +136,12 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       }
     }
     for (const note of unread) {
-      if (short || !handoffFor(note, me)) continue;
+      if (short || !handoffFor(note, actor)) continue;
       const next = handoffNext(note.body);
       for (const link of note.links) if (next) handoffs.set(link, next);
     }
     const forMe = [];
-    for (const note of unread.filter((n) => n.handoffTo !== undefined && handoffFor(n, me))) {
+    for (const note of unread.filter((n) => n.handoffTo !== undefined && handoffFor(n, actor))) {
       const author = await r.get("actor", note.createdBy);
       forMe.push({ note, from: author?.name ?? note.handoffFromName ?? note.createdBy });
     }

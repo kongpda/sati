@@ -1,14 +1,29 @@
 {
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "heartbeatAt": "2026-11-11T10:48:58.104Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 26060
-    },
-    "leaseUntil": "2026-11-11T13:48:58.104Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "c46791dee6c9d30e8e86e5ad7abe2c2518cfb79c",
+    "completedAt": "2026-11-11T11:02:26.649Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "packages/cli/src/ui/server.ts",
+      "packages/cli/src/commands/ui.ts",
+      "packages/cli/test/ui-server.test.ts",
+      "packages/ui/src/api.ts",
+      "packages/ui/src/app.tsx",
+      "packages/ui/src/memory.tsx",
+      "packages/ui/src/thread.tsx",
+      "packages/ui/src/styles.css",
+      "packages/ui/test/my-work.test.ts",
+      "e2e/ui/flows.spec.ts",
+      "PLAN.md",
+      "README.md",
+      "docs/ideas.md",
+      "docs/progress.md",
+      ".changeset/board-approve-mentions.md"
+    ],
+    "releaseNote": "The board can approve a file and take the approval away, and offers names after @ in comments.",
+    "summary": "Board Memory page approves a file as it is now and removes the approval (POST /api/cards/approve, same approveCard and hash as the CLI; RepoPath keeps the read in the project folder). Comment box offers names after @ (listbox, arrow keys, Enter/Tab, Escape closes names only). Tests: ui-server route test, UI unit tests (picked handle reaches the person's My work), two Playwright flows. Commit c46791d. Not done: board does not show that an approved file changed since (kept in docs/ideas.md)."
   },
   "createdAt": "2026-11-11T10:45:11.985Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
@@ -19,13 +34,14 @@
   "stamps": {
     "*": "2026-11-11T10:45:11.985Z#000001#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "branch": "2026-11-11T10:48:58.104Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "claim": "2026-11-11T10:48:58.104Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "status": "2026-11-11T10:48:58.104Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T11:02:26.649Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T11:02:26.649Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T11:02:26.649Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "worktree": "2026-11-11T10:48:58.104Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Board: approve a file from its card, and @name suggestions in comments",
-  "updatedAt": "2026-11-11T10:48:58.105Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T11:02:26.650Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

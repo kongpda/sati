@@ -2,6 +2,7 @@ import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync } f
 import { join, posix } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import {
+  compareHlc,
   type ImportRecordsInput,
   type ImportResult,
   importRecords,
@@ -225,10 +226,25 @@ export function refusedError(refused: readonly RefusedRecord[]): SatiError {
   );
 }
 
+/**
+ * A copy of a record file under a new name: an id, then text a file-sync app or a file manager
+ * added, as in `tsk_… (1).json`, `tsk_… 2.json` or `tsk_… (conflicted copy).json`.
+ */
+const RECORD_COPY = /^[a-z]+_[0-9A-HJKMNP-TV-Z]{26}.+\.json$/u;
+
 /** Reads every record file under `dir`. Unparseable files fail the whole read. */
 export function readSnapshot(dir: string): ImportRecordsInput {
+  return scanSnapshot(dir).records;
+}
+
+/**
+ * As `readSnapshot`, and also names the files it left out: copies of record files a file-sync app
+ * made. One of those must not stop every import. Any other odd file still fails the read.
+ */
+function scanSnapshot(dir: string): { records: ImportRecordsInput; skipped: string[] } {
   refuseLinkedFolders(dir);
   const out: ImportRecordsInput = [];
+  const skipped: string[] = [];
   let count = 0;
   let total = 0;
   for (const entity of SNAPSHOT_ENTITIES) {
@@ -237,6 +253,10 @@ export function readSnapshot(dir: string): ImportRecordsInput {
     for (const name of readdirSync(folder).sort()) {
       if (!name.endsWith(".json")) continue;
       const source = posix.join(SNAPSHOT_DIRS[entity], name);
+      if (RECORD_COPY.test(name)) {
+        skipped.push(source);
+        continue;
+      }
       const file = join(folder, name);
       const fail = (why: string) => {
         throw new SatiError("VALIDATION", `Invalid snapshot file ${source}: ${why}`, {
@@ -253,7 +273,8 @@ export function readSnapshot(dir: string): ImportRecordsInput {
       if (total > MAX_TOTAL_BYTES) fail("the snapshot is larger than 256 MB in total");
       let record: unknown;
       try {
-        record = JSON.parse(readFileSync(file, "utf8"));
+        // Some editors and sync tools add a byte-order mark; JSON.parse refuses it.
+        record = JSON.parse(readFileSync(file, "utf8").replace(/^\uFEFF/u, ""));
       } catch {
         // The parser's message can quote the file's content; keep it out of the error.
         fail("not valid JSON");
@@ -265,20 +286,46 @@ export function readSnapshot(dir: string): ImportRecordsInput {
       out.push({ entity, source, record: full });
     }
   }
-  return out;
+  return { records: out, skipped };
 }
 
 /** Imports the snapshot in `dir` into the DB; see `importRecords` for the rules. */
 export async function importSnapshot(ctx: ServiceContext, dir: string): Promise<ImportResult> {
-  return importRecords(ctx, await joinTies(ctx, readSnapshot(dir)));
+  const { records, skipped } = scanSnapshot(dir);
+  const result = await importRecords(ctx, await joinTies(ctx, records));
+  for (const path of skipped) {
+    result.problems.push(
+      `${path} is not a record file and was skipped (a copy made by a file-sync app?). Delete it.`,
+    );
+  }
+  return result;
+}
+
+/** True when each side holds a field the other wrote earlier: both were edited since they met. */
+function eachSideLater(stored: Obj, file: Obj): boolean {
+  const a = isObj(stored.stamps) ? stored.stamps : {};
+  const b = isObj(file.stamps) ? file.stamps : {};
+  let storedLater = false;
+  let fileLater = false;
+  for (const key of Object.keys(a)) {
+    const x = a[key];
+    const y = b[key];
+    if (typeof x !== "string" || typeof y !== "string") continue;
+    const cmp = compareHlc(x, y);
+    storedLater ||= cmp > 0;
+    fileLater ||= cmp < 0;
+  }
+  return storedLater && fileLater;
 }
 
 /**
- * A file and the DB at the same version with different stamps changed apart without a git merge:
- * a local edit still inside the export debounce, or kept from export by a crash, when a pull
- * brings a teammate's file. Import keeps whole records, so one side's edit would be lost; merge
- * the two field by field instead. The merged record is one version past both, so it is imported
- * and then exported over the file.
+ * A file and the DB that changed apart without a git merge: a local edit still inside the export
+ * debounce, or kept from export by a crash, when a pull brings a teammate's file. Import keeps
+ * whole records, so one side's edit would be lost; merge the two field by field instead. They
+ * changed apart when the versions match and the stamps differ, or, at any versions, when each
+ * side wrote some field later than the other (a higher version alone does not mean the file has
+ * seen the local edit). The merged record is one version past both, so it is imported and then
+ * exported over the file.
  */
 async function joinTies(ctx: ServiceContext, records: ImportRecordsInput) {
   return ctx.store.read(async (r) => {
@@ -290,9 +337,10 @@ async function joinTies(ctx: ServiceContext, records: ImportRecordsInput) {
       const tie =
         isObj(file) &&
         stored !== undefined &&
-        stored.version === file.version &&
         isObj(file.stamps) &&
-        !isDeepStrictEqual(stored.stamps, file.stamps) &&
+        (stored.version === file.version
+          ? !isDeepStrictEqual(stored.stamps, file.stamps)
+          : eachSideLater(stored as unknown as Obj, file)) &&
         // Compared as files: a task saved before `effort` has no effort stamp in the DB, and its
         // file reads back with the shared one. That is not a change.
         !isDeepStrictEqual(encodeRecord(stored), encodeRecord(file));

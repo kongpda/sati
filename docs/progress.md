@@ -1918,3 +1918,16 @@ Task `tsk_fevjbj`, from the 2026-11-11 deep review (PLAN Phase 9).
 - `sati init`: kind defaults to `general` outside git; `--dry-run` prints the kind; standalone init refuses the home folder and the filesystem root.
 - Tests: each new test fails on the old code. Not tested: the filesystem-root refusal (a test cannot run there), and the live rename through a real MCP client (the identity function and the `oninitialized` wiring are covered apart, not together).
 - Seen while testing, not from this work: `packages/ui` has lint errors from the other agent's work in progress; two git-hook CLI tests (`sync.test.ts`, `init.test.ts` fresh clone) failed once each under a loaded machine and passed on the rerun.
+
+## 2026-11-11 — Phase 9b: sync and store safety
+
+Task `tsk_fevjbk`.
+
+- Import merge: `joinTies` now also merges when the versions differ and each side holds a field stamp later than the other's. A record where only one side is later is taken or kept whole, as before. Records with no stamps keep the old rule (the higher version wins).
+- Snapshot reader: a leading byte-order mark is dropped. A file named as a record id plus extra text (`tsk_… (1).json`, `… (conflicted copy).json`) is skipped and reported in `problems`. Choice: any other odd name still fails the import, so a bad file a teammate pushed is not passed over in silence.
+- `writeFileAtomic` flushes the temp file before the rename (`flush: true`). The folder entry is not flushed; a power cut can still lose the rename, never the content.
+- Remote store: the server answers an `abort` or `end` for a transaction that is already over. The client has a 60 s limit per request; when it fires the connection is dropped, so the daemon rolls back.
+- `fuseblk` is local. Other FUSE types stay network.
+- `syncedFolder` guesses the file-sync app from folder names only. `doctor` fails the new `synced folder` check; `init` prints a warning and continues. Choice: a failing check, because doctor has no warning level and a synced database does get corrupted.
+- Not tested: the flush (no test can cut the power); a real failed COMMIT (the test sends the `abort` after a finished transaction, the same server state).
+- Tooling note: `pnpm exec biome` run through the `rtk` hook ended with "Linter process terminated abnormally" on one file; the raw binary checks it clean.

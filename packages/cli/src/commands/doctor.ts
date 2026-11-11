@@ -19,7 +19,7 @@ import { defaultBase, samePath } from "../git.js";
 import { installedSelf } from "../hooks.js";
 import { runHint } from "../install.js";
 import { closeRuntime, execute, openRuntime, output, worktreePaths } from "../runtime.js";
-import { pendingUpgrade } from "./init.js";
+import { pendingUpgrade, syncedDbWarning } from "./init.js";
 
 /**
  * The git hooks of this clone: the pre-commit runner init writes under the git common dir, and
@@ -165,6 +165,8 @@ export default defineCommand({
             checks.push({ name: "integrity", ok: integrity === "ok", detail: integrity });
             if (args.vacuum) await store.vacuum();
           }
+          const synced = syncedDbWarning(rt.location.path);
+          if (synced) checks.push({ name: "synced folder", ok: false, detail: synced });
           if (rt.location.mode !== "standalone") {
             const hooks = hooksCheck(rt.location.root);
             checks.push(hooks);

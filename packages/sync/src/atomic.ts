@@ -13,7 +13,8 @@ export function writeFileAtomic(path: string, text: string, mode?: number): void
     // New file: the default mode (or `mode`) applies.
   }
   const tmp = `${path}.${process.pid}.tmp`;
-  writeFileSync(tmp, text);
+  // Flushed before the rename: without it a power cut can leave the new name on an empty file.
+  writeFileSync(tmp, text, { flush: true });
   if (keep !== undefined) chmodSync(tmp, keep);
   rename(tmp, path);
 }

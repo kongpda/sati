@@ -261,6 +261,20 @@ describe("commands", () => {
     expect(r.code).not.toBe(0);
   });
 
+  // Deep review 2026-11-11: a repo inside Dropbox or OneDrive looks like a local disk, and the
+  // database under .git was synced while written. Nothing said so.
+  it("init and doctor warn when the database is in a file-sync folder", async () => {
+    const dir = join(await tempRepo(), "Dropbox", "launch");
+    mkdirSync(dir, { recursive: true });
+    execFileSync("git", ["init", "-q"], { cwd: dir });
+    const init = sati(dir, "init", "--yes", "--tools", "");
+    expect(init.code, init.stderr).toBe(0);
+    expect(init.stderr).toContain("Dropbox keeps in sync");
+    const doctor = sati(dir, "doctor");
+    expect(doctor.stdout).toContain("fail synced folder");
+    expect(doctor.code).not.toBe(0);
+  });
+
   // Why: running `scan --apply` twice created every feature twice.
   it("scan --apply is idempotent and skips build output folders", async () => {
     const dir = await tempRepo({ init: true });

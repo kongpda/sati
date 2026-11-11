@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createIdFactory, createTask, initProject, systemClock } from "@sati/core";
 import { describe, expect, it } from "vitest";
-import { classifyFilesystem, filesystemKind, mountedType } from "../src/fs-kind.js";
+import { classifyFilesystem, filesystemKind, mountedType, syncedFolder } from "../src/fs-kind.js";
 import { connectStore, listenStore, socketPath } from "../src/remote.js";
 import { SqliteStore } from "../src/store.js";
 
@@ -14,6 +14,27 @@ describe("filesystem class", () => {
     expect(classifyFilesystem("nfs")).toBe("network");
     expect(classifyFilesystem("smbfs")).toBe("network");
     expect(classifyFilesystem("9p")).toBe("bind");
+  });
+
+  // An NTFS or exFAT disk on Linux mounts as fuseblk. Read as a network share, it refused the
+  // database until the user ran `serve`.
+  it("treats a FUSE block device as a local disk, other FUSE mounts as network", () => {
+    expect(classifyFilesystem("fuseblk")).toBe("local");
+    expect(classifyFilesystem("fuse.sshfs")).toBe("network");
+  });
+
+  // Office users keep projects in Dropbox or OneDrive. Those folders look like a local disk, and
+  // a database copied mid-write there ends up corrupt.
+  it("names the file-sync app that keeps a folder", () => {
+    expect(syncedFolder("/Users/dara/Dropbox/launch/.git/sati")).toBe("Dropbox");
+    expect(syncedFolder("/Users/dara/Library/CloudStorage/OneDrive-Acme/q3")).toBe("OneDrive");
+    expect(syncedFolder("/Users/dara/Library/Mobile Documents/com~apple~CloudDocs/x")).toBe(
+      "iCloud Drive",
+    );
+    expect(syncedFolder("C:\\Users\\dara\\OneDrive - Acme\\q3")).toBe("OneDrive");
+    expect(syncedFolder("G:\\My Drive\\q3")).toBe("Google Drive");
+    expect(syncedFolder("/Users/dara/work/dropbox-clone")).toBeUndefined();
+    expect(syncedFolder("/Users/dara/.sati/projects")).toBeUndefined();
   });
 
   // Windows has no `stat` command, so every path read as local, and a database on a share

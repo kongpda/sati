@@ -1,15 +1,30 @@
 {
   "body": "actor.ts detectTool + MCP clientInfo; domain/locks.ts comparison; card put / lock acquire relative to cwd; init --yes outside git defaults to general and refuses the home folder or /.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "heartbeatAt": "2026-11-11T07:10:41.591Z",
-    "holder": {
-      "host": "h:001065b26af48df5",
-      "pid": 67720
-    },
-    "leaseUntil": "2026-11-11T09:10:41.591Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "6cc3d353d0a154c5a1849fb523de819316547f76",
+    "completedAt": "2026-11-11T07:18:43.743Z",
+    "completedBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "filesTouched": [
+      "PLAN.md",
+      "docs/progress.md",
+      ".changeset/office-identity-paths.md",
+      "packages/core/src/services/actor.ts",
+      "packages/core/src/domain/locks.ts",
+      "packages/core/test/actor.test.ts",
+      "packages/core/test/locks.test.ts",
+      "packages/cli/src/runtime.ts",
+      "packages/cli/src/commands/mcp.ts",
+      "packages/cli/src/commands/guard.ts",
+      "packages/cli/src/commands/context.ts",
+      "packages/cli/src/commands/lock.ts",
+      "packages/cli/src/commands/init.ts",
+      "packages/cli/test/init.test.ts",
+      "packages/mcp/src/index.ts"
+    ],
+    "releaseNote": "MCP clients without an agent variable are recorded as agents; paths match without case; CLI paths work from a subfolder; init outside git defaults to general.",
+    "summary": "Commit 6cc3d35. MCP callers with no agent variable are agents named from clientInfo (start as mcp@<folder>, renamed on initialise). pathsOverlap folds NFC and lower case (locks, guard, features). CLI card put|get and lock acquire resolve cwd-relative and absolute in-project paths. init outside git defaults to general, dry-run prints the kind, refuses home folder and filesystem root. Tests added fail on old code. Not tested: root refusal; live rename through a real MCP client end to end."
   },
   "createdAt": "2026-11-11T07:10:09.034Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
@@ -20,13 +35,14 @@
   "stamps": {
     "*": "2026-11-11T07:10:09.034Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "branch": "2026-11-11T07:10:41.591Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "claim": "2026-11-11T07:10:41.591Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
-    "status": "2026-11-11T07:10:41.591Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T07:18:43.743Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "completion": "2026-11-11T07:18:43.743Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T07:18:43.743Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
     "worktree": "2026-11-11T07:10:41.591Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "9a Identity and paths: MCP callers are agents, case and Unicode in lock paths, CLI paths from a subfolder, general kind outside git",
-  "updatedAt": "2026-11-11T07:10:41.592Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T07:18:43.744Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

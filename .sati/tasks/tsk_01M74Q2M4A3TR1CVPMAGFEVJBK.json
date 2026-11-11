@@ -1,5 +1,16 @@
 {
   "body": "core sync.ts isNewer/joinTies; snapshot.ts BOM and stray conflicted-copy names; atomic.ts fsync; remote.ts abort after failed COMMIT; fs-kind.ts fuseblk and synced-folder detection.",
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "heartbeatAt": "2026-11-11T07:18:44.147Z",
+    "holder": {
+      "host": "h:001065b26af48df5",
+      "pid": 67720
+    },
+    "leaseUntil": "2026-11-11T09:18:44.147Z",
+    "token": 2
+  },
   "createdAt": "2026-11-11T07:10:09.035Z",
   "createdBy": "actr_01M74PFFG6AH34XKMG8W6QE26Y",
   "id": "tsk_01M74Q2M4A3TR1CVPMAGFEVJBK",
@@ -7,10 +18,15 @@
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "*": "2026-11-11T07:10:09.035Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
+    "*": "2026-11-11T07:10:09.035Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "branch": "2026-11-11T07:18:44.147Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "claim": "2026-11-11T07:18:44.147Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "status": "2026-11-11T07:18:44.147Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y",
+    "worktree": "2026-11-11T07:18:44.147Z#000000#actr_01M74PFFG6AH34XKMG8W6QE26Y"
   },
-  "status": "todo",
+  "status": "in_progress",
   "title": "9b Sync and store safety: merge diverged stamps on import, tolerant snapshot reader, fsync, abort timeout, fuseblk, cloud-folder warning",
-  "updatedAt": "2026-11-11T07:10:09.035Z",
-  "version": 1
+  "updatedAt": "2026-11-11T07:18:44.147Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

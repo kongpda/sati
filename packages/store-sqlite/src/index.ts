@@ -1,4 +1,4 @@
-export { classifyFilesystem, filesystemKind } from "./fs-kind.js";
+export { classifyFilesystem, filesystemKind, syncedFolder } from "./fs-kind.js";
 export { buildFtsQuery } from "./fts.js";
 export {
   clearLocateCache,

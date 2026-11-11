@@ -198,6 +198,26 @@ describe("exportSnapshot / importSnapshot", () => {
     expect(() => readSnapshot(dir)).toThrow(/does not match the record id/);
   });
 
+  // Deep review 2026-11-11: in a folder kept by Dropbox or OneDrive one "conflicted copy", or a
+  // file an editor saved with a byte-order mark, refused every import until someone found it.
+  it("reads a file with a byte-order mark and skips a sync app's copy with a warning", async () => {
+    const a = await clone();
+    const dir = tempDir();
+    const t = await createTask(a, { title: "One" });
+    await exportSnapshot(a, dir);
+    const file = join(dir, `tasks/${t.id}.json`);
+    const text = readFileSync(file, "utf8");
+    writeFileSync(file, `\uFEFF${text}`);
+    writeFileSync(join(dir, `tasks/${t.id} (conflicted copy 2026-11-11).json`), text);
+    writeFileSync(join(dir, `tasks/${t.id} (1).json`), "{ half a file");
+
+    const b = await clone(a.projectId);
+    const result = await importSnapshot(b, dir);
+    expect(result.imported.map((i) => i.id)).toEqual([t.id]);
+    expect(result.problems).toHaveLength(2);
+    expect(result.problems[0]).toContain(`tasks/${t.id} (1).json`);
+  });
+
   // WHY: .sati/ is committed by teammates; a symlink there must not pull in files outside the repo
   // or echo their content in an error.
   it("refuses symlinked record files and does not quote file content in parse errors", () => {
@@ -396,6 +416,30 @@ describe("a file and the DB that changed apart at the same version", () => {
     await exportSnapshot(a, dir);
     await importSnapshot(b, dir);
     expect(await getRecord(b, "task", t.id)).toMatchObject({ title: "ours", body: "theirs" });
+  });
+
+  // Deep review 2026-11-11: with two edits on one side the versions differ, and the higher one
+  // replaced the whole record, dropping the other side's edit.
+  it.each([
+    ["the teammate's file", 2, 1],
+    ["the local DB", 1, 2],
+  ])("keep both sides' fields when %s is at the higher version", async (_who, theirs, ours) => {
+    const a = await clone();
+    const b = await clone(a.projectId);
+    const dir = tempDir();
+    const t = await createTask(a, { title: "One" });
+    await exportSnapshot(a, dir);
+    await importSnapshot(b, dir);
+    for (let i = 1; i <= theirs; i++) await updateTask(b, t.id, { body: `theirs ${i}` });
+    await exportSnapshot(b, dir);
+    for (let i = 1; i <= ours; i++) await updateTask(a, t.id, { title: `ours ${i}` });
+
+    await importSnapshot(a, dir);
+    const want = { title: `ours ${ours}`, body: `theirs ${theirs}` };
+    expect(await getRecord(a, "task", t.id)).toMatchObject({ ...want, version: 4 });
+    await exportSnapshot(a, dir);
+    await importSnapshot(b, dir);
+    expect(await getRecord(b, "task", t.id)).toMatchObject(want);
   });
 
   it("leave a file the DB already holds alone", async () => {

@@ -292,7 +292,19 @@ export function listenStore(
         return;
       }
       const gate = msg.txn !== undefined ? gates.get(msg.txn) : undefined;
-      if (!gate) return;
+      if (!gate) {
+        // The transaction is already over: a failed COMMIT answered the client's `end`, and the
+        // client now aborts. With no reply it would wait for ever.
+        if (msg.op === "abort") send({ id: msg.id, ok: true });
+        else if (msg.op === "end") {
+          send({
+            id: msg.id,
+            ok: false,
+            error: { code: "INTERNAL", message: "No open transaction." },
+          });
+        }
+        return;
+      }
       gate.endId = msg.id;
       if (msg.op === "abort") gate.reject(new Error("aborted"));
       else gate.resolve();
@@ -317,15 +329,31 @@ export function listenStore(
   return server;
 }
 
-export function connectStore(socketPath: string): StorageAdapter {
+/**
+ * How long a client waits for one reply. Far above a slow write behind a full queue (the store's
+ * own busy timeout is seconds), so it only fires when the daemon is stuck.
+ */
+const REQUEST_TIMEOUT_MS = 60_000;
+
+export function connectStore(
+  socketPath: string,
+  opts: { requestTimeoutMs?: number } = {},
+): StorageAdapter {
   const socket = createConnection(socketPath);
+  const timeoutMs = opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
   let seq = 0;
-  const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
+  const pending = new Map<
+    number,
+    { resolve: (v: unknown) => void; reject: (e: Error) => void; timer: NodeJS.Timeout }
+  >();
   const failAll = (reason: string) => {
     const err = new SatiError("INTERNAL", `Lost the connection to the sati daemon (${reason}).`, {
       hint: "Restart `sati serve` and retry.",
     });
-    for (const wait of pending.values()) wait.reject(err);
+    for (const wait of pending.values()) {
+      clearTimeout(wait.timer);
+      wait.reject(err);
+    }
     pending.clear();
   };
   let down: string | undefined;
@@ -341,6 +369,7 @@ export function connectStore(socketPath: string): StorageAdapter {
     const wait = pending.get(msg.id);
     if (!wait) return;
     pending.delete(msg.id);
+    clearTimeout(wait.timer);
     if (msg.ok) wait.resolve(msg.result);
     else wait.reject(fail(msg.error));
   });
@@ -351,7 +380,14 @@ export function connectStore(socketPath: string): StorageAdapter {
         reject(new SatiError("INTERNAL", `Lost the connection to the sati daemon (${down}).`));
         return;
       }
-      pending.set(id, { resolve: (value) => resolve(value as T), reject });
+      // A reply that never comes leaves the transaction in an unknown state: drop the connection,
+      // which fails every waiting request and makes the daemon roll back.
+      const timer = setTimeout(() => {
+        down ??= `no reply in ${Math.round(timeoutMs / 1000)} s`;
+        socket.destroy();
+        failAll(down);
+      }, timeoutMs);
+      pending.set(id, { resolve: (value) => resolve(value as T), reject, timer });
       socket.write(encode({ ...msg, id }));
     });
   const proxy = (txn: number): StorageWriter =>

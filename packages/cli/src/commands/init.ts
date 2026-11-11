@@ -21,7 +21,13 @@ import {
   type ServiceContext,
   systemClock,
 } from "@sati/core";
-import { type DbLocation, locateDb, SqliteStore, standaloneDbPath } from "@sati/store-sqlite";
+import {
+  type DbLocation,
+  locateDb,
+  SqliteStore,
+  standaloneDbPath,
+  syncedFolder,
+} from "@sati/store-sqlite";
 import { importSnapshot, writeFileAtomic } from "@sati/sync";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
@@ -337,9 +343,25 @@ interface UpgradeResult {
   notes: string[];
 }
 
+/**
+ * What to tell the user when the database sits in a folder a file-sync app keeps, or undefined.
+ * Standalone projects are safe: their database is under `~/.sati`, outside the project folder.
+ */
+export function syncedDbWarning(db: string): string | undefined {
+  const app = syncedFolder(db);
+  if (!app) return undefined;
+  return `The database (${db}) is in a folder ${app} keeps in sync. A file-sync app copies the database while it is written, which can corrupt it. Move the project out of the synced folder, or pause syncing for it.`;
+}
+
+const warnIfSynced = (db: string) => {
+  const warning = syncedDbWarning(db);
+  if (warning) process.stderr.write(`warning: ${warning}\n`);
+};
+
 function applyUpgrade(p: InitPlan & { upgrade: Project }): UpgradeResult {
   writeManaged(p);
   warnIfNotOnPath(p.tools, isLocalInstall(p.root));
+  warnIfSynced(p.db);
   return { upgraded: p.upgrade, files: p.files, notes: notes(p.hooks) };
 }
 
@@ -388,6 +410,7 @@ async function apply(p: InitPlan): Promise<InitResult | UpgradeResult> {
     }
     writeManaged(p);
     warnIfNotOnPath(p.tools, isLocalInstall(p.root));
+    warnIfSynced(p.db);
     // Register first: if the snapshot import below fails, the project still exists and is known.
     const { rememberProject } = await import("../projects.js");
     rememberProject({

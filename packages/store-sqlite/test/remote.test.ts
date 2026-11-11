@@ -154,6 +154,19 @@ describe("daemon hardening", () => {
     client.destroy();
   });
 
+  // Deep review 2026-11-11: when COMMIT fails the server answers `end` with the error and
+  // forgets the transaction; the client then sends `abort`, got no reply, and hung for ever.
+  it("answers an abort for a transaction that is already over", async () => {
+    const client = await connect();
+    client.write(frame({ id: 1, op: "begin", mode: "write", txn: 1, protocol: PROTOCOL }));
+    await nextFrame(client);
+    client.write(frame({ id: 2, op: "end", txn: 1 }));
+    expect(await within(nextFrame(client))).toMatchObject({ id: 2, ok: true });
+    client.write(frame({ id: 3, op: "abort", txn: 1 }));
+    expect(await within(nextFrame(client))).toMatchObject({ id: 3, ok: true });
+    client.destroy();
+  });
+
   // A client that begins and idles would hold the write lock for every other agent.
   it("rolls back and drops a client that idles inside a transaction", async () => {
     const dir = mkdtempSync(join(tmpdir(), "sati-remote-"));
@@ -204,6 +217,19 @@ describe("daemon client", () => {
     const err = await within(remote.read(async () => undefined)).catch((e) => e);
     expect(err).toBeInstanceOf(SatiError);
     expect(err.message).toMatch(/daemon/);
+    silent.close();
+  });
+
+  // A daemon that is up but stuck never closes the socket, so the caller needs its own limit.
+  it("gives up on a daemon that never answers", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "sati-remote-"));
+    const mute = socketPath(join(dir, "mute.db"));
+    const silent = createServer(() => undefined);
+    await new Promise<void>((resolve) => silent.listen(mute, resolve));
+    const remote = connectStore(mute, { requestTimeoutMs: 100 });
+    const err = await within(remote.read(async () => undefined)).catch((e) => e);
+    expect(err).toBeInstanceOf(SatiError);
+    expect(err.message).toMatch(/no reply/);
     silent.close();
   });
 

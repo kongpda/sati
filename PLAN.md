@@ -867,12 +867,12 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 
 **9b — Sync and store safety**
 
-- [ ] Import merges field by field whenever the stored record and the file changed apart, not only at equal versions, so a pull never drops a local edit that was not exported yet
-- [ ] The snapshot reader accepts a UTF-8 byte-order mark and skips, with a warning, files a sync client made (`name (1).json`, conflicted copies) instead of refusing the whole import
-- [ ] Snapshot files are flushed to disk before the rename
-- [ ] A remote `abort` after a failed commit gets an answer, and every remote request has a timeout
-- [ ] `fuseblk` (NTFS and exFAT external disks on Linux) counts as a local disk
-- [ ] A project database inside a cloud-synced folder (OneDrive, Dropbox, Google Drive, iCloud) is detected by path, and `doctor` and `init` warn
+- [x] Import merges field by field whenever the stored record and the file changed apart, not only at equal versions, so a pull never drops a local edit that was not exported yet
+- [x] The snapshot reader accepts a UTF-8 byte-order mark and skips, with a warning, files a sync client made (`name (1).json`, conflicted copies) instead of refusing the whole import
+- [x] Snapshot files are flushed to disk before the rename
+- [x] A remote `abort` after a failed commit gets an answer, and every remote request has a timeout
+- [x] `fuseblk` (NTFS and exFAT external disks on Linux) counts as a local disk
+- [x] A project database inside a cloud-synced folder (OneDrive, Dropbox, Google Drive, iCloud) is detected by path, and `doctor` and `init` warn
 
 **9c — Cards**
 

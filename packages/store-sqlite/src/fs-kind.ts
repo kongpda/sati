@@ -7,6 +7,8 @@ const BIND = new Set(["9p", "virtiofs", "drvfs", "prl_fs", "vboxsf"]);
 export function classifyFilesystem(fstype: string): "local" | "network" | "bind" {
   const kind = fstype.toLowerCase();
   if (BIND.has(kind)) return "bind";
+  // A FUSE block device (NTFS and exFAT disks on Linux) is a local disk.
+  if (kind === "fuseblk") return "local";
   if (
     kind.includes("nfs") ||
     kind.includes("smb") ||
@@ -61,4 +63,30 @@ export function filesystemKind(
   } catch {
     return "local";
   }
+}
+
+/** Folder names the common file-sync apps use, on macOS, Windows and Linux. */
+const SYNCED: readonly [RegExp, string][] = [
+  [/(^|\/)Library\/Mobile Documents(\/|$)/u, "iCloud Drive"],
+  [/(^|\/)iCloudDrive(\/|$)/iu, "iCloud Drive"],
+  [/(^|\/)Library\/CloudStorage\/([^/-]+)/u, ""],
+  [/(^|\/)Dropbox( \([^/]+\))?(\/|$)/u, "Dropbox"],
+  [/(^|\/)OneDrive( - [^/]+)?(\/|$)/u, "OneDrive"],
+  [/(^|\/)(Google Drive|GoogleDrive|My Drive)(\/|$)/u, "Google Drive"],
+  [/(^|\/)Box( Sync)?(\/|$)/u, "Box"],
+];
+
+/**
+ * The file-sync app that keeps `path`, judged by the folder names on the way to it, or undefined.
+ * A SQLite database in such a folder is copied while it is being written, and the app can put an
+ * older copy back; both corrupt it. A guess from names only: nothing is opened or asked.
+ */
+export function syncedFolder(path: string): string | undefined {
+  const posixPath = path.replaceAll("\\", "/");
+  for (const [pattern, name] of SYNCED) {
+    const m = pattern.exec(posixPath);
+    // macOS keeps every provider under Library/CloudStorage/<Provider>-<account>.
+    if (m) return name || (m[2] ?? "a file-sync app");
+  }
+  return undefined;
 }

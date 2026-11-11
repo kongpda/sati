@@ -1,10 +1,10 @@
 {
-  "body": "Move rule wired into drag, bulk menu, send-back dialog. Panel, claim box and agent-run board next.",
+  "body": "B1-B10 board fixes written, unit tests pass, refusal browser specs passing. Next: full e2e, temp-folder cleanup, CI items, docs.",
   "branch": "main",
   "claim": {
     "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "heartbeatAt": "2026-11-11T07:15:19.665Z",
-    "leaseUntil": "2026-11-11T07:45:19.665Z",
+    "heartbeatAt": "2026-11-11T07:21:11.050Z",
+    "leaseUntil": "2026-11-11T07:51:11.050Z",
     "token": 3
   },
   "createdAt": "2026-11-11T07:06:27.041Z",
@@ -14,15 +14,15 @@
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
     "*": "2026-11-11T07:06:27.047Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "body": "2026-11-11T07:15:19.671Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "body": "2026-11-11T07:21:11.053Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "branch": "2026-11-11T07:06:27.160Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "claim": "2026-11-11T07:15:19.671Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-11T07:21:11.053Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "status": "2026-11-11T07:06:27.160Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "worktree": "2026-11-11T07:06:27.160Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
   "status": "in_progress",
   "title": "Board offers actions the server refuses; registry pollution; remaining open items",
-  "updatedAt": "2026-11-11T07:15:19.682Z",
-  "version": 4,
+  "updatedAt": "2026-11-11T07:21:11.056Z",
+  "version": 5,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

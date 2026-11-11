@@ -1,11 +1,13 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { resolve } from "node:path";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import {
   addComment,
   applyTemplate,
+  approveCard,
   availableTemplates,
   CLI_NAME,
   createMilestone,
@@ -19,7 +21,9 @@ import {
   listChanges,
   markWaiting,
   ProjectKind,
+  parseInput,
   putContext,
+  RepoPath,
   readSettings,
   recall,
   recordDecision,
@@ -47,6 +51,7 @@ import { getCookie, setCookie } from "hono/cookie";
 import micromatch from "micromatch";
 import { z } from "zod";
 import pkg from "../../package.json" with { type: "json" };
+import { fileSha256 } from "../file-hash.js";
 
 /**
  * Cookies are shared by every port on 127.0.0.1, so two `sati ui` servers would overwrite each
@@ -124,7 +129,11 @@ export interface UiRuntime {
   onKind?: (kind: ProjectKind) => void;
   /** The project's own templates (`.sati/templates/`); without it, only the starters. */
   templates?: () => TemplateFile[];
+  /** The project folder. Approving a file hashes it there; without it, no file can be approved. */
+  root?: string;
 }
+
+const ApproveBody = z.strictObject({ path: RepoPath, clear: z.boolean().optional() });
 
 /** A JSON request body. Malformed JSON is the client's mistake: 400, not a 500 "server failed". */
 async function body(c: Context): Promise<unknown> {
@@ -165,6 +174,9 @@ function openApi() {
       "/api/feature-list": { get: { summary: "Shipped features as Markdown" } },
       "/api/recall": { get: { summary: "What is known about a question (query: q)" } },
       "/api/cards": { post: { summary: "Save a card (replaces the card for its path)" } },
+      "/api/cards/approve": {
+        post: { summary: "Approve a file as it is now, or take the approval away" },
+      },
       "/api/templates": { get: { summary: "Plan templates: the starters and .sati/templates/" } },
       "/api/templates/apply": { post: { summary: "Create a milestone and its tasks from one" } },
       "/api/tasks": { post: { summary: "Create a task" } },
@@ -440,6 +452,19 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
     c.json(await recall(rt.ctx, { question: c.req.query("q") ?? "" })),
   );
   app.post("/api/cards", async (c) => c.json(await putContext(rt.ctx, await body(c))));
+  // The same hash and the same service as `card approve`. `RepoPath` refuses `..` and absolute
+  // paths, so only a file inside the project is read; its bytes are hashed and dropped.
+  app.post("/api/cards/approve", async (c) => {
+    const { path, clear } = parseInput(ApproveBody, await body(c));
+    if (clear) return c.json(await approveCard(rt.ctx, { path, hash: null }));
+    const hash = rt.root === undefined ? undefined : fileSha256(resolve(rt.root, path));
+    if (hash === undefined) {
+      throw new SatiError("NOT_FOUND", `There is no file at ${path}.`, {
+        hint: "Only a file in the project folder can be approved.",
+      });
+    }
+    return c.json(await approveCard(rt.ctx, { path, hash }));
+  });
   // The New plan menu: the same templates and the same apply as `sati template`.
   const templateFiles = () => rt.templates?.() ?? [];
   app.get("/api/templates", (c) => c.json(availableTemplates(templateFiles()).map(summarize)));

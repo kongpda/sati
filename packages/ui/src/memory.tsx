@@ -12,6 +12,13 @@ function folderOf(path: string): string {
   return cut > 0 ? path.slice(0, cut) : "Top level";
 }
 
+/**
+ * True when the card is about one file in the project: only that can be approved. A folder, a
+ * wildcard, a part of a file (`#`) and a web link have no single version to sign off.
+ */
+export const oneFile = (path: string): boolean =>
+  !/[*?[\]{}#]/u.test(path) && !/^(?:[a-z][a-z0-9+.-]*:|[\\/])/iu.test(path) && !path.endsWith("/");
+
 const field = (form: FormData, name: string) => String(form.get(name) ?? "");
 
 /** Edits one card through the same `putContext` agents use. Facts are one per line. */
@@ -135,6 +142,7 @@ export function Memory({
   onSaved,
   onCopied,
   onCopyFailed,
+  onFailed,
   onOpenTask,
   onGo,
 }: {
@@ -143,6 +151,8 @@ export function Memory({
   /** Copying changes no record, so it says so without refetching. */
   onCopied: (message: string) => void;
   onCopyFailed: () => void;
+  /** Shows why an approval was refused. */
+  onFailed: (err: unknown) => void;
   onOpenTask: (id: string) => void;
   /** Opens a list page at one record. */
   onGo: (path: string, id: string) => void;
@@ -151,6 +161,23 @@ export function Memory({
   const [question, setQuestion] = useState("");
   const [editing, setEditing] = useState<Card | "new" | null>(null);
   const [filter, setFilter] = useState("");
+  // The path being approved: its button waits, so a second click cannot send it twice.
+  const [approving, setApproving] = useState<string | null>(null);
+  const approve = (c: Card) => {
+    const clear = c.approved !== undefined;
+    setApproving(c.path);
+    api
+      .approveCard(c.path, clear)
+      .then(() =>
+        onSaved(
+          clear
+            ? `${c.path} is no longer approved.`
+            : `Approved ${c.path} as it is now. A change to it is stopped until a person approves it again.`,
+        ),
+      )
+      .catch(onFailed)
+      .finally(() => setApproving(null));
+  };
   const answer = useQuery({
     queryKey: ["recall", question, data.version],
     queryFn: () => api.recall(question),
@@ -302,6 +329,7 @@ export function Memory({
                 <h3 className="row-title">{c.path.slice(c.path.lastIndexOf("/") + 1) || c.path}</h3>
                 {c.private ? <span className="badge private">Private</span> : null}
                 {c.stale ? <span className="badge kind-late">Changed since</span> : null}
+                {c.approved ? <span className="badge kind-done">Approved</span> : null}
                 <p className="summary">{c.summary}</p>
                 {c.facts?.length ? (
                   <ul className="facts">
@@ -319,9 +347,26 @@ export function Memory({
                   </time>
                   {c.sourceSeen ? ` · read at ${c.sourceSeen}` : ""}
                   {c.tags?.length ? ` · ${c.tags.join(", ")}` : ""}
+                  {c.approved
+                    ? ` · approved by ${nameOf(data, c.approved.by)} on ${c.approved.at.slice(0, 10)}`
+                    : ""}
                   <button type="button" aria-label={`Edit ${c.path}`} onClick={() => setEditing(c)}>
                     Edit
                   </button>
+                  {oneFile(c.path) || c.approved ? (
+                    <button
+                      type="button"
+                      disabled={approving === c.path}
+                      aria-label={
+                        c.approved
+                          ? `Remove the approval of ${c.path}`
+                          : `Approve ${c.path} as it is now`
+                      }
+                      onClick={() => approve(c)}
+                    >
+                      {c.approved ? "Remove approval" : "Approve"}
+                    </button>
+                  ) : null}
                 </div>
               </article>
             ))}

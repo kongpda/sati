@@ -2063,3 +2063,11 @@ Task `tsk_fevjbr`.
 
 - 14 warnings, all in `packages/ui`. One was an unused import; removed.
 - 13 were `noDescendingSpecificity` in `styles.css`. Each pair names two unrelated components (`.badge` after `.card .meta-text .badge`, `.thread-head button` after a palette button). Nothing is drawn wrong, and moving rules in a 1,500-line stylesheet to please the rule could change what wins. The rule is off for CSS in `biome.json`; every other CSS rule stays on.
+
+## 2026-11-11 — 9h: approve on the board, names after `@`
+
+- Approve: `POST /api/cards/approve` hashes the file in the project folder and calls the same `approveCard` as the CLI. `RepoPath` refuses `..` and absolute paths before any file is read. The button shows for a card about one file (no folder, wildcard, `#part` or web link); a card that is approved always shows "Remove approval".
+- Not done: the board does not tell that an approved file changed since. That needs a hash of every approved file on each snapshot, and a deliverable may be gigabytes. `sati card show` and the guard still tell. Kept in `docs/ideas.md`.
+- Names: the handle put in is the first word of the shown name, or the user part of `user@worktree`: both are words My work already answers to, so no change to how a mention is found. Sessions of one agent share a handle and are offered once. A mention still does nothing more for an agent than any comment, which it reads in its brief.
+- The list is a `listbox` under the box with `aria-activedescendant`; the textarea keeps its `textbox` role, because `combobox` is not allowed on a textarea. Escape closes the names and leaves the task sheet open.
+- The Playwright browser cache on this machine was gone; `playwright install chromium` put it back. No version changed.

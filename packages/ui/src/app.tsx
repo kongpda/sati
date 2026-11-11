@@ -959,6 +959,7 @@ export function App() {
             onSaved={saved}
             onCopied={(message) => setToast(message)}
             onCopyFailed={copyFailed}
+            onFailed={fail}
             onOpenTask={(id) => go("/", id)}
             onGo={show}
           />

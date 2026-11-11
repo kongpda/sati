@@ -1,4 +1,5 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { startUi, type Ui } from "./server.js";
@@ -1124,6 +1125,81 @@ test("an open task deleted elsewhere says so and leaves without asking", async (
   await page.getByRole("link", { name: "Notes", exact: true }).click();
   await expect(page).toHaveURL(`${ui.origin}/notes`);
   expect(asked).toEqual([]);
+  expect(await problems()).toEqual([]);
+});
+
+// PLAN 9h: approving was `card approve` only, so a person with no terminal could not sign off a
+// file. The board stores the same hash, so the guard treats both approvals alike.
+test("Memory approves a file as it is now and takes the approval away", async ({ page }) => {
+  const problems = await watch(page);
+  writeFileSync(join(ui.repo, "brief.md"), "Final brief, v3.\n");
+  ui.sati("card", "put", "brief.md", "--summary", "The signed brief.");
+  ui.sati("card", "put", "https://example.test/quote.pdf", "--summary", "The quote online.");
+  await page.goto(ui.signIn);
+  await page.getByRole("link", { name: "Memory", exact: true }).click();
+  // A web link has no one version to sign off.
+  await expect(
+    page.getByRole("button", { name: "Edit https://example.test/quote.pdf" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Approve https/u })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Approve brief.md as it is now" }).click();
+  await expect(page.locator(".toast")).toContainText("Approved brief.md as it is now.");
+  const row = page.locator("article").filter({ hasText: "The signed brief." });
+  await expect(row.getByText("Approved", { exact: true })).toBeVisible();
+  // An earlier test may have given the person a display name.
+  await expect(row).toContainText(/approved by .+ on \d{4}-\d{2}-\d{2}/u);
+  const shown = () =>
+    ui
+      .sati<{ path: string; approved?: { hash: string }; approval?: string }[]>(
+        "card",
+        "get",
+        "brief.md",
+      )
+      .find((c) => c.path === "brief.md");
+  expect(shown()?.approved?.hash).toBe(
+    createHash("sha256").update("Final brief, v3.\n").digest("hex"),
+  );
+  // The file changes after the sign-off: the CLI tells, from the hash the board stored.
+  writeFileSync(join(ui.repo, "brief.md"), "Final brief, v4.\n");
+  expect(shown()?.approval).toBe("changed");
+
+  await page.getByRole("button", { name: "Remove the approval of brief.md" }).click();
+  await expect(page.locator(".toast")).toContainText("brief.md is no longer approved.");
+  await expect(row.getByText("Approved", { exact: true })).toHaveCount(0);
+  expect(shown()?.approved).toBeUndefined();
+  expect(await problems()).toEqual([]);
+});
+
+// PLAN 9h: a mention reaches a person only when the name is spelled as My work expects, so the
+// comment box offers the names. Escape must close the names and leave the task open.
+test("typing @ in a comment offers the project's names and puts the picked one in", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  const t = await ui.api<{ id: string }>("POST", "/api/tasks", { title: "Book the hall" });
+  ui.as("dara", "person")("comment", "add", t.id, "I can call them.");
+  await page.goto(ui.signIn);
+  await page.goto(`${ui.origin}/?task=${t.id}`);
+  const sheet = page.getByRole("dialog", { name: "Book the hall" });
+  const thread = sheet.getByRole("region", { name: /^Comments/u });
+  const box = thread.getByLabel("Add a comment");
+  const names = thread.getByRole("listbox", { name: "Names" });
+  await box.pressSequentially("Thanks @da");
+  await expect(names.getByRole("option")).toHaveText(["@dara"]);
+  await box.press("Escape");
+  await expect(names).toHaveCount(0);
+  await expect(sheet).toBeVisible();
+  await box.pressSequentially("r");
+  await expect(names.getByRole("option", { selected: true })).toHaveText("@dara");
+  await box.press("Enter");
+  await expect(box).toHaveValue("Thanks @dara ");
+  await expect(names).toHaveCount(0);
+  await box.pressSequentially("please do");
+  await box.press("Control+Enter");
+  await expect(box).toHaveValue("");
+  const said = ui.sati<{ body: string }[]>("comment", "list", t.id).map((c) => c.body);
+  expect(said).toEqual(["I can call them.", "Thanks @dara please do"]);
   expect(await problems()).toEqual([]);
 });
 

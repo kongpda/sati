@@ -96,7 +96,8 @@ export default defineCommand({
       let flush = async () => {};
       const onKind = (kind: ProjectKind) => writeConfigKind(rt.location.root, kind);
       const templates = () => readTemplateFiles(rt.location.root);
-      let ui: UiRuntime = { ctx: rt.ctx, onKind, templates };
+      const root = rt.location.root;
+      let ui: UiRuntime = { ctx: rt.ctx, onKind, templates, root };
       const dir = sharedDir(rt);
       if (dir) {
         const { afterWrites } = await import("@sati/sync");
@@ -120,6 +121,7 @@ export default defineCommand({
           dataStore: rt.ctx.store,
           onKind,
           templates,
+          root,
         };
       }
       const app = createUiApp(ui, token, uiDir());

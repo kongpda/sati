@@ -166,6 +166,8 @@ export interface Card {
   sourceSeen?: string;
   sourceTokens?: number;
   private?: boolean;
+  /** A person signed off the file in this version; the guard blocks a change to it. */
+  approved?: { hash: string; by: string; at: string };
   /** In git: the files changed since the card. `null` outside git. */
   stale: boolean | null;
   createdBy: string;
@@ -328,6 +330,9 @@ export const api = {
     ),
   saveCard: (body: Record<string, unknown>) =>
     request<Card>("/api/cards", { method: "POST", body: JSON.stringify(body) }),
+  /** Approves the file as it is now; `clear` takes the approval away. */
+  approveCard: (path: string, clear = false) =>
+    request<Card>("/api/cards/approve", { method: "POST", body: JSON.stringify({ path, clear }) }),
   applyTemplate: (body: { template: string; title?: string; targetDate?: string }) =>
     request<{ milestone: Milestone; taskIds: string[] }>("/api/templates/apply", {
       method: "POST",

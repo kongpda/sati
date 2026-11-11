@@ -245,6 +245,7 @@ sati undo <activity-id>        # revert one change if nothing changed since
 sati doctor                    # leases, locks, integrity, hooks
 sati doctor --fix              # release expired locks, remove cards whose file is gone
 sati card approve deck.pptx    # sign off a file; the guard blocks a change to it
+                               # (or Approve on the board's Memory page)
 sati ui                        # the web board
 sati app --shortcut ~/Desktop  # a file that opens the board on a double click
 ```

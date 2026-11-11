@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { dueLabel, phoneColumn, type Snapshot, type Task } from "../src/api.js";
+import { oneFile } from "../src/memory.js";
 import { inboxCount, mentionsOf, myWork, weekEnd } from "../src/my-work.js";
+import { mentionAt, mentionNames } from "../src/thread.js";
 
 const you = "actr_you";
 const other = "actr_other";
@@ -132,10 +134,64 @@ describe("mentions", () => {
     expect(mentionsOf(board(notes), now).map((n) => n.body)).toEqual(["cc @Ann Lee"]);
   });
 
+  // The point of offering names: a picked name must reach its person. A handle My work does
+  // not answer to would look sent and arrive nowhere.
+  it("offers names after @ that land in that person's My work when picked", () => {
+    const team = [
+      { id: you, name: "ann@laptop", kind: "human", displayName: "Ann Lee" },
+      { id: other, name: "bob@desk", kind: "human" },
+      { id: "actr_c", name: "chan@desk", kind: "human", displayName: "Sok Chan" },
+      { id: "actr_a1", name: "claude-code@main#1111", kind: "agent" },
+      { id: "actr_a2", name: "claude-code@main#2222", kind: "agent" },
+    ];
+    const as = (who: string) =>
+      ({ you: who, tasks: [], actors: team, notes: [] }) as unknown as Snapshot;
+    // People first, yourself left out, an agent's sessions offered once.
+    expect(mentionNames(as(you), "").map((m) => m.handle)).toEqual(["bob", "Sok", "claude-code"]);
+    // Either word of the shown name finds the person.
+    expect(mentionNames(as(you), "cha").map((m) => m.handle)).toEqual(["Sok"]);
+    expect(mentionNames(as(you), "zz")).toEqual([]);
+    for (const who of [you, other, "actr_c"]) {
+      const from = who === you ? other : you;
+      const mine = mentionNames(as(from), "").find(
+        (m) => m.name === (who === you ? "Ann Lee" : who === other ? "bob" : "Sok Chan"),
+      );
+      const said = [comment(`@${mine?.handle} please look`, "2026-11-11T09:00:00.000Z", from)];
+      const seen = { ...as(who), notes: said } as unknown as Snapshot;
+      expect(mentionsOf(seen, now).map((n) => n.body)).toEqual(said.map((n) => n.body));
+    }
+  });
+
+  it("finds the @word at the caret, not an email address or a finished word", () => {
+    expect(mentionAt("ask @bo", 7)).toEqual({ start: 4, query: "bo" });
+    expect(mentionAt("@", 1)).toEqual({ start: 0, query: "" });
+    expect(mentionAt("mail bob@ann", 12)).toBeNull();
+    expect(mentionAt("ask @bob now", 12)).toBeNull();
+    // The caret is in the middle of the text: only what is before it counts.
+    expect(mentionAt("ask @bo later", 7)).toEqual({ start: 4, query: "bo" });
+  });
+
   it("counts mentions, questions and approvals next to My work, not plain assigned tasks", () => {
     const tasks = [task({ status: "review" }), task({ assigneeIds: [you], dueDate: "2026-11-12" })];
     const notes = [comment("@ann please look", "2026-11-11T09:00:00.000Z")];
     expect(inboxCount(board(notes, tasks), now)).toBe(2);
+  });
+});
+
+// Approve is offered only where there is one version to sign off: the server refuses the rest.
+describe("oneFile", () => {
+  it("is true for one project file, not a folder, wildcard, part or link", () => {
+    expect(oneFile("venue/hall-b-quote.pdf")).toBe(true);
+    for (const path of [
+      "venue/",
+      "src/**/*.ts",
+      "plan.md#budget",
+      "https://x.test/a.pdf",
+      "/etc/hosts",
+      "C:\\x.pdf",
+    ]) {
+      expect(oneFile(path)).toBe(false);
+    }
   });
 });
 

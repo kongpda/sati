@@ -1,4 +1,5 @@
-import { mkdtempSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -31,7 +32,7 @@ const ctx = {
 };
 await createTask(ctx, { title: "Paint the board" });
 const token = sessionToken();
-const app = createUiApp({ ctx }, token, dir);
+const app = createUiApp({ ctx, root: dir }, token, dir);
 
 afterAll(async () => {
   await store.close();
@@ -174,6 +175,39 @@ describe("ui server", () => {
     });
     expect(missing.status).toBe(404);
     expect(((await missing.json()) as { error: { code: string } }).error.code).toBe("NOT_FOUND");
+  });
+
+  // PLAN 9h: the board approves a file with the same hash `card approve` stores, so the guard
+  // treats both alike; and it never reads a file outside the project folder.
+  it("approves a project file by its hash, takes the approval away, and stays in the folder", async () => {
+    const cookie = cookieOf(await app.request(`http://127.0.0.1/session?token=${token}`));
+    const post = (body: unknown) =>
+      app.request("http://127.0.0.1/api/cards/approve", {
+        method: "POST",
+        headers: { cookie, "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    mkdirSync(join(dir, "venue"));
+    writeFileSync(join(dir, "venue", "quote.txt"), "price: 2400\n");
+    const done = await post({ path: "venue/quote.txt" });
+    expect(done.status).toBe(200);
+    const card = (await done.json()) as { approved?: { hash: string; by: string } };
+    expect(card.approved).toMatchObject({
+      hash: createHash("sha256").update("price: 2400\n").digest("hex"),
+      by: actor.id,
+    });
+    const snapshot = await app.request("http://127.0.0.1/api/snapshot", { headers: { cookie } });
+    const { cards } = (await snapshot.json()) as { cards: { path: string; approved?: object }[] };
+    expect(cards.find((c) => c.path === "venue/quote.txt")?.approved).toBeDefined();
+
+    const cleared = await post({ path: "venue/quote.txt", clear: true });
+    expect(((await cleared.json()) as { approved?: object }).approved).toBeUndefined();
+
+    expect((await post({ path: "venue/missing.txt" })).status).toBe(404);
+    expect((await post({ path: "venue" })).status).toBe(404);
+    for (const path of ["../outside.txt", "/etc/hosts"]) {
+      expect((await post({ path })).status).toBe(400);
+    }
   });
 
   // PLAN: live updates under 500 ms. A write made through this server must reach other tabs.

@@ -1,7 +1,9 @@
 {
+  "blockedReason": null,
   "body": "Code and docs done; unit tests pass. Waiting for the Playwright run, then commit, push and complete.",
   "branch": "main",
   "completion": {
+    "approvedCommit": "1e79fc4e818d722a4fa4772cf70360f73ff2d73a",
     "branch": "main",
     "commit": "521541998a94c23d073165a20633f24d46c48d6a",
     "completedAt": "2026-11-11T06:47:07.613Z",
@@ -27,18 +29,21 @@
   "id": "tsk_01M74N204RT06ENZYFGCQMNS5A",
   "priority": "medium",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "reviewNote": null,
   "stamps": {
     "*": "2026-11-11T06:34:51.417Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "blockedReason": "2026-11-11T06:54:22.782Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "body": "2026-11-11T06:44:26.833Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "branch": "2026-11-11T06:34:57.444Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "claim": "2026-11-11T06:47:07.616Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "completion": "2026-11-11T06:47:07.616Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-11T06:47:07.616Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-11T06:54:22.782Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "reviewNote": "2026-11-11T06:54:22.782Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "status": "2026-11-11T06:54:22.782Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
     "worktree": "2026-11-11T06:34:57.444Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "review",
+  "status": "done",
   "title": "Audit leftovers: major updates, small cleanups, ideas prune, repo settings",
-  "updatedAt": "2026-11-11T06:47:07.619Z",
-  "version": 5,
+  "updatedAt": "2026-11-11T06:54:22.784Z",
+  "version": 6,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

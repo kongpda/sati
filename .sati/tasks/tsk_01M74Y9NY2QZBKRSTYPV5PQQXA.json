@@ -1,10 +1,14 @@
 {
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "heartbeatAt": "2026-11-11T09:16:20.431Z",
-    "leaseUntil": "2026-11-11T09:46:20.431Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "1d15909677acea56819c73233e896dc2a000bfa6",
+    "completedAt": "2026-11-11T09:16:54.756Z",
+    "completedBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "filesTouched": [
+      "packages/cli/test/init.test.ts"
+    ],
+    "summary": "The test started the server with HOME only; Windows reads USERPROFILE, so the server looked in the runner's real home. Test now passes USERPROFILE and SATI_REGISTRY. Local gate passes; Windows result comes from CI."
   },
   "createdAt": "2026-11-11T09:16:20.290Z",
   "createdBy": "actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
@@ -14,13 +18,14 @@
   "stamps": {
     "*": "2026-11-11T09:16:20.294Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "branch": "2026-11-11T09:16:20.432Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "claim": "2026-11-11T09:16:20.432Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
-    "status": "2026-11-11T09:16:20.432Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "claim": "2026-11-11T09:16:54.757Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "completion": "2026-11-11T09:16:54.757Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
+    "status": "2026-11-11T09:16:54.757Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV",
     "worktree": "2026-11-11T09:16:20.432Z#000000#actr_01M71NFBJHBQ4QKA2FBGEW4AGV"
   },
-  "status": "in_progress",
+  "status": "review",
   "title": "Windows CI: Claude Desktop entry test passes only HOME to the server it starts",
-  "updatedAt": "2026-11-11T09:16:20.434Z",
-  "version": 2,
+  "updatedAt": "2026-11-11T09:16:54.759Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

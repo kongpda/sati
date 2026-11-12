@@ -1,11 +1,42 @@
 {
   "body": "milestone_upsert, task_release, truncated lists, shorter tool descriptions, record no-change decisions, openapi doc line.",
   "branch": "wp12-mcp",
-  "claim": {
-    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
-    "heartbeatAt": "2026-11-12T17:31:49.251Z",
-    "leaseUntil": "2026-11-12T18:01:49.251Z",
-    "token": 2
+  "checklist": [
+    {
+      "done": false,
+      "text": "MCP side: milestone_upsert, task_release, truncated, descriptions"
+    },
+    {
+      "done": false,
+      "text": "CLI footer for task list/search after WP16"
+    }
+  ],
+  "completion": {
+    "branch": "wp12-mcp",
+    "commit": "b0beecb582d1d1b586e88a176b540545668c6489",
+    "completedAt": "2026-11-12T17:40:47.739Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      ".claude/skills/sati/SKILL.md",
+      "AGENTS.md",
+      "PLAN.md",
+      "README.md",
+      "docs/guide/agent-workflow-general.md",
+      "docs/guide/agent-workflow.md",
+      "docs/guide/glossary.md",
+      "docs/guide/quick-start.md",
+      "docs/ideas.md",
+      "docs/progress.md",
+      "docs/review-2026-11-12.md",
+      "e2e/ui/parity.spec.ts",
+      "packages/cli/src/integrations.ts",
+      "packages/cli/test/integrations.test.ts",
+      "packages/core/src/workflow.ts",
+      "packages/mcp/src/server.ts",
+      "packages/mcp/test/server.test.ts",
+      ".changeset/mcp-surface.md"
+    ],
+    "summary": "MCP: milestone_upsert (roadmap_upsert kept as old name), task_release tool, task_list/search return {items, truncated}, descriptions under 350 chars (5,058 total), rules blocks gain a release step; docs updated. 12.3 CLI footer waits for WP16."
   },
   "createdAt": "2026-11-12T17:31:49.134Z",
   "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
@@ -15,13 +46,15 @@
   "stamps": {
     "*": "2026-11-12T17:31:49.136Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "branch": "2026-11-12T17:31:49.253Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "claim": "2026-11-12T17:31:49.253Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "status": "2026-11-12T17:31:49.253Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "checklist": "2026-11-12T17:37:35.685Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T17:40:47.740Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T17:40:47.740Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T17:40:47.740Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "worktree": "2026-11-12T17:31:49.253Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
   },
-  "status": "in_progress",
+  "status": "done",
   "title": "WP12: MCP surface (review 12.1-12.7)",
-  "updatedAt": "2026-11-12T17:31:49.256Z",
-  "version": 2,
+  "updatedAt": "2026-11-12T17:40:47.746Z",
+  "version": 5,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

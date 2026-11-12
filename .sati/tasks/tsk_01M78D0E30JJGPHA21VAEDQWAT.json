@@ -1,10 +1,24 @@
 {
   "body": "Pure moves in packages/cli/src: split runtime.ts, commands/task.ts, commands/init.ts; flags.ts and layout.ts; help-honesty test. No behaviour change.",
   "branch": "wp16-runtime",
+  "checklist": [
+    {
+      "done": false,
+      "text": "16.1-16.5 moves (subagent)"
+    },
+    {
+      "done": false,
+      "text": "Verify gate, bench, line counts; tick and push"
+    }
+  ],
   "claim": {
     "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
-    "heartbeatAt": "2026-11-12T17:31:09.394Z",
-    "leaseUntil": "2026-11-12T18:01:09.394Z",
+    "heartbeatAt": "2026-11-12T17:37:31.875Z",
+    "holder": {
+      "host": "h:3fb635c67b4b8fcc",
+      "pid": 43007
+    },
+    "leaseUntil": "2026-11-12T18:07:31.875Z",
     "token": 2
   },
   "createdAt": "2026-11-12T17:31:09.279Z",
@@ -15,13 +29,14 @@
   "stamps": {
     "*": "2026-11-12T17:31:09.282Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "branch": "2026-11-12T17:31:09.395Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "claim": "2026-11-12T17:31:09.395Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "checklist": "2026-11-12T17:37:31.876Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T17:37:31.876Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "status": "2026-11-12T17:31:09.395Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "worktree": "2026-11-12T17:31:09.395Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
   },
   "status": "in_progress",
   "title": "WP16: CLI code refactor (review 16.1-16.5)",
-  "updatedAt": "2026-11-12T17:31:09.398Z",
-  "version": 2,
+  "updatedAt": "2026-11-12T17:37:31.876Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

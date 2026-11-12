@@ -1,0 +1,14 @@
+{
+  "context": "Review 2026-11-12 item 12.6 (decision D12).",
+  "createdAt": "2026-11-12T17:36:26.276Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "Do not fold task_create and task_update into a task_upsert. A task update is guarded by a claim token and a create is not, and task_create has its own similar-task check (ifSimilar); one upsert would mix two different contracts. note, feature and milestone keep their upsert tools.",
+  "id": "dec_01M78DA3N4REENRD1XQ9VAQFY7",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T17:36:26.276Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "Keep task_create and task_update separate from the *_upsert tools (review 12.6)",
+  "updatedAt": "2026-11-12T17:36:26.276Z",
+  "version": 1
+}

@@ -1,0 +1,14 @@
+{
+  "context": "Review 2026-11-12 item 12.5 (decision D11). The brief tool carries the product prefix so it does not clash with other servers' brief tools; the rest are plain verbs.",
+  "createdAt": "2026-11-12T17:36:24.431Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "Leave the mixed MCP names (sati_brief beside task_list, recall, search) unchanged. Renaming every tool to one scheme would break each installed rules block and every agent that learned the names; only roadmap_upsert gets a new name (milestone_upsert), and the old one stays registered.",
+  "id": "dec_01M78DA1VFTXSFES9K1RVQQX7Q",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T17:36:24.435Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "Keep MCP tool names as they are, with and without a prefix (review 12.5)",
+  "updatedAt": "2026-11-12T17:36:24.431Z",
+  "version": 1
+}

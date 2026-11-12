@@ -9,6 +9,8 @@ import { othersLiveLocks } from "./lock.js";
 export const CHANGE_KINDS = ["added", "modified", "deleted", "renamed"] as const;
 export type ChangeKind = (typeof CHANGE_KINDS)[number];
 
+// Not the shared `RepoPath`: that one caps glob braces for lock and feature patterns. These are
+// literal changed-file paths, and a real file with many braces must not block a commit.
 const RepoPath = z
   .string()
   .min(1)

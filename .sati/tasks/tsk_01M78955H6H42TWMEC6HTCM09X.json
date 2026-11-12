@@ -1,11 +1,36 @@
 {
   "blockedReason": null,
   "branch": "wp9-core",
-  "claim": {
-    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
-    "heartbeatAt": "2026-11-12T16:23:54.800Z",
-    "leaseUntil": "2026-11-12T16:53:54.800Z",
-    "token": 3
+  "completion": {
+    "branch": "wp9-core",
+    "commit": "22c2ecbc47085196ff437658be2c45d2b602c4fd",
+    "completedAt": "2026-11-12T16:31:24.971Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "docs/progress.md",
+      "docs/review-2026-11-12.md",
+      "packages/cli/src/commands/handoff.ts",
+      "packages/cli/src/commands/plan.ts",
+      "packages/core/src/ports/storage.ts",
+      "packages/core/src/services/actor.ts",
+      "packages/core/src/services/guard.ts",
+      "packages/core/src/services/handoff.ts",
+      "packages/core/src/services/plan.ts",
+      "packages/core/src/services/query.ts",
+      "packages/core/src/services/task.ts",
+      "packages/core/test/coordination.test.ts",
+      "packages/core/test/lock-service.test.ts",
+      "packages/core/test/support/memory-store.ts",
+      "packages/core/test/workspace.test.ts",
+      "packages/mcp/src/server.ts",
+      "packages/store-sqlite/src/remote.ts",
+      "packages/store-sqlite/src/store.ts",
+      "packages/store-sqlite/test/store.test.ts",
+      "packages/sync/src/snapshot.ts",
+      "packages/sync/test/sync.test.ts",
+      ".changeset/wp9-core-correctness.md"
+    ],
+    "summary": "WP9 core correctness: claim over an expired claim frees the old holder's task locks (9.2); the brief's sweep releases up to 200 expired locks (9.5); findBySuffix is scoped to the project before the 100-row limit, daemon protocol 3 (9.3); handoff files are RepoPaths and resolveActor is shared by CLI and MCP (9.1); snapshot files that cannot be opened report 'cannot be read' instead of a raw error (9.10); plan import gives a reason for repeated lines and deleted milestones (9.11). 9.4 and 9.6 closed by decisions dec_56rc3d and dec_gwm69p. 9.7 and 9.8 left. Each fix has a test that failed before it; full gate green."
   },
   "createdAt": "2026-11-12T16:23:50.054Z",
   "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
@@ -16,13 +41,14 @@
     "*": "2026-11-12T16:23:50.056Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "blockedReason": "2026-11-12T16:23:54.632Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "branch": "2026-11-12T16:23:54.804Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "claim": "2026-11-12T16:23:54.804Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "status": "2026-11-12T16:23:54.804Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T16:31:24.972Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T16:31:24.972Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T16:31:24.972Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "worktree": "2026-11-12T16:23:54.804Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
   },
-  "status": "in_progress",
+  "status": "done",
   "title": "WP9: core correctness bugs (9.1, 9.2, 9.3, 9.5, 9.6, 9.10, 9.11)",
-  "updatedAt": "2026-11-12T16:23:54.811Z",
-  "version": 3,
+  "updatedAt": "2026-11-12T16:31:24.974Z",
+  "version": 6,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

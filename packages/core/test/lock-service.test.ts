@@ -197,3 +197,41 @@ describe("locks and tasks", () => {
     expect(theirBrief).not.toContain(shortHandle(theirs.lock.id));
   });
 });
+
+describe("a claim over an expired claim", () => {
+  // A lock can outlive the claim it serves (its own lease is longer). When another agent takes
+  // the task over after the claim ran out, the old holder's locks on that task must go too, or
+  // they keep the new holder out of the task's own paths.
+  it("frees the old holder's task locks, so the new holder can lock the same paths", async () => {
+    const { ctx, clock } = await setup();
+    const task = await createTask(ctx, { title: "Billing" });
+    await claimTask(ctx, task.id, { leaseMinutes: 5 });
+    const old = await acquireLock(ctx, {
+      paths: ["src/billing"],
+      taskId: task.id,
+      leaseMinutes: 120,
+    });
+    clock.advance(6 * 60_000);
+    const other = await otherActor(ctx);
+    await claimTask(other, task.id);
+    expect((await listLocks(ctx)).map((l) => l.id)).not.toContain(old.lock.id);
+    await acquireLock(other, { paths: ["src/billing"], taskId: task.id });
+  });
+});
+
+describe("the brief's sweep", () => {
+  // A lock with no task, or one that outlived its claim, is released only by the next acquire
+  // or `doctor`. Without the sweep the lock table grows and `doctor` keeps failing on it.
+  it("releases expired locks, so the table does not fill", async () => {
+    const { ctx, clock, store } = await setup();
+    const live = await acquireLock(ctx, { paths: ["docs"], leaseMinutes: 60 });
+    const old = await acquireLock(ctx, { paths: ["src"], leaseMinutes: 5 });
+    clock.advance(5 * 60_000);
+    await buildBrief(ctx);
+    expect(store.activity.some((a) => a.verb === "release" && a.entityId === old.lock.id)).toBe(
+      true,
+    );
+    const rows = await store.read((r) => r.list("lock", ctx.projectId));
+    expect(rows.map((l) => l.id)).toEqual([live.lock.id]);
+  });
+});

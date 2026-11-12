@@ -56,6 +56,7 @@ import {
   recall,
   recordDecision,
   releaseLock,
+  resolveActor,
   resolveId,
   resolveLinks,
   SatiError,
@@ -511,11 +512,10 @@ function registerTools(
     },
     ({ taskId, to, ...input }) =>
       run(async () => {
-        const named = to && (await ctx.store.read((r) => r.getByKey("actor", ctx.projectId, to)));
         const note = await writeHandoff(ctx, {
           ...input,
           taskId: await task(taskId),
-          ...(to && { to: named ? named.id : await resolveId(ctx, "actor", to) }),
+          ...(to && { to: await resolveActor(ctx, to) }),
         });
         return { id: note.id, version: note.version };
       }),

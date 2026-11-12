@@ -4,7 +4,7 @@ import {
   HANDOFF_TAG,
   listAll,
   type Note,
-  resolveId,
+  resolveActor,
   SatiError,
   shortHandle,
   writeHandoff,
@@ -56,13 +56,7 @@ export default defineCommand({
           }
           return args.ack ? acknowledgeHandoff(ctx, note.id) : note;
         }
-        let to: string | undefined;
-        if (args.to) {
-          const named = await ctx.store.read((r) =>
-            r.getByKey("actor", ctx.projectId, args.to ?? ""),
-          );
-          to = named ? named.id : await resolveId(ctx, "actor", args.to);
-        }
+        const to = args.to ? await resolveActor(ctx, args.to) : undefined;
         return writeHandoff(ctx, {
           taskId,
           done: args.done,

@@ -116,8 +116,9 @@ export class MemoryStore implements StorageAdapter {
             .sort(byRankThenId("project"))[0] as Project | undefined,
         ),
       get: async (e, id) => clone(table(e).get(id)) as never,
-      findBySuffix: async (e, suffix) =>
+      findBySuffix: async (e, projectId, suffix) =>
         [...table(e).values()]
+          .filter((r) => (r.projectId ?? r.id) === projectId)
           .filter((r) => r.id.toLowerCase().endsWith(suffix.toLowerCase()))
           .map(clone) as never,
       list: async (e, projectId, q = {}) => {

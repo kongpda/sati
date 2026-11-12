@@ -18,6 +18,8 @@ export interface PlanChange {
   kind: "milestone" | "task";
   title: string;
   key: string;
+  /** Why it was skipped, when that is not simply "already imported". */
+  reason?: string;
 }
 
 export interface PlanImport {
@@ -120,7 +122,13 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
     for (const title of headings) {
       const key = `plan:${createHash("sha256").update(title).digest("hex").slice(0, 16)}`;
       if (milestoneTitles.has(title)) {
-        result.skipped.push({ kind: "milestone", title, key });
+        const deleted = !milestoneIds.has(title);
+        result.skipped.push({
+          kind: "milestone",
+          title,
+          key,
+          ...(deleted && { reason: "the milestone is deleted: its tasks are created without it" }),
+        });
         continue;
       }
       // Parsed and checked for secrets here, so a dry run refuses what the import would.
@@ -129,9 +137,17 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
       result.added.push({ kind: "milestone", title, key });
       if (write) milestoneIds.set(title, (await createMilestoneIn(write, ctx, data)).id);
     }
+    // The first line of each key in this file, so a repeated line can name the one it repeats.
+    const firstLine = new Map<string, number>();
     for (const item of items) {
       const label = `plan:${item.key}`;
       const change = { kind: "task" as const, title: item.title, key: label };
+      const first = firstLine.get(label);
+      if (first !== undefined) {
+        result.skipped.push({ ...change, reason: `line ${item.line} repeats line ${first}` });
+        continue;
+      }
+      firstLine.set(label, item.line);
       if (taskKeys.has(label)) {
         result.skipped.push(change);
         continue;

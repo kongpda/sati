@@ -25,7 +25,8 @@ export default defineCommand({
               dryRun: args["dry-run"],
             }),
           (result: PlanImport) => {
-            const line = (c: PlanImport["added"][number]) => `- ${c.kind} ${c.title}`;
+            const line = (c: PlanImport["added"][number]) =>
+              `- ${c.kind} ${c.title}${c.reason ? ` (${c.reason})` : ""}`;
             return [
               result.added.length ? `Add\n${result.added.map(line).join("\n")}` : "Add\nnothing",
               result.skipped.length

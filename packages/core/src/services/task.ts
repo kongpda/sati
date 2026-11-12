@@ -480,6 +480,10 @@ async function applyClaim(
       );
     }
   }
+  // The old claim ran out: its holder's locks on this task go with it, as on a take-over.
+  if (held && held.actorId !== ctx.actorId) {
+    await releaseTaskLocks(w, ctx, before.id, held.actorId);
+  }
   const claim = { ...(await lease(w, ctx, leaseMinutes)), token: before.version + 1 };
   await renewTaskLocks(w, ctx, before.id, claim.leaseUntil);
   const actor = await w.get("actor", ctx.actorId);
@@ -713,22 +717,34 @@ export async function adoptClaims(ctx: ServiceContext): Promise<Task[]> {
   });
 }
 
+/** Expired locks the claim sweep releases at most, per call. */
+const LOCK_SWEEP_MAX = 200;
+
 /**
  * Clears claims whose lease has run out, or whose holder process has exited (see
  * `claimHealth`), so abandoned work returns to the pool: an `in_progress` task goes back to
- * `todo`; `review` and `blocked` tasks keep their status. Writes only when something is
- * released. Returns the released tasks.
+ * `todo`; `review` and `blocked` tasks keep their status. Also releases expired locks. Writes
+ * only when something is released. Returns the released tasks.
  */
 export async function releaseExpiredClaims(ctx: ServiceContext): Promise<Task[]> {
   const now = nowIso(ctx);
   const expired = (t: Task) => t.claim !== null && t.claim.leaseUntil <= now;
-  const active = await ctx.store.read(async (r) =>
-    listAll(r, ctx, "task", { status: ["in_progress", "review", "blocked"] }),
-  );
+  const [active, locks] = await ctx.store.read(async (r) => [
+    await listAll(r, ctx, "task", { status: ["in_progress", "review", "blocked"] }),
+    await listAll(r, ctx, "lock"),
+  ]);
   const goneIds = new Set(claimHealth(ctx, active).gone.map((t) => t.id));
   const candidates = active.filter((t) => expired(t) || goneIds.has(t.id));
-  if (candidates.length === 0) return [];
+  // Expired locks with no task, or that outlived their claim, would otherwise wait for the next
+  // acquire or `doctor`. Bounded, so one sweep stays one short transaction.
+  const staleLocks = locks.filter((l) => l.leaseUntil <= now).slice(0, LOCK_SWEEP_MAX);
+  if (candidates.length === 0 && staleLocks.length === 0) return [];
   return ctx.store.write(async (w) => {
+    for (const { id } of staleLocks) {
+      const lock = await w.get("lock", id);
+      if (!lock || lock.deletedAt !== null || lock.leaseUntil > now) continue;
+      await updateWithLog(w, ctx, "lock", lock, { deletedAt: now }, { verb: "release" });
+    }
     const released: Task[] = [];
     for (const { id } of candidates) {
       // Re-read inside the transaction: the holder may have renewed since the check above.

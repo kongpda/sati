@@ -273,15 +273,18 @@ export class SqliteStore implements StorageAdapter {
       return row ? (JSON.parse(row.data) as EntityMap[E]) : undefined;
     },
 
-    findBySuffix: async <E extends StoredEntity>(entity: E, suffix: string) => {
+    findBySuffix: async <E extends StoredEntity>(entity: E, projectId: string, suffix: string) => {
       const t: s.EntityTable = TABLES[entity];
       const rows = await this.orm
         .select({ data: t.data })
         .from(t)
         .where(
-          sql`upper(${t.id}) LIKE ${`%${suffix.toUpperCase().replace(/[%_\\]/g, "\\$&")}`} ESCAPE '\\'`,
+          and(
+            eq(t.projectId, projectId),
+            sql`upper(${t.id}) LIKE ${`%${suffix.toUpperCase().replace(/[%_\\]/g, "\\$&")}`} ESCAPE '\\'`,
+          ),
         )
-        // The caller filters by project afterwards, so keep enough rows for that to be safe.
+        // More than one row is already ambiguous; the cap only bounds a pathological suffix.
         .limit(100)
         .all();
       return rows.map((r) => JSON.parse(r.data) as EntityMap[E]);

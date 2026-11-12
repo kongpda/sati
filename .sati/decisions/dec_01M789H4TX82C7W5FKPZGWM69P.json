@@ -1,0 +1,15 @@
+{
+  "consequences": "A real file whose name has many braces is still accepted by the guard and does not block a commit. A comment above the guard's schema says why. Plan item 9.6 assumed the two schemas should match; they serve different inputs.",
+  "context": "The shared RepoPath caps glob braces (globBraceError), because lock and feature paths are patterns. The guard checks literal changed-file paths from git.",
+  "createdAt": "2026-11-12T16:30:22.556Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "Do not replace the guard's local RepoPath in services/guard.ts with the shared RepoPath from domain/schemas.ts.",
+  "id": "dec_01M789H4TX82C7W5FKPZGWM69P",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T16:30:22.558Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "Guard keeps its own RepoPath schema (review 9.6 rejected)",
+  "updatedAt": "2026-11-12T16:30:22.556Z",
+  "version": 1
+}

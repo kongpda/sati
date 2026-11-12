@@ -88,6 +88,8 @@ export async function updateProfile(
     if (caller.kind !== "human") {
       throw new SatiError("VALIDATION", "Only a person can change how people are shown.");
     }
+    // No version check: every record write bumps the actor's version (`issueStamp`), so an
+    // expected version would almost always be stale. The last write wins.
     const before = await mustGet(w, ctx, "actor", actorId);
     if (before.kind !== "human") {
       throw new SatiError("VALIDATION", "Agents have no profile; they are shown by their name.");

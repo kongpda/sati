@@ -19,6 +19,7 @@ import {
   releaseExpiredClaims,
   releaseTask,
   removableWorktrees,
+  resolveActor,
   reviewDrift,
   type ServiceContext,
   shortHandle,
@@ -473,5 +474,28 @@ describe("a lock tagged with another agent's task", () => {
     expect((await getRecord(a, "task", t.id)).claim).not.toBeNull();
     const lock = await tagged();
     expect(lock.lock.paths).toEqual(["src/**"]);
+  });
+});
+
+describe("handoff input", () => {
+  // The next agent opens the listed files. A path outside the repo points it at the wrong
+  // place, or at a file it must not touch.
+  it("refuses a files entry that is not a repo path", async () => {
+    const { ctx } = await setup();
+    const t = await createTask(ctx, { title: "Migrate" });
+    for (const bad of ["/etc/passwd", "../other/x.ts"]) {
+      await expect(writeHandoff(ctx, { taskId: t.id, files: [bad] })).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+    }
+    const note = await writeHandoff(ctx, { taskId: t.id, files: ["./src/a.ts"] });
+    expect(note.body).toContain("- src/a.ts");
+  });
+
+  it("names the addressee by name or by id", async () => {
+    const { ctx } = await setup();
+    const kim = await ensureActor(ctx, { name: "kim@app", kind: "agent", tool: "codex" });
+    expect(await resolveActor(ctx, "kim@app")).toBe(kim.id);
+    expect(await resolveActor(ctx, kim.id)).toBe(kim.id);
   });
 });

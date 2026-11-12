@@ -282,6 +282,12 @@ type Scanned = ImportRecordsInput[number];
  * made. One of those must not stop every import. Any other odd file still fails the read. With
  * `mergeCopies`, a copy that reads as the record its name starts with is returned in `copies`.
  */
+/** Why a listed file could not be opened, without the OS message (it names the full path). */
+function unreadable(err: unknown): string {
+  const code = (err as { code?: unknown } | null)?.code;
+  return code === "ENOENT" ? "removed during the scan" : "cannot be read";
+}
+
 function scanSnapshot(
   dir: string,
   opts: ImportOptions = {},
@@ -304,17 +310,28 @@ function scanSnapshot(
         });
       };
       // lstat, not stat: a symlink pushed into .sati/ must not make us read files outside the repo.
-      const info = lstatSync(file);
+      let info: ReturnType<typeof lstatSync>;
+      try {
+        info = lstatSync(file);
+      } catch (err) {
+        return fail(unreadable(err));
+      }
       if (!info.isFile()) fail("not a regular file (symlinks and folders are refused)");
       if (info.size > MAX_FILE_BYTES) fail("larger than 1 MB");
       count += 1;
       total += info.size;
       if (count > MAX_FILES) fail(`more than ${MAX_FILES} record files`);
       if (total > MAX_TOTAL_BYTES) fail("the snapshot is larger than 256 MB in total");
+      let text: string;
+      try {
+        text = readFileSync(file, "utf8");
+      } catch (err) {
+        return fail(unreadable(err));
+      }
       let record: unknown;
       try {
         // Some editors and sync tools add a byte-order mark; JSON.parse refuses it.
-        record = JSON.parse(readFileSync(file, "utf8").replace(/^﻿/u, ""));
+        record = JSON.parse(text.replace(/^﻿/u, ""));
       } catch {
         // The parser's message can quote the file's content; keep it out of the error.
         fail("not valid JSON");

@@ -1,0 +1,15 @@
+{
+  "consequences": "Profile fields are set by people only and rarely race. A comment at updateProfile says why there is no check.",
+  "context": "Every record write bumps the writing actor's version in issueStamp (services/context.ts). An expected version taken from a profile view would be stale almost every time, so the edit would fail.",
+  "createdAt": "2026-11-12T16:30:22.432Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "updateProfile writes without an expected version; the last write wins for display name, initials and colour.",
+  "id": "dec_01M789H4Q5GHDD1BEE3P56RC3D",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T16:30:22.441Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "updateProfile keeps no version check (review 9.4)",
+  "updatedAt": "2026-11-12T16:30:22.432Z",
+  "version": 1
+}

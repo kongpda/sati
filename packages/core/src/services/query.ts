@@ -53,6 +53,12 @@ export async function listRecords<E extends StoredEntity>(
  * Turns a full ID or a short handle (`tsk_8f3k2a`) into a full ID of this project.
  * A handle matching several records fails with AMBIGUOUS and lists them.
  */
+/** An actor by name (as `sati whoami` prints it) or by id or short handle. */
+export async function resolveActor(ctx: ServiceContext, ref: string): Promise<string> {
+  const named = await ctx.store.read((r) => r.getByKey("actor", ctx.projectId, ref.trim()));
+  return named ? named.id : resolveId(ctx, "actor", ref);
+}
+
 export async function resolveId(
   ctx: ServiceContext,
   entity: StoredEntity,
@@ -78,10 +84,8 @@ export async function resolveId(
   const handle = parseHandle(input);
   if (!handle || handle.prefix !== prefix) throw wrongKind();
   const matches = await ctx.store.read(async (r) =>
-    (await r.findBySuffix(entity, handle.suffix)).filter(
-      (rec) =>
-        (opts.deleted ? rec.deletedAt !== null : rec.deletedAt === null) &&
-        ("projectId" in rec ? rec.projectId : rec.id) === ctx.projectId,
+    (await r.findBySuffix(entity, ctx.projectId, handle.suffix)).filter((rec) =>
+      opts.deleted ? rec.deletedAt !== null : rec.deletedAt === null,
     ),
   );
   const [only, ...rest] = matches;

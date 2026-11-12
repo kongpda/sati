@@ -2275,3 +2275,19 @@ The owner asked for one more pass so that a Sonnet or Opus agent can implement t
 - **Added packages:** WP0 (foundations other packages need), WP15 (board redesign: file splits and design tokens first, then navigation, layout, palette, keyboard help, empty states, appearance; no new dependency), WP16 (CLI code refactor as pure moves: `runtime.ts`, `commands/task.ts`, `commands/init.ts`).
 - **Stays with the owner:** npm publish, renaming the project, pruning the registry, approving the waiting tasks, the screen-reader pass, the one-week trial, and removing about 1.1 GB of old `sati-*` temp folders (the machine had under 1 GB free during this pass).
 - **Not verified:** nothing was looked at in a browser; the file has a "What was not verified" list.
+
+
+## 2026-11-12 — Review WP9: core correctness
+
+Items 9.1 to 9.6, 9.10 and 9.11 of `docs/review-2026-11-12.md` are done. 9.7 and 9.8 are left. Each fix has a test that failed before it.
+
+- **9.1:** `HandoffInput.files` uses the shared `RepoPath`. The actor lookup by name or handle is now one core function, `resolveActor`, used by the CLI and the MCP `handoff_write`.
+- **9.2:** `applyClaim` frees the old holder's task locks when it claims over an expired claim, as a take-over does.
+- **9.3:** `findBySuffix` takes the project id, and the SQL filters on it before the 100-row limit. The daemon protocol goes to 3, because the port signature changed. The test is in the store tests (`store.test.ts`), where the limit lives, not in a new `resolve.test.ts`.
+- **9.4:** closed by decision `dec_56rc3d`, with a comment at `updateProfile`.
+- **9.5:** `releaseExpiredClaims`, which the brief and the board call, also releases up to 200 expired locks in the same write.
+- **9.6:** closed without the change (decision `dec_gwm69p`). The plan was wrong: the shared `RepoPath` would refuse a real changed file whose name has many braces.
+- **9.10:** confirmed. `lstatSync` sat outside the `try`, so a file that vanished or could not be searched threw a raw error that `skipBad` did not catch, and a file that could not be read was reported as "not valid JSON". Both are now a snapshot `VALIDATION` error that says "cannot be read" or "removed during the scan". The test uses file and folder permissions; it is skipped when run as root.
+- **9.11:** the plan import result has an optional `reason` on skipped items, and `sati plan import` prints it.
+- **Left:** 9.7 (one error-code rule, changes exit codes, needs its own task) and 9.8 (low value).
+

@@ -227,6 +227,35 @@ describe("daily workspace", () => {
     expect(second.skipped.map((c) => c.kind).sort()).toEqual(["milestone", "task", "task"]);
   });
 
+  // WHY: a skipped line used to vanish without a word, so the person could not tell a typo'd
+  // repeat or a deleted milestone from a line the parser missed.
+  it("the import says which lines it skipped and why", async () => {
+    const { ctx, store } = await setup();
+    await importPlan(ctx, { markdown: "# Old\n\n- [ ] Kept\n" });
+    const [old] = await store.read((r) => r.list("milestone", ctx.projectId));
+    // No command deletes a milestone; a deleted one arrives from a teammate's snapshot.
+    if (!old) throw new Error("no milestone");
+    const deletedAt = ctx.clock.now().toISOString();
+    await store.write((w) =>
+      w.update("milestone", { ...old, deletedAt, version: old.version + 1 }, old.version),
+    );
+    const md = "# Old\n\n- [ ] New\n\n# Beta\n\n- [ ] Same\n- [ ] Same\n";
+    const result = await importPlan(ctx, { markdown: md });
+    expect(result.skipped).toEqual([
+      expect.objectContaining({
+        kind: "milestone",
+        title: "Old",
+        reason: expect.stringMatching(/deleted/),
+      }),
+      expect.objectContaining({ kind: "task", title: "Same", reason: "line 8 repeats line 7" }),
+    ]);
+    const tasks = await store.read((r) => r.list("task", ctx.projectId, { limit: 20 }));
+    const created = tasks.find((t) => t.title === "New");
+    expect(created).toBeDefined();
+    expect(created?.milestoneId ?? null).toBeNull();
+    expect(tasks.filter((t) => t.title === "Same")).toHaveLength(1);
+  });
+
   it("soft-deletes and restores a note, and refuses to delete a shipped feature", async () => {
     const { ctx } = await setup();
     const feature = await createFeature(ctx, { title: "Login", paths: ["src/login/**"] });

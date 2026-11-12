@@ -78,8 +78,15 @@ export interface ActivityQuery {
 export interface StorageReader {
   getProject(): Promise<Project | undefined>;
   get<E extends StoredEntity>(entity: E, id: string): Promise<EntityMap[E] | undefined>;
-  /** Records whose id ends with `suffix` (case-insensitive), for short handles. */
-  findBySuffix<E extends StoredEntity>(entity: E, suffix: string): Promise<EntityMap[E][]>;
+  /**
+   * A project's records whose id ends with `suffix` (case-insensitive), for short handles.
+   * Deleted records are included; the caller picks live or deleted.
+   */
+  findBySuffix<E extends StoredEntity>(
+    entity: E,
+    projectId: string,
+    suffix: string,
+  ): Promise<EntityMap[E][]>;
   list<E extends StoredEntity>(
     entity: E,
     projectId: string,

@@ -185,7 +185,9 @@ describe("queries", () => {
   it("finds records by short-handle suffix", async () => {
     const t = task();
     await store.write((w) => w.insert("task", t));
-    const hits = await store.read((r) => r.findBySuffix("task", t.id.slice(-6).toLowerCase()));
+    const hits = await store.read((r) =>
+      r.findBySuffix("task", PROJECT_ID, t.id.slice(-6).toLowerCase()),
+    );
     expect(hits.map((h) => h.id)).toEqual([t.id]);
   });
 
@@ -195,16 +197,25 @@ describe("queries", () => {
       await w.insert("task", task());
       await w.insert("task", task());
     });
-    expect(await store.read((r) => r.findBySuffix("task", "%"))).toHaveLength(0);
-    expect(await store.read((r) => r.findBySuffix("task", "_"))).toHaveLength(0);
+    expect(await store.read((r) => r.findBySuffix("task", PROJECT_ID, "%"))).toHaveLength(0);
+    expect(await store.read((r) => r.findBySuffix("task", PROJECT_ID, "_"))).toHaveLength(0);
   });
 
-  // The caller filters by project after the lookup, so a small cap could hide the real match.
-  it("returns more than ten suffix candidates", async () => {
+  // A short handle typed in one project must find that project's record, however many records
+  // in other projects (the daemon serves many) end with the same characters.
+  it("finds this project's record even when over 100 records elsewhere share the suffix", async () => {
+    const other = "prj_01JC0000000000000000000001";
     await store.write(async (w) => {
-      for (let i = 0; i < 15; i++) await w.insert("task", task({ id: `tsk_${i}SAME` }));
+      for (let i = 0; i < 120; i++) {
+        await w.insert(
+          "task",
+          task({ id: `tsk_${String(i).padStart(3, "0")}SAME`, projectId: other }),
+        );
+      }
+      await w.insert("task", task({ id: "tsk_ZZZSAME" }));
     });
-    expect(await store.read((r) => r.findBySuffix("task", "same"))).toHaveLength(15);
+    const hits = await store.read((r) => r.findBySuffix("task", PROJECT_ID, "same"));
+    expect(hits.map((h) => h.id)).toEqual(["tsk_ZZZSAME"]);
   });
 
   // `read` promises one consistent snapshot: a commit from another process mid-read must not show.

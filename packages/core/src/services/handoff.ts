@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
-import { BodyText, LIMITS, type Note } from "../domain/schemas.js";
+import { BodyText, LIMITS, type Note, RepoPath } from "../domain/schemas.js";
 import { refuseSecrets } from "../domain/secrets.js";
 import {
   baseFields,
@@ -20,7 +20,8 @@ export const HandoffInput = z.strictObject({
   done: BodyText.default(""),
   next: z.string().max(LIMITS.shortText).default(""),
   questions: BodyText.default(""),
-  files: z.array(z.string().min(1).max(LIMITS.path)).max(LIMITS.array).default([]),
+  /** Files in flight, as repo paths: an absolute or `..` path would point outside the repo. */
+  files: z.array(RepoPath).max(LIMITS.array).default([]),
   /** The actor it is for (an id). Without it, it is for whoever claims the task next. */
   to: z.string().trim().min(1).max(60).optional(),
 });

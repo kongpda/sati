@@ -17,7 +17,7 @@ import {
  * what a call's arguments mean (a daemon that ignores a paging cursor answers the same page
  * forever), so each `begin` carries it and the daemon echoes it; a mismatch on either side fails.
  */
-export const PROTOCOL = 2;
+export const PROTOCOL = 3;
 
 interface Message {
   id: number;

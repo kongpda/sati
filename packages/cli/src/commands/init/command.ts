@@ -183,7 +183,7 @@ export default defineCommand({
     upgrade: {
       type: "boolean",
       description:
-        "Update the git hooks, merge driver and agent files (as `rules sync` does) of an initialized project. Exit 6 if there is none",
+        "Update the git hooks, merge driver and agent files of an initialized project. Exit 6 if there is none",
     },
     share: {
       type: "boolean",
@@ -199,7 +199,7 @@ export default defineCommand({
     "cli-only": {
       type: "boolean",
       description:
-        "Write the rules as commands, for agents with no MCP client, and add no MCP configs. Kept by later runs; `rules sync --no-cli-only` goes back",
+        "Write the rules as commands, for agents with no MCP client, and add no MCP configs. Kept by later runs; `upgrade --no-cli-only` goes back",
     },
     "global-hooks": {
       type: "boolean",

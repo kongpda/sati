@@ -75,13 +75,13 @@ for it once:
 
 ```bash
 sati init --cli-only          # a new project
-sati rules sync --cli-only    # a project that already has sati
+sati upgrade --cli-only       # a project that already has sati
 ```
 
 This writes the rules block in `AGENTS.md` (and the other rules files) with a command for each
 step in place of the MCP tool names, and adds no MCP configs. An MCP config that is already
-there is left alone. Later runs of `sati rules sync` and `sati upgrade` keep the command form;
-`sati rules sync --no-cli-only` goes back.
+there is left alone. Later runs of `sati upgrade` keep the command form;
+`sati upgrade --no-cli-only` goes back.
 
 A session then looks like this:
 

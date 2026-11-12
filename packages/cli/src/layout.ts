@@ -9,10 +9,10 @@ export const layout: HelpLayout = {
     Memory: ["note", "comment", "decision", "card", "recall", "search"],
     "Work together": ["lock", "guard", "review", "scan"],
     History: ["activity", "changes", "undo"],
-    Project: ["settings", "projects", "ui", "rules", "sync", "export", "import", "completion"],
+    Project: ["settings", "projects", "ui", "sync", "export", "import", "completion"],
     "Run by tools": ["mcp", "serve", "nudge", "merge-driver"],
   },
   aliases: { context: "card", app: "ui" },
-  hidden: [],
+  hidden: ["rules"],
   hiddenFlags: HIDDEN_FLAGS,
 };

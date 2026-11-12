@@ -1,0 +1,15 @@
+{
+  "consequences": "Old scripts calling `rules sync` keep working; one test keeps that promise.",
+  "context": "Review 6.2, D8: one command per job. `upgrade` (6.1) refreshes agent files in every project kind.",
+  "createdAt": "2026-11-12T18:11:10.781Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "decision": "`rules` is in the root layout's hidden list; it still runs. Hints, docs and tests now name `sati upgrade` / `upgrade --cli-only`.",
+  "id": "dec_01M78F9Q9XFB4EWGKMJ3WDESWJ",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T18:11:10.781Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "title": "Hide rules sync from help and completion",
+  "updatedAt": "2026-11-12T18:11:10.781Z",
+  "version": 1
+}

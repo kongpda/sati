@@ -33,12 +33,17 @@ function distance(a: string, b: string): number {
   return prev[b.length] ?? 0;
 }
 
+/** Flags that take a list by repeating: `--label a --label b` is `--label a,b`. */
+const REPEATABLE: ReadonlySet<string> = new Set(["label", "feature"]);
+
+type FlagCheck = { error: string } | { argv: string[] };
+
 /**
  * citty silently drops flags a command does not declare, so `task list --stauts backlog` would
  * list everything. Walk to the command that will run and refuse flags it does not know. Names
  * are accepted in kebab and camel case, as aliases, and with citty's `--no-` negation.
  */
-async function unknownFlag(root: CommandDef, argv: readonly string[]): Promise<string | undefined> {
+async function unknownFlag(root: CommandDef, argv: readonly string[]): Promise<FlagCheck> {
   let cmd = root;
   let rest = [...argv];
   for (;;) {
@@ -52,7 +57,7 @@ async function unknownFlag(root: CommandDef, argv: readonly string[]): Promise<s
     if (next === undefined) {
       // `sati --bogus`: with no command word, citty would only say that a command is missing.
       const flag = name === undefined ? rest.find((a) => a.startsWith("-") && a !== "--json") : "";
-      return flag ? `Unknown option ${flag}.` : undefined; // citty reports the rest
+      return flag ? { error: `Unknown option ${flag}.` } : { argv: [...argv] }; // citty reports the rest
     }
     cmd = await resolveValue(next);
     rest = rest.slice(at + 1);
@@ -62,6 +67,8 @@ async function unknownFlag(root: CommandDef, argv: readonly string[]): Promise<s
     { type?: string; alias?: string | string[] }
   >;
   const known = new Map<string, boolean>(); // name -> takes a value
+  const primary = new Map<string, string>(); // any spelling -> the argument's own name
+  const repeatable = new Set<string>(); // primary names that take a list by repeating
   let places = 0;
   const words: string[] = [];
   for (const [name, def] of Object.entries(defs)) {
@@ -71,7 +78,12 @@ async function unknownFlag(root: CommandDef, argv: readonly string[]): Promise<s
     }
     const takesValue = def.type !== "boolean";
     const aliases = def.alias === undefined ? [] : [def.alias].flat();
-    for (const n of [name, kebab(name), camel(name), ...aliases]) known.set(n, takesValue);
+    const spellings = [name, kebab(name), camel(name), ...aliases];
+    for (const n of spellings) {
+      known.set(n, takesValue);
+      primary.set(n, name);
+    }
+    if (takesValue && spellings.some((n) => REPEATABLE.has(n))) repeatable.add(name);
   }
   // `sati task create Fix the bug` made a task named "Fix": citty drops the words it has no place
   // for. Only the words before a `--` are counted; what follows it belongs to the command.
@@ -81,40 +93,70 @@ async function unknownFlag(root: CommandDef, argv: readonly string[]): Promise<s
       ? undefined
       : `Unexpected argument "${extra}". Put quotes around a value that has spaces.`;
   };
-  let valueNext = false;
-  const given = new Set<string>();
-  for (const token of rest) {
-    if (token === "--") return surplus();
-    if (valueNext) {
-      valueNext = false;
-      continue;
+  const prefix = argv.slice(0, argv.length - rest.length);
+  const kept: string[] = [];
+  const collected = new Map<string, string[]>(); // repeatable flag -> its values, in order
+  const given = new Map<string, string>(); // primary name -> the spelling that was typed
+  let tail: string[] = [];
+  for (let i = 0; i < rest.length; i++) {
+    const token = rest[i] as string;
+    if (token === "--") {
+      tail = rest.slice(i);
+      break;
     }
     if (!token.startsWith("-") || token === "-" || /^-\d/.test(token)) {
       words.push(token); // a word, or a negative number
+      kept.push(token);
       continue;
     }
     const body = token.replace(/^--?/, "");
     const [flag = "", ...value] = body.split("=");
     const negated = token.startsWith("--no-") ? known.has(flag.slice(3)) : false;
     if (known.has(flag) || negated) {
-      // No option takes a list by repeating: the parser kept the last value and dropped the
-      // rest, so `--add a --add b` added only b.
-      if (known.get(flag) === true) {
-        if (given.has(flag)) {
-          return `--${flag} was given twice. Give it once; where it takes a list, separate the values with commas.`;
+      const takesValue = known.get(flag) === true;
+      if (takesValue) {
+        const own = primary.get(flag) as string;
+        const before = given.get(own);
+        if (before !== undefined && before !== flag) {
+          return { error: `--${before} and --${flag} are the same option. Give it once.` };
         }
-        given.add(flag);
+        // A list is taken by repeating only where it is named in REPEATABLE; for any other
+        // option the parser kept the last value and dropped the rest, so `--add a --add b`
+        // added only b.
+        if (before !== undefined && !repeatable.has(own)) {
+          return {
+            error: `--${flag} was given twice. Give it once; where it takes a list, separate the values with commas.`,
+          };
+        }
+        given.set(own, flag);
+        if (repeatable.has(own)) {
+          const text = value.length > 0 ? value.join("=") : rest[i + 1];
+          if (value.length === 0) i++;
+          if (text !== undefined) collected.set(own, [...(collected.get(own) ?? []), text]);
+          continue;
+        }
       }
-      valueNext = value.length === 0 && !negated && known.get(flag) === true;
+      kept.push(token);
+      if (takesValue && value.length === 0 && !negated) {
+        const next = rest[i + 1];
+        if (next !== undefined) kept.push(next);
+        i++;
+      }
       continue;
     }
-    if (HELP.has(token) || VERSION_FLAGS.has(token)) continue;
+    if (HELP.has(token) || VERSION_FLAGS.has(token)) {
+      kept.push(token);
+      continue;
+    }
     const pool = [...known.keys()].filter((n) => n.length > 1);
     const best = pool.map((n) => ({ n, d: distance(flag, n) })).sort((a, b) => a.d - b.d)[0];
     const hint = best && best.d <= 2 ? ` Did you mean --${best.n}?` : "";
-    return `Unknown option ${token.startsWith("--") ? `--${flag}` : `-${flag}`}.${hint}`;
+    return { error: `Unknown option ${token.startsWith("--") ? `--${flag}` : `-${flag}`}.${hint}` };
   }
-  return surplus();
+  const error = surplus();
+  if (error !== undefined) return { error };
+  const merged = [...collected].map(([flag, values]) => `--${flag}=${values.join(",")}`);
+  return { argv: [...prefix, ...kept, ...merged, ...tail] };
 }
 
 /** The leading words of `typed` that name commands, e.g. `merge-driver` of `merge-driver a`. */
@@ -248,9 +290,9 @@ export async function main(root: CommandDef, layout: HelpLayout): Promise<void> 
     return;
   }
   try {
-    const bad = await unknownFlag(root, argv);
-    if (bad) throw new Error(bad);
-    await runCommand(root, { rawArgs: argv });
+    const checked = await unknownFlag(root, argv);
+    if ("error" in checked) throw new Error(checked.error);
+    await runCommand(root, { rawArgs: checked.argv });
   } catch (err) {
     // Loaded only here: the core and SQLite stay out of `--version` and `--help`.
     const [{ SatiError, isSatiError }, { printError }] = await Promise.all([

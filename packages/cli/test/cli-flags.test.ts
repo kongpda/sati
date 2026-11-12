@@ -88,6 +88,29 @@ describe("task flags", () => {
   });
 });
 
+describe("repeatable flags", () => {
+  // Why: citty keeps the last value of a repeated flag, so `--label a --label b` silently kept
+  // only b. A list flag must take every value; any other flag must still refuse the repeat,
+  // and a name given together with its alias is the same mistake in disguise.
+  it("--label twice adds both labels, and a flag that is not repeatable still refuses a repeat", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = satiJson<Rec>(dir, "task", "create", "A", "--label", "ui", "--label", "db").data;
+    expect(t.labels).toEqual(["ui", "db"]);
+    const u = satiJson<Rec>(dir, "task", "update", t.id, "--labels=x", "--labels", "y,z").data;
+    expect(u.labels).toEqual(["x", "y", "z"]);
+    const own = satiJson<Rec>(dir, "task", "create", "B", "--label", "only").data;
+    expect(own.labels).toEqual(["only"]);
+
+    const twice = sati(dir, "task", "create", "C", "--priority", "high", "--priority", "low");
+    expect(twice.code).toBe(2);
+    expect(twice.stderr).toContain("--priority was given twice");
+
+    const both = sati(dir, "task", "create", "D", "--label", "a", "--labels", "b");
+    expect(both.code).toBe(2);
+    expect(both.stderr).toContain("same option");
+  });
+});
+
 describe("actor filters", () => {
   // Why: `changes --actor` with a misspelt name filtered by the name itself and printed
   // "nothing changed", which reads as a true answer; MCP `changes` took only a full actor id.

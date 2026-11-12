@@ -1,0 +1,36 @@
+{
+  "body": "docs/review-2026-11-12.md item 0.3. main.ts unknownFlag: allow repeat for REPEATABLE, merge values, reject name+alias.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "af075d82c7d63a51cc579f3ca350fbd5a3995046",
+    "completedAt": "2026-11-12T16:37:45.350Z",
+    "completedBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "filesTouched": [
+      "packages/cli/src/main.ts",
+      "packages/cli/test/cli-flags.test.ts",
+      ".changeset/repeatable-label-flag.md",
+      "docs/review-2026-11-12.md"
+    ],
+    "releaseNote": "--label and --feature can be repeated; an option given with its alias is refused",
+    "summary": "citty keeps the last value of a repeated flag (verified). main.ts unknownFlag now returns {error}|{argv}: a flag whose name/alias is in REPEATABLE (label, feature) may repeat; values are merged into one --flag=a,b before citty parses. A name given with its alias (--label a --labels b) is refused (\"same option\"). Other flags still refuse a repeat. Caveat: single-value --feature on task create/update/list also joins \"a,b\" and then fails as an unknown feature."
+  },
+  "createdAt": "2026-11-12T16:36:59.507Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "id": "tsk_01M789X8FKT3GEC83T0XY45PR9",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T16:36:59.507Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "branch": "2026-11-12T16:37:01.046Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "claim": "2026-11-12T16:37:45.351Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "completion": "2026-11-12T16:37:45.351Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "status": "2026-11-12T16:37:45.351Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "worktree": "2026-11-12T16:37:01.046Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "status": "done",
+  "title": "WP0 0.3: repeatable flags (label, feature)",
+  "updatedAt": "2026-11-12T16:37:45.352Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -178,9 +178,6 @@ export async function plan(
       );
     }
   }
-  if (args.upgrade && mode === "standalone") {
-    throw new SatiError("USAGE", "Standalone projects have no git hooks to upgrade.");
-  }
   const found = await alreadyInitialized(db);
   if (found && !args.upgrade) {
     throw new SatiError("CONFLICT", `This project is already initialized as "${found.slug}".`, {

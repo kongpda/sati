@@ -1,0 +1,15 @@
+{
+  "consequences": "Standalone planning returns no hooks and doctor skips the setup check there, so nothing nags.",
+  "context": "`rules sync` is to be hidden (review 6.2); standalone users had no other command to refresh agent files.",
+  "createdAt": "2026-11-12T18:08:26.676Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "decision": "Removed the \"Standalone projects have no git hooks to upgrade.\" refusal and added --cli-only to `sati upgrade`, so `upgrade` replaces `rules sync` as the one command that refreshes agent files.",
+  "id": "dec_01M78F4Q1M2ZQPHVD4ZCG4FR2B",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T18:08:26.677Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "title": "upgrade works in standalone projects and takes --cli-only",
+  "updatedAt": "2026-11-12T18:08:26.676Z",
+  "version": 1
+}

@@ -259,6 +259,22 @@ describe("sati init", () => {
     expect(list.code, list.stderr).toBe(0);
   });
 
+  // Why: a standalone project has no git hooks but does have agent files, and `rules sync` was the
+  // only command that refreshed them. `upgrade` must be that one command, with `--cli-only`.
+  it("upgrade refreshes agent files in a standalone project, so it can replace rules sync", () => {
+    const dir = tempDir();
+    const home = tempDir();
+    expect(run(dir, ["init", "--yes", "--tools", "codex"], { HOME: home }).code).toBe(0);
+    const file = join(dir, "AGENTS.md");
+    writeFileSync(
+      file,
+      readFileSync(file, "utf8").replace(/<!-- sati:start v\d+ -->/u, "<!-- sati:start v0 -->"),
+    );
+    const r = run(dir, ["upgrade", "--tools", "codex", "--cli-only"], { HOME: home });
+    expect(r.code, r.stderr).toBe(0);
+    expect(readFileSync(file, "utf8")).toContain("There are no MCP tools here");
+  });
+
   // PLAN Phase 9d: Claude Desktop starts servers in its own folder and without the shell's
   // PATH, so `sati mcp` found no project there. The printed entry must start this project's
   // server from anywhere.

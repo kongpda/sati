@@ -258,6 +258,11 @@ export const upgradeCommand = defineCommand({
         "Also set up these agent tools, added to the ones detected, comma-separated (e.g. claude-code,codex)",
     },
     "dry-run": { type: "boolean", description: "Show what it would write, and write nothing" },
+    "cli-only": {
+      type: "boolean",
+      description:
+        "Write the rules as commands, for agents with no MCP client, and add no MCP configs. Kept by later runs; --no-cli-only goes back to the MCP tool names",
+    },
     "global-hooks": {
       type: "boolean",
       description:
@@ -271,6 +276,7 @@ export const upgradeCommand = defineCommand({
       async () => {
         const p = await plan(process.cwd(), {
           upgrade: true,
+          cliOnly: args["cli-only"],
           tools: args.tools,
           globalHooks: args["global-hooks"],
         });

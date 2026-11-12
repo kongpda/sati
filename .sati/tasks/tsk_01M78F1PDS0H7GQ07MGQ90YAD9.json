@@ -1,0 +1,31 @@
+{
+  "body": "Review 6.1. Test first in packages/cli/test/init.test.ts.",
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "heartbeatAt": "2026-11-12T18:06:49.141Z",
+    "holder": {
+      "host": "h:3fb635c67b4b8fcc",
+      "pid": 41642
+    },
+    "leaseUntil": "2026-11-12T18:36:49.141Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-12T18:06:47.736Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "id": "tsk_01M78F1PDS0H7GQ07MGQ90YAD9",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T18:06:47.737Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "branch": "2026-11-12T18:06:49.141Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "claim": "2026-11-12T18:06:49.141Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "status": "2026-11-12T18:06:49.141Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "worktree": "2026-11-12T18:06:49.141Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "status": "in_progress",
+  "title": "WP6 6.1: upgrade works in a standalone project and takes --cli-only",
+  "updatedAt": "2026-11-12T18:06:49.141Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

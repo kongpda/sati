@@ -1026,8 +1026,8 @@ Added 2026-11-12 at the owner's request. sati already needs no server: every com
 
 **10e (H5) — Agents without MCP, and docs**
 
-- [ ] `Tools:` line in the brief; `sati rules --cli-only`
-- [ ] `docs/guide/headless.md`
+- [x] `Tools:` line in the brief; `sati rules sync --cli-only`
+- [x] `docs/guide/headless.md`
 
 **Gate:** every CLI test from before Phase 10 passes unchanged (scripts and agents see no difference), no command prompts when stdin is not a terminal or an agent variable is set, the board's My work page and `sati inbox --json` list the same ids, and `pnpm lint && pnpm typecheck && pnpm test` and the Playwright board tests pass.
 

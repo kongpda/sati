@@ -1,0 +1,15 @@
+{
+  "consequences": "Projects with a hook written before this need `sati upgrade` once; until then the hook brief says CLI and adds \"use the MCP tools instead if your client lists them\". `--cli-only` leaves existing MCP configs alone.",
+  "context": "Phase 10e (H5) of docs/headless-cli-plan.md said the brief should end with `Tools: MCP` when asked through the MCP server and `Tools: CLI` otherwise. The Claude Code session-start hook runs `sati brief` as a command for an agent that does have the MCP tools.",
+  "createdAt": "2026-11-12T07:27:08.574Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "`buildBrief` takes the tool form as a third argument. The MCP server passes `mcp`. `sati brief` has `--tools mcp|cli` (default `cli`), and the hook sati writes passes `--tools=mcp`. Rejected: detecting the form from how the process was started, and an input field the agent could set. `sati rules sync --cli-only` is remembered by a marker line in the rules files, not a project setting.",
+  "id": "dec_01M77AEERYTM4Z79G32JBECRTX",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T07:27:08.575Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "The brief's Tools line is set by the caller, not detected",
+  "updatedAt": "2026-11-12T07:27:08.574Z",
+  "version": 1
+}

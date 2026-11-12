@@ -211,6 +211,20 @@ Updates return only the id, version, status, claim and the fields the call set; 
 
 The workflow is also served as the MCP resource `sati://workflow`.
 
+### No server, no MCP, no board
+
+sati needs none of them. Every command opens the database itself, and `sati mcp` speaks over
+stdio: the agent's client starts and stops it, and nothing listens on a port.
+
+- **An agent with no MCP client** runs the same steps as commands, each with `--json`.
+  `sati rules sync --cli-only` writes the rules block with those commands in place of the tool
+  names. The brief's last line says which form to use: `Tools: MCP.` or `Tools: CLI (…)`.
+- **A person with no board** types `sati` for a status and a menu, `sati inbox` for what waits,
+  `sati task approve` and `sati task send-back` to review, `sati task list --board` for the
+  columns and `sati activity --follow` for changes as they happen.
+
+Details: [sati in the terminal](docs/guide/headless.md).
+
 ## For AI agents
 
 If you are an agent working in a repo that uses sati:
@@ -295,6 +309,7 @@ Report a vulnerability privately: see [SECURITY.md](SECURITY.md).
 - [Quick start](docs/guide/quick-start.md): install, modes, first task, backups, exit codes
 - [Agent workflow](docs/guide/agent-workflow.md) and [for general projects](docs/guide/agent-workflow-general.md)
 - [Guard rules](docs/guide/guard.md): layers, rules, overrides, locks, CI
+- [sati in the terminal](docs/guide/headless.md): what runs when, working with no board, agents with no MCP
 - [FAQ](docs/guide/faq.md): data location, client repos, upgrading, backups, removal
 - [Glossary](docs/guide/glossary.md)
 - [Architecture decisions](docs/decisions/)

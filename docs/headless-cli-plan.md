@@ -1,6 +1,6 @@
 # Plan: sati in the terminal, with no server
 
-- Status: approved by the owner (2026-11-12), with the recommended answers to the four open decisions. Phases H1 to H4 are done; H5 is next. Progress is tracked in the checklist under "Implementation notes" below.
+- Status: approved by the owner (2026-11-12), with the recommended answers to the four open decisions. All five phases (H1 to H5) are done as of 2026-11-12. Progress was tracked in the checklist under "Implementation notes" below.
 - Asked by the owner: use sati without its server, headless, with an interactive CLI; can an agent talk to it with or without a server; does MCP need a server.
 
 ## Short answers
@@ -168,9 +168,9 @@ Gate: every existing CLI test passes unchanged. That proves scripts and agents s
 
 ### Phase H5: agents and docs (about half a day)
 
-- [ ] `Tools:` line in the brief
-- [ ] `rules --cli-only`
-- [ ] `docs/guide/headless.md`, README section, completions regenerated for the new commands and flags
+- [x] `Tools:` line in the brief
+- [x] `rules sync --cli-only`
+- [x] `docs/guide/headless.md`, README section, completions regenerated for the new commands and flags
 
 Total: about 5 to 7 working days.
 
@@ -280,10 +280,12 @@ As built, where it differs from the four points above: see the "10d (H4)" entry 
 
 ### Phase H5 in detail
 
-- [ ] `Tools:` line at the end of the brief (MCP when the brief is asked through the MCP server, CLI otherwise)
-- [ ] `sati rules --cli-only`
-- [ ] `docs/guide/headless.md`, a README section, completions for every new command and flag
-- [ ] This document's status set to done; `docs/ideas.md` gets whatever was cut
+- [x] `Tools:` line at the end of the brief (MCP when the brief is asked through the MCP server, CLI otherwise)
+- [x] `sati rules sync --cli-only`
+- [x] `docs/guide/headless.md`, a README section, completions for every new command and flag
+- [x] This document's status set to done; `docs/ideas.md` gets whatever was cut
+
+As built, where it differs from the points above: see the "10e (H5)" entry in `docs/progress.md`.
 
 ### How each phase ships
 

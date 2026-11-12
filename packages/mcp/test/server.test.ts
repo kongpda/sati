@@ -771,6 +771,8 @@ describe("MCP server", () => {
     const res = await client.callTool({ name: "sati_brief", arguments: {} });
     const text = (res.content as { text: string }[])[0]?.text ?? "";
     expect(text).toMatch(/^# sati brief: Demo/);
+    // Asked through the server, so the agent has the tools: the brief says to use them.
+    expect(text.endsWith("\nTools: MCP.\n")).toBe(true);
     expect(text).toContain(`${shortHandle(t.body.id)} [in_progress, medium] Ship it`);
   });
 

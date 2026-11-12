@@ -135,6 +135,13 @@ describe("sati CLI", () => {
     const j = satiJson<{ markdown: string; tokens: number }>(dir, "brief", "--format", "short");
     expect(j.data.tokens).toBeGreaterThan(0);
     expect(satiJson(dir, "brief", "--format", "long").code).toBe(5);
+    // A brief run as a command is read by an agent that may have no MCP client; the hook, which
+    // sati writes next to the MCP config, says so with --tools=mcp.
+    expect(md.stdout.trimEnd().split("\n").at(-1)).toMatch(/^Tools: CLI \(--json on every/u);
+    expect(sati(dir, "brief", "--tools=mcp").stdout.trimEnd().endsWith("Tools: MCP.")).toBe(true);
+    const bad = sati(dir, "brief", "--tools=both");
+    expect(bad.code).toBe(2);
+    expect(bad.stderr).toContain("--tools must be mcp or cli.");
   });
 
   it("writes a changelog from release notes and a feature list from shipped features", async () => {

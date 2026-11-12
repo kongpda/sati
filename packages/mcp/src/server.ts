@@ -354,7 +354,7 @@ function registerTools(
     async (input) => {
       try {
         // Markdown, not JSON: the agent reads it as is.
-        const brief = await buildBrief(ctx, input);
+        const brief = await buildBrief(ctx, input, "mcp");
         return { content: [{ type: "text", text: brief.markdown }] };
       } catch (err) {
         return fail(err);

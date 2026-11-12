@@ -1,12 +1,15 @@
 import { GENERAL_WORKFLOW } from "@sati/core";
 import { describe, expect, it } from "vitest";
 import {
+  CLI_RULES_BLOCK,
+  GENERAL_CLI_RULES_BLOCK,
   GENERAL_RULES_BLOCK,
   type PlannedFile,
   planIntegrations,
   RULES_BLOCK,
   upsertBlock,
 } from "../src/integrations.js";
+import { sati, tempRepo } from "./helpers.js";
 
 const reader = (files: Record<string, string>) => (path: string) => files[path];
 const byPath = (plan: PlannedFile[]) => Object.fromEntries(plan.map((f) => [f.path, f]));
@@ -154,11 +157,11 @@ describe("agent file planning", () => {
     expect(settings.hooks.SessionStart).toEqual([
       {
         matcher: "startup|clear",
-        hooks: [{ type: "command", command: "sati brief --format=agent" }],
+        hooks: [{ type: "command", command: "sati brief --format=agent --tools=mcp" }],
       },
       {
         matcher: "resume|compact",
-        hooks: [{ type: "command", command: "sati brief --format=short" }],
+        hooks: [{ type: "command", command: "sati brief --format=short --tools=mcp" }],
       },
     ]); // The guard runs before every file edit.
     expect(settings.hooks.PreToolUse).toEqual([
@@ -188,8 +191,8 @@ describe("agent file planning", () => {
       hooks: {
         Stop: [...theirs.hooks.Stop, { hooks: run("nudge") }],
         SessionStart: [
-          { matcher: "startup|clear", hooks: run("brief --format=agent") },
-          { matcher: "resume|compact", hooks: run("brief --format=short") },
+          { matcher: "startup|clear", hooks: run("brief --format=agent --tools=mcp") },
+          { matcher: "resume|compact", hooks: run("brief --format=short --tools=mcp") },
         ],
         PreToolUse: [
           { matcher: "Edit|MultiEdit|Write|NotebookEdit", hooks: run("guard --hook") },
@@ -315,5 +318,64 @@ describe("agent file planning", () => {
       (p) => p === ".kiro/steering/sati.md",
     );
     expect(plan[0]).toMatchObject({ action: "update" });
+  });
+});
+
+// Some agents have no MCP client. Their rules must name commands they can run, and must not
+// send them to tools that are not there.
+describe("rules for agents without MCP", () => {
+  const tools = ["claude-code", "codex", "cursor"];
+  const plan = (files: Record<string, string>, cliOnly?: boolean) =>
+    planIntegrations(tools, "git", reader(files), undefined, false, "code", cliOnly);
+
+  it("writes the steps as commands, adds no MCP config, and names no MCP tool", () => {
+    const files = byPath(plan({}, true));
+    expect(files["AGENTS.md"]?.content).toBe(CLI_RULES_BLOCK);
+    expect(files[".cursor/rules/sati.mdc"]?.content).toContain("There are no MCP tools here");
+    for (const path of [".mcp.json", ".codex/config.toml", ".cursor/mcp.json"]) {
+      expect(files[path], path).toBeUndefined();
+    }
+    for (const block of [CLI_RULES_BLOCK, GENERAL_CLI_RULES_BLOCK]) {
+      expect(block).not.toMatch(/task_claim|task_complete|feature_check|context_get|sati_brief/u);
+      expect(block.trimEnd().split("\n").length).toBeLessThan(30);
+    }
+    // The hook's brief must not say "Tools: MCP" to an agent that has none.
+    expect(files[".claude/settings.json"]?.content).toContain('"sati brief --format=agent"');
+  });
+
+  // `sati upgrade` and a plain `rules sync` run without the flag. They must not undo the choice.
+  it("keeps the command form on a later run, until told to go back", () => {
+    const files: Record<string, string> = { ".mcp.json": '{ "mcpServers": {} }\n' };
+    for (const f of plan(files, true)) files[f.path] = f.content;
+    // An MCP config that was there before is the user's: left alone.
+    expect(files[".mcp.json"]).toBe('{ "mcpServers": {} }\n');
+    expect(plan(files).every((f) => f.action === "keep")).toBe(true);
+    const back = byPath(plan(files, false));
+    expect(back["AGENTS.md"]?.content).toBe(RULES_BLOCK);
+    expect(back[".mcp.json"]?.action).toBe("update");
+    expect(back[".claude/settings.json"]?.content).toContain("--format=agent --tools=mcp");
+  });
+
+  // A rule that names a command or a flag that does not exist costs every agent a failed call.
+  it("names only commands and flags the CLI has", async () => {
+    const dir = await tempRepo();
+    const named = new Set<string>();
+    for (const block of [CLI_RULES_BLOCK, GENERAL_CLI_RULES_BLOCK]) {
+      for (const [, command] of block.matchAll(/`sati ([a-z][^`]*)`/gu)) {
+        if (command && !command.startsWith("<")) named.add(command);
+      }
+    }
+    expect(named.size).toBeGreaterThan(8);
+    for (const command of named) {
+      const words = command.split(" ");
+      const at = words.findIndex((w) => !/^[a-z][a-z-]*$/u.test(w));
+      const path = at < 0 ? words : words.slice(0, at);
+      const help = sati(dir, ...path, "--help");
+      expect(help.code, command).toBe(0);
+      expect(help.stdout, command).toContain(`sati ${path.join(" ")}`);
+      for (const flag of command.match(/--[a-z-]+/gu) ?? []) {
+        expect(help.stdout, command).toContain(flag);
+      }
+    }
   });
 });

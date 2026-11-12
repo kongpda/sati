@@ -16,6 +16,32 @@ import {
 import { setup } from "./support/setup.js";
 
 describe("buildBrief", () => {
+  // An agent reads the rules once and the brief every session. The last line tells it which form
+  // of each step works here, so an agent with no MCP client does not call tools it does not have.
+  it("ends with the form of the tools in use, and only when the caller names it", async () => {
+    const { ctx } = await setup();
+    await createTask(ctx, { title: "Ready one" });
+    expect((await buildBrief(ctx)).markdown).not.toContain("Tools:");
+    expect((await buildBrief(ctx, {}, "mcp")).markdown.endsWith("\n\nTools: MCP.\n")).toBe(true);
+    const cli = (await buildBrief(ctx, { format: "short" }, "cli")).markdown;
+    expect(cli.trimEnd().split("\n").at(-1)).toMatch(/^Tools: CLI \(--json on every command\)/u);
+  });
+
+  // The line is the one thing a cut brief must still say; items go first.
+  it("keeps the tools line when the brief is cut to its smallest size", async () => {
+    const { ctx } = await setup();
+    for (let i = 0; i < 12; i++) {
+      const task = await createTask(ctx, { title: `A task with a long enough title, number ${i}` });
+      await claimTask(ctx, task.id);
+      await recordDecision(ctx, { title: `A decision worth a line, number ${i}`, decision: "y" });
+    }
+    const whole = await buildBrief(ctx, {}, "cli");
+    expect(whole.tokens).toBeGreaterThan(200);
+    const cut = await buildBrief(ctx, { maxTokens: 200 }, "cli");
+    expect(cut.tokens).toBeLessThan(whole.tokens);
+    expect(cut.markdown.trimEnd().split("\n").at(-1)).toMatch(/^Tools: CLI/u);
+  });
+
   it("shows my claimed task with its feature's acceptance criteria, ready work and context", async () => {
     const { ctx, clock, actor } = await setup();
     const old = await recordDecision(ctx, { title: "Old call", decision: "x" });

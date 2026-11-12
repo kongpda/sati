@@ -16,6 +16,11 @@ const sync = defineCommand({
       type: "string",
       description: "Also set up these agent tools, comma-separated (e.g. claude-code,codex)",
     },
+    "cli-only": {
+      type: "boolean",
+      description:
+        "Write the rules as commands, for agents with no MCP client, and add no MCP configs. Kept by later runs; --no-cli-only goes back to the MCP tool names",
+    },
     ...json,
   },
   run: ({ args }) =>
@@ -29,6 +34,7 @@ const sync = defineCommand({
           location.path,
           readSettings(project.settings).kind,
           tools,
+          args["cli-only"],
         );
         writePlanned(location.root, files, exclude);
         warnIfNotOnPath(tools, isLocalInstall(location.root));

@@ -55,6 +55,15 @@ export const BriefInput = z.strictObject({
 });
 export type BriefInput = z.input<typeof BriefInput>;
 
+export const BRIEF_TOOLS = ["mcp", "cli"] as const;
+export type BriefTools = (typeof BRIEF_TOOLS)[number];
+
+/** The brief's last line: which form of each step the agent should use. */
+const TOOLS_LINE: Record<BriefTools, string> = {
+  mcp: "Tools: MCP.",
+  cli: `Tools: CLI (--json on every command). Each step is a \`${CLI_NAME}\` command; use the MCP tools instead if your client lists them.`,
+};
+
 export interface Brief {
   markdown: string;
   /** Estimated as characters / 4, and one token for each character outside ASCII. */
@@ -91,7 +100,16 @@ const SECTION_FLOOR = 2;
  * decisions, stale context entries and protected features. Every line carries an id so the
  * agent can fetch more. Lower sections lose items first when the text would exceed the token cap.
  */
-export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Promise<Brief> {
+export async function buildBrief(
+  ctx: ServiceContext,
+  input: unknown = {},
+  /**
+   * How the agent reading this reaches the project: through the MCP server's tools, or by
+   * running commands. The brief then ends with a line that says so. Not an input field: the
+   * caller knows it, the agent does not choose it.
+   */
+  tools?: BriefTools,
+): Promise<Brief> {
   const { format = "agent", maxTokens = BRIEF_TOKEN_CAP } = parseInput(BriefInput, input);
   const short = format === "short";
   const now = nowIso(ctx);
@@ -492,7 +510,7 @@ export async function buildBrief(ctx: ServiceContext, input: unknown = {}): Prom
       }),
     },
   ];
-  return fit(header, sections, maxTokens);
+  return fit(header, sections, maxTokens, tools ? ["", TOOLS_LINE[tools]] : []);
 }
 
 /**
@@ -519,7 +537,7 @@ async function decisionsSince(r: StorageReader, ctx: ServiceContext, since: stri
  * down to each section's floor, then past it. If it still does not fit, sections left with no items fold into one closing line, bottom up, since
  * each would otherwise cost a heading and a "left out" line.
  */
-function fit(header: string[], sections: Section[], maxTokens: number): Brief {
+function fit(header: string[], sections: Section[], maxTokens: number, footer: string[]): Brief {
   const dropped = sections.map((s) => Math.max(0, s.items.length - SECTION_LINES));
   const folded = sections.map(() => false);
   const render = (): string => {
@@ -538,6 +556,7 @@ function fit(header: string[], sections: Section[], maxTokens: number): Brief {
       if (cut > 0) out.push(`- … ${cut} more left out to keep this brief short.`);
     });
     if (hidden > 0) out.push("", `… ${hidden} more items left out to keep this brief short.`);
+    out.push(...footer);
     return `${out.join("\n")}\n`;
   };
   let text = render();

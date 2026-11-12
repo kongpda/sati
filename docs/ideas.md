@@ -49,3 +49,9 @@ From the 2026-11-12 final pass (9n), not bugs:
 From Phase 10d (H4), 2026-11-12:
 
 - **A faster inbox on very large projects**: `inbox` (CLI, MCP and the home screen) lists every task and note and filters in memory, the same way the board does, so the two cannot disagree. That is 275 ms on 50,000 records. Filtered queries (open tasks by assignee, status and due date; comments from the last 14 days) would make it constant, at the price of a second implementation to keep equal to the board's.
+
+From Phase 10e (H5), 2026-11-12:
+
+- **`sati init --cli-only`**: today a project for agents with no MCP client runs `sati init` and then `sati rules sync --cli-only`. One flag on `init` would do both and skip the MCP configs from the start.
+- **A CLI-only skill file**: `--cli-only` rewrites the rules blocks; the skill file sati installs still names the MCP tools.
+- **Remove MCP configs on `--cli-only`**: they are left alone because sati cannot tell its own entry from one the owner edited.

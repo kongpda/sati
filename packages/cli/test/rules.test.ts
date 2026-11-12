@@ -44,4 +44,24 @@ describe("sati rules sync", () => {
     expect(readFileSync(local, "utf8")).toContain("(required)");
     expect(execFileSync("git", ["status", "--porcelain"], { cwd: dir, encoding: "utf8" })).toBe("");
   });
+
+  // The flag is given once. `sati upgrade` and later syncs run without it and must keep the
+  // command form; --no-cli-only is the way back.
+  it("--cli-only writes the rules as commands and later runs keep them", async () => {
+    const dir = await tempRepo({ init: true });
+    const rules = () => readFileSync(join(dir, "AGENTS.md"), "utf8");
+    const first = satiJson<Change[]>(dir, "rules", "sync", "--tools", "codex", "--cli-only");
+    expect(first.data).toEqual([{ path: "AGENTS.md", action: "create" }]);
+    expect(rules()).toContain("There are no MCP tools here");
+    expect(rules()).toContain("`sati task claim`");
+    expect(sati(dir, "rules", "sync", "--tools", "codex").stdout).toContain(
+      "Everything is up to date.",
+    );
+    const back = satiJson<Change[]>(dir, "rules", "sync", "--tools", "codex", "--no-cli-only");
+    expect(back.data).toEqual([
+      { path: "AGENTS.md", action: "update" },
+      { path: ".codex/config.toml", action: "create" },
+    ]);
+    expect(rules()).toContain("`task_claim` a ready task");
+  });
 });

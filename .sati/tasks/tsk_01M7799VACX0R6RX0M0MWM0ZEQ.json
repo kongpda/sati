@@ -1,15 +1,50 @@
 {
   "body": "Phase 10e of PLAN.md and H5 of docs/headless-cli-plan.md. The brief ends with a `Tools:` line naming the form in use (MCP or CLI with --json). `sati rules --cli-only` writes the rules block for agents without MCP. `docs/guide/headless.md`, a README section, completions checked. Close the Phase 10 gate.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "390e001724a6dfa523161068e908318f44d04155",
+    "completedAt": "2026-11-12T07:27:14.324Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/core/src/services/brief.ts",
+      "packages/core/test/brief.test.ts",
+      "packages/mcp/src/server.ts",
+      "packages/mcp/test/server.test.ts",
+      "packages/cli/src/commands/brief.ts",
+      "packages/cli/src/commands/rules.ts",
+      "packages/cli/src/integrations.ts",
+      "packages/cli/test/cli.test.ts",
+      "packages/cli/test/integrations.test.ts",
+      "packages/cli/test/rules.test.ts",
+      "packages/cli/test/support/pty-run.py",
+      "docs/guide/headless.md",
+      "README.md",
+      "PLAN.md",
+      "docs/headless-cli-plan.md",
+      "docs/progress.md",
+      "docs/ideas.md",
+      ".changeset/tools-line-cli-only.md"
+    ],
+    "releaseNote": "The brief names the tool form to use, and `sati rules sync --cli-only` writes rules for agents with no MCP client.",
+    "summary": "Phase 10e (H5). The brief ends with a Tools line: `Tools: MCP.` from the MCP server and the session-start hook, `Tools: CLI (--json on every command)…` from `sati brief` (new `--tools mcp|cli`). `sati rules sync --cli-only` writes the rules block as commands, adds no MCP configs, and later syncs keep that form (`--no-cli-only` reverts). New guide docs/guide/headless.md, README section, PLAN.md 10e ticked, plan doc status done, progress entry, ideas, changeset. pty-run.py no longer takes an answered question's redraw for the next prompt (fixed two flakes). Verified: build, lint, typecheck, unit tests (core 376, cli 279 + 3 skipped as before, mcp 32, store 92, sync 57, ui 40), Playwright 97. Not done: screen-reader pass; `init --cli-only` (ideas)."
+  },
   "createdAt": "2026-11-12T07:07:09.004Z",
   "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
   "id": "tsk_01M7799VACX0R6RX0M0MWM0ZEQ",
   "priority": "high",
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "*": "2026-11-12T07:07:09.004Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+    "*": "2026-11-12T07:07:09.004Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T07:07:40.374Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T07:27:14.325Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T07:27:14.325Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T07:27:14.325Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T07:07:40.374Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
   },
-  "status": "todo",
+  "status": "review",
   "title": "H5: Tools line in the brief, sati rules --cli-only, headless guide",
-  "updatedAt": "2026-11-12T07:07:09.004Z",
-  "version": 1
+  "updatedAt": "2026-11-12T07:27:14.326Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

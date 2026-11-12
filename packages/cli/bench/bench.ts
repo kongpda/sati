@@ -11,7 +11,7 @@
  * and the idle cost of `sati activity --follow`. The other budgets belong to later phases.
  */
 import { execFileSync, spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, realpathSync } from "node:fs";
+import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -52,12 +52,13 @@ const HOME_TASKS = 5_000;
 const FACTOR = Number(process.env.BENCH_FACTOR ?? "1");
 if (!(FACTOR >= 1)) throw new Error("BENCH_FACTOR must be a number, 1 or more.");
 
-// Every `sati init` below registers its temp project. Keep them out of the developer's real
-// ~/.sati/projects.json, as the tests do (test/setup-registry.ts).
-process.env.SATI_REGISTRY = join(
-  mkdtempSync(join(tmpdir(), "sati-bench-registry-")),
-  "projects.json",
-);
+/** Every folder the run makes; `main` removes them at the end (`SATI_KEEP_TMP=1` keeps them). */
+const scratch: string[] = [];
+const scratchDir = (prefix: string): string => {
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
+  scratch.push(dir);
+  return dir;
+};
 
 const WORDS = (
   "auth token session cache index query schema migration router handler parser render " +
@@ -267,7 +268,19 @@ interface Result {
 }
 
 async function main(): Promise<void> {
-  const dir = realpathSync(mkdtempSync(join(tmpdir(), "sati-bench-")));
+  try {
+    await bench();
+  } finally {
+    if (process.env.SATI_KEEP_TMP === "1") console.log(`Kept: ${scratch.join(", ")}`);
+    else for (const dir of scratch) rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
+  }
+}
+
+async function bench(): Promise<void> {
+  // Every `sati init` below registers its temp project. Keep them out of the developer's real
+  // ~/.sati/projects.json, as the tests do (test/setup-registry.ts). The claim workers inherit it.
+  process.env.SATI_REGISTRY = join(scratchDir("sati-bench-registry-"), "projects.json");
+  const dir = scratchDir("sati-bench-");
   execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir });
   cli(dir, ["init", "--yes"]);
   const seedStart = performance.now();
@@ -305,13 +318,13 @@ async function main(): Promise<void> {
   const claims = await concurrentClaims(dir, ctx);
   await ctx.store.close();
 
-  const small = realpathSync(mkdtempSync(join(tmpdir(), "sati-bench-home-")));
+  const small = scratchDir("sati-bench-home-");
   execFileSync("git", ["init", "-q", "-b", "main"], { cwd: small });
   cli(small, ["init", "--yes"]);
   await (await seed(small, HOME_TASKS * 2, 0)).store.close();
   homeDrawn(small);
   const home = Array.from({ length: 10 }, () => homeDrawn(small));
-  const aged = realpathSync(mkdtempSync(join(tmpdir(), "sati-bench-old-")));
+  const aged = scratchDir("sati-bench-old-");
   execFileSync("git", ["init", "-q", "-b", "main"], { cwd: aged });
   cli(aged, ["init", "--yes"]);
   await (await seed(aged, RECORDS, CARDS, true)).store.close();

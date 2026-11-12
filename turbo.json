@@ -14,11 +14,12 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["build"]
+      "dependsOn": ["build"],
+      "passThroughEnv": ["SATI_KEEP_TMP"]
     },
     "bench": {
       "dependsOn": ["build"],
-      "passThroughEnv": ["BENCH_FACTOR"],
+      "passThroughEnv": ["BENCH_FACTOR", "SATI_KEEP_TMP"],
       "cache": false
     }
   }

@@ -2291,3 +2291,13 @@ Items 9.1 to 9.6, 9.10 and 9.11 of `docs/review-2026-11-12.md` are done. 9.7 and
 - **9.11:** the plan import result has an optional `reason` on skipped items, and `sati plan import` prints it.
 - **Left:** 9.7 (one error-code rule, changes exit codes, needs its own task) and 9.8 (low value).
 
+
+## 2026-11-12 — Phase 11 WP0: foundations
+
+Items 0.1 to 0.5 of `docs/review-2026-11-12.md` are done. 0.1 (guard, `ed27452`) was done by the Opus session; 0.2 to 0.5 by a Sonnet session. Each item with a test failed first.
+
+- **0.1:** `segments()` takes the character after a backslash inside double quotes too. The test has the three failing inputs and the single-quote control.
+- **0.2:** `HelpLayout` has `hidden` (root command names) and `hiddenFlags` (from `HIDDEN_FLAGS` in `help.ts`); `usage()` and `tree()` skip them, and `completionCommand` takes the layout. Subcommand help already honoured `meta.hidden`. Both lists are empty, so help is unchanged. The item says to remove `context` and `app` from `layout.aliases`, but also that help does not change yet; removing them now would change help. They stay in `aliases` until 6.4 hides them.
+- **0.3:** confirmed: citty keeps the last value of a repeated flag. `unknownFlag` in `main.ts` now merges repeats of a `REPEATABLE` flag (`label`, `feature`) into one comma list before citty parses, and refuses a name given with its alias. Caveat: `task create|update|list --feature` takes one value, so `--feature a --feature b` now joins into `a,b` and fails as an unknown feature instead of saying "given twice". `decision --features` is the real list flag; WP7 should decide the spelling.
+- **0.4:** `packages/ui/src/prefs.ts`. The UI package has no Zod, so the check is by hand. Not used by the board yet (WP1, WP15 B).
+- **0.5:** the tests were already clean: `scripts/test-tmp.ts` (vitest global setup) puts every test temp folder under one run folder and removes it. The leaks left were the benchmark (`sati-bench-*`, and one `sati-bench-registry-*` per claim worker, because the registry folder was made at module load) and `sati-gitconfig-*` (made at every vitest config load). The bench now removes its folders in a `finally`, the registry folder is made once in `main`, and the empty git config moves into the run folder. `tempRepo` and `tmpDb` need no change. `SATI_KEEP_TMP=1` keeps the folders; it is in `turbo.json` `passThroughEnv`. A full `pnpm test && pnpm bench` left the count unchanged (33 in `/tmp`, 14 in `$TMPDIR`; those are old leftovers, not deleted: the owner removes them).

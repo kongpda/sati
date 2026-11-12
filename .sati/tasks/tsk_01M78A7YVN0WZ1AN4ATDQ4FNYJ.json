@@ -1,0 +1,38 @@
+{
+  "body": "docs/review-2026-11-12.md item 0.5. Bench removes its folders in finally; gitconfig moves into the test run folder; SATI_KEEP_TMP=1.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "32df7432971ad8225912f8098de45790eb7bd72e",
+    "completedAt": "2026-11-12T16:42:55.434Z",
+    "completedBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "filesTouched": [
+      "packages/cli/bench/bench.ts",
+      "packages/cli/vitest.config.ts",
+      "scripts/test-tmp.ts",
+      "turbo.json",
+      "docs/progress.md",
+      "docs/review-2026-11-12.md",
+      "PLAN.md"
+    ],
+    "summary": "Tests already redirected temp to one run folder (scripts/test-tmp.ts). Fixed the remaining leaks: bench removes its folders in a finally (registry folder now made once in main, not per claim worker); the empty git config moves into the test run folder instead of a leftover sati-gitconfig-* per vitest start. SATI_KEEP_TMP=1 keeps folders; added to turbo passThroughEnv. Full pnpm test + pnpm bench left sati-* counts unchanged (33 /tmp, 14 TMPDIR). Bench all PASS."
+  },
+  "createdAt": "2026-11-12T16:42:50.101Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "id": "tsk_01M78A7YVN0WZ1AN4ATDQ4FNYJ",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T16:42:50.101Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "branch": "2026-11-12T16:42:51.760Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "claim": "2026-11-12T16:42:55.434Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "completion": "2026-11-12T16:42:55.434Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "status": "2026-11-12T16:42:55.434Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "worktree": "2026-11-12T16:42:51.760Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "status": "done",
+  "title": "WP0 0.5: bench and tests clean up their temp folders",
+  "updatedAt": "2026-11-12T16:42:55.434Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

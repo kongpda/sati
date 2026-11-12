@@ -1,17 +1,11 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { defineConfig } from "vitest/config";
 
 // Windows and the macOS CI runners spawn processes and open SQLite files several times slower
 // than Linux, so tests there get more time. Locally 15 s: several agents run this suite at the
 // same time on one machine, and under that load the tests that spawn git went past 5 s.
-// Tests run `sati init` in temp repos, which chains into `core.hooksPath`. Ignoring the global
-// and system git config keeps a developer's own hooks folder (and its hooks) out of the run;
-// the identity variables stand in for the `user.name` and `user.email` it would have supplied.
-// An empty file, not `os.devNull`: git for Windows cannot open `\\.\nul` as a config file.
-const emptyGitConfig = join(mkdtempSync(join(tmpdir(), "sati-gitconfig-")), "gitconfig");
-writeFileSync(emptyGitConfig, "");
+// The empty global git config and the temp folder come from `scripts/test-tmp.ts`. The system
+// config is ignored here, and the identity variables stand in for the `user.name` and
+// `user.email` a developer's config would have supplied.
 
 export default defineConfig({
   test: {
@@ -19,7 +13,6 @@ export default defineConfig({
     setupFiles: ["test/setup-registry.ts"],
     globalSetup: ["../../scripts/test-tmp.ts"],
     env: {
-      GIT_CONFIG_GLOBAL: emptyGitConfig,
       GIT_CONFIG_NOSYSTEM: "1",
       GIT_AUTHOR_NAME: "Tester",
       GIT_AUTHOR_EMAIL: "tester@example.test",

@@ -1,0 +1,27 @@
+{
+  "blockedReason": null,
+  "body": "Review 2026-11-12 items 14.4 and 14.5. List tests over 2 s in progress.md; give each a stated timeout with a reason, or make it faster. A one-line comment at each skip.",
+  "branch": "wp14-tests",
+  "createdAt": "2026-11-12T18:37:15.750Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "effort": "standard",
+  "id": "tsk_01M78GSFK6645SBHHZ3G9PC4SP",
+  "labels": [
+    "review-2026-11-12"
+  ],
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T18:37:15.750Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "blockedReason": "2026-11-12T18:44:08.305Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T18:37:32.121Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T18:44:08.305Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T18:44:08.305Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T18:37:32.121Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "todo",
+  "title": "WP14: slow tests get stated timeouts, and every skip says why (review 14.4, 14.5)",
+  "updatedAt": "2026-11-12T18:44:08.305Z",
+  "version": 4,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

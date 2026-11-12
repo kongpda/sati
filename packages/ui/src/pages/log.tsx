@@ -1,10 +1,12 @@
+import type { ReactNode } from "react";
 import type { Snapshot } from "../api.js";
 import { nameOf } from "../people.js";
 import { threadOf } from "../thread.js";
 import { Ago } from "../time.js";
 import { activityWords, fullTime } from "../words.js";
 
-export function Activity({ data }: { data: Snapshot }) {
+/** The Log tab of Changes: every write, newest first. */
+export function Activity({ data, tabs }: { data: Snapshot; tabs: ReactNode }) {
   // Name the record each row touched when it is still on screen elsewhere in the snapshot.
   const titles = new Map<string, string>([
     ...data.tasks.map((t) => [t.id, t.title] as const),
@@ -18,7 +20,10 @@ export function Activity({ data }: { data: Snapshot }) {
     // Rows have no controls, so the scrolling page itself takes focus (WCAG scrollable region).
     // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be keyboard-reachable
     <section className="page" tabIndex={0} aria-labelledby="activity-title">
-      <h1 id="activity-title">Activity</h1>
+      <div className="page-head">
+        <h1 id="activity-title">Changes</h1>
+      </div>
+      {tabs}
       <div className="list">
         {data.activity.map((row) => {
           // A new comment reads "commented on <the task>", not "added the note Comment on …".

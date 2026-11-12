@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { startUi, type Ui } from "./server.js";
 import { watch } from "./watch.js";
 
@@ -17,6 +17,12 @@ const column = (page: import("@playwright/test").Page, name: string) =>
   page.getByRole("region", { name, exact: true });
 
 // PLAN Phase 4: the board is reachable only through the token `sati ui` prints.
+/** The Log tab of the Changes page, where the old Activity page went. */
+async function openLog(page: Page) {
+  await page.getByRole("link", { name: "Changes", exact: true }).click();
+  await page.getByRole("tab", { name: "Log", exact: true }).click();
+}
+
 test("signs in with the printed token and refuses anything else", async ({ page, request }) => {
   expect((await request.get(`${ui.origin}/session?token=wrong`)).status()).toBe(401);
   expect((await request.get(`${ui.origin}/api/snapshot`)).status()).toBe(401);
@@ -205,7 +211,6 @@ test("every page loads and marks itself current", async ({ page }) => {
     "Memory",
     "Decisions",
     "Changes",
-    "Activity",
     "Settings",
     "Board",
   ]) {
@@ -415,7 +420,7 @@ test("comments on a task, a note and a decision, and deletes one with Undo", asy
   await dec.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(dec.getByText("Comments · 1")).toBeVisible();
 
-  await page.getByRole("link", { name: "Activity", exact: true }).click();
+  await openLog(page);
   await expect(
     page.locator("article").filter({ hasText: "commented on Print locally" }).first(),
   ).toBeVisible();
@@ -550,7 +555,7 @@ test("sets a person's display name, initials and colour, shown on the board", as
     .getByRole("img", { name: "Sokha Chan" });
   await expect(avatar).toHaveText("SK");
   await expect(avatar).toHaveClass(/c-plum/u);
-  await page.getByRole("link", { name: "Activity", exact: true }).click();
+  await openLog(page);
   await expect(page.locator("article strong").first()).toHaveText("Sokha Chan");
 
   // A blank field goes back to the default.
@@ -587,7 +592,7 @@ test("uses plain words for statuses, activity and times", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(column(page, "Working on it")).toContainText("Write the toast");
 
-  await page.getByRole("link", { name: "Activity", exact: true }).click();
+  await openLog(page);
   const row = page.locator("article").filter({ hasText: "Write the toast" }).first();
   await expect(row).toContainText("started working on the task");
   await expect(page.locator("article").filter({ hasText: "added the task" }).first()).toBeVisible();
@@ -1515,4 +1520,20 @@ test.describe("columns that fit", () => {
     await page.reload();
     await expect(column(page, "Backlog")).not.toHaveClass(/collapsed/u);
   });
+});
+
+test("an old /activity link lands on the Log tab of Changes", async ({ page }) => {
+  await page.goto(ui.signIn);
+  await page.goto(`${ui.origin}/activity`);
+  await expect(page).toHaveURL(/\/changes\?tab=log$/u);
+  await expect(page.getByRole("tab", { name: "Log", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByRole("link", { name: "Activity", exact: true })).toHaveCount(0);
+  // Arrow keys move between the tabs, and the address follows.
+  await page.getByRole("tab", { name: "Log", exact: true }).focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.getByRole("tab", { name: "Changes", exact: true })).toBeFocused();
+  await expect(page).toHaveURL(/\/changes$/u);
 });

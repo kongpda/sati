@@ -144,3 +144,22 @@ button.danger {
   color: var(--clay);
   border-color: var(--clay);
 }
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+.tabs [role="tab"] {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 6px 12px;
+  color: inherit;
+  cursor: pointer;
+}
+.tabs [role="tab"][aria-selected="true"] {
+  border-bottom-color: var(--moss);
+  font-weight: 600;
+}

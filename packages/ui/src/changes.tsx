@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api, type ChangeItem, type ChangesFilter, type Snapshot } from "./api.js";
 import { knownName, nameOf } from "./people.js";
 import { capital, dayWords, fullTime, plainError } from "./words.js";
@@ -53,8 +53,11 @@ export function Changes({
   onGo,
   onCopied,
   onCopyFailed,
+  tabs,
 }: {
   data: Snapshot;
+  /** The Changes and Log tabs, shown under the heading. */
+  tabs: ReactNode;
   onOpenTask: (id: string) => void;
   /** Opens a list page at one record. */
   onGo: (path: string, id: string) => void;
@@ -122,6 +125,7 @@ export function Changes({
           )}
         </div>
       </div>
+      {tabs}
       <fieldset className="changes-filters">
         <legend className="sr-only">Show changes</legend>
         <label>

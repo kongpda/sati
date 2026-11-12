@@ -27,7 +27,7 @@ const WIDE = "(min-width: 900px)";
 export function App() {
   const query = useQuery({ queryKey: ["snapshot"], queryFn: api.snapshot });
   const client = useQueryClient();
-  const { path, task, cursor, go, setSheetDirty, setDraft } = useRoute();
+  const { path, params, task, cursor, go, setSheetDirty, setDraft } = useRoute();
   const [filter, setFilter] = useState("");
   const [feature, setFeature] = useState("");
   // On a phone, null until the person picks a column: the board picks one that has tasks.
@@ -136,7 +136,7 @@ export function App() {
     onDraft: setDraft,
   };
 
-  const ctx = { client, saved, fail, setToast, remove, go, path, thread };
+  const ctx = { client, saved, fail, setToast, remove, go, path, params, thread };
   const closePalette = useCallback(() => setPalette(false), []);
 
   useLive(client, moving, setOffline, setExpired, setFresh);
@@ -248,6 +248,7 @@ export function App() {
           remove={remove}
           go={go}
           path={path}
+          params={params}
           thread={thread}
         />
       ) : null}

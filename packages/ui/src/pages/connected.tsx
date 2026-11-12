@@ -18,6 +18,8 @@ export interface PageContext {
   remove: (entity: Deletable, id: string, title: string) => void;
   go: (next: string, taskId?: string | null) => boolean;
   path: string;
+  /** The page's own query part: its tab or filter. */
+  params: URLSearchParams;
   thread: {
     onAdd: (on: string, body: string) => Promise<void>;
     onDelete: (id: string, title: string) => void;

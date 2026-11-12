@@ -14,7 +14,6 @@ const PAGES = [
   ["/memory", "Memory"],
   ["/decisions", "Decisions"],
   ["/changes", "Changes"],
-  ["/activity", "Activity"],
   ["/settings", "Settings"],
 ] as const;
 

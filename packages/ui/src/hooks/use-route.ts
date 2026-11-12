@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { resolveUrl } from "../redirects.js";
 
 const DISCARD_COMMENT = "Discard the comment you typed?";
 
@@ -7,10 +8,12 @@ const DISCARD_COMMENT = "Discard the comment you typed?";
  * edits or an unsent comment asks first; Back and Forward ask too.
  */
 export function useRoute() {
-  const [path, setPath] = useState(window.location.pathname);
-  const [task, setTask] = useState<string | null>(
-    new URLSearchParams(window.location.search).get("task"),
-  );
+  // An old address is sent on once, before anything shows it.
+  const first = useRef(resolveUrl(window.location.pathname, window.location.search));
+  const [path, setPath] = useState(first.current.path);
+  const [task, setTask] = useState<string | null>(first.current.params.get("task"));
+  /** The page's own query (`tab`, `kind`), without the open task. */
+  const [query, setQuery] = useState(() => withoutTask(first.current.params));
   /** The task j/k steps from: the open one, or the last one opened. */
   const cursor = useRef<string | null>(null);
   /** The open task, for `go`, which must not change on every render. */
@@ -21,6 +24,11 @@ export function useRoute() {
   const drafts = useRef(new Set<string>());
   // The URL on screen, to put back when a Back or Forward is declined.
   const here = useRef(window.location.pathname + window.location.search);
+  if (first.current.moved) {
+    here.current = urlOf(first.current.path, first.current.params);
+    window.history.replaceState(null, "", here.current);
+    first.current = { ...first.current, moved: false };
+  }
 
   const setSheetDirty = useCallback((dirty: boolean) => {
     sheetDirty.current = dirty;
@@ -37,7 +45,9 @@ export function useRoute() {
 
   useEffect(() => {
     const onPop = () => {
-      const next = new URLSearchParams(window.location.search).get("task");
+      const to = resolveUrl(window.location.pathname, window.location.search);
+      if (to.moved) window.history.replaceState(null, "", urlOf(to.path, to.params));
+      const next = to.params.get("task");
       // Back and Forward ask too. Declining puts the panel's URL back.
       if (
         sheetDirty.current &&
@@ -49,7 +59,7 @@ export function useRoute() {
       }
       if (
         drafts.current.size > 0 &&
-        window.location.pathname !== new URL(here.current, window.location.origin).pathname &&
+        to.path !== new URL(here.current, window.location.origin).pathname &&
         !window.confirm(DISCARD_COMMENT)
       ) {
         window.history.pushState(null, "", here.current);
@@ -57,8 +67,9 @@ export function useRoute() {
       }
       if (next !== shownTask.current) sheetDirty.current = false;
       shownTask.current = next;
-      here.current = window.location.pathname + window.location.search;
-      setPath(window.location.pathname);
+      here.current = urlOf(to.path, to.params);
+      setPath(to.path);
+      setQuery(withoutTask(to.params));
       setTask(next);
     };
     // Reloading or closing the tab with unsaved edits gets the browser's own prompt.
@@ -73,7 +84,15 @@ export function useRoute() {
     };
   }, []);
 
-  const go = useCallback((next: string, taskId: string | null = null) => {
+  const go = useCallback((target: string, taskId: string | null = null) => {
+    // The target may carry the page's own query: `/changes?tab=log`.
+    const [next = target, typed] = target.split("?");
+    // Opening a task from this page keeps the page's own tab or filter.
+    const own =
+      typed ??
+      (taskId && next === window.location.pathname
+        ? withoutTask(new URLSearchParams(window.location.search))
+        : "");
     // Leaving a panel with unsaved edits asks first. On a wide screen the board stays clickable
     // beside the panel, so one stray click would otherwise throw the edits away.
     if (
@@ -91,14 +110,28 @@ export function useRoute() {
     // Clicking the open task again keeps its edits, so it stays dirty.
     if (taskId !== shownTask.current) sheetDirty.current = false;
     shownTask.current = taskId;
-    const url = taskId ? `${next}?task=${taskId}` : next;
+    const params = new URLSearchParams(own);
+    if (taskId) params.set("task", taskId);
+    const url = urlOf(next, params);
     // The same URL again (the open card clicked) adds no history entry for Back to step through.
     if (url !== here.current) window.history.pushState(null, "", url);
     here.current = url;
     setPath(next);
+    setQuery(own);
     setTask(taskId);
     return true;
   }, []);
 
-  return { path, task, cursor, go, setSheetDirty, setDraft };
+  return { path, params: new URLSearchParams(query), task, cursor, go, setSheetDirty, setDraft };
+}
+
+function withoutTask(params: URLSearchParams): string {
+  const rest = new URLSearchParams(params);
+  rest.delete("task");
+  return rest.toString();
+}
+
+function urlOf(path: string, params: URLSearchParams): string {
+  const q = params.toString();
+  return q ? `${path}?${q}` : path;
 }

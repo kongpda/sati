@@ -55,7 +55,7 @@ const PAGES = [
   "/memory",
   "/decisions",
   "/changes",
-  "/activity",
+  "/changes?tab=log",
   "/settings",
 ];
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
@@ -75,8 +75,12 @@ for (const [device, viewport, colorScheme] of [
     for (const path of PAGES) {
       test(`axe: ${path}`, async ({ page }) => {
         await page.goto(ui.signIn);
-        if (path !== "/")
-          await page.getByRole("link", { name: navName(path), exact: true }).click();
+        if (path !== "/") {
+          const [base = path, query] = path.split("?");
+          await page.getByRole("link", { name: navName(base), exact: true }).click();
+          if (query === "tab=log")
+            await page.getByRole("tab", { name: "Log", exact: true }).click();
+        }
         await page.waitForLoadState("networkidle");
         if (path === "/notes")
           await expect(page.locator(".mermaid[data-ready=true]")).toBeVisible();

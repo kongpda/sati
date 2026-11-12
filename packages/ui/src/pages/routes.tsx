@@ -4,6 +4,7 @@ import { Changes } from "../changes.js";
 import { CODE_ONLY } from "../hooks/use-view.js";
 import { Memory } from "../memory.js";
 import { Settings } from "../settings.js";
+import { Tabs } from "../shell/tabs.js";
 import { BoardPage } from "./board-page.js";
 import { AgentsPage, FeaturesPage, MyWorkPage, NotesPage, type PageContext } from "./connected.js";
 import { Decisions } from "./knowledge.js";
@@ -26,7 +27,18 @@ export function Routes({
   show: (next: string, id: string) => void;
   copyFailed: () => void;
 }) {
-  const { path, go, saved, fail, setToast, remove, thread } = ctx;
+  const { path, params, go, saved, fail, setToast, remove, thread } = ctx;
+  const changeTabs = (
+    <Tabs
+      label="Changes"
+      tabs={[
+        ["changes", "Changes"],
+        ["log", "Log"],
+      ]}
+      current={params.get("tab") === "log" ? "log" : "changes"}
+      onSelect={(id) => go(id === "log" ? `${path}?tab=log` : path)}
+    />
+  );
   return (
     <>
       {path === "/" ? <BoardPage {...board} /> : null}
@@ -60,16 +72,19 @@ export function Routes({
           thread={thread}
         />
       ) : null}
-      {data && path === "/changes" ? (
+      {data && path === "/changes" && params.get("tab") !== "log" ? (
         <Changes
           data={data}
+          tabs={changeTabs}
           onOpenTask={(id) => go(path, id)}
           onGo={show}
           onCopied={(message) => setToast(message)}
           onCopyFailed={copyFailed}
         />
       ) : null}
-      {data && path === "/activity" ? <Activity data={data} /> : null}
+      {data && path === "/changes" && params.get("tab") === "log" ? (
+        <Activity data={data} tabs={changeTabs} />
+      ) : null}
       {data && path === "/settings" ? (
         <Settings data={data} onSaved={saved} onError={fail} />
       ) : null}

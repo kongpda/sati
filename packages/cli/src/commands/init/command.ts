@@ -232,9 +232,11 @@ export default defineCommand({
           return chosen && apply(chosen);
         }
         const p = await plan(cwd, opts);
-        const flags = args.upgrade ? "--upgrade " : "";
+        // `init --upgrade` is a hidden flag: point at the visible command.
+        const command = args.upgrade ? "upgrade" : "init";
+        const go = args.upgrade ? command : `${command} --yes`;
         throw new SatiError("USAGE", `${CLI_NAME} init needs --yes when it cannot ask questions.`, {
-          hint: `Run \`${CLI_NAME} init ${flags}--yes\`, or \`${CLI_NAME} init ${flags}--dry-run\` to see what it would write.`,
+          hint: `Run \`${CLI_NAME} ${go}\`, or \`${CLI_NAME} ${command} --dry-run\` to see what it would write.`,
           details: { preview: summary(p) },
         });
       },

@@ -527,7 +527,14 @@ describe("sati init", () => {
     expect(text.stdout).toContain("nothing was written");
     // Without --yes or a terminal, the hint points at --dry-run, not at a circular --json.
     const err = satiJson<Err>(dir, "init", "--upgrade");
-    expect(err.data.error.hint).toContain("init --upgrade --dry-run");
+    expect(err.data.error.hint).toContain("sati upgrade --dry-run");
+  });
+
+  // Old installed hooks and scripts run `init --upgrade`, so it must keep working.
+  it("init --upgrade still works but help does not list it", async () => {
+    const dir = await tempRepo({ init: true });
+    expect(sati(dir, "init", "--upgrade", "--yes").code).toBe(0);
+    expect(sati(dir, "init", "--help").stdout).not.toContain("--upgrade");
   });
 
   it("rejects modes that do not fit the folder", async () => {

@@ -1,0 +1,14 @@
+{
+  "context": "Review 6.3. Old installed hooks print `sati init --upgrade`.",
+  "createdAt": "2026-11-12T18:12:43.047Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "decision": "`upgrade` on `init` is in HIDDEN_FLAGS. Hints that named it point to `sati upgrade`. The flag still works.",
+  "id": "dec_01M78FCHD74TG27YAHGZB92PWQ",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T18:12:43.047Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "title": "Hide init --upgrade",
+  "updatedAt": "2026-11-12T18:12:43.047Z",
+  "version": 1
+}

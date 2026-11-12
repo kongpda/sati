@@ -7,6 +7,8 @@ export const HIDDEN_FLAGS: Readonly<Record<string, readonly string[]>> = {
   "task update": ["reviewed"],
   "feature update": ["reviewed"],
   "note update": ["reviewed"],
+  // Old installed hooks print `sati init --upgrade`; `sati upgrade` is the visible form (review 6.3).
+  init: ["upgrade"],
   // Replaced by `--md` (review 7.9).
   "feature list": ["format"],
 };

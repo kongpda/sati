@@ -1,5 +1,7 @@
 # Team brain: the brain for AI agents and the people who use them
 
+> Kept as history. Commands named here may have changed; see [`docs/guide`](../guide/).
+
 Nov 7, 2026 · plan for PLAN.md Phase 7 · @kongpda
 
 ## Why
@@ -107,7 +109,7 @@ Grounded in the 2026-11-07 review of the code:
    14:32" in local time. CLI and MCP keep `claim`, `review` and UTC, because agents and scripts rely
    on them and the MCP schemas are a public API.
 4. **The brain is notes + decisions + search, served to any assistant.** Add `note_upsert`,
-   `note_get` (Phase 7a) and a `recall` tool (Phase 8, `docs/knowledge-brain.md`) that returns ranked records with IDs. Do not bundle a model: the
+   `note_get` (Phase 7a) and a `recall` tool (Phase 8, `docs/history/knowledge-brain.md`) that returns ranked records with IDs. Do not bundle a model: the
    user's own assistant (Claude Code, Claude Desktop, ChatGPT through remote MCP) writes the
    answer. That keeps sati small, local-first and model-neutral.
 5. **Templates beat features.** An event, a campaign and a release are each a milestone plus a

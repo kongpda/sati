@@ -1,0 +1,15 @@
+{
+  "consequences": "The npm page keeps a short overview. When the CLI's main commands change, this file is checked with the root README (13.8).",
+  "context": "Review 13.6 asked to cut packages/cli/README.md to the install line, three commands and a link, after a diff against the root README. The diff shows it is not a copy: 67 lines written for the npm page (what sati is, install, five commands, links to the guide, the bundled licences). npm shows only the package's own README, and the root README is not in the package.",
+  "createdAt": "2026-11-12T18:36:17.006Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "Keep it as it is. Its commands and links were checked against the current CLI and the root README's anchors.",
+  "id": "dec_01M78GQP7EMS1910Y1KARZTVAF",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T18:36:17.007Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "Keep packages/cli/README.md as the npm page (review 13.6 closed without a cut)",
+  "updatedAt": "2026-11-12T18:36:17.006Z",
+  "version": 1
+}

@@ -2436,3 +2436,13 @@ The CLI footer for a cut list is done (task `tsk_01M78GA1PZA8DJ2EQ56TNT8FSD`), s
 - `search` has no `--offset`, so its line says "Use --limit up to 200 for more", or at 200 "Use more words to narrow the search".
 - With `--json` the array is unchanged and the line goes to stderr.
 
+## 2026-11-13 — Review WP13: docs (13.1 to 13.6)
+
+Items 13.1 to 13.6 are done (task `tsk_01M78GKS873Y4E80TDTY5XHMKH`); 13.7 closed with WP10. 13.8 stays open: it needs the board's six pages and keyboard sheet (WP2, WP15), which are not built yet.
+
+- **13.1:** an "Environment" table in `README.md`, without the review's "Read in" column (line numbers go stale; the table is for users). `NO_COLOR` sits with `FORCE_COLOR`, which `term.ts` also reads. `SATI_DAEMON_OWNER` is left out, as decided. The quick start links to it.
+- **13.2, 13.3:** two new quick-start sections, "Plans and milestones" and "Projects on this machine" (the personal workspace, `settings --name`, `projects forget`, completion), plus one line each for `init --dry-run` and `mcp --desktop`.
+- **13.4, corrected:** the merge driver writes no conflict markers. A field changed on both sides keeps the later change, flags the record "needs review" and exits 0; only a file that is not a record exits 1 and leaves git's own conflict. The quick start says that.
+- **13.5:** the three files are in `docs/history/`. The "kept as history" line sits under each title as a quote, as in `AGENT_KICKOFF.md`, not above it. PLAN's links point to the new paths. Mentions in `progress.md`, `review-followups.md` and `.sati/` records are history and keep the old paths.
+- **13.6:** closed without a cut; decision `dec_01M78GQP7EMS1910Y1KARZTVAF`. The file is the npm page, written for it, not a stale copy of the root README.
+

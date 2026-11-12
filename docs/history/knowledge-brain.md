@@ -1,5 +1,7 @@
 # Knowledge brain: agents read, sati remembers
 
+> Kept as history. Commands named here may have changed; see [`docs/guide`](../guide/).
+
 Nov 7, 2026 · implementation plan for PLAN.md Phase 8 · @kongpda
 
 ## The idea

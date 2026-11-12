@@ -293,6 +293,22 @@ sati ui --shortcut ~/Desktop  # a file that opens the board on a double click
 
 `sati <command> --help` lists every option.
 
+## Environment
+
+| Variable | Effect |
+| --- | --- |
+| `SATI_ACTOR` | Forces the actor name, instead of the one sati works out from the tool and worktree |
+| `SATI_PROJECT` | Picks a project by slug or folder path, as `--project` does |
+| `SATI_YES` | `1` creates the personal workspace without asking |
+| `SATI_NO_INPUT` | `1` never asks a question, as `--no-input` does |
+| `SATI_GUARD` | `off` skips the guard once, and the skip is logged |
+| `SATI_PAGER` | Pager for long output; falls back to `PAGER`, then `less`. `cat` or empty turns it off |
+| `SATI_REGISTRY` | Path of the file that lists this machine's projects |
+| `SATI_SESSION_ID` | Session id in the actor name when `CLAUDE_CODE_SESSION_ID` is not set |
+| `SATI_DEBUG` | Prints the stack of an unexpected error |
+| `SATI_KEEP_TMP` | Tests and the bench keep their temp folders, for debugging |
+| `NO_COLOR`, `FORCE_COLOR` | Turn colour off, or force it on or off |
+
 ## Data and security
 
 - Everything stays on your machine. sati makes no network calls; `sati ui` serves only on

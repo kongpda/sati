@@ -1,5 +1,7 @@
 # Plan: sati in the terminal, with no server
 
+> Kept as history. Commands named here may have changed; see [`docs/guide`](../guide/).
+
 - Status: approved by the owner (2026-11-12), with the recommended answers to the four open decisions. All five phases (H1 to H5) are done as of 2026-11-12. Progress was tracked in the checklist under "Implementation notes" below.
 - Asked by the owner: use sati without its server, headless, with an interactive CLI; can an agent talk to it with or without a server; does MCP need a server.
 

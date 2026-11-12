@@ -51,6 +51,8 @@ once. `sati doctor` reports a clone that has no hooks yet.
 sati init --yes --mode git --tools claude-code,codex
 ```
 
+`sati init --dry-run` shows what `init` would write, and writes nothing.
+
 | Mode | Live database | What is committed |
 | --- | --- | --- |
 | `git` (default) | `<git-common-dir>/sati/sati.db` | A `.sati/` snapshot, merged by a git merge driver |
@@ -82,6 +84,10 @@ Supported agent tools: `claude-code`, `codex`, `cursor` and `gemini-cli` get a m
 block, the MCP server and, where the tool has them, hooks. `copilot`, `windsurf`, `cline` and
 `kiro` get the rules block.
 
+Claude Desktop starts its MCP servers outside any project folder. `sati mcp --desktop`, run in an
+initialized project, prints the config entry that points the server at this project; add it to
+Claude Desktop's config file. It starts no server.
+
 After you upgrade sati, refresh the git hooks, the merge driver, `.gitattributes`, the rules
 block and the agent configs in one step (the [FAQ](faq.md#how-do-i-update-sati) has the rest):
 
@@ -100,6 +106,27 @@ sati brief           # what an agent sees at the start of a session
 
 Agents use the same operations through MCP (`task_claim`, `task_update`, `task_complete` and
 others). The rules they follow are in [Agent workflow](agent-workflow.md).
+
+## Plans and milestones
+
+A milestone groups tasks toward a target day:
+
+```bash
+sati milestone create "Beta" --goal "Ten users sign in" --due 2026-12-01
+sati milestone update <id> --status active   # planned | active | done | cancelled
+sati milestone list
+```
+
+A plan is a milestone with its tasks, from a template or from a Markdown checklist:
+
+```bash
+sati plan list                          # the starters and your own in .sati/templates/
+sati plan show <name>                   # its Markdown, to copy and edit
+sati plan apply <name> --due 2026-12-01 # due dates count back from the target day
+sati plan import roadmap.md             # one milestone per heading, one task per unchecked item
+```
+
+`plan apply` and `plan import` take `--dry-run` to show what they would create.
 
 ## Protect what works
 
@@ -137,6 +164,26 @@ window stops the board. The file is not signed, so macOS may ask to confirm the 
 Install sati first (`npm install -g @kongpda/sati`): a
 copy fetched by `npx` is removed from its cache later and the launcher would stop working.
 
+## Projects on this machine
+
+```bash
+sati projects                  # the projects this machine knows
+sati task list --project shop  # run any command against one, by slug or folder
+sati settings                  # this project's settings; change them with flags
+sati settings --name "Shop"    # rename the project (a person only)
+sati projects forget shop      # remove it from the list; the folder and database stay
+```
+
+A command run outside any project uses a personal workspace at `~/.sati/personal`. The first time,
+sati asks before it creates it; `SATI_YES=1` creates it without asking, and a script or agent that
+cannot be asked gets an error instead. To use a project instead, run `sati init` in its folder.
+
+Tab completion: add `eval "$(sati completion)"` to your shell profile (bash or zsh), or
+`sati completion fish | source` for fish.
+
+The environment variables sati reads are listed in the
+[README](https://github.com/kongpda/sati#environment).
+
 ## Health and backups
 
 ```bash
@@ -172,4 +219,7 @@ The code says what kind of failure it was, so a script can branch on it. 2 is a 
 
 Commands that other tools start follow those tools' rules instead: `sati guard --hook` exits 2
 to block an edit, as Claude Code expects, and `sati nudge`, `sati wait --hook` and
-`sati merge-driver` exit 1 on any error.
+`sati merge-driver` exit 1 on any error. A field changed on both sides is not an error for the merge
+driver: it keeps the later change (text fields merge line by line), flags the record "needs
+review" and exits 0, so the merge goes on. `sati doctor --reviewed <id>` clears the flag.
+Only a file that is not a sati record exits 1, which leaves git's own conflict in the file.

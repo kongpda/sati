@@ -777,7 +777,7 @@ Deferred by the owner on 2026-11-07: v1 stays local-first. See `docs/progress.md
 
 ### Phase 7 — The brain for AI agents and the people who work with them
 
-Added 2026-11-07 at the owner's request and refined the same day. sati is the brain AI agents work from, and the place their users plan, keep todo lists and take notes. It also looks back: it reviews what was done and what changed, and writes changelogs and feature lists from that record. The reasoning, personas and examples are in [`docs/team-brain.md`](docs/team-brain.md).
+Added 2026-11-07 at the owner's request and refined the same day. sati is the brain AI agents work from, and the place their users plan, keep todo lists and take notes. It also looks back: it reviews what was done and what changed, and writes changelogs and feature lists from that record. The reasoning, personas and examples are in [`docs/history/team-brain.md`](docs/history/team-brain.md).
 
 **Two ways to work, one memory.** Everything a person can plan or record, they can do either way, and both write the same records:
 
@@ -842,7 +842,7 @@ A capability is not done until both ways have it, with tests on both. sati itsel
 
 ### Phase 8 — Knowledge brain: agents read, sati remembers
 
-Added 2026-11-07 at the owner's request. sati is the memory, not a file reader: AI agents open the Word, Excel, PowerPoint, PDF and image files with their own tools, notice changes and understand the language; sati keeps what they and the people learned, decided, did, need and plan, and hands back the right part in as few tokens as possible. The full plan is in [`docs/knowledge-brain.md`](docs/knowledge-brain.md). It follows Phase 7a and uses `note_upsert` / `note_get` from 7a.
+Added 2026-11-07 at the owner's request. sati is the memory, not a file reader: AI agents open the Word, Excel, PowerPoint, PDF and image files with their own tools, notice changes and understand the language; sati keeps what they and the people learned, decided, did, need and plan, and hands back the right part in as few tokens as possible. The full plan is in [`docs/history/knowledge-brain.md`](docs/history/knowledge-brain.md). It follows Phase 7a and uses `note_upsert` / `note_get` from 7a.
 
 **Rule:** sati never opens, parses or watches the user's files.
 
@@ -994,7 +994,7 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 
 ### Phase 10 — sati in the terminal, with no server
 
-Added 2026-11-12 at the owner's request. sati already needs no server: every command opens the database itself and `sati mcp` speaks over stdio. What is missing is a comfortable terminal for a person. The full plan, the findings and a checklist per phase are in [`docs/headless-cli-plan.md`](docs/headless-cli-plan.md). No new dependency and no daemon.
+Added 2026-11-12 at the owner's request. sati already needs no server: every command opens the database itself and `sati mcp` speaks over stdio. What is missing is a comfortable terminal for a person. The full plan, the findings and a checklist per phase are in [`docs/history/headless-cli-plan.md`](docs/history/headless-cli-plan.md). No new dependency and no daemon.
 
 **10a (H1) — The inbox in the core**
 

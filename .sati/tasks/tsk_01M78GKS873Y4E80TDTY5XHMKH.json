@@ -1,0 +1,44 @@
+{
+  "body": "Review 2026-11-12 items 13.1 to 13.6. 13.8 waits for the board's six pages (WP2, WP15).",
+  "branch": "wp13-docs",
+  "completion": {
+    "branch": "wp13-docs",
+    "commit": "f5b6ecd7a218f6feba82b78206c6cd8165239b8b",
+    "completedAt": "2026-11-12T18:36:43.432Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "PLAN.md",
+      "README.md",
+      "docs/guide/quick-start.md",
+      "docs/history/headless-cli-plan.md",
+      "docs/history/knowledge-brain.md",
+      "docs/history/team-brain.md",
+      "docs/progress.md",
+      "docs/review-2026-11-12.md"
+    ],
+    "releaseNote": "Docs: environment variables, plans and milestones, projects on this machine.",
+    "summary": "Review 13.1-13.6: README Environment table; quick start gains Plans and milestones, Projects on this machine (personal workspace, settings --name, projects forget, completion), init --dry-run, mcp --desktop and the merge driver's exit codes (corrected: no conflict markers); history plans moved to docs/history; CLI README kept (decision). 13.8 waits for the board."
+  },
+  "createdAt": "2026-11-12T18:34:09.031Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "effort": "standard",
+  "id": "tsk_01M78GKS873Y4E80TDTY5XHMKH",
+  "labels": [
+    "review-2026-11-12"
+  ],
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T18:34:09.031Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T18:34:21.458Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T18:36:43.434Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T18:36:43.434Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T18:36:43.434Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T18:34:21.458Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "done",
+  "title": "WP13 Docs: environment table, personal workspace, missing guide commands, merge driver, history files, CLI README (13.1-13.6)",
+  "updatedAt": "2026-11-12T18:36:43.434Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

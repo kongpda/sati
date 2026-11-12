@@ -6,14 +6,16 @@ import {
   type ServiceContext,
 } from "@sati/core";
 import { defineCommand } from "citty";
+import { json } from "../args.js";
 import { sharedDir } from "../runtime/config.js";
 import { osUser, processProbe } from "../runtime/identity.js";
 import { openRuntime } from "../runtime/location.js";
-import { exportWritten, printError } from "../runtime/output.js";
+import { exportWritten, output, printError } from "../runtime/output.js";
 import { markSeen, watchFolder } from "../shared-folder.js";
 import { readTemplateFiles } from "../templates.js";
 import { warn } from "../term.js";
 import { VERSION } from "../version.js";
+import { desktopEntry, desktopText } from "./init/desktop.js";
 
 /**
  * Each write exports only what it touched, so one full export before serving repairs anything an
@@ -35,7 +37,19 @@ const EXPORT_DEBOUNCE_MS = 2000;
 
 export default defineCommand({
   meta: { name: "mcp", description: "Serve the MCP tools over stdio (started by your agent)" },
-  run: async () => {
+  args: {
+    desktop: {
+      type: "boolean",
+      description:
+        "Print the Claude Desktop config entry for this initialized project, and start no server",
+    },
+    ...json,
+  },
+  run: async ({ args }) => {
+    // The entry is printed on stdout like any command; only the server itself owns stdout.
+    if (args.desktop) {
+      return output(args.json, async () => desktopEntry(process.cwd()), desktopText);
+    }
     try {
       const rt = await openRuntime(process.cwd(), "");
       const { project, location } = rt;

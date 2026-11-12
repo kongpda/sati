@@ -2400,3 +2400,11 @@ Items 11.1 to 11.6, 11.8 and 11.10 to 11.12 are done (task `tsk_01M78EBHERF7AFXK
 - **11.12:** `rangeDecisions` reads newest first and stops at 50 matches. With no feature touched it asks the store only for decisions updated since the range started.
 - **No migration 0008** and no `note_links` table: the scans are fast enough (decision recorded).
 - **Bench** (three new lines without a PLAN budget, printed as INFO; load average about 5): guard with 2,000 cards p95 4.6 ms before, 2.2 ms after; brief with 50,000 records p95 207.4 ms, 198.9 ms; import of 5,000 records 171.7 ms, 94.0 ms. Every budget passed. `recall` p95 went from 33.4 ms to 42.2 ms, still under its 50 ms budget. The open-task subquery in the search may cost a little; watch it on the next bench run.
+
+## 2026-11-13 — Review WP6: one command per job
+
+- **6.1-6.14 done.** Hidden, still running, not in help or completion: `rules sync`, `init --upgrade`, `init --desktop`, `export`, `import`, `app`, `context`, `card show`, `scan`, `template`, `guard --hook`, `wait --hook`. Visible forms: `upgrade`, `mcp --desktop`, `ui`, `card get`, `feature scan`, `plan list|show|apply|import`.
+- **6.7 closed, kept visible.** `task send-back` asks which in-review task and what should change at a terminal; `task update` cannot. `task take-over` has no other form, and core hints name it.
+- **Batching:** the layout-only items 6.4, 6.6, 6.11 and 6.12 shared one gate and one commit (`ba38d52`); each has its own test line and review box. 6.5 and 6.14 shared one (`2e5fb9f`).
+- **Aliases:** `layout.aliases` is now empty (`app` and `context` are hidden names). The mechanism stays for later use.
+- **6.10:** the desktop entry module already existed (`init/desktop.ts`); `mcp --desktop` calls it. The docs for it are 13.3.

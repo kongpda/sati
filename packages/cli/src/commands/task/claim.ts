@@ -2,6 +2,7 @@ import {
   CLI_NAME,
   claimNext,
   claimTask,
+  getRecord,
   listTasks,
   releaseTask,
   resolveId,
@@ -14,10 +15,19 @@ import {
 import { defineCommand } from "citty";
 import { id, json, taskId } from "../../args.js";
 import { canAsk, pickTask, sameAs } from "../../prompt.js";
-import { row } from "../../render.js";
+import { claimed, row } from "../../render.js";
 import { heldTask, int } from "../../runtime/input.js";
 import { execute } from "../../runtime/output.js";
 import { when } from "../../term.js";
+
+/** The task with its feature's acceptance lines, as `claimNext` gives them. */
+async function withAcceptance<T extends Task>(
+  ctx: ServiceContext,
+  task: T,
+): Promise<T & { acceptance: string[] }> {
+  const feature = task.featureId ? await getRecord(ctx, "feature", task.featureId) : undefined;
+  return { ...task, acceptance: feature?.deletedAt ? [] : (feature?.acceptance ?? []) };
+}
 
 /**
  * `task claim --pick`: a person chooses from the ready tasks, in the order `task claim` would
@@ -63,7 +73,7 @@ export const claimCommand = defineCommand({
         const leaseMinutes = int(args.lease, "lease");
         if (args.pick) {
           const chosen = await pickReady(ctx, args.id !== undefined || args.json === true);
-          return claimTask(ctx, chosen, { leaseMinutes });
+          return withAcceptance(ctx, await claimTask(ctx, chosen, { leaseMinutes }));
         }
         // A person with several ready tasks chooses; the top one is first, so Enter takes what
         // `task claim` always took. Scripts and agents get the top one without a question.
@@ -72,19 +82,19 @@ export const claimCommand = defineCommand({
           if (ready.length > 1) {
             const chosen = await pickReady(ctx, false);
             sameAs("task", "claim", shortHandle(chosen));
-            return claimTask(ctx, chosen, { leaseMinutes });
+            return withAcceptance(ctx, await claimTask(ctx, chosen, { leaseMinutes }));
           }
         }
         if (!args.id) {
           const next = await claimNext(ctx, { leaseMinutes });
           return { ...next.task, acceptance: next.acceptance };
         }
-        return claimTask(ctx, await resolveId(ctx, "task", args.id), { leaseMinutes });
+        return withAcceptance(
+          ctx,
+          await claimTask(ctx, await resolveId(ctx, "task", args.id), { leaseMinutes }),
+        );
       },
-      (t: Task & { acceptance?: string[] }) =>
-        `Claimed ${row(t)} until ${when(t.claim?.leaseUntil)}, token ${t.claim?.token}${
-          t.acceptance?.length ? `\n${t.acceptance.map((a) => `- ${a}`).join("\n")}` : ""
-        }`,
+      claimed,
     ),
 });
 

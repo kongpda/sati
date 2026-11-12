@@ -26,6 +26,26 @@ describe("sati mcp", () => {
     expect(listed.data.map((t) => t.title)).toEqual(["From MCP"]);
   });
 
+  // Review 6.10: the Desktop entry is about the MCP server, so `mcp` prints it. `init --desktop`
+  // stays for old instructions but help no longer lists it.
+  it("mcp --desktop prints the config entry and does not start the server", async () => {
+    const dir = await tempRepo({ init: true });
+    // Closed stdin would end a running server quietly; a printed entry proves it never started.
+    const printed = satiJson<{
+      desktop: { mcpServers: Record<string, { command: string; args: string[] }> };
+    }>(dir, "mcp", "--desktop");
+    const [entry] = Object.values(printed.data.desktop.mcpServers);
+    expect(entry?.args.slice(1)).toEqual(["mcp", "--project", dir]);
+    const text = sati(dir, "mcp", "--desktop");
+    expect(text.code).toBe(0);
+    expect(text.stdout).toContain("claude_desktop_config.json");
+    expect(run(dir, ["init", "--desktop"]).stdout).toContain("claude_desktop_config.json");
+    expect(sati(dir, "init", "--help").stdout).not.toContain("--desktop");
+    expect(sati(dir, "mcp", "--help").stdout).toContain("--desktop");
+    // Before init there is no server to start, so no entry is printed.
+    expect(sati(await tempRepo(), "mcp", "--desktop").code).not.toBe(0);
+  });
+
   it("exits with NOT_INITIALIZED on stderr, keeping stdout clean for the protocol", async () => {
     const dir = await tempRepo();
     const r = run(dir, ["mcp"]);

@@ -385,6 +385,32 @@ describe("usage errors teach the command", () => {
     expect(names("plan", "apply")).toEqual(names("template", "apply"));
   });
 
+  // Review 6.13: an agent that claims a task by id needs the feature's acceptance lines as much
+  // as one that takes the top task, so both ways give the same fields and the same text.
+  it("task claim <id> has acceptance as next does, in --json and in text", async () => {
+    const dir = await tempRepo({ init: true });
+    const feature = satiJson<{ id: string }>(
+      dir,
+      "feature",
+      "create",
+      "Search",
+      "--acceptance",
+      "Typos match",
+    ).data;
+    const make = (title: string) =>
+      satiJson<{ id: string }>(dir, "task", "create", title, "--feature", feature.id).data;
+    const byId = make("By id");
+    const claimed = satiJson<{ acceptance?: string[] }>(dir, "task", "claim", byId.id);
+    expect(claimed.data.acceptance).toEqual(["Typos match"]);
+    expect(sati(dir, "task", "release", byId.id).code).toBe(0);
+    const text = sati(dir, "task", "claim", byId.id).stdout;
+    expect(text).toContain("\n- Typos match");
+    expect(sati(dir, "task", "release", byId.id).code).toBe(0);
+    // `next` prints the same lines in the same shape.
+    expect(sati(dir, "next").stdout).toContain("\n- Typos match");
+    expect(sati(dir, "next", "--help").stdout).toContain("Never asks");
+  });
+
   // The root list is scanned; exit codes and flag lists belong in the command's own help.
   it("lists commands by their first sentence and keeps the rest for the command's help", async () => {
     const dir = await tempRepo();

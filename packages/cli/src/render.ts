@@ -1,4 +1,4 @@
-import { type SearchHit, shortHandle } from "@sati/core";
+import { type SearchHit, shortHandle, type Task } from "@sati/core";
 import {
   bold,
   cyan,
@@ -198,4 +198,10 @@ export function checks(items: readonly { name: string; ok: boolean; detail: stri
       : `${bold(red(`${failed} failed`))}, ${passed} passed.`,
   );
   return lines.join("\n");
+}
+
+/** What `next` and `task claim` print for a claimed task: the lease, the token, the acceptance lines. */
+export function claimed(t: Task & { acceptance?: string[] }): string {
+  const lines = t.acceptance?.length ? `\n${t.acceptance.map((a) => `- ${a}`).join("\n")}` : "";
+  return `Claimed ${row(t)} until ${when(t.claim?.leaseUntil)}, token ${t.claim?.token}${lines}`;
 }

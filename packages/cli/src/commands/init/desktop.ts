@@ -43,7 +43,7 @@ export function desktopEntry(cwd: string, script = process.argv[1] ?? CLI_NAME):
   };
 }
 
-/** The text `init --desktop` prints for a desktop entry. */
+/** The text `mcp --desktop` prints for a desktop entry. */
 export function desktopText(r: DesktopEntry): string {
   return [
     `Add this to ${DESKTOP_CONFIG} (merge it into "mcpServers" if the file has one),`,

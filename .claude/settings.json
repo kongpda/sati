@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sati brief --format=agent"
+            "command": "sati brief --format=agent --tools=mcp"
           }
         ]
       },
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sati brief --format=short"
+            "command": "sati brief --format=short --tools=mcp"
           }
         ]
       }

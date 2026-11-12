@@ -1,0 +1,36 @@
+{
+  "body": "docs/review-2026-11-12.md item 0.2. Add layout.hidden, HIDDEN_FLAGS in help.ts; usage() and tree() skip them. No command hidden yet.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "0ed4340c92da058db1187ace0dbef6f10bef3920",
+    "completedAt": "2026-11-12T16:35:22.600Z",
+    "completedBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "filesTouched": [
+      "packages/cli/src/help.ts",
+      "packages/cli/src/commands/completion.ts",
+      "packages/cli/src/index.ts",
+      "packages/cli/test/hidden.test.ts",
+      "docs/review-2026-11-12.md"
+    ],
+    "summary": "Added HelpLayout.hidden (root command names) and hiddenFlags (by command path; HIDDEN_FLAGS in help.ts, empty for now). usage() and tree() skip them; completionCommand takes the layout. Subcommand help already honoured meta.hidden. Nothing hidden yet, so help is unchanged. context/app stay in layout.aliases until 6.4 hides them (spec step 2 conflicts with 'help does not change yet')."
+  },
+  "createdAt": "2026-11-12T16:33:36.645Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "id": "tsk_01M789Q2C554S93473QD6E9EQ6",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T16:33:36.646Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "branch": "2026-11-12T16:33:52.878Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "claim": "2026-11-12T16:35:22.600Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "completion": "2026-11-12T16:35:22.600Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "status": "2026-11-12T16:35:22.600Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "worktree": "2026-11-12T16:33:52.878Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "status": "done",
+  "title": "WP0 0.2: hidden flags and hidden names in help and completion",
+  "updatedAt": "2026-11-12T16:35:22.600Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

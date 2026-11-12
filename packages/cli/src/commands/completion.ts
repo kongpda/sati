@@ -1,6 +1,7 @@
 import { basename } from "node:path";
 import { CLI_NAME, SatiError } from "@sati/core";
 import { type CommandDef, defineCommand } from "citty";
+import { type HelpLayout, hiddenIn } from "../help.js";
 import { output } from "../runtime.js";
 
 type Resolvable<T> = T | Promise<T> | (() => T | Promise<T>);
@@ -23,7 +24,12 @@ const GLOBAL_FLAGS = [
 ];
 
 /** Walks the command tree. Hidden commands are run by tools, not typed. */
-export async function tree(cmd: CommandDef, name: string): Promise<Node> {
+export async function tree(
+  cmd: CommandDef,
+  name: string,
+  layout?: HelpLayout,
+  path: readonly string[] = [],
+): Promise<Node> {
   const meta = (await resolveValue(cmd.meta ?? {})) as { description?: string };
   const args = (await resolveValue(cmd.args ?? {})) as Record<
     string,
@@ -36,14 +42,15 @@ export async function tree(cmd: CommandDef, name: string): Promise<Node> {
   for (const [sub, def] of Object.entries(defs ?? {})) {
     const resolved = await resolveValue(def);
     const m = (await resolveValue(resolved.meta ?? {})) as { hidden?: boolean };
-    if (!m.hidden) subs.push(await tree(resolved, sub));
+    const hiddenName = path.length === 0 && layout?.hidden.includes(sub) === true;
+    if (!m.hidden && !hiddenName) subs.push(await tree(resolved, sub, layout, [...path, sub]));
   }
   return {
     name,
     description: meta.description ?? "",
     flags: [
       ...Object.entries(args)
-        .filter(([, a]) => a.type !== "positional")
+        .filter(([flag, a]) => a.type !== "positional" && !hiddenIn(layout, path, flag))
         .map(([flag, a]) => ({ name: flag, description: a.description ?? "" })),
       ...GLOBAL_FLAGS,
     ],
@@ -181,7 +188,7 @@ export function script(shell: string, root: Node): string {
 }
 
 /** `root` is asked for when the command runs, because the root lists this command too. */
-export const completionCommand = (root: () => CommandDef) =>
+export const completionCommand = (root: () => CommandDef, layout?: HelpLayout) =>
   defineCommand({
     meta: {
       name: "completion",
@@ -198,7 +205,10 @@ export const completionCommand = (root: () => CommandDef) =>
       output(
         false,
         async () =>
-          script(args.shell ?? basename(process.env.SHELL ?? ""), await tree(root(), CLI_NAME)),
+          script(
+            args.shell ?? basename(process.env.SHELL ?? ""),
+            await tree(root(), CLI_NAME, layout),
+          ),
         (text) => text,
       ),
   });

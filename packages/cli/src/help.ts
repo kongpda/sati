@@ -19,7 +19,24 @@ export interface HelpLayout {
   groups: Record<string, readonly string[]>;
   /** Second names of a command, shown beside it instead of as their own row. */
   aliases: Record<string, string>;
+  /** Root commands that still run but are not listed (one module served under two names). */
+  hidden: readonly string[];
+  /** Flags that still work but are not listed, by command path (`"init"`, `"task create"`). */
+  hiddenFlags: Readonly<Record<string, readonly string[]>>;
 }
+
+/**
+ * Flags kept for old scripts and installed hooks: accepted, but absent from help and completion.
+ * Add a flag here when a newer name replaces it (review D8, D9, D24).
+ */
+export const HIDDEN_FLAGS: Readonly<Record<string, readonly string[]>> = {};
+
+/** True when `flag` of the command at `path` is kept for old callers and not listed. */
+export const hiddenIn = (
+  layout: HelpLayout | undefined,
+  path: readonly string[],
+  flag: string,
+): boolean => layout?.hiddenFlags[path.join(" ")]?.includes(flag) === true;
 
 /** Every command has these; `main` handles them before citty sees the arguments. */
 const GLOBAL: [string, string][] = [
@@ -80,6 +97,7 @@ export async function usage(
   const options: [string, string][] = [];
   const usageWords = [name];
   for (const [arg, def] of args) {
+    if (hiddenIn(layout, path, arg)) continue;
     const note = def.default === undefined ? "" : ` (default: ${String(def.default)})`;
     if (def.type === "positional") {
       const required = def.required !== false && def.default === undefined;
@@ -109,7 +127,7 @@ export async function usage(
   if (subs && Object.keys(subs).length > 0) {
     const described = new Map<string, string>();
     for (const [sub, def] of Object.entries(subs)) {
-      if (atRoot && layout.aliases[sub] !== undefined) continue;
+      if (atRoot && (layout.aliases[sub] !== undefined || layout.hidden.includes(sub))) continue;
       const m = (await resolveValue((await resolveValue(def)).meta ?? {})) as {
         description?: string;
         hidden?: boolean;

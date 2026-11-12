@@ -1,5 +1,6 @@
 import type { CommandDef } from "citty";
 import { bold, cyan, dim, pad, term, underline, width, wrap } from "./term.js";
+import { versionLine } from "./version.js";
 
 type Resolvable<T> = T | Promise<T> | (() => T | Promise<T>);
 const resolveValue = async <T>(v: Resolvable<T>): Promise<T> =>
@@ -29,7 +30,14 @@ export interface HelpLayout {
  * Flags kept for old scripts and installed hooks: accepted, but absent from help and completion.
  * Add a flag here when a newer name replaces it (review D8, D9, D24).
  */
-export const HIDDEN_FLAGS: Readonly<Record<string, readonly string[]>> = {};
+export const HIDDEN_FLAGS: Readonly<Record<string, readonly string[]>> = {
+  // `sati doctor --reviewed <id>` is the one documented way to clear needsReview (review 7.10).
+  "task update": ["reviewed"],
+  "feature update": ["reviewed"],
+  "note update": ["reviewed"],
+  // Replaced by `--md` (review 7.9).
+  "feature list": ["format"],
+};
 
 /** True when `flag` of the command at `path` is kept for old callers and not listed. */
 export const hiddenIn = (
@@ -119,7 +127,8 @@ export async function usage(
 
   const max = Math.min(term().width, 100);
   const out: string[] = [];
-  const title = atRoot && rootMeta.version ? `${name} ${rootMeta.version}` : name;
+  // The same line `--version` prints, so the two never show different forms (review 7.12).
+  const title = atRoot && rootMeta.version ? versionLine(name) : name;
   out.push(bold(title), wrap(meta.description ?? "", max), "");
   out.push(`${heading("USAGE")}  ${cyan(usageWords.join(" "))}`, "");
   if (positional.length > 0) out.push(heading("ARGUMENTS"), ...columns(positional), "");

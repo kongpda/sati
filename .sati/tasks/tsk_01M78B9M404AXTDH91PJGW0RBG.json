@@ -1,10 +1,22 @@
 {
   "branch": "cli-small",
-  "claim": {
-    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
-    "heartbeatAt": "2026-11-12T17:01:18.790Z",
-    "leaseUntil": "2026-11-12T19:01:18.790Z",
-    "token": 2
+  "completion": {
+    "branch": "cli-small",
+    "commit": "28f0591003675a861bf4100a956aa812086e1ecc",
+    "completedAt": "2026-11-12T17:05:01.508Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "docs/guide/glossary.md",
+      "docs/progress.md",
+      "docs/review-2026-11-12.md",
+      "packages/cli/src/commands/feature.ts",
+      "packages/cli/src/commands/task.ts",
+      "packages/cli/src/help.ts",
+      "packages/cli/test/cli-flags.test.ts",
+      "packages/cli/test/version.test.ts",
+      ".changeset/cli-small-items.md"
+    ],
+    "summary": "Review 7.5, 7.7, 7.9, 7.10, 7.12, 8.2: status help from TASK_STATUSES; task checklist defaults to the held task; feature list --md (--format hidden); --reviewed on update hidden; help header uses versionLine; --board help notes the off-terminal form. Each new test failed first; full gate green."
   },
   "createdAt": "2026-11-12T17:01:13.215Z",
   "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
@@ -14,13 +26,14 @@
   "stamps": {
     "*": "2026-11-12T17:01:13.218Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "branch": "2026-11-12T17:01:18.798Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "claim": "2026-11-12T17:01:18.798Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "status": "2026-11-12T17:01:18.798Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T17:05:01.510Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T17:05:01.510Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T17:05:01.510Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "worktree": "2026-11-12T17:01:18.798Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
   },
-  "status": "in_progress",
+  "status": "done",
   "title": "CLI small items: status order in help, checklist without id, feature list --md, hide --reviewed flags, one version form, --board help (review 7.5, 7.7, 7.9, 7.10, 7.12, 8.2)",
-  "updatedAt": "2026-11-12T17:01:18.802Z",
-  "version": 2,
+  "updatedAt": "2026-11-12T17:05:01.513Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

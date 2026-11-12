@@ -60,11 +60,13 @@ const ls = defineCommand({
       description: "Comma-separated: planned, building, shipped, deprecated, removed",
     },
     milestone: { type: "string", description: "Only features of this milestone" },
-    format: {
-      type: "string",
+    md: {
+      type: "boolean",
       description:
-        "md (the only value): what the product does today (shipped features, acceptance criteria, milestone); ignores the filters",
+        "What the product does today as Markdown: shipped features, acceptance criteria, milestone; ignores the filters",
     },
+    // Kept for old scripts: `--format md` is `--md` (hidden, review 7.9).
+    format: { type: "string", description: "Old form of --md: md is the only value" },
     ...pagination,
     ...json,
   },
@@ -72,10 +74,10 @@ const ls = defineCommand({
     execute(
       args.json,
       async ({ ctx }): Promise<string | Feature[]> => {
-        if (args.format === "md") return featureList(ctx);
+        if (args.md || args.format === "md") return featureList(ctx);
         if (args.format !== undefined) {
           throw new SatiError("USAGE", `Unknown format "${args.format}".`, {
-            hint: "Use --format md, or leave it out for the list.",
+            hint: "Use --md, or leave it out for the list.",
           });
         }
         return listRecords(ctx, "feature", {

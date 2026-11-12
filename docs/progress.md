@@ -2312,3 +2312,14 @@ Items 7.2, 7.3, 7.4, 8.1, 8.3 and 8.9 of `docs/review-2026-11-12.md` are done (t
 - **8.1:** `nudge --tools cli` prints shell commands; the Claude Stop hook of a cli-only project passes it. The MCP text was also wrong: it said to call `task_update` "with its status and a note", but `task_update` has no note field.
 - **8.3:** `orNone` moved from `task.ts` to `args.ts`; the item's test name says `--due`, but the flag is still `--date` until 7.1.
 - **8.9:** done as written.
+
+## 2026-11-12 — Review WP7 and WP8: small CLI items
+
+Items 7.5, 7.7, 7.9, 7.10, 7.12 and 8.2 of `docs/review-2026-11-12.md` are done (task `tsk_gw0rbg`). Each test failed before its fix.
+
+- **7.5:** the `task list --status` help is built from `TASK_STATUSES`.
+- **7.7:** `task checklist` takes `...taskId` and `heldTask`.
+- **7.9:** `feature list --md`; `--format` stays as a hidden flag, with the same output for `md` and the same error for other values. The glossary names `--md`.
+- **7.10:** `--reviewed` on `task update`, `feature update` and `note update` is in `HIDDEN_FLAGS`. The glossary names `sati doctor --reviewed <id>`.
+- **7.12:** the root help title calls `versionLine`. This replaces the test "keeps the semver form in the help title", which asked for the opposite; the review is newer, so it wins. The MCP server info still uses `VERSION`.
+- **8.2:** help text only.

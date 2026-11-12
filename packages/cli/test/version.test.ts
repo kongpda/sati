@@ -52,12 +52,11 @@ describe("sati --version", () => {
     expect(versionLine("sati", "1.2.3", "", "")).toBe("sati 1.2.3");
   });
 
-  // The MCP server info and the help title take a version, not a sentence: semver with the
-  // commit as build metadata.
-  it("keeps the semver form in the help title", () => {
-    expect(run("--help")).toMatch(
-      new RegExp(`^sati ${pkg.version.replaceAll(".", "\\.")}\\+[0-9a-f]{7,}(\\.dirty)?\\b`, "u"),
-    );
+  // Review 7.12: the help title said `sati 0.2.0+7e1d00e` and --version `sati 0.2.0 (7e1d00e
+  // 2026-11-12)`, two forms of one version. The help title now prints the --version line; only
+  // the MCP server info keeps the semver form.
+  it("the help header and --version show the same version", () => {
+    expect(run("--help").split("\n")[0]?.startsWith(run("--version"))).toBe(true);
   });
 
   // node, npm and pnpm answer `-v`; many other tools answer `-V`. Neither means anything else here.

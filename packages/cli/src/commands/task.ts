@@ -15,6 +15,7 @@ import {
   SatiError,
   type ServiceContext,
   shortHandle,
+  TASK_STATUSES,
   type Task,
   type TaskRow,
   takeOverTask,
@@ -263,7 +264,7 @@ const ls = defineCommand({
   args: {
     status: {
       type: "string",
-      description: "Comma-separated: backlog, todo, in_progress, blocked, review, done, cancelled",
+      description: `Comma-separated: ${TASK_STATUSES.join(", ")}`,
     },
     feature: { type: "string", description: "Only tasks of this feature" },
     milestone: {
@@ -285,7 +286,7 @@ const ls = defineCommand({
     board: {
       type: "boolean",
       description:
-        "The board's columns as text; --limit is then the rows shown per column (default 10)",
+        "The board's columns as text; --limit is then the rows shown per column (default 10). Off a terminal, one task per line in column order, and --limit is ignored",
     },
     ...pagination,
     ...json,
@@ -464,7 +465,7 @@ const checklist = defineCommand({
     description: "Show a task's checklist, or add, tick, untick or remove a step",
   },
   args: {
-    ...id("Task"),
+    ...taskId,
     add: { type: "string", description: "Add a step with this text" },
     done: { type: "string", description: "Tick step number N" },
     undone: { type: "string", description: "Untick step number N" },
@@ -476,7 +477,7 @@ const checklist = defineCommand({
     execute(
       args.json,
       async ({ ctx }) => {
-        const taskId = await resolveId(ctx, "task", args.id);
+        const taskId = await heldTask(ctx, args.id);
         const t = await getRecord(ctx, "task", taskId);
         const items: ChecklistItem[] = [...(t.checklist ?? [])];
         const step = (flag: "done" | "undone" | "remove") => {

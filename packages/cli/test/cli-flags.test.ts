@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createIdFactory, initProject, SEARCHABLE, systemClock } from "@sati/core";
+import { createIdFactory, initProject, SEARCHABLE, systemClock, TASK_STATUSES } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
 import { describe, expect, it } from "vitest";
 import pkg from "../package.json" with { type: "json" };
@@ -139,6 +139,59 @@ describe("help", () => {
     const help = run(dir, ["search", "--help"]);
     for (const kind of SEARCHABLE) expect(help.stdout).toContain(kind);
     expect(run(dir, ["card", "show", "--help"]).stdout).toContain("card show");
+  });
+
+  // Review 7.5: the help listed statuses in one order and the error in another.
+  it("task list help lists the statuses in the order the error does", async () => {
+    const dir = await tempRepo({ init: true });
+    const help = run(dir, ["task", "list", "--help"]).stdout.replace(/\s+/gu, " ");
+    expect(help).toContain(TASK_STATUSES.join(", "));
+    expect(run(dir, ["task", "list", "--status", "nope"]).stderr).toContain(
+      TASK_STATUSES.join(", "),
+    );
+  });
+
+  // Review 7.10: `doctor --reviewed <id>` is the one documented way; the update flags still work
+  // for old scripts but are not offered.
+  it("hides --reviewed on update, and the flag still clears needsReview", async () => {
+    const dir = await tempRepo({ init: true });
+    for (const kind of ["task", "feature", "note"]) {
+      expect(run(dir, [kind, "update", "--help"]).stdout).not.toContain("--reviewed");
+    }
+    const t = satiJson<{ id: string }>(dir, "task", "create", "T").data;
+    expect(sati(dir, "task", "update", t.id, "--reviewed").code).toBe(0);
+  });
+});
+
+describe("feature list --md", () => {
+  // Review 7.9: `--format` had one value, so it is a plain switch now; `--format md` stays hidden.
+  it("feature list --md prints the shipped-features Markdown", async () => {
+    const dir = await tempRepo({ init: true });
+    const f = satiJson<{ id: string }>(dir, "feature", "create", "Login").data;
+    for (const status of ["building", "shipped"]) {
+      expect(sati(dir, "feature", "update", f.id, "--status", status).code).toBe(0);
+    }
+    const md = sati(dir, "feature", "list", "--md");
+    expect(md.code).toBe(0);
+    expect(md.stdout).toContain("Login");
+    expect(md.stdout).toMatch(/^#/mu);
+    expect(sati(dir, "feature", "list", "--format", "md").stdout).toBe(md.stdout);
+    const help = run(dir, ["feature", "list", "--help"]).stdout;
+    expect(help).toContain("--md");
+    expect(help).not.toContain("--format");
+  });
+});
+
+describe("task checklist", () => {
+  // Review 7.7: show, complete and release default to the task you hold; checklist did not.
+  it("checklist ticks a step of the task you hold when no id is given", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = satiJson<{ id: string }>(dir, "task", "create", "Steps").data;
+    expect(sati(dir, "task", "checklist", t.id, "--add", "one").code).toBe(0);
+    expect(sati(dir, "task", "claim", t.id).code).toBe(0);
+    expect(sati(dir, "task", "checklist", "--done", "1").code).toBe(0);
+    const after = satiJson<{ checklist: { done: boolean }[] }>(dir, "task", "show", t.id).data;
+    expect(after.checklist[0]?.done).toBe(true);
   });
 });
 

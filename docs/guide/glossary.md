@@ -25,14 +25,14 @@ scripts and agents do not break. This table maps one to the other; the board's w
 | Changed since | a stale context entry | The file changed after the card was written; read it again and save a new card. |
 | Keep on this computer only, Private | `private: true` (`--private`) | Never written to `.sati/`, so never shared through git. Set when the item is made; a shared item cannot be made private again. `sati doctor` lists them. |
 | Pinned | `pinned: true` (`--pinned`) | Shown on the board and in every brief (up to 3). |
-| Edited in two places · Looks right | `needsReview`, `--reviewed` | A sync merged two copies; check the result and confirm. |
+| Edited in two places · Looks right | `needsReview`, `sati doctor --reviewed <id>` | A sync merged two copies; check the result and confirm. |
 | Person, AI agent | actor `kind: human`, `agent` | Who did something. |
 | Software project, General project | `kind: code`, `kind: general` (`sati settings --kind`) | A general project (an event, a campaign) has no features, file reservations or guard. |
 | Due date, Assigned to, Checklist | `dueDate`, `assigneeIds`, `checklist` | Planning fields on a task. |
 | Comments | a note tagged `comment`, linked to the record (`sati comment add`) | A reply on a task, note or decision. Agents see the newest one by someone else on their task in the brief. |
 | Changes, Copy changelog | `sati changes --format changelog`, MCP `changes` | What changed in a time range. The changelog uses each task's release note (`--release-note`), falling back to its summary, and leaves out tasks labelled `internal`. |
 | Since my last visit | `--since last-session` | From your previous session's last write; for an agent, its previous session with the same name. |
-| Copy feature list | `sati feature list --format md` | Shipped features with their acceptance criteria, by plan. |
+| Copy feature list | `sati feature list --md` | Shipped features with their acceptance criteria, by plan. |
 | New plan | `sati template apply <name>`, MCP `roadmap_upsert` with `template` | A milestone and its tasks from a template (event, campaign, proposal, monthly-report, content-calendar, meeting-notes, release, or `.sati/templates/<name>.md`). Each stage waits for the one before; due dates count back from the day. |
 | Needs you · "Codex asks" · I answered | `claim.waiting`, `sati wait`, `needsInput`, `POST …/answered` | An agent waits on a person for an answer or a permission. Answer it in the agent's session, then mark it answered. |
 | Blocked: "…" | `blockedReason`, `--status blocked --reason` | What a blocked task waits on. |

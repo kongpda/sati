@@ -12,11 +12,39 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { type Actor, COLUMNS, dueLabel, type Feature, type Task, waitingOn } from "./api.js";
 import { Avatar } from "./people.js";
+import { readPrefs, usePrefs, writePrefs } from "./prefs.js";
 import { Ago } from "./time.js";
 import { capital, fullTime, statusWord } from "./words.js";
+
+const WIDE = "(min-width: 701px)";
+const subscribeWide = (listener: () => void) => {
+  const query = window.matchMedia?.(WIDE);
+  query?.addEventListener("change", listener);
+  return () => query?.removeEventListener("change", listener);
+};
+/** Columns fold into rails only beside each other; on a phone one column fills the screen. */
+const useWide = () =>
+  useSyncExternalStore(
+    subscribeWide,
+    () => window.matchMedia?.(WIDE).matches ?? true,
+    () => true,
+  );
+
+function setFolded(status: string, folded: boolean): void {
+  const rest = readPrefs().collapsedColumns.filter((s) => s !== status);
+  writePrefs({ collapsedColumns: folded ? [...rest, status] : rest });
+}
 
 export const Board = memo(function Board({
   tasks,
@@ -58,6 +86,9 @@ export const Board = memo(function Board({
 }) {
   const { featureName, columns } = useMemo(() => boardColumns(tasks, features), [tasks, features]);
   const people = useMemo(() => new Map(actors.map((a) => [a.id, a])), [actors]);
+  const wide = useWide();
+  const prefs = usePrefs();
+  const folded = new Set(wide ? prefs.collapsedColumns : []);
   // From every task, not only the filtered ones: a hidden task can still hold another one up.
   const unfinished = useMemo(
     () =>
@@ -129,6 +160,7 @@ export const Board = memo(function Board({
             status={status}
             label={label}
             show={shows(column, status)}
+            folded={folded.has(status)}
             closed={
               dragged && dragged.status !== status ? refusal(dragged, status) !== null : false
             }
@@ -170,6 +202,7 @@ function Column({
   status,
   label,
   show,
+  folded,
   closed,
   heldBy,
   count,
@@ -188,6 +221,8 @@ function Column({
   status: string;
   label: string;
   show: boolean;
+  /** The reader folded this column into a rail; it opens again for an open or selected task. */
+  folded: boolean;
   /** The card being dragged cannot go here. */
   closed: boolean;
   heldBy: (task: Task) => string | null;
@@ -226,6 +261,7 @@ function Column({
   // From the rows, not the page: the virtual list draws only the cards in view.
   const ids = useMemo(() => rows.flatMap((r) => (r.kind === "task" ? [r.task.id] : [])), [rows]);
   const picked = ids.reduce((n, id) => n + (selected.has(id) ? 1 : 0), 0);
+  const collapsed = folded && picked === 0 && !ids.includes(open ?? "");
   const openIndex = rows.findIndex((r) => r.kind === "task" && r.task.id === open);
   // Opening a card keeps it in view next to the panel: its column scrolls in sideways, and the
   // virtual list down to it.
@@ -237,78 +273,107 @@ function Column({
   }, [open]);
   return (
     <section
-      className={`column${show ? " show" : ""}${closed ? " closed" : ""}`}
+      className={`column${show ? " show" : ""}${closed ? " closed" : ""}${collapsed ? " collapsed" : ""}${isOver ? " over" : ""}`}
       ref={sectionRef}
       aria-label={label}
     >
-      <div className="column-head">
-        {ids.length > 0 ? (
-          <input
-            type="checkbox"
-            aria-label={`Select all in ${label}`}
-            checked={picked === ids.length}
-            ref={(el) => {
-              if (el) el.indeterminate = picked > 0 && picked < ids.length;
-            }}
-            onChange={(e) => onSelectColumn(ids, e.target.checked)}
-          />
-        ) : null}
-        <h2>
-          {label} <span className="count">{count}</span>
-          {isOver ? (closed ? " · cannot move here" : " · drop") : ""}
-        </h2>
-      </div>
-      <div className="cards" ref={parent}>
-        {count === 0 ? <p className="column-empty">No tasks</p> : null}
-        <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
-          {virtual.getVirtualItems().map((row) => {
-            const item = rows[row.index];
-            if (!item) return null;
-            const style = {
-              position: "absolute" as const,
-              top: 0,
-              left: 0,
-              width: "100%",
-              transform: `translateY(${row.start}px)`,
-            };
-            if (item.kind === "lane") {
-              return (
-                <div
-                  key={item.key}
-                  ref={virtual.measureElement}
-                  data-index={row.index}
-                  className="lane"
-                  style={style}
-                >
-                  {item.title}
-                </div>
-              );
-            }
-            return (
-              <div
-                key={item.task.id}
-                ref={virtual.measureElement}
-                data-index={row.index}
-                style={style}
-              >
-                <Card
-                  task={item.task}
-                  feature={featureName?.(item.task.featureId) ?? ""}
-                  people={people}
-                  waiting={waiting(item.task)}
-                  fresh={fresh.has(item.task.id)}
-                  selected={selected.has(item.task.id)}
-                  heldBy={heldBy(item.task)}
-                  open={item.task.id === open}
-                  onOpen={onOpen}
-                  onToggle={onToggle}
-                  onReviewed={onReviewed}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {collapsed ? (
+        <button
+          type="button"
+          className="rail"
+          aria-expanded={false}
+          onClick={() => setFolded(status, false)}
+        >
+          {/* The name comes from the text, so it always holds what is shown. */}
+          <span className="sr-only">{`Show ${label}, ${count} ${count === 1 ? "task" : "tasks"}`}</span>
+          <span className="rail-count" aria-hidden="true">
+            {count}
+          </span>
+          <span className="rail-name" aria-hidden="true">
+            {label}
+          </span>
+        </button>
+      ) : (
+        <>
+          <div className="column-head">
+            {ids.length > 0 ? (
+              <input
+                type="checkbox"
+                aria-label={`Select all in ${label}`}
+                checked={picked === ids.length}
+                ref={(el) => {
+                  if (el) el.indeterminate = picked > 0 && picked < ids.length;
+                }}
+                onChange={(e) => onSelectColumn(ids, e.target.checked)}
+              />
+            ) : null}
+            <h2>
+              {label} <span className="count">{count}</span>
+              {isOver ? (closed ? " · cannot move here" : " · drop") : ""}
+            </h2>
+            <button
+              type="button"
+              className="fold"
+              aria-label={`Hide ${label}`}
+              aria-expanded={true}
+              onClick={() => setFolded(status, true)}
+            >
+              ‹
+            </button>
+          </div>
+          <div className="cards" ref={parent}>
+            {count === 0 ? <p className="column-empty">No tasks</p> : null}
+            <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
+              {virtual.getVirtualItems().map((row) => {
+                const item = rows[row.index];
+                if (!item) return null;
+                const style = {
+                  position: "absolute" as const,
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  transform: `translateY(${row.start}px)`,
+                };
+                if (item.kind === "lane") {
+                  return (
+                    <div
+                      key={item.key}
+                      ref={virtual.measureElement}
+                      data-index={row.index}
+                      className="lane"
+                      style={style}
+                    >
+                      {item.title}
+                    </div>
+                  );
+                }
+                return (
+                  <div
+                    key={item.task.id}
+                    ref={virtual.measureElement}
+                    data-index={row.index}
+                    style={style}
+                  >
+                    <Card
+                      task={item.task}
+                      feature={featureName?.(item.task.featureId) ?? ""}
+                      people={people}
+                      waiting={waiting(item.task)}
+                      fresh={fresh.has(item.task.id)}
+                      selected={selected.has(item.task.id)}
+                      heldBy={heldBy(item.task)}
+                      open={item.task.id === open}
+                      onOpen={onOpen}
+                      onToggle={onToggle}
+                      onReviewed={onReviewed}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
     </section>
   );
 }

@@ -220,6 +220,10 @@ test.describe("a board run by a person", () => {
     page,
   }) => {
     const problems = await watch(page);
+    // Backlog starts folded (review 1.3); this test is about its cards, so open it.
+    await page.addInitScript(() =>
+      localStorage.setItem("sati.ui.v1", JSON.stringify({ collapsedColumns: [] })),
+    );
     const held = await create("Wire the lights");
     await create("Sweep the hall");
     ui.as("codex@main#1", "agent")("task", "claim", held.id);

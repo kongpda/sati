@@ -13,7 +13,7 @@ export interface Prefs {
 
 const KEY = "sati.ui.v1";
 const THEMES: readonly string[] = ["system", "light", "dark"];
-const DEFAULTS: Prefs = { collapsedColumns: [], theme: "system" };
+const DEFAULTS: Prefs = { collapsedColumns: ["backlog", "cancelled"], theme: "system" };
 
 /** Keeps the known keys with a valid value and drops the rest. */
 function parse(raw: string | null): Prefs {

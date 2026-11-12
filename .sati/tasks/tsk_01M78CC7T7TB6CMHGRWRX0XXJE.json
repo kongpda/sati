@@ -1,0 +1,26 @@
+{
+  "branch": "wp8-perf",
+  "claim": {
+    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "heartbeatAt": "2026-11-12T17:20:10.871Z",
+    "leaseUntil": "2026-11-12T17:50:10.871Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-12T17:20:07.495Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M78CC7T7TB6CMHGRWRX0XXJE",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T17:20:07.497Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T17:20:10.872Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T17:20:10.872Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T17:20:10.872Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T17:20:10.872Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "in_progress",
+  "title": "WP8 perf: read-only commands skip export, fewer spawns (review 8.6, 8.7)",
+  "updatedAt": "2026-11-12T17:20:10.875Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

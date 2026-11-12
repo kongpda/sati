@@ -658,6 +658,10 @@ test("a general project hides features and the Agents page, and switches back", 
 // choice) and keep the URL in step, as a click does.
 test("j and k step through the cards in board order and keep ?task= in step", async ({ page }) => {
   const problems = await watch(page);
+  // Backlog starts folded (review 1.3); this test is about its cards, so open it.
+  await page.addInitScript(() =>
+    localStorage.setItem("sati.ui.v1", JSON.stringify({ collapsedColumns: [] })),
+  );
   const alpha = ui.sati<{ id: string }>("feature", "create", "Alpha", "--paths", "src/alpha/**");
   const beta = ui.sati<{ id: string }>("feature", "create", "Beta", "--paths", "src/beta/**");
   const make = (title: string, status: string, featureId?: string) =>
@@ -1453,4 +1457,62 @@ test("select all in a column selects every task in it, drawn or not", async ({ p
   } finally {
     await own.stop();
   }
+});
+
+// Review 1.3 (D2): at laptop width every open column is on screen without sideways scrolling;
+// Backlog and Cancelled start as narrow rails that still show their count and take a drop.
+test.describe("columns that fit", () => {
+  let own: Ui;
+  test.beforeAll(async () => {
+    own = await startUi();
+    for (const title of ["Rail one", "Rail two"])
+      await own.api("POST", "/api/tasks", { title, status: "backlog" });
+    await own.api("POST", "/api/tasks", { title: "Drop me", status: "todo" });
+  });
+  test.afterAll(async () => {
+    await own?.stop();
+  });
+
+  test("at 1400 × 900 every open column is fully inside the viewport", async ({ page }) => {
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await page.goto(own.signIn);
+    const open = page.locator(".column:not(.collapsed)");
+    await expect(open).toHaveCount(5);
+    for (const box of await open.evaluateAll((els) =>
+      els.map((el) => el.getBoundingClientRect().toJSON()),
+    )) {
+      expect(box.left).toBeGreaterThanOrEqual(0);
+      expect(box.right).toBeLessThanOrEqual(1400);
+    }
+    const board = page.locator(".board");
+    expect(await board.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  });
+
+  test("a collapsed column still shows its count and takes a drop", async ({ page }) => {
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await page.goto(own.signIn);
+    const rail = column(page, "Backlog");
+    await expect(rail).toHaveClass(/collapsed/u);
+    const show = rail.getByRole("button", { name: "Show Backlog, 2 tasks" });
+    await expect(show).toHaveAttribute("aria-expanded", "false");
+    await expect(rail.locator(".card")).toHaveCount(0);
+
+    // Drag To do's card onto the rail: the rail counts it.
+    const from = await page
+      .getByRole("button", { name: "Move Drop me", exact: true })
+      .boundingBox();
+    const to = await rail.boundingBox();
+    if (!from || !to) throw new Error("card or rail is not on the page");
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + 120, { steps: 12 });
+    await page.mouse.up();
+    await expect(rail.getByRole("button", { name: "Show Backlog, 3 tasks" })).toBeVisible();
+
+    // The choice to open a column is remembered by this browser.
+    await rail.getByRole("button", { name: /^Show Backlog/u }).click();
+    await expect(column(page, "Backlog")).not.toHaveClass(/collapsed/u);
+    await page.reload();
+    await expect(column(page, "Backlog")).not.toHaveClass(/collapsed/u);
+  });
 });

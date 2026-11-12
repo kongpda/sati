@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readPrefs, usePrefs, writePrefs } from "../src/prefs.js";
 
-const DEFAULTS = { collapsedColumns: [], theme: "system" };
+const DEFAULTS = { collapsedColumns: ["backlog", "cancelled"], theme: "system" };
 const KEY = "sati.ui.v1";
 
 const stub = (storage: Partial<Storage>) => vi.stubGlobal("localStorage", storage);

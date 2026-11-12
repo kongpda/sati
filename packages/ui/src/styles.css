@@ -193,15 +193,17 @@ textarea {
 }
 .board {
   display: flex;
-  gap: 10px;
-  padding: 10px 14px 16px;
+  gap: 8px;
+  padding: 10px 12px 16px;
   overflow: auto;
   flex: 1;
   min-height: 0;
 }
 .column {
-  width: 260px;
-  flex: 0 0 260px;
+  /* 200, not 220: with the sidebar, five open columns must fit a 1400 px window. */
+  flex: 1 1 200px;
+  min-width: 200px;
+  max-width: 360px;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -216,6 +218,52 @@ textarea {
   display: flex;
   align-items: center;
   padding-left: 10px;
+}
+.column.collapsed {
+  flex: 0 0 44px;
+  min-width: 44px;
+  max-width: 44px;
+}
+.column.over {
+  outline: 2px dashed var(--moss);
+  outline-offset: -2px;
+}
+.rail {
+  all: unset;
+  box-sizing: border-box;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.rail:focus-visible {
+  outline: 2px solid var(--moss);
+  outline-offset: -2px;
+  border-radius: 10px;
+}
+.rail-count {
+  color: var(--muted);
+  font-weight: 400;
+}
+.rail-name {
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+}
+.fold {
+  all: unset;
+  margin: 6px 6px 0 auto;
+  padding: 0 6px;
+  cursor: pointer;
+  color: var(--muted);
+}
+.fold:focus-visible {
+  outline: 2px solid var(--moss);
+  border-radius: 4px;
 }
 .column-head input {
   margin: 6px 0 0;
@@ -638,9 +686,13 @@ body:has(.palette) .toast {
     scroll-snap-type: x mandatory;
     scroll-padding-inline: 14px;
   }
+  .fold {
+    display: none;
+  }
   .column {
     display: none;
     width: 100%;
+    max-width: none;
     flex-basis: auto;
     scroll-snap-align: start;
   }

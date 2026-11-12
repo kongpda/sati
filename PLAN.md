@@ -1043,7 +1043,7 @@ Added 2026-11-12 at the owner's request. sati already needs no server: every com
 Added 2026-11-12 at the owner's request: the whole-project review found the model sound and the surfaces crowded (11 board pages, duplicate CLI commands, two names for one record). `docs/review-2026-11-12.md` is the spec for this phase: the findings checked against the code, the decisions (the owner asked the reviewing agent to choose them), the target shape of the board and the CLI, and for each item the files, steps, test and acceptance. Work the packages in the order given there under "Order of work". Items listed there as "Owner only" need the owner's word.
 
 - [x] WP0 Foundations: the guard's escaped-quote bug, hidden flags, repeatable flags, board preferences, temp-folder cleanup
-- [ ] WP1 Board: approve in bulk, and columns that fit
+- [x] WP1 Board: approve in bulk, and columns that fit
 - [ ] WP8 CLI: bugs and gaps
 - [ ] WP9 Core: correctness
 - [ ] WP16 CLI code refactor (split `runtime.ts`, `commands/task.ts`, `commands/init.ts`)

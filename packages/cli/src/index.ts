@@ -1,7 +1,7 @@
 import { CLI_NAME } from "@sati/core/name";
 import { type CommandDef, defineCommand } from "citty";
 import pkg from "../package.json" with { type: "json" };
-import { type HelpLayout, HIDDEN_FLAGS } from "./help.js";
+import { layout } from "./layout.js";
 import { main } from "./main.js";
 import { VERSION } from "./version.js";
 
@@ -20,21 +20,6 @@ if (major < needMajor || (major === needMajor && minor < needMinor)) {
 // Subcommands load on demand so `sati --version` and `--help` stay fast.
 const lazy = (load: () => Promise<{ default: unknown }>) => () =>
   load().then((m) => m.default as ReturnType<typeof defineCommand>);
-
-const layout: HelpLayout = {
-  groups: {
-    Start: ["init", "upgrade", "brief", "inbox", "next", "doctor"],
-    Work: ["task", "feature", "milestone", "plan", "template", "handoff", "wait"],
-    Memory: ["note", "comment", "decision", "card", "recall", "search"],
-    "Work together": ["lock", "guard", "review", "scan"],
-    History: ["activity", "changes", "undo"],
-    Project: ["settings", "projects", "ui", "rules", "sync", "export", "import", "completion"],
-    "Run by tools": ["mcp", "serve", "nudge", "merge-driver"],
-  },
-  aliases: { context: "card", app: "ui" },
-  hidden: [],
-  hiddenFlags: HIDDEN_FLAGS,
-};
 
 const root: CommandDef = defineCommand({
   meta: { name: CLI_NAME, version: VERSION, description: pkg.description },

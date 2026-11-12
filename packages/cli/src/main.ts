@@ -1,6 +1,7 @@
 import { stripVTControlCharacters } from "node:util";
 import { CLI_NAME } from "@sati/core/name";
 import { type CommandDef, runCommand } from "citty";
+import { REPEATABLE } from "./flags.js";
 import { type HelpLayout, usage } from "./help.js";
 import { errorText, setTerm } from "./term.js";
 import { versionLine } from "./version.js";
@@ -32,9 +33,6 @@ function distance(a: string, b: string): number {
   }
   return prev[b.length] ?? 0;
 }
-
-/** Flags that take a list by repeating: `--label a --label b` is `--label a,b`. */
-const REPEATABLE: ReadonlySet<string> = new Set(["label", "feature"]);
 
 type FlagCheck = { error: string } | { argv: string[] };
 

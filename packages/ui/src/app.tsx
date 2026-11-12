@@ -610,6 +610,18 @@ export function App() {
       }),
     [],
   );
+  const selectColumn = useCallback(
+    (ids: string[], on: boolean) =>
+      setSelected((cur) => {
+        const next = new Set(cur);
+        for (const id of ids) {
+          if (on) next.add(id);
+          else next.delete(id);
+        }
+        return next;
+      }),
+    [],
+  );
   const reviewed = useCallback(
     (id: string) => {
       const item = latest.current.data?.tasks.find((t) => t.id === id);
@@ -871,6 +883,7 @@ export function App() {
                 column={column}
                 onOpen={openTask}
                 onToggle={toggle}
+                onSelectColumn={selectColumn}
                 onReviewed={reviewed}
                 onMove={moveCard}
                 refusal={refusal}

@@ -1,15 +1,19 @@
 {
   "body": "docs/review-2026-11-12.md item 1.2. Checkbox in each column header; selects from filtered data, not DOM.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
-    "heartbeatAt": "2026-11-12T16:58:06.904Z",
-    "holder": {
-      "host": "h:3fb635c67b4b8fcc",
-      "pid": 41642
-    },
-    "leaseUntil": "2026-11-12T17:28:06.904Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "a82d06c3d192a502cfbd7af99989b7e1bb9a6090",
+    "completedAt": "2026-11-12T17:02:15.474Z",
+    "completedBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "filesTouched": [
+      "packages/ui/src/app.tsx",
+      "packages/ui/src/board.tsx",
+      "packages/ui/src/styles.css",
+      "e2e/ui/flows.spec.ts",
+      "docs/review-2026-11-12.md"
+    ],
+    "summary": "Each board column header has a Select all checkbox (aria-label \"Select all in <name>\"), indeterminate when some are picked. It selects from the column's filtered rows, not the drawn cards, via a stable onSelectColumn."
   },
   "createdAt": "2026-11-12T16:45:56.861Z",
   "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
@@ -19,13 +23,14 @@
   "stamps": {
     "*": "2026-11-12T16:45:56.861Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
     "branch": "2026-11-12T16:58:06.904Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
-    "claim": "2026-11-12T16:58:06.904Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
-    "status": "2026-11-12T16:58:06.904Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "claim": "2026-11-12T17:02:15.477Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "completion": "2026-11-12T17:02:15.477Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "status": "2026-11-12T17:02:15.477Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
     "worktree": "2026-11-12T16:58:06.904Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
   },
-  "status": "in_progress",
+  "status": "done",
   "title": "WP1 1.2: select-all per board column",
-  "updatedAt": "2026-11-12T16:58:06.906Z",
-  "version": 3,
+  "updatedAt": "2026-11-12T17:02:15.477Z",
+  "version": 5,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

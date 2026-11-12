@@ -212,6 +212,14 @@ textarea {
 .column.closed {
   opacity: 0.45;
 }
+.column-head {
+  display: flex;
+  align-items: center;
+  padding-left: 10px;
+}
+.column-head input {
+  margin: 6px 0 0;
+}
 .column h2 {
   font-size: 13px;
   font-weight: 600;

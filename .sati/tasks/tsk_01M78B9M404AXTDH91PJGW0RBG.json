@@ -1,0 +1,26 @@
+{
+  "branch": "cli-small",
+  "claim": {
+    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "heartbeatAt": "2026-11-12T17:01:18.790Z",
+    "leaseUntil": "2026-11-12T19:01:18.790Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-12T17:01:13.215Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M78B9M404AXTDH91PJGW0RBG",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T17:01:13.218Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T17:01:18.798Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T17:01:18.798Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T17:01:18.798Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T17:01:18.798Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "in_progress",
+  "title": "CLI small items: status order in help, checklist without id, feature list --md, hide --reviewed flags, one version form, --board help (review 7.5, 7.7, 7.9, 7.10, 7.12, 8.2)",
+  "updatedAt": "2026-11-12T17:01:18.802Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -29,6 +29,7 @@ export const Board = memo(function Board({
   column,
   onOpen,
   onToggle,
+  onSelectColumn,
   onReviewed,
   onMove,
   refusal,
@@ -46,6 +47,8 @@ export const Board = memo(function Board({
   column: string;
   onOpen: (id: string) => void;
   onToggle: (id: string) => void;
+  /** Selects or clears every task in a column; stable, so the memoised board is not redrawn. */
+  onSelectColumn: (ids: string[], on: boolean) => void;
   onReviewed: (id: string) => void;
   onMove: (id: string, status: string) => void;
   /** Why the task cannot move to the column, or null when it can. */
@@ -140,6 +143,7 @@ export const Board = memo(function Board({
             open={open}
             onOpen={onOpen}
             onToggle={onToggle}
+            onSelectColumn={onSelectColumn}
             onReviewed={onReviewed}
           />
         ))}
@@ -178,6 +182,7 @@ function Column({
   open,
   onOpen,
   onToggle,
+  onSelectColumn,
   onReviewed,
 }: {
   status: string;
@@ -197,6 +202,7 @@ function Column({
   open: string | null;
   onOpen: (id: string) => void;
   onToggle: (id: string) => void;
+  onSelectColumn: (ids: string[], on: boolean) => void;
   onReviewed: (id: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
@@ -217,6 +223,9 @@ function Column({
     estimateSize: (index) => (rows[index]?.kind === "lane" ? 28 : 78),
     overscan: 8,
   });
+  // From the rows, not the page: the virtual list draws only the cards in view.
+  const ids = useMemo(() => rows.flatMap((r) => (r.kind === "task" ? [r.task.id] : [])), [rows]);
+  const picked = ids.reduce((n, id) => n + (selected.has(id) ? 1 : 0), 0);
   const openIndex = rows.findIndex((r) => r.kind === "task" && r.task.id === open);
   // Opening a card keeps it in view next to the panel: its column scrolls in sideways, and the
   // virtual list down to it.
@@ -232,10 +241,23 @@ function Column({
       ref={sectionRef}
       aria-label={label}
     >
-      <h2>
-        {label} <span className="count">{count}</span>
-        {isOver ? (closed ? " · cannot move here" : " · drop") : ""}
-      </h2>
+      <div className="column-head">
+        {ids.length > 0 ? (
+          <input
+            type="checkbox"
+            aria-label={`Select all in ${label}`}
+            checked={picked === ids.length}
+            ref={(el) => {
+              if (el) el.indeterminate = picked > 0 && picked < ids.length;
+            }}
+            onChange={(e) => onSelectColumn(ids, e.target.checked)}
+          />
+        ) : null}
+        <h2>
+          {label} <span className="count">{count}</span>
+          {isOver ? (closed ? " · cannot move here" : " · drop") : ""}
+        </h2>
+      </div>
       <div className="cards" ref={parent}>
         {count === 0 ? <p className="column-empty">No tasks</p> : null}
         <div style={{ height: virtual.getTotalSize(), position: "relative" }}>

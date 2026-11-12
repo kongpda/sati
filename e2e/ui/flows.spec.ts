@@ -1423,3 +1423,34 @@ test("relative times tick each minute without a write", async ({ page }) => {
   await page.clock.fastForward("01:05");
   await expect(card).toContainText("1 min ago");
 });
+
+// Review 1.2: a checkbox in each column header selects every task the filter leaves in that
+// column, including the ones the virtual list has not drawn.
+test("select all in a column selects every task in it, drawn or not", async ({ page }) => {
+  const own = await startUi();
+  try {
+    for (let from = 0; from < 200; from += 25) {
+      await Promise.all(
+        Array.from({ length: 25 }, (_, i) =>
+          own.api("POST", "/api/tasks", { title: `Bulk task ${from + i}` }),
+        ),
+      );
+    }
+    await page.goto(own.signIn);
+    const todo = column(page, "To do");
+    const all = todo.getByRole("checkbox", { name: "Select all in To do" });
+    await expect(all).not.toBeChecked();
+    await all.check();
+    await expect(page.getByText("200 selected")).toBeVisible();
+    await expect(all).toBeChecked();
+    await all.uncheck();
+    await expect(page.getByText("200 selected")).toHaveCount(0);
+    // One card selected by hand shows the box as mixed; the next click selects the rest.
+    await todo.locator(".card").first().getByRole("button", { name: "select" }).click();
+    await expect(all).toHaveJSProperty("indeterminate", true);
+    await all.check();
+    await expect(page.getByText("200 selected")).toBeVisible();
+  } finally {
+    await own.stop();
+  }
+});

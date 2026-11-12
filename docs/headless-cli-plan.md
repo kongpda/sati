@@ -1,6 +1,6 @@
 # Plan: sati in the terminal, with no server
 
-- Status: proposed (2026-11-12). Not started. Needs the owner's go-ahead and a block in `PLAN.md` before any code.
+- Status: approved by the owner (2026-11-12), with the recommended answers to the four open decisions. Phase H1 is being read in; no code is committed yet. Progress is tracked in the checklist under "Implementation notes" below.
 - Asked by the owner: use sati without its server, headless, with an interactive CLI; can an agent talk to it with or without a server; does MCP need a server.
 
 ## Short answers
@@ -185,9 +185,106 @@ Total: about 5 to 7 working days.
 | `$EDITOR` leaves secrets in a temp file | File made with mode 0600 in the OS temp folder and removed in a `finally` |
 | Pseudo-terminal tests do not run on Windows | They skip there, as now. The non-interactive path, which is what Windows CI covers, is unchanged |
 
-## For the owner to decide
+## Decided by the owner (2026-11-12)
+
+All four as recommended: bare `sati` opens the home screen; the MCP `inbox` tool exists and is read-only; `$EDITOR` is used for bodies when it is set; the phase order is as written.
 
 1. Should bare `sati` open the home screen, or should that be `sati home` with bare `sati` left as help? Recommended: bare `sati`, because it is what a new person types first.
 2. Should an agent be allowed to call the MCP `inbox` tool for the person it works for? Recommended: yes, read-only. It is the same data the brief already draws from.
 3. Is `$EDITOR` for note and decision bodies wanted, or one-line input only? Recommended: `$EDITOR` when set.
 4. Phase order. Recommended as written: H1 and H2 give most of the value in two days.
+
+## Implementation notes
+
+Written 2026-11-12 after reading the code at `8a9a8eb`, so the work can be picked up again from here. Tick the boxes in the same commit as the work, and copy each phase's ticked list into its `PLAN.md` block.
+
+### What the code looks like today
+
+| Finding | Where | What it means for the work |
+|---|---|---|
+| The board package imports nothing from `@sati/core`. Its only link is `vite.config.ts` reading `../core/src/name.ts`. It has its own `Task`, `Note`, `Actor`, `Claim` and `Snapshot` types | `packages/ui/package.json`, `packages/ui/src/api.ts` | The shared inbox function must not pull Zod, ulid or micromatch into the browser bundle. It has to live in a file with no runtime imports, and take structural types so both the core records and the board's records fit |
+| The mention rule exists twice | `mentionsOf(data, now)` in `packages/ui/src/my-work.tsx`; `mentionsOf(notes, actor, now, selves)` in `packages/core/src/services/comment.ts` ("kept in step with the board") | Keep one. The core one is the fuller: it skips deleted notes, treats every session of an agent as the same actor (`selves`), and breaks ties by id |
+| The board names a person with `personName` (the user part of `user@worktree` for people); the core uses `displayName ?? name` | `packages/ui/src/people.tsx:11`, `comment.ts` | Both try the shown name, its first word and the user part, so the names matched are the same. The moved tests prove it |
+| `weekEnd` and `today` use the reader's local time zone | `my-work.tsx`, `api.ts:379` | Keep local time. The CLI and the board run on the same machine, so `sati inbox` and My work agree on what is due this week |
+| `waitingOn(task, now)` is a claim with `waiting` set and a lease still running | `packages/ui/src/api.ts:245`; `Claim.waiting` in `packages/core/src/domain/schemas.ts:283` | Move into the shared file; the board re-exports it |
+| The board's bell count is `inboxCount` = needs + approval + mentions | `my-work.tsx`, used in `app.tsx:555` | The home screen's "Needs you" line uses the same number |
+| The only picker is `pickReady(ctx, conflict)` | `packages/cli/src/commands/task.ts:378` | It becomes `pickTask(ctx, filter)` in H2 |
+| The only confirm prompt is `ensurePersonal` (`SATI_YES`) | `packages/cli/src/runtime.ts` | `ask` in H3 follows its checks |
+| `term().rich` already means "a terminal, and not `CLAUDECODE` or `AI_AGENT`" | `packages/cli/src/term.ts` | Rule 1 is `term().rich && stdin is a TTY && no --json && no SATI_NO_INPUT` in one function, `canAsk()` |
+| `unknownFlag(root, argv)` rejects flags it does not know | `packages/cli/src/main.ts` | `--no-input` must be declared as a global flag there, or every command refuses it |
+| MCP tools are registered with `server.registerTool(` (21 today) | `packages/mcp/src/server.ts` | `inbox` is the 22nd; the workflow text and the tool count in tests and docs change with it |
+| The board's live stream polls `PRAGMA data_version` every 250 ms | `packages/cli/src/ui/server.ts` | `activity --follow` reuses the same read, not a second mechanism |
+| A release tag exists: `v0.1.0` at `407040c`, 56 commits behind `main`. 31 changesets wait. `release.yml` runs by hand only | `git tag -l`, `.changeset/`, `.github/workflows/release.yml` | The next tag is a version bump through changesets (`pnpm changeset version`), not a bare `git tag`. Left for the owner |
+
+### Phase H1 in detail
+
+1. `packages/core/src/domain/inbox.ts`: no runtime imports. Holds `weekEnd(now)`, `waitingOn(task, now)`, `mentionsOf(notes, actor, now, selves)` (moved from `comment.ts`, which re-exports it so `brief.ts` is untouched) and `inboxOf({ you, tasks, notes, actors }, now, selves?)` returning `{ needs, approval, mentions, assigned, due, end }`. Generic over the task and note types, so the caller gets its own records back.
+2. `packages/core/src/services/inbox.ts`: `inbox(ctx, { actorId? })` reads tasks, notes and actors in one read transaction, calls `inboxOf`, and returns rows validated by `InboxOutput` (Zod): id, handle, title, status, priority, due date, and for each section its own field (the question, the blocked reason, the completion summary, the comment text and what it is on).
+3. `packages/ui/src/my-work.tsx` imports `inboxOf`, `weekEnd` from `../../core/src/domain/inbox.ts` (the way `vite.config.ts` reads the name) and keeps only rendering. `myWork(data, now)` stays as a thin wrapper so the component and `app.tsx` do not change. `api.ts` re-exports `waitingOn`.
+4. Tests: the `weekEnd`, `myWork` and `mentions` cases of `packages/ui/test/my-work.test.ts` move to `packages/core/test/inbox.test.ts` with the same inputs and expectations. The board keeps one test that `myWork` is the core function, and the tests of its own code (`mentionNames`, `mentionAt`, `oneFile`, board words).
+5. `packages/cli/src/commands/inbox.ts`: sections "Needs you", "Mentions", "Waiting for your approval", "Assigned to you", "Due by <day>"; empty sections say so in the rich layout and are left out of the plain one; `--json` prints the service output. Stored text goes through the sanitiser. Registered in `main.ts` and in completions.
+6. MCP tool `inbox` in `packages/mcp/src/server.ts`: read-only, optional `for` (an actor id or name; default: the person the agent works for where known, else the caller). Result text inside the data fence.
+7. `PLAN.md`: a new block "Phase 10 — sati in the terminal" with one sub-block per phase; `docs/progress.md` entry; `.changeset/terminal-inbox.md`.
+
+- [ ] `domain/inbox.ts`, with `comment.ts` re-exporting `mentionsOf`
+- [ ] `services/inbox.ts` and `InboxOutput`
+- [ ] The board imports it; bundle size checked before and after (no Zod in `packages/ui/dist`)
+- [ ] Tests moved; one CLI test per section; one MCP test
+- [ ] `sati inbox` (rich, plain, `--json`)
+- [ ] MCP `inbox`
+- [ ] Gate, Playwright, changeset, progress entry
+
+### Phase H2 in detail
+
+1. `packages/cli/src/prompt.ts` (new): `canAsk(args)` (rule 1 and 2), `pickTask(ctx, filter, message)` over at most 200 rows in `task list` order with type-to-filter, `sameAs(command)` printing the dimmed equivalent to stderr, and the lazy `import("@clack/prompts")`.
+2. `--no-input` as a global flag in `main.ts`; `SATI_NO_INPUT=1` read in `canAsk`.
+3. `task approve [id] [--commit]` and `task send-back [id] --reason` in `commands/task.ts`, both calling `updateTask`. People only: the core already refuses an agent.
+4. `task show`, `task update`, `task claim` with no id: the picker when `canAsk`, else the usage error printed today, word for word.
+5. `task claim --pick` keeps working and calls `pickTask`.
+
+- [ ] `prompt.ts` with `canAsk`, `pickTask`, `sameAs`
+- [ ] `--no-input`, `SATI_NO_INPUT`
+- [ ] `task approve`, `task send-back`
+- [ ] Picker for `task show`, `task update`, `task claim`
+- [ ] Pseudo-terminal tests: pick and approve; cancel writes nothing; `CLAUDECODE=1` gives the old usage error
+- [ ] A test that runs each changed command with stdin closed and a 5 s limit
+- [ ] Gate (every existing CLI test unchanged), Playwright, changeset, progress entry
+
+### Phase H3 in detail
+
+1. `ask(kind, opts)` in `prompt.ts`: text, select, confirm; throws the command's own USAGE error when `canAsk` is false.
+2. `editBody(initial)`: `$VISUAL`, then `$EDITOR`; a 0600 file in a 0700 folder made with `mkdtemp` under the OS temp folder; removed in `finally`; an empty or unchanged file cancels; lines starting with `#` at the top are a help text and are cut.
+3. Commands: `task create` (title, priority), `task complete` (summary; files offered from `git diff --name-only` against the merge base, multi-select), `comment add` (record, text), `note create`, `decision record` (title, body).
+
+- [ ] `ask`, `editBody`
+- [ ] `task create`, `task complete`, `comment add`, `note create`, `decision record`
+- [ ] Pseudo-terminal test per command; piped stdin never prompts; the temp file is gone after a cancel and after an editor that exits non-zero
+- [ ] Gate, Playwright, changeset, progress entry
+
+### Phase H4 in detail
+
+1. `packages/cli/src/commands/home.ts`: three counts from one read (`inboxCount`, in progress with running leases, ready), then a select loop that calls the existing commands' functions. Run from `main.ts` when argv is empty and `canAsk`.
+2. `activity --follow`: prints the last rows, then polls `data_version` every 250 ms and prints rows newer than the last seen id; `--json` is one object per line; SIGINT exits 0.
+3. `task list --board`: columns side by side when the terminal is wide enough, stacked otherwise; plain layout for a pipe.
+4. Budgets in `packages/cli/bench` and `PLAN.md`: home under 300 ms on the 5,000-task fixture; `--follow` idle under 1% of one core.
+
+- [ ] Home screen
+- [ ] `activity --follow`
+- [ ] `task list --board`
+- [ ] Budgets measured and written down
+- [ ] Gate, Playwright, changeset, progress entry
+
+### Phase H5 in detail
+
+- [ ] `Tools:` line at the end of the brief (MCP when the brief is asked through the MCP server, CLI otherwise)
+- [ ] `sati rules --cli-only`
+- [ ] `docs/guide/headless.md`, a README section, completions for every new command and flag
+- [ ] This document's status set to done; `docs/ideas.md` gets whatever was cut
+
+### How each phase ships
+
+1. `sati task create`, then `task claim`; `feature_check` the paths that move; lock shared files and release before the commit.
+2. A worktree and branch per phase (`git worktree add ../sati-h1 -b headless-h1`), `pnpm install`, `pnpm build`.
+3. `pnpm lint && pnpm typecheck && pnpm test`, then `pnpm test:ui`.
+4. `task complete`, commit, fast-forward `main`, push, `pnpm build` in the main checkout (this is what `~/.local/bin/sati` runs), `sati --version`, `sati doctor`.
+5. Check CI for the full commit id.

@@ -43,7 +43,7 @@ export async function depends(ctx: ServiceContext, value: string | undefined) {
 }
 
 /**
- * `--assign`: comma-separated actor names, ids or handles, `me`, or `none` to clear. People
+ * `--assignee`: comma-separated actor names, ids or handles, `me`, or `none` to clear. People
  * know each other by name, so a name is looked up before it is treated as an id.
  */
 export async function assignees(
@@ -80,8 +80,9 @@ export const fields = {
   worktree: { type: "string", description: "Worktree path for this task" },
   due: { type: "string", description: "Due day YYYY-MM-DD, or none" },
   milestone: { type: "string", description: "Milestone (plan) id or handle, or none" },
-  assign: {
+  assignee: {
     type: "string",
+    alias: "assign",
     description: "Who should do it: comma-separated names, ids or me, or none",
   },
 } as const;

@@ -155,6 +155,8 @@ A backup of the database is written before each schema migration.
 Every command that returns data takes `--json`. Errors print a message and a hint, and exit
 with a fixed code:
 
+The code says what kind of failure it was, so a script can branch on it. 2 is a command typed wrong, 5 is a value of the wrong shape, 3 is something asked for that does not exist (this includes `sati task claim` when no task is ready), 4 is a lost race, 8 is an action the status or the role does not permit, and 1 is always a bug in sati.
+
 | Code | Meaning |
 | --- | --- |
 | 1 | Internal error (a bug) |

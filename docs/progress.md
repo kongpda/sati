@@ -2420,3 +2420,10 @@ Items 10.1 to 10.7 are done for core, the CLI and the server (task `tsk_01M78FAP
 - **10.5:** profiled first: a plan import of 500 tasks took 227.1 ms, of which the actor row was 65.4 ms (29%), over the 20% bar. `writeTx` in `context.ts` wraps `ctx.store.write` at all 36 core call sites and writes the actor row once at the end; `issueStamp` outside it writes at once, as before. After: 162.0 ms, actor row 0.3 ms (0%). The test fails without the change (actor version up by 52, not 2).
 - **10.7:** no change; decision `dec_01M78FS7DBS4YYD8DJYEQGGMCQ`.
 - **Bench** (load average about 20): every budget passed. Cold start p95 42.6 ms, read 118.2 ms, search 42.2 ms, recall 42.8 ms, claim 4.6 ms, home 246.1 and 192.3 ms.
+
+## 2026-11-13 — Review WP7: one flag per idea, one way to print
+
+- **7.1:** the old flag names keep working as long aliases that help does not show. `test/cli-flags.test.ts` proves it.
+- **7.6:** `activity` and `lock` text output name the actor; `--json` keeps ids.
+- **7.8:** `feature create` and `milestone create` ask for a missing title at a terminal. The rule is in README and `docs/guide/headless.md`.
+- **7.11:** `task claim` with nothing ready exits 3 (not found). It fits the rule, so nothing changed. The rule is one paragraph above the table in `docs/guide/quick-start.md`.

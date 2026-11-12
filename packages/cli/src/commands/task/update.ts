@@ -48,8 +48,9 @@ export const updateCommand = defineCommand({
       type: "string",
       description: "Ask a person this question; your next write clears it",
     },
-    "approved-commit": {
+    commit: {
       type: "string",
+      alias: "approved-commit",
       description: "Approving: the commit you looked at; refused if the branch moved since",
     },
     ...json,
@@ -65,7 +66,7 @@ export const updateCommand = defineCommand({
         const input = someChange(
           {
             needsInput: args["needs-input"],
-            approvedCommit: args["approved-commit"],
+            approvedCommit: args.commit,
             title: args.title,
             body: bodyText(args.body),
             status: args.status,
@@ -79,7 +80,7 @@ export const updateCommand = defineCommand({
             worktree: args.worktree,
             dueDate: orNone(args.due),
             milestoneId: await link(ctx, "milestone", args.milestone),
-            assigneeIds: await assignees(ctx, args.assign),
+            assigneeIds: await assignees(ctx, args.assignee),
             expectedVersion: int(args["expected-version"], "expected-version"),
             reviewed: args.reviewed ? true : undefined,
             reason: args.reason,
@@ -100,7 +101,7 @@ export const updateCommand = defineCommand({
   },
 });
 
-/** The checklist as numbered lines, so `--done 2` refers to what the person sees. */
+/** The checklist as numbered lines, so `--tick 2` refers to what the person sees. */
 function checklistText(t: Task): string {
   const items = t.checklist ?? [];
   if (items.length === 0) return `${row(t)}\n  No checklist. Add a step with --add "text".`;
@@ -116,8 +117,8 @@ export const checklistCommand = defineCommand({
   args: {
     ...taskId,
     add: { type: "string", description: "Add a step with this text" },
-    done: { type: "string", description: "Tick step number N" },
-    undone: { type: "string", description: "Untick step number N" },
+    tick: { type: "string", alias: "done", description: "Tick step number N" },
+    untick: { type: "string", alias: "undone", description: "Untick step number N" },
     remove: { type: "string", description: "Remove step number N" },
     ...token,
     ...json,
@@ -129,7 +130,7 @@ export const checklistCommand = defineCommand({
         const taskId = await heldTask(ctx, args.id);
         const t = await getRecord(ctx, "task", taskId);
         const items: ChecklistItem[] = [...(t.checklist ?? [])];
-        const step = (flag: "done" | "undone" | "remove") => {
+        const step = (flag: "tick" | "untick" | "remove") => {
           const n = int(args[flag], flag);
           if (n === undefined) return undefined;
           if (n < 1 || n > items.length) {
@@ -140,8 +141,8 @@ export const checklistCommand = defineCommand({
           }
           return n - 1;
         };
-        const done = step("done");
-        const undone = step("undone");
+        const done = step("tick");
+        const undone = step("untick");
         const removed = step("remove");
         if (done !== undefined && items[done]) items[done] = { ...items[done], done: true };
         if (undone !== undefined && items[undone])

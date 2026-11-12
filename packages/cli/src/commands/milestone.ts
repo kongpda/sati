@@ -9,25 +9,38 @@ import {
 } from "@sati/core";
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, orNone, pagination } from "../args.js";
+import { askText, canAsk, missing, sameAs } from "../prompt.js";
 import { record, row, rows } from "../render.js";
 import { int } from "../runtime/input.js";
 import { execute } from "../runtime/output.js";
+import { typedAfter } from "./task/shared.js";
 
 const create = defineCommand({
   meta: { name: "create", description: "Create a milestone" },
   args: {
-    title: { type: "positional", required: true, description: "Milestone title" },
+    title: {
+      type: "positional",
+      required: false,
+      description: "Milestone title (at a terminal: asked when left out)",
+    },
     goal: { type: "string", description: "What done looks like" },
-    date: { type: "string", description: "Target date YYYY-MM-DD" },
+    due: { type: "string", alias: "date", description: "Target date YYYY-MM-DD" },
     ...json,
   },
-  run: ({ args }) =>
-    execute(
+  run: ({ args }) => {
+    if (args.title === undefined && !canAsk(args.json)) throw missing("title", "milestone create");
+    return execute(
       args.json,
-      ({ ctx }) =>
-        createMilestone(ctx, { title: args.title, goal: args.goal, targetDate: args.date ?? null }),
+      async ({ ctx }) => {
+        const title = args.title ?? (await askText("Milestone title"));
+        if (args.title === undefined) {
+          sameAs("milestone", "create", title, ...typedAfter("create"));
+        }
+        return createMilestone(ctx, { title, goal: args.goal, targetDate: args.due ?? null });
+      },
       (m: Milestone) => `Created ${row(m)}`,
-    ),
+    );
+  },
 });
 
 const ls = defineCommand({
@@ -65,7 +78,11 @@ const update = defineCommand({
     ...id("Milestone"),
     title: { type: "string", description: "New title" },
     goal: { type: "string", description: "What done looks like" },
-    date: { type: "string", description: "Target date YYYY-MM-DD, or none to clear" },
+    due: {
+      type: "string",
+      alias: "date",
+      description: "Target date YYYY-MM-DD, or none to clear",
+    },
     status: {
       type: "string",
       description:
@@ -81,7 +98,7 @@ const update = defineCommand({
         updateMilestone(ctx, await resolveId(ctx, "milestone", args.id), {
           title: args.title,
           goal: args.goal,
-          targetDate: orNone(args.date),
+          targetDate: orNone(args.due),
           status: args.status,
           expectedVersion: int(args["expected-version"], "expected-version"),
         }),

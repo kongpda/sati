@@ -58,7 +58,7 @@ export const createCommand = defineCommand({
           worktree: args.worktree,
           dueDate: orNone(args.due),
           milestoneId: await link(ctx, "milestone", args.milestone),
-          assigneeIds: await assignees(ctx, args.assign),
+          assigneeIds: await assignees(ctx, args.assignee),
           subtasks: args.subtasks ? parseJson(args.subtasks, "--subtasks", "USAGE") : undefined,
         });
       },

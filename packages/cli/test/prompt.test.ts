@@ -82,6 +82,8 @@ describe("without a terminal, a command never waits for an answer", () => {
       [["comment", "add"], 2, "sati comment add <on>"],
       [["comment", "add", first.id], 2, "sati comment add <on> <body>"],
       [["note", "create"], 2, "sati note create <title>"],
+      [["feature", "create"], 2, "sati feature create <title>"],
+      [["milestone", "create"], 2, "sati milestone create <title>"],
       [["decision", "record"], 2, "sati decision record <title>"],
       [["decision", "record", "Title"], 2, "Missing --decision."],
     ];
@@ -374,5 +376,21 @@ describe.skipIf(!python)("a person who left an argument out", () => {
     expect(r.status).toBe(2);
     expect(r.stdout).toContain("Missing <title>");
     expect(r.stdout).not.toContain("Task title");
+  });
+});
+
+// Review 7.8 (D26): one rule. A command that needs a title asks for it at a terminal and gives a
+// usage error to a script, as `note create` and `decision record` do.
+describe.skipIf(!python)("a title left out of feature create and milestone create", () => {
+  it.each([
+    ["feature", "Feature title", "feature"],
+    ["milestone", "Milestone title", "milestone"],
+  ])("%s create asks for it at a terminal", async (command, question) => {
+    const dir = await tempRepo({ init: true });
+    const r = typed(dir, question, "Asked for\r", [command, "create"]);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout + r.stderr).toContain("Same as: sati");
+    const made = satiJson<{ title: string }[]>(dir, command, "list").data;
+    expect(made.map((x) => x.title)).toEqual(["Asked for"]);
   });
 });

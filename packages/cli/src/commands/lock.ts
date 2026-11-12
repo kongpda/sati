@@ -11,13 +11,16 @@ import {
 import { defineCommand } from "citty";
 import { id, json } from "../args.js";
 import { handle } from "../render.js";
-import { int, list, ref } from "../runtime/input.js";
+import { actorNames, int, list, ref } from "../runtime/input.js";
 import { execute } from "../runtime/output.js";
 import { dim, table, term, when, yellow } from "../term.js";
 import { projectPath } from "./guard.js";
 
-const line = (l: Lock) =>
-  `${handle(l.id)}  ${l.mode}  ${l.paths.join(", ")}  by ${shortHandle(l.actorId)} until ${when(l.leaseUntil)}`;
+const holder = (l: Lock, names: ReadonlyMap<string, string>) =>
+  names.get(l.actorId) ?? shortHandle(l.actorId);
+
+const line = (l: Lock, names: ReadonlyMap<string, string>) =>
+  `${handle(l.id)}  ${l.mode}  ${l.paths.join(", ")}  by ${holder(l, names)} until ${when(l.leaseUntil)}`;
 
 const acquire = defineCommand({
   meta: { name: "acquire", description: "Lock paths so other agents do not edit them" },
@@ -33,11 +36,13 @@ const acquire = defineCommand({
     lease: { type: "string", description: "Lease length in minutes (default: project setting)" },
     ...json,
   },
-  run: ({ args }) =>
-    execute(
+  run: ({ args }) => {
+    const names = new Map<string, string>();
+    return execute(
       args.json,
       async (rt) => {
         const { ctx } = rt;
+        if (!args.json) await actorNames(ctx, names);
         return acquireLock(ctx, {
           paths: list(args.paths)?.map((p) => projectPath(rt, p)),
           mode: args.shared ? "shared" : "exclusive",
@@ -48,12 +53,13 @@ const acquire = defineCommand({
       },
       ({ lock, warnings }: AcquireLockResult) =>
         [
-          `Locked ${line(lock)}`,
+          `Locked ${line(lock, names)}`,
           ...warnings.map(
             (w) => `warning: overlaps ${w.mode} lock ${shortHandle(w.lockId)} by ${w.holderName}`,
           ),
         ].join("\n"),
-    ),
+    );
+  },
 });
 
 const release = defineCommand({
@@ -75,26 +81,31 @@ const release = defineCommand({
 const ls = defineCommand({
   meta: { name: "list", description: "List live locks" },
   args: { ...json },
-  run: ({ args }) =>
-    execute(
+  run: ({ args }) => {
+    const names = new Map<string, string>();
+    return execute(
       args.json,
-      async ({ ctx }) => listLocks(ctx),
+      async ({ ctx }) => {
+        if (!args.json) await actorNames(ctx, names);
+        return listLocks(ctx);
+      },
       (locks: Lock[]) => {
         if (!locks.length)
           return `No locks. Lock paths with \`${CLI_NAME} lock acquire "src/area/**"\`.`;
-        if (!term().rich) return locks.map(line).join("\n");
+        if (!term().rich) return locks.map((l) => line(l, names)).join("\n");
         return table(
           locks.map((l) => [
             handle(l.id),
             l.mode === "exclusive" ? yellow(l.mode) : l.mode,
             l.paths.join(", "),
-            dim(`by ${shortHandle(l.actorId)} until ${when(l.leaseUntil)}`),
+            dim(`by ${holder(l, names)} until ${when(l.leaseUntil)}`),
           ]),
           { flex: 2 },
         );
       },
       { readOnly: true },
-    ),
+    );
+  },
 });
 
 export default defineCommand({

@@ -11,10 +11,12 @@ import {
 } from "@sati/core";
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination } from "../args.js";
+import { askText, canAsk, missing, sameAs } from "../prompt.js";
 import { record, row, rows } from "../render.js";
 import { int, list, ref } from "../runtime/input.js";
 import { execute } from "../runtime/output.js";
 import scan from "./scan.js";
+import { typedAfter } from "./task/shared.js";
 
 const fields = {
   description: { type: "string", description: "What the feature does, in Markdown" },
@@ -32,16 +34,23 @@ const fields = {
 const create = defineCommand({
   meta: { name: "create", description: "Create a feature" },
   args: {
-    title: { type: "positional", required: true, description: "Feature title" },
+    title: {
+      type: "positional",
+      required: false,
+      description: "Feature title (at a terminal: asked when left out)",
+    },
     ...fields,
     ...json,
   },
-  run: ({ args }) =>
-    execute(
+  run: ({ args }) => {
+    if (args.title === undefined && !canAsk(args.json)) throw missing("title", "feature create");
+    return execute(
       args.json,
-      async ({ ctx }) =>
-        createFeature(ctx, {
-          title: args.title,
+      async ({ ctx }) => {
+        const title = args.title ?? (await askText("Feature title"));
+        if (args.title === undefined) sameAs("feature", "create", title, ...typedAfter("create"));
+        return createFeature(ctx, {
+          title,
           description: args.description,
           status: args.status,
           milestoneId: await ref(ctx, "milestone", args.milestone),
@@ -49,9 +58,11 @@ const create = defineCommand({
           tests: list(args.tests),
           acceptance: list(args.acceptance),
           protected: args.protected,
-        }),
+        });
+      },
       (f: Feature) => `Created ${row(f)}`,
-    ),
+    );
+  },
 });
 
 const ls = defineCommand({

@@ -126,7 +126,7 @@ function render(r: GuardResult): string {
           ? "Ask the person who approved it, or override once with SATI_GUARD=off (logged)."
           : r.findings.every((f) => f.level !== "blocked" || f.rule === "locked")
             ? "Ask the lock holder or wait for the lease to end, or override once with SATI_GUARD=off (logged)."
-            : `Record a decision on the feature (\`${CLI_NAME} decision record --features <id>\`), ask the lock holder, or override once with SATI_GUARD=off (logged).`,
+            : `Record a decision on the feature (\`${CLI_NAME} decision record --feature <id>\`), ask the lock holder, or override once with SATI_GUARD=off (logged).`,
     );
   }
   return lines.join("\n");

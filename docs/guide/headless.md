@@ -68,6 +68,8 @@ In every other case a missing argument is a usage error with exit code 2, as it 
 a bare `sati` prints the help text. A script, a pipe, a CI job or an agent is never left waiting
 at a prompt.
 
+The rule is the same for every command: what a person may leave out at a terminal (an id, a title, a summary) is asked for. `feature create` and `milestone create` ask for a missing title. With `--no-input`, `--json`, a pipe or an agent, a missing title is a usage error.
+
 ## An agent, with no MCP
 
 Every step of the workflow is a command, and every command takes `--json`. Set the project up

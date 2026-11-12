@@ -237,7 +237,7 @@ const StepTexts = z
   .describe("Checklist steps to add at the end");
 
 /**
- * The checklist with steps ticked and added, as `sati task checklist --done N --add "…"` does.
+ * The checklist with steps ticked and added, as `sati task checklist --tick N --add "…"` does.
  * The version read here guards the list against a change made meanwhile.
  */
 async function editSteps(

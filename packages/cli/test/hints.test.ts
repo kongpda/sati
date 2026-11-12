@@ -23,7 +23,7 @@ describe("hints", () => {
   it("name only flags that `decision record` has", async () => {
     const subs = decision.subCommands as Record<string, { args?: Record<string, unknown> }>;
     const flags = Object.keys(subs.record?.args ?? {});
-    expect(flags).toContain("features");
+    expect(flags).toContain("feature");
     const used = new Set<string>();
     for (const pkg of readdirSync(packages)) {
       let files: string[] = [];

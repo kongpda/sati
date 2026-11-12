@@ -127,3 +127,34 @@ describe("worktree coordination through git", () => {
     expect(after.data.claim.waiting).toBeUndefined();
   });
 });
+
+// Review 7.6: a person reads who holds a lock and who did what by name, not by actr_ id. Scripts
+// keep the ids in --json.
+describe("lock and activity text", () => {
+  it("lock acquire and lock list show who holds a lock by name", async () => {
+    const dir = await tempRepo({ init: true });
+    const taken = run(dir, ["lock", "acquire", "a.ts"], agent("codex-a"));
+    expect(taken.code, taken.stderr).toBe(0);
+    for (const out of [taken.stdout, run(dir, ["lock", "list"], agent("codex-a")).stdout]) {
+      expect(out).toContain("by codex-a");
+      expect(out).not.toMatch(/actr_/u);
+    }
+    const raw = json<{ actorId: string }[]>(dir, ["lock", "list"], agent("codex-a")).data;
+    expect(raw[0]?.actorId).toMatch(/^actr_/u);
+  });
+
+  it("activity text names the actor and words the change, and --json keeps the ids", async () => {
+    const dir = await tempRepo({ init: true });
+    expect(
+      run(dir, ["task", "create", "Name me", "--priority", "high"], agent("codex-a")).code,
+    ).toBe(0);
+    const text = run(dir, ["activity"], agent("codex-a")).stdout;
+    // The row for the new task: who (a name), what (create task), and the fields as words.
+    const row = text.split("\n").find((l) => l.includes(" create task "));
+    expect(row).toContain(" codex-a create task ");
+    expect(row).toContain("title Name me");
+    expect(row).not.toMatch(/actr_|\{"/u);
+    const raw = json<{ actorId: string }[]>(dir, ["activity"], agent("codex-a")).data;
+    expect(raw[0]?.actorId).toMatch(/^actr_/u);
+  });
+});

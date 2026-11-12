@@ -30,7 +30,11 @@ const create = defineCommand({
     context: { type: "string", description: "The situation that forced the decision" },
     consequences: { type: "string", description: "What follows from it" },
     supersedes: { type: "string", description: "Decision id this one replaces" },
-    features: { type: "string", description: "Comma-separated feature ids it affects" },
+    feature: {
+      type: "string",
+      alias: "features",
+      description: "A feature id it affects; repeat the flag or use commas for several",
+    },
     ...json,
   },
   run: ({ args }) => {
@@ -61,7 +65,7 @@ const create = defineCommand({
           context: args.context,
           consequences: args.consequences,
           supersedes: await ref(ctx, "decision", args.supersedes),
-          featureIds: await refs(ctx, "feature", args.features),
+          featureIds: await refs(ctx, "feature", args.feature),
         });
       },
       (d: Decision) => `Recorded ${row(d)}`,

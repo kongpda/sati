@@ -131,7 +131,7 @@ The guard runs in three places: the Claude Code `PreToolUse` hook (before the ed
 ```console
 $ git rm src/billing/webhooks.ts && sati guard --staged
 blocked: This deletes src/billing/webhooks.ts from shipped, protected feature "Billing".
-Record a decision on the feature (`sati decision record --features <id>`), ask the lock holder, or override once with SATI_GUARD=off (logged).
+Record a decision on the feature (`sati decision record --feature <id>`), ask the lock holder, or override once with SATI_GUARD=off (logged).
 $ echo $?
 10
 ```
@@ -252,7 +252,8 @@ If you are an agent working in a repo that uses sati:
   `task update`, `task show` and `task claim` then show a list to choose from, and print the
   command that does the same. Scripts, pipes, agents and `--json` are never asked: they get the
   usage error. `--no-input` or `SATI_NO_INPUT=1` turns the questions off for a person too.
-- **Or leave the rest out.** `sati task create`, `task complete`, `comment add`, `note create` and
+- **Or leave the rest out.** `sati task create`, `task complete`, `feature create`,
+  `milestone create`, `comment add`, `note create` and
   `decision record` ask a person for what is missing. `task complete` offers the files git says
   you changed. A note's text and a decision open in `$VISUAL` or `$EDITOR` when one is set; save
   an empty file to cancel.

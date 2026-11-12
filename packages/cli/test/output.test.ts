@@ -609,9 +609,9 @@ describe("validation errors", () => {
   // Why: a day that is not real failed two checks, and the same field was reported twice.
   it("a bad milestone date is reported once", async () => {
     const dir = await tempRepo({ init: true });
-    const m = sati(dir, "milestone", "create", "M", "--date", "2026-13-45").stderr;
-    expect(m).toContain("--date: not a real day");
-    expect(m.match(/--date/gu)).toHaveLength(1);
+    const m = sati(dir, "milestone", "create", "M", "--due", "2026-13-45").stderr;
+    expect(m).toContain("--due: not a real day");
+    expect(m.match(/--due/gu)).toHaveLength(1);
     const due = sati(dir, "task", "list", "--due-by", "2026-1-1").stderr;
     expect(due.match(/--due-by/gu)).toHaveLength(1);
   });

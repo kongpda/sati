@@ -175,3 +175,10 @@ export async function heldTask(ctx: ServiceContext, typed: string | undefined): 
     hint: mine.map((t) => `${shortHandle(t.id)} ${t.title}`).join("; "),
   });
 }
+
+/** Actor names for a person's text output, by id; scripts and --json keep the ids. */
+export async function actorNames(ctx: ServiceContext, into: Map<string, string>): Promise<void> {
+  for (const a of await ctx.store.read((r) => listAll(r, ctx, "actor"))) {
+    into.set(a.id, a.displayName ?? a.name);
+  }
+}

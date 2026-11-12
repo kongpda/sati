@@ -644,3 +644,90 @@ describe("milestone flags", () => {
     expect(cleared.targetDate).toBeNull();
   });
 });
+
+// Review 7.1: one flag per idea. Each old spelling is a hidden alias, so scripts keep working.
+describe("flag renames keep the old name working", () => {
+  interface Row {
+    id: string;
+    assigneeIds?: string[];
+    targetDate?: string | null;
+    featureIds?: string[];
+    checklist?: { done: boolean }[];
+    approvedCommit?: string | null;
+    status?: string;
+  }
+
+  it("--assignee is the flag, --assign still works, and help names only the new one", async () => {
+    const dir = await tempRepo({ init: true });
+    for (const flag of ["--assignee", "--assign"]) {
+      const t = satiJson<Row>(dir, "task", "create", `For ${flag}`, flag, "me").data;
+      expect(t.assigneeIds, flag).toHaveLength(1);
+    }
+    const help = sati(dir, "task", "create", "--help").stdout;
+    expect(help).toContain("--assignee");
+    expect(help).not.toMatch(/--assign\b(?!ee)/u);
+  });
+
+  it("--due is the milestone and template flag, --date still works", async () => {
+    const dir = await tempRepo({ init: true });
+    for (const flag of ["--due", "--date"]) {
+      const m = satiJson<Row>(dir, "milestone", "create", `M ${flag}`, flag, "2027-01-31").data;
+      expect(m.targetDate, flag).toBe("2027-01-31");
+      const moved = satiJson<Row>(dir, "milestone", "update", m.id, flag, "2027-02-01").data;
+      expect(moved.targetDate, flag).toBe("2027-02-01");
+    }
+    const dry = (flag: string) =>
+      sati(dir, "plan", "apply", "campaign", flag, "2027-01-31", "--dry-run").stdout;
+    expect(dry("--due")).toBe(dry("--date"));
+    expect(dry("--due")).toContain("2027");
+    expect(sati(dir, "milestone", "create", "--help").stdout).not.toContain("--date");
+    // A bad day names the flag the person was shown.
+    expect(sati(dir, "milestone", "create", "M", "--due", "2026-13-45").stderr).toContain("--due:");
+  });
+
+  it("--commit is the approving flag on task update, --approved-commit still works", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = satiJson<Row>(dir, "task", "create", "Review me").data;
+    expect(sati(dir, "task", "claim", t.id).code).toBe(0);
+    // Both spellings reach the same check: a commit that is not the branch head is refused.
+    for (const flag of ["--commit", "--approved-commit"]) {
+      const r = run(dir, ["task", "update", t.id, "--status", "done", flag, "abc1234"]);
+      expect(r.stderr, flag).not.toContain("Unknown option");
+    }
+    expect(sati(dir, "task", "update", "--help").stdout).not.toContain("--approved-commit");
+  });
+
+  it("--feature is repeatable on decision record, --features still works", async () => {
+    const dir = await tempRepo({ init: true });
+    const a = satiJson<Row>(dir, "feature", "create", "A").data;
+    const b = satiJson<Row>(dir, "feature", "create", "B").data;
+    const record = (...flags: string[]) =>
+      satiJson<Row>(dir, "decision", "record", "Why", "--decision", "because", ...flags).data;
+    expect(record("--feature", a.id, "--feature", b.id).featureIds?.sort()).toEqual(
+      [a.id, b.id].sort(),
+    );
+    expect(record("--features", `${a.id},${b.id}`).featureIds?.sort()).toEqual([a.id, b.id].sort());
+    const help = sati(dir, "decision", "record", "--help").stdout;
+    expect(help).toContain("--feature");
+    expect(help).not.toContain("--features");
+  });
+
+  it("--tick and --untick are the checklist flags, --done and --undone still work", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = satiJson<Row>(dir, "task", "create", "Steps").data;
+    expect(sati(dir, "task", "checklist", t.id, "--add", "one").code).toBe(0);
+    const done = () => satiJson<Row>(dir, "task", "show", t.id).data.checklist?.map((i) => i.done);
+    for (const [on, off] of [
+      ["--tick", "--untick"],
+      ["--done", "--undone"],
+    ] as const) {
+      expect(sati(dir, "task", "checklist", t.id, on, "1").code, on).toBe(0);
+      expect(done()).toEqual([true]);
+      expect(sati(dir, "task", "checklist", t.id, off, "1").code, off).toBe(0);
+      expect(done()).toEqual([false]);
+    }
+    const help = sati(dir, "task", "checklist", "--help").stdout;
+    expect(help).toContain("--tick");
+    expect(help).not.toContain("--done");
+  });
+});

@@ -4,11 +4,11 @@ import { plainIssue, type SatiError } from "@sati/core";
 const FLAG_NAMES: Record<string, string> = {
   actorId: "actor",
   approvedCommit: "commit",
-  assigneeIds: "assign",
+  assigneeIds: "assignee",
   dependsOn: "depends",
   dueDate: "due",
   featureId: "feature",
-  featureIds: "features",
+  featureIds: "feature",
   filesTouched: "files",
   leaseMinutes: "lease",
   markdown: "file",
@@ -16,7 +16,7 @@ const FLAG_NAMES: Record<string, string> = {
   parentId: "parent",
   sourceSeen: "seen",
   sourceTokens: "tokens",
-  targetDate: "date",
+  targetDate: "due",
   taskId: "task",
 };
 

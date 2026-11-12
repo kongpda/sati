@@ -1,7 +1,6 @@
 import {
   type Activity,
   CLI_NAME,
-  listAll,
   parseSince,
   SatiError,
   type ServiceContext,
@@ -12,7 +11,7 @@ import { SqliteStore } from "@sati/store-sqlite";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { handle } from "../render.js";
-import { actorRef, int, ref } from "../runtime/input.js";
+import { actorNames, actorRef, int, ref } from "../runtime/input.js";
 import { closeRuntime, openRuntime } from "../runtime/location.js";
 import { execute, printError } from "../runtime/output.js";
 import { bold, cleanDeep, dim, symbols, table, term, truncate, when } from "../term.js";
@@ -89,19 +88,14 @@ async function query(ctx: ServiceContext, args: Args) {
   };
 }
 
-/** Names are for a person's table only; scripts and --json keep the ids. */
-async function actorNames(ctx: ServiceContext, into: Map<string, string>): Promise<void> {
-  for (const a of await ctx.store.read((r) => listAll(r, ctx, "actor"))) {
-    into.set(a.id, a.displayName ?? a.name);
-  }
-}
-
 function lines(rows: readonly Activity[], names: ReadonlyMap<string, string>): string {
   if (!term().rich) {
+    // The stored time stays (`when` keeps it for scripts); everything else is words, not ids.
     return rows
       .map((row) => {
-        const diff = Object.keys(row.diff).length ? ` ${JSON.stringify(row.diff)}` : "";
-        return `${shortHandle(row.id)} ${row.at} ${row.actorId} ${row.verb} ${row.entity} ${row.entityId}${diff}`;
+        const diff = Object.keys(row.diff).length ? ` ${changed(row.diff)}` : "";
+        const who = names.get(row.actorId) ?? shortHandle(row.actorId);
+        return `${shortHandle(row.id)} ${row.at} ${who} ${row.verb} ${row.entity} ${row.entityId}${diff}`;
       })
       .join("\n");
   }
@@ -140,7 +134,7 @@ async function follow(args: Args): Promise<void> {
       if (!found.length) return;
       const rows = json ? found : cleanDeep(found);
       // A new agent may have joined since the names were read.
-      if (rich && rows.some((r) => !names.has(r.actorId))) await actorNames(ctx, names);
+      if (!json && rows.some((r) => !names.has(r.actorId))) await actorNames(ctx, names);
       process.stdout.write(
         `${json ? rows.map((r) => JSON.stringify(r, withoutStamps)).join("\n") : lines(rows, names)}\n`,
       );
@@ -222,7 +216,7 @@ export default defineCommand({
       args.json,
       async ({ ctx }) => {
         const filter = await query(ctx, args);
-        if (!args.json && term().rich) await actorNames(ctx, names);
+        if (!args.json) await actorNames(ctx, names);
         return ctx.store.read((r) =>
           r.listActivity(ctx.projectId, { ...filter, after: args.after }),
         );

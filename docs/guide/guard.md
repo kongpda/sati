@@ -52,7 +52,7 @@ feature, then retry:
 ```bash
 sati decision record "Drop the legacy export" \
   --decision "Remove the CSV exporter; the JSON export replaces it." \
-  --features <feature-id>
+  --feature <feature-id>
 ```
 
 The newest decision that lists a feature allows the change. The finding then shows as a warning

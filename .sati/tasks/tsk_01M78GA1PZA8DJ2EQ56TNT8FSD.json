@@ -1,0 +1,31 @@
+{
+  "body": "Review 12.3, CLI half. `task list` and `search`: when more rows exist than the limit, text output ends with \"Showing the first N. Use --offset N for more.\"; `--json` keeps the bare array and prints the line on stderr. Closes WP12.",
+  "branch": "wp12-footer",
+  "claim": {
+    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "heartbeatAt": "2026-11-12T18:29:13.808Z",
+    "leaseUntil": "2026-11-12T18:59:13.808Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-12T18:28:50.015Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "effort": "standard",
+  "id": "tsk_01M78GA1PZA8DJ2EQ56TNT8FSD",
+  "labels": [
+    "review-2026-11-12"
+  ],
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T18:28:50.016Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T18:29:13.809Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T18:29:13.809Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T18:29:13.809Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T18:29:13.809Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "in_progress",
+  "title": "WP12.3 CLI: task list and search say when the list was cut",
+  "updatedAt": "2026-11-12T18:29:13.809Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

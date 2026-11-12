@@ -309,6 +309,32 @@ describe("usage errors teach the command", () => {
     for (const [text, who] of texts) expect(who, `commands described as "${text}"`).toHaveLength(1);
   });
 
+  // Review 6.4, 6.6, 6.11, 6.12: commands run by hooks, shortcuts and old scripts stay out of the
+  // help and the completion list, so a person sees the commands meant for them; they still run.
+  it("keeps export, import, app and the --hook flags out of help and completion, and doctor under Project", async () => {
+    const dir = await tempRepo({ init: true });
+    const root = run(dir, ["--help"], { COLUMNS: "100" }).stdout;
+    for (const name of ["export", "import", "app"]) {
+      expect(root, `${name} in root help`).not.toMatch(new RegExp(`^ {2}${name}[ ,]`, "mu"));
+      // Only the top-level word list: `sync export` and `plan import` are other commands.
+      const top = /^ {4}""\) words="([^"]*)"/mu.exec(sati(dir, "completion", "bash").stdout)?.[1];
+      expect(top?.split(" "), `${name} in completion`).not.toContain(name);
+    }
+    expect(sati(dir, "export").code).toBe(0);
+    expect(sati(dir, "import").code).toBe(0);
+    expect(sati(dir, "app", "--help").code).toBe(0);
+    for (const cmd of ["guard", "wait"]) {
+      expect(sati(dir, cmd, "--help").stdout, `${cmd} --hook in help`).not.toContain("--hook");
+    }
+    // Root help lists doctor under Project, and completion closes Start.
+    const at = (re: RegExp) => root.search(re);
+    const inside = (name: string, heading: string, next: string) =>
+      at(new RegExp(`^ {2}${name} `, "mu")) > at(new RegExp(`^${heading}$`, "mu")) &&
+      at(new RegExp(`^ {2}${name} `, "mu")) < at(new RegExp(`^${next}$`, "mu"));
+    expect(inside("doctor", "PROJECT", "RUN BY TOOLS"), "doctor under Project").toBe(true);
+    expect(inside("completion", "START", "WORK"), "completion under Start").toBe(true);
+  });
+
   // The root list is scanned; exit codes and flag lists belong in the command's own help.
   it("lists commands by their first sentence and keeps the rest for the command's help", async () => {
     const dir = await tempRepo();

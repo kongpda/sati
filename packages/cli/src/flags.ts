@@ -9,6 +9,9 @@ export const HIDDEN_FLAGS: Readonly<Record<string, readonly string[]>> = {
   "note update": ["reviewed"],
   // Old installed hooks print `sati init --upgrade`; `sati upgrade` is the visible form (review 6.3).
   init: ["upgrade"],
+  // Written into git hooks and agent configs by init; not for a person to type (review 6.11).
+  guard: ["hook"],
+  wait: ["hook"],
   // Replaced by `--md` (review 7.9).
   "feature list": ["format"],
 };

@@ -128,13 +128,13 @@ lists its routes. It serves the board, not other programs: it can change in any 
 For a person who does not use a terminal, write a launcher once:
 
 ```bash
-sati app --shortcut ~/Desktop
+sati ui --shortcut ~/Desktop
 ```
 
 It writes a file named after the project (`.command` on macOS, `.cmd` on Windows, a desktop entry
 on Linux). A double click starts the board of that project and opens the browser; closing its
 window stops the board. The file is not signed, so macOS may ask to confirm the first time.
-`sati app` alone is the same as `sati ui`. Install sati first (`npm install -g @kongpda/sati`): a
+Install sati first (`npm install -g @kongpda/sati`): a
 copy fetched by `npx` is removed from its cache later and the launcher would stop working.
 
 ## Health and backups

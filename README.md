@@ -287,7 +287,7 @@ sati doctor --fix              # release expired locks, remove cards whose file 
 sati card approve deck.pptx    # sign off a file (a person only); the guard blocks a change to it
                                # (or Approve on the board's Memory page)
 sati ui                        # the web board
-sati app --shortcut ~/Desktop  # a file that opens the board on a double click
+sati ui --shortcut ~/Desktop  # a file that opens the board on a double click
 ```
 
 `sati <command> --help` lists every option.

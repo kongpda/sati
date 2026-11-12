@@ -1,0 +1,15 @@
+{
+  "consequences": "Breaking for `sati decision delete`, so the changeset is minor. Until the board task lands, the board's Delete button on a decision returns 404.",
+  "context": "A deleted decision stopped protecting the feature it lists, because the guard reads only undeleted decisions. `sati decision delete|restore` and the board routes allowed that. `feature` was in SOFT but no caller reached it, and deleteRecord already refused a shipped feature.",
+  "createdAt": "2026-11-12T18:15:20.508Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "Remove \"decision\" and \"feature\" from SOFT in core records.ts. Remove `sati decision delete` and `restore` and the board API routes. To change a decision, record a new one with --supersedes. `decision show` and recall now say \"Superseded by <title>\". Decisions already deleted stay deleted, and their tombstones import as before.",
+  "id": "dec_01M78FHB5W7F66J0F0EKH55SKZ",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T18:15:20.508Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "Decisions cannot be deleted; features leave the soft-delete list (review 10.1, 10.3)",
+  "updatedAt": "2026-11-12T18:15:20.508Z",
+  "version": 1
+}

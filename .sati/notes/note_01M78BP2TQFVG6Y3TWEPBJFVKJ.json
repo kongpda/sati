@@ -1,0 +1,20 @@
+{
+  "body": "## Done so far\n1.3 code written, uncommitted in working tree: board.tsx (rail, fold button, useWide), styles.css (flex 1 1 200px columns, .collapsed rail), prefs.ts default collapsed backlog+cancelled, prefs.test.tsx, flows.spec.ts \"columns that fit\" (2 tests pass). build/lint/typecheck/knip pass. 1.1 (a82d06c) and 1.2 (4bde09c) pushed.\n\n## Next step\nFree disk (ENOSPC hit; owner action). Rerun pnpm test and pnpm test:ui. Check a11y.spec.ts \"desktop axe: /\" failure (maybe rail/fold button). Then tick review 1.3 and PLAN WP1 box, progress.md note (min-width 200 not 220; no expand on drag-over), commit, push, task_complete.\n\n## Open questions\nSpec said min-width 220 but that cannot fit five open columns at 1400 px beside the sidebar; used 200.\n\n## Files in flight\n- packages/ui/src/board.tsx\n- packages/ui/src/styles.css\n- packages/ui/src/prefs.ts\n- packages/ui/test/prefs.test.tsx\n- e2e/ui/flows.spec.ts",
+  "createdAt": "2026-11-12T17:08:01.495Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "handoffFromName": "claude-code@sati#a556e17e",
+  "id": "note_01M78BP2TQFVG6Y3TWEPBJFVKJ",
+  "links": [
+    "tsk_01M78ADP063DECWVTHVJGGJP5R"
+  ],
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T17:08:01.496Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "tags": [
+    "handoff"
+  ],
+  "title": "Handoff WP1 1.3: board columns that fit a laptop window",
+  "updatedAt": "2026-11-12T17:08:01.495Z",
+  "version": 1
+}

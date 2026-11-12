@@ -53,3 +53,8 @@ From Phase 10e (H5), 2026-11-12:
 
 - **A CLI-only skill file**: `--cli-only` rewrites the rules blocks; the skill file sati installs still names the MCP tools.
 - **Remove MCP configs on `--cli-only`**: they are left alone because sati cannot tell its own entry from one the owner edited.
+
+From review item 8.4, 2026-11-13 (not done: `ListQuery` has no field for them):
+
+- **`note list --pinned` and `note list --tag <t>`**: `ListQuery.label` filters `labels`, but notes keep `tags`, and there is no pinned filter. Both need a new port field in the store, the memory store and the daemon.
+- **`decision list --feature <id>`**: `ListQuery.featureId` filters the single `featureId` column; decisions keep a `featureIds` list. It needs a port field that searches the list.

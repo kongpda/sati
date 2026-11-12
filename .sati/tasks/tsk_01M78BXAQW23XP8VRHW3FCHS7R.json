@@ -1,0 +1,42 @@
+{
+  "branch": "wp8-rest",
+  "completion": {
+    "branch": "wp8-rest",
+    "commit": "b6953944afcc4e78ef7e0f5912cd62557f5b43e9",
+    "completedAt": "2026-11-12T17:19:28.848Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/core/src/services/project.ts",
+      "packages/cli/src/commands/settings.ts",
+      "packages/cli/src/commands/projects.ts",
+      "packages/cli/src/projects.ts",
+      "packages/cli/src/main.ts",
+      "packages/cli/src/commands/doctor.ts",
+      "packages/cli/test/cli-flags.test.ts",
+      "docs/ideas.md",
+      "docs/progress.md",
+      "docs/review-2026-11-12.md",
+      "docs/guide/faq.md",
+      ".changeset/settings-name-projects-forget.md"
+    ],
+    "summary": "Review 8.4 (filters unsupported by ListQuery, written to ideas), 8.5 part (settings --name person-only via core renameProject; projects forget registry-only with confirm/--yes), 8.8 (doctor uses one git cat-file --batch-check). Gate green."
+  },
+  "createdAt": "2026-11-12T17:11:58.971Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M78BXAQW23XP8VRHW3FCHS7R",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T17:11:58.974Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T17:12:03.294Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T17:19:28.851Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T17:19:28.851Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T17:19:28.851Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T17:12:03.294Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "done",
+  "title": "WP8 rest: note/decision list filters, settings --name, projects forget, doctor branch walk (review 8.4, 8.5 part, 8.8)",
+  "updatedAt": "2026-11-12T17:19:28.857Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -87,4 +87,5 @@ not changed since.
 Delete the managed rules blocks (between the `sati:start` and `sati:end` markers), the
 `.sati/` folder and the sati lines in `.gitattributes` and your git hooks. Then delete
 `<git-common-dir>/sati/`. `sati projects --prune` then forgets every project whose folder or
-database is gone.
+database is gone. `sati projects forget <slug>` forgets one project and leaves its folder
+and database alone.

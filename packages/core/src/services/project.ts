@@ -104,6 +104,26 @@ export async function updateSettings(ctx: ServiceContext, input: unknown): Promi
   });
 }
 
+const RenameProjectInput = z.strictObject({ name: z.string().trim().min(1).max(300) });
+
+/** Renames the project. Only a person may: the name is what everyone sees on the board. */
+export async function renameProject(ctx: ServiceContext, input: unknown): Promise<Project> {
+  const data = parseInput(RenameProjectInput, input);
+  return ctx.store.write(async (w) => {
+    const project = await w.getProject();
+    if (!project || project.id !== ctx.projectId) {
+      throw new SatiError("NOT_INITIALIZED", "This repository has no project.", {
+        hint: `Run \`${CLI_NAME} init\`.`,
+      });
+    }
+    if ((await w.get("actor", ctx.actorId))?.kind !== "human") {
+      throw new SatiError("INVALID_TRANSITION", "Only a person can rename the project.");
+    }
+    if (project.name === data.name) return project;
+    return updateWithLog(w, ctx, "project", project, { name: data.name });
+  });
+}
+
 interface Deps {
   store: StorageAdapter;
   clock: Clock;

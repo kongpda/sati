@@ -2323,3 +2323,11 @@ Items 7.5, 7.7, 7.9, 7.10, 7.12 and 8.2 of `docs/review-2026-11-12.md` are done 
 - **7.10:** `--reviewed` on `task update`, `feature update` and `note update` is in `HIDDEN_FLAGS`. The glossary names `sati doctor --reviewed <id>`.
 - **7.12:** the root help title calls `versionLine`. This replaces the test "keeps the semver form in the help title", which asked for the opposite; the review is newer, so it wins. The MCP server info still uses `VERSION`.
 - **8.2:** help text only.
+
+## 2026-11-13 — Review WP8: settings --name, projects forget, doctor branch walk
+
+Items 8.4 and 8.8 are done, and part of 8.5 (task `tsk_fchs7r`).
+
+- **8.4:** no filter is added. `ListQuery` supports none of the three: notes keep `tags`, not `labels`, there is no pinned field, and decisions keep `featureIds`, not `featureId`. The item says to leave such filters out, so they are in `docs/ideas.md`.
+- **8.5 (part):** `sati settings --name <text>` calls the new core `renameProject`; only a person may, with `INVALID_TRANSITION` as 9.7 sets for "who may act". It also updates the name in this machine's project list. `settings` JSON now carries `name`. `sati projects forget <slug|path>` removes the registry entry only, asks at a terminal, and needs `--yes` elsewhere. `projects` keeps its own listing and gains `forget` under it: citty runs a parent's `run` after a subcommand, so the listing returns early when `forget` was asked for, and the unknown-flag check now reads the parent's own flags when no subcommand word matches. The 8.5 box stays open for `milestone --status cancelled` (10.2) and `decision delete|restore` (10.1).
+- **8.8:** `goneCards` asks one `git cat-file --batch-check` for every `<branch>:<path>` pair instead of listing each branch's tree. The answer is the same: a file or folder on any branch keeps its card.

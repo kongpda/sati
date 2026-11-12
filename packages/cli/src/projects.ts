@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { CLI_NAME, SatiError } from "@sati/core";
 import type { DbLocation } from "@sati/store-sqlite";
 import { writeFileAtomic } from "@sati/sync";
@@ -102,6 +102,29 @@ export function pruneProjects(home?: string): KnownProject[] {
       )}\n`,
     );
     return gone;
+  });
+}
+
+/**
+ * Removes one entry from the registry, found by slug or by its folder. Never touches the folder
+ * or the database. Returns the entry, or undefined when none matched.
+ */
+export function forgetProject(ref: string, home?: string): KnownProject | undefined {
+  if (!existsSync(file(home))) return undefined;
+  const folder = resolve(ref);
+  return withRegistryLock(file(home), () => {
+    const all = readProjects(home);
+    const found = all.find((p) => p.slug === ref) ?? all.find((p) => resolve(p.root) === folder);
+    if (!found) return undefined;
+    writeFileAtomic(
+      file(home),
+      `${JSON.stringify(
+        all.filter((p) => p !== found),
+        null,
+        2,
+      )}\n`,
+    );
+    return found;
   });
 }
 

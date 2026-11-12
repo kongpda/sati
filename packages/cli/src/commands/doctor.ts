@@ -157,27 +157,39 @@ function goneCards(root: string, git: boolean, cards: ContextEntry[]): ContextEn
       !existsSync(resolve(root, cardFile(c.path))),
   );
   if (missing.length === 0 || !git) return missing;
-  const known = new Set<string>();
+  // One `cat-file` for every branch and missing path, instead of listing each branch's whole tree
+  // (review 8.8). `<ref>:<path>` names a file or a folder; an absent one prints "missing".
+  const big = { cwd: root, encoding: "utf8", maxBuffer: 1 << 28 } as const;
+  let answers: string[];
+  const asked: { card: ContextEntry; query: string }[] = [];
   try {
-    const big = { cwd: root, encoding: "utf8", maxBuffer: 1 << 28 } as const;
     const refs = execFileSync(
       "git",
       ["for-each-ref", "--format=%(refname)", "refs/heads", "refs/remotes"],
       big,
-    );
-    for (const ref of refs.split("\n").filter(Boolean)) {
-      const files = execFileSync("git", ["ls-tree", "-r", "--name-only", "-z", ref], big);
-      for (const f of files.split("\0")) known.add(f);
+    )
+      .split("\n")
+      .filter(Boolean);
+    for (const card of missing) {
+      for (const ref of refs) {
+        for (const path of new Set([card.path, cardFile(card.path)])) {
+          asked.push({ card, query: `${ref}:${path}` });
+        }
+      }
     }
+    if (asked.length === 0) return missing;
+    answers = execFileSync("git", ["cat-file", "--batch-check"], {
+      ...big,
+      input: `${asked.map((a) => a.query).join("\n")}\n`,
+    }).split("\n");
   } catch {
     // The branches cannot be read, so no card can be called gone.
     return [];
   }
-  const names = [...known];
-  return missing.filter((c) => {
-    const file = cardFile(c.path);
-    return !known.has(c.path) && !known.has(file) && !names.some((f) => f.startsWith(`${file}/`));
-  });
+  const found = new Set(
+    asked.filter((_, i) => !(answers[i] ?? "missing").endsWith(" missing")).map((a) => a.card),
+  );
+  return missing.filter((c) => !found.has(c));
 }
 
 /** Informational: what could be cleaned up, and how. With `fix`, cleans it up first. */

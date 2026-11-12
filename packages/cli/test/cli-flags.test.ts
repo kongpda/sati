@@ -492,6 +492,68 @@ describe("small", () => {
     expect(existsSync(db)).toBe(false);
   });
 
+  // Why: a project moved or given up stayed in `sati projects` for ever. Forgetting it must
+  // never take the folder or the database with it, and must not happen by accident.
+  it("projects forget removes only the registry entry", () => {
+    const home = mkdtempSync(join(tmpdir(), "sati-home-"));
+    const row = (slug: string) => {
+      const root = mkdtempSync(join(tmpdir(), `sati-${slug}-`));
+      writeFileSync(join(root, "sati.db"), "");
+      return {
+        slug,
+        name: slug,
+        projectId: `prj_${slug}`,
+        root,
+        mode: "git" as const,
+        db: join(root, "sati.db"),
+      };
+    };
+    const a = row("a");
+    const b = row("b");
+    rememberProject(a, home);
+    rememberProject(b, home);
+    const unasked = run(a.root, ["projects", "forget", "a"], { HOME: home });
+    expect(unasked.code).toBe(2);
+    expect(readProjects(home).map((p) => p.slug)).toEqual(["a", "b"]);
+
+    const bySlug = run(a.root, ["projects", "forget", "a", "--yes"], { HOME: home });
+    expect(bySlug.code).toBe(0);
+    expect(bySlug.stdout).toContain("Forgot a.");
+    // The list command must not run after the subcommand.
+    expect(bySlug.stdout).not.toContain("ready ");
+    expect(readProjects(home).map((p) => p.slug)).toEqual(["b"]);
+    expect(existsSync(a.root)).toBe(true);
+    expect(existsSync(a.db)).toBe(true);
+
+    const byPath = run(a.root, ["projects", "forget", b.root, "--yes"], { HOME: home });
+    expect(byPath.code).toBe(0);
+    expect(readProjects(home)).toEqual([]);
+    expect(existsSync(b.db)).toBe(true);
+    expect(run(a.root, ["projects", "forget", "nope", "--yes"], { HOME: home }).code).toBe(3);
+  });
+
+  // Why: the name shows on the board for everyone, so an agent may not change it.
+  it("settings --name renames the project and only a person may", async () => {
+    const dir = await tempRepo({ init: true });
+    const agent = run(dir, ["settings", "--name", "Agent pick"], {
+      SATI_ACTOR: "",
+      CLAUDECODE: "1",
+    });
+    expect(agent.code).toBe(8);
+    expect(agent.stderr).toContain("Only a person can rename the project");
+    expect(satiJson<{ name: string }>(dir, "settings").data.name).toBe("Demo");
+
+    const renamed = satiJson<{ name: string; review: string }>(
+      dir,
+      "settings",
+      "--name",
+      "New name",
+    );
+    expect(renamed.code).toBe(0);
+    expect(renamed.data).toMatchObject({ name: "New name", review: "agents" });
+    expect(satiJson<{ name: string }>(dir, "settings").data.name).toBe("New name");
+  });
+
   // Why: about 1,400 temp repos from test runs had piled up in the owner's real registry.
   it("test runs register projects outside the real home", async () => {
     const registry = process.env.SATI_REGISTRY ?? "";

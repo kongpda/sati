@@ -54,6 +54,8 @@ async function unknownFlag(root: CommandDef, argv: readonly string[]): Promise<F
     const at = rest.findIndex((a) => !a.startsWith("-"));
     const name = rest[at];
     const next = name === undefined ? undefined : subs[name];
+    // `projects` lists by itself and has `forget` under it: its own flags are checked below.
+    if (next === undefined && cmd !== root && cmd.run) break;
     if (next === undefined) {
       // `sati --bogus`: with no command word, citty would only say that a command is missing.
       const flag = name === undefined ? rest.find((a) => a.startsWith("-") && a !== "--json") : "";

@@ -217,7 +217,7 @@ sati needs none of them. Every command opens the database itself, and `sati mcp`
 stdio: the agent's client starts and stops it, and nothing listens on a port.
 
 - **An agent with no MCP client** runs the same steps as commands, each with `--json`.
-  `sati rules sync --cli-only` writes the rules block with those commands in place of the tool
+  `sati init --cli-only` (or `sati rules sync --cli-only` later) writes the rules block with those commands in place of the tool
   names. The brief's last line says which form to use: `Tools: MCP.` or `Tools: CLI (…)`.
 - **A person with no board** types `sati` for a status and a menu, `sati inbox` for what waits,
   `sati task approve` and `sati task send-back` to review, `sati task list --board` for the

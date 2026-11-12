@@ -80,7 +80,6 @@ export const underline = sgr(4, 24);
 export const red = sgr(31, 39);
 export const green = sgr(32, 39);
 export const yellow = sgr(33, 39);
-export const blue = sgr(34, 39);
 export const magenta = sgr(35, 39);
 export const cyan = sgr(36, 39);
 

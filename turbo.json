@@ -18,6 +18,7 @@
     },
     "bench": {
       "dependsOn": ["build"],
+      "passThroughEnv": ["BENCH_FACTOR"],
       "cache": false
     }
   }

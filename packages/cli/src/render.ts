@@ -43,7 +43,7 @@ const PRIORITY: Record<string, Paint> = {
   low: dim,
 };
 
-export const status = (s: string | undefined): string => (s ? (STATUS[s] ?? plain)(s) : "");
+const status = (s: string | undefined): string => (s ? (STATUS[s] ?? plain)(s) : "");
 const priority = (p: string | undefined): string => (p ? (PRIORITY[p] ?? plain)(p) : "");
 export const handle = (id: string): string => cyan(shortHandle(id));
 

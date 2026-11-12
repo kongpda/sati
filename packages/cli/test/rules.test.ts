@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { sati, satiJson, tempRepo } from "./helpers.js";
@@ -43,6 +43,25 @@ describe("sati rules sync", () => {
     expect(r.data).toContainEqual({ path: "CLAUDE.local.md", action: "update" });
     expect(readFileSync(local, "utf8")).toContain("(required)");
     expect(execFileSync("git", ["status", "--porcelain"], { cwd: dir, encoding: "utf8" })).toBe("");
+  });
+
+  // A project for agents with no MCP client must never get an MCP config, not even for the
+  // moment between `init` and a later `rules sync --cli-only`.
+  it("init --cli-only sets a new project up with commands and no MCP config", async () => {
+    const dir = await tempRepo();
+    const r = sati(dir, "init", "--yes", "--tools", "codex,claude-code", "--cli-only");
+    expect(r.code).toBe(0);
+    expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).toContain("There are no MCP tools here");
+    expect(existsSync(join(dir, ".codex/config.toml"))).toBe(false);
+    expect(existsSync(join(dir, ".mcp.json"))).toBe(false);
+    // The session hook stays, with a brief that does not claim MCP tools.
+    const hooks = readFileSync(join(dir, ".claude/settings.json"), "utf8");
+    expect(hooks).toContain("brief --format=agent");
+    expect(hooks).not.toContain("--tools=mcp");
+    // A plain upgrade later keeps the form.
+    expect(sati(dir, "upgrade").code).toBe(0);
+    expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).toContain("There are no MCP tools here");
+    expect(existsSync(join(dir, ".mcp.json"))).toBe(false);
   });
 
   // The flag is given once. `sati upgrade` and later syncs run without it and must keep the

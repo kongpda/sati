@@ -9,8 +9,10 @@ import {
   inbox,
   inboxCount,
   inboxOf,
+  listRecords,
   markWaiting,
   mentionsOf,
+  recordDecision,
   type ServiceContext,
   updateTask,
   weekEnd,
@@ -212,6 +214,46 @@ describe("inbox service", () => {
     const own = await inbox(ctx);
     expect(own.assigned).toEqual([]);
     expect(own.mentions).toEqual([]);
+  });
+
+  // The service reads open tasks and recent notes only, for speed on old projects. What it
+  // leaves out must be what the rule drops anyway, and a mention on closed work keeps its title.
+  it("gives the lists every record would give, with closed work left unread", async () => {
+    const { ctx } = await setup();
+    const kim = await as(ctx, "kim@main", "human");
+    const open = await createTask(ctx, { title: "Open one", assigneeIds: [kim.actorId] });
+    const closed = await createTask(ctx, {
+      title: "Closed one",
+      assigneeIds: [kim.actorId],
+      dueDate: "2020-01-01",
+    });
+    const claim = await claimTask(ctx, closed.id);
+    await completeTask(ctx, closed.id, {
+      summary: "Done.",
+      filesTouched: ["src/done.ts"],
+      token: claim.claim?.token,
+    });
+    await updateTask(kim, closed.id, { status: "done" });
+    const why = await recordDecision(ctx, { title: "Use SQLite", decision: "One file." });
+    await addComment(ctx, { on: closed.id, body: "@kim one more thing here" });
+    await addComment(ctx, { on: why.id, body: "@kim do you agree?" });
+
+    const out = await inbox(kim);
+    const all = inboxOf(
+      {
+        you: kim.actorId,
+        tasks: await listRecords(ctx, "task", { limit: 500 }),
+        notes: await listRecords(ctx, "note", { limit: 500 }),
+        actors: await listRecords(ctx, "actor", { limit: 500 }),
+      },
+      ctx.clock.now(),
+    );
+    expect(out.assigned.map((t) => t.id)).toEqual([open.id]);
+    expect(out.assigned.map((t) => t.id)).toEqual(all.assigned.map((t) => t.id));
+    expect(out.due).toEqual([]);
+    expect(all.due).toEqual([]);
+    expect(out.mentions.map((m) => m.id)).toEqual(all.mentions.map((m) => m.id));
+    expect(out.mentions.map((m) => m.onTitle).sort()).toEqual(["Closed one", "Use SQLite"]);
   });
 
   it("refuses a name that is nobody, with what to pass", async () => {

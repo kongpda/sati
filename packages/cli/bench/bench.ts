@@ -2,6 +2,10 @@
  * Benchmarks for the Phase 1 CLI budgets (PLAN "Performance budgets"). Run with `pnpm bench`
  * after a build. Exits 1 if any budget is missed.
  *
+ * `BENCH_FACTOR=3` multiplies every time budget by 3. CI sets it: a shared runner is slower and
+ * less even than the laptop the budgets are written for, and the run there is to catch a change
+ * that makes something several times slower, not to prove the budgets.
+ *
  * Budgets checked here: CLI cold start, CLI read p95, full-text search and `recall` on 50,000
  * records and cards, `task_claim` under 10 concurrent agents, the home screen of a bare `sati`,
  * and the idle cost of `sati activity --follow`. The other budgets belong to later phases.
@@ -39,10 +43,14 @@ const PTY = fileURLToPath(new URL("../test/support/pty-run.py", import.meta.url)
 /** How long `activity --follow` is left idle while its CPU time is read. */
 const IDLE_MS = 5_000;
 /**
- * Tasks in the project the home screen is timed on, with as many notes. The inbox it shows reads
- * every task and note, so its cost grows with the project; 5,000 tasks is a large real one.
+ * Open tasks in the first project the home screen is timed on, with as many new notes. The inbox
+ * it shows reads open tasks and the notes of the last two weeks, so its cost grows with the open
+ * work; 5,000 open tasks is far more than a real project has.
  */
 const HOME_TASKS = 5_000;
+/** How much slower than the budgets this machine may be (see the top of the file). */
+const FACTOR = Number(process.env.BENCH_FACTOR ?? "1");
+if (!(FACTOR >= 1)) throw new Error("BENCH_FACTOR must be a number, 1 or more.");
 
 const WORDS = (
   "auth token session cache index query schema migration router handler parser render " +
@@ -142,7 +150,13 @@ async function followIdle(cwd: string): Promise<number | undefined> {
 }
 
 /** Inserts `records` tasks, notes and cards in one transaction, cloned from service-made templates. */
-async function seed(dir: string, records = RECORDS, cards = CARDS): Promise<ServiceContext> {
+async function seed(
+  dir: string,
+  records = RECORDS,
+  cards = CARDS,
+  /** An old project: 9 tasks in 10 are done, and every note is two months old. */
+  old = false,
+): Promise<ServiceContext> {
   clearLocateCache();
   const store = await SqliteStore.open(locateDb(dir).path);
   const project = await store.read((r) => r.getProject());
@@ -157,6 +171,7 @@ async function seed(dir: string, records = RECORDS, cards = CARDS): Promise<Serv
   const task: Task = await createTask(ctx, { title: "template task" });
   const note: Note = await createNote(ctx, { title: "template note" });
   const card: ContextEntry = await putContext(ctx, { path: "template", summary: "template" });
+  const longAgo = new Date(Date.now() - 60 * 86_400_000).toISOString();
   await store.write(async (w) => {
     for (let i = 0; i < cards; i++) {
       await w.insert("context", {
@@ -174,12 +189,14 @@ async function seed(dir: string, records = RECORDS, cards = CARDS): Promise<Serv
         id: ids("task"),
         title: words(i, 5),
         body: words(i + 7, 30),
+        ...(old && i % 10 !== 0 ? { status: "done" as const } : {}),
       });
       await w.insert("note", {
         ...note,
         id: ids("note"),
         title: words(i + 3, 5),
         body: words(i + 11, 40),
+        ...(old ? { createdAt: longAgo, updatedAt: longAgo } : {}),
       });
     }
   });
@@ -287,6 +304,12 @@ async function main(): Promise<void> {
   await (await seed(small, HOME_TASKS * 2, 0)).store.close();
   homeDrawn(small);
   const home = Array.from({ length: 10 }, () => homeDrawn(small));
+  const aged = realpathSync(mkdtempSync(join(tmpdir(), "sati-bench-old-")));
+  execFileSync("git", ["init", "-q", "-b", "main"], { cwd: aged });
+  cli(aged, ["init", "--yes"]);
+  await (await seed(aged, RECORDS, CARDS, true)).store.close();
+  homeDrawn(aged);
+  const homeOld = Array.from({ length: 10 }, () => homeDrawn(aged));
   const idle = await followIdle(dir);
 
   const results: Result[] = [
@@ -315,8 +338,16 @@ async function main(): Promise<void> {
   const drawn = home.filter((ms): ms is number => ms !== undefined);
   if (drawn.length === home.length) {
     results.push({
-      measure: `Home screen (bare sati) on ${HOME_TASKS} tasks, p95`,
+      measure: `Home screen (bare sati), ${HOME_TASKS} open tasks, p95`,
       value: percentile(drawn, 95),
+      budget: 300,
+    });
+    results.push({
+      measure: `Home screen, ${RECORDS} records, 1 task in 10 open, p95`,
+      value: percentile(
+        homeOld.filter((ms): ms is number => ms !== undefined),
+        95,
+      ),
       budget: 300,
     });
   } else console.log("SKIP  Home screen: no python3 with pty here.");
@@ -329,11 +360,14 @@ async function main(): Promise<void> {
     });
   } else console.log("SKIP  activity --follow idle cost: no ps here.");
   let failed = false;
+  if (FACTOR !== 1) console.log(`Time budgets are multiplied by ${FACTOR} (BENCH_FACTOR).`);
   for (const r of results) {
-    const ok = r.value < r.budget;
+    // The idle share is a share of a core, not a time: a slow machine does not raise it much.
+    const budget = r.unit === undefined ? r.budget * FACTOR : r.budget;
+    const ok = r.value < budget;
     failed ||= !ok;
     console.log(
-      `${ok ? "PASS" : "FAIL"}  ${r.measure.padEnd(48)} ${r.value.toFixed(1).padStart(7)} ${r.unit ?? "ms"}  (budget ${r.budget} ${r.unit ?? "ms"})`,
+      `${ok ? "PASS" : "FAIL"}  ${r.measure.padEnd(52)} ${r.value.toFixed(1).padStart(7)} ${r.unit ?? "ms"}  (budget ${budget} ${r.unit ?? "ms"})`,
     );
   }
   if (failed) process.exitCode = 1;

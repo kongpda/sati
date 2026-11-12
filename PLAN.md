@@ -431,7 +431,7 @@ Agents call sati dozens of times per session, so the CLI must feel instant. `pnp
 | UI first load | under 1 s; JS under 250 KB gzipped | Route-level code splitting, no heavy chart library |
 | Board with 2,000 cards | 60 fps scroll and drag | TanStack Virtual, memoised cards |
 | Live update latency (agent write → UI) | under 500 ms | `PRAGMA data_version` poll every 250 ms + SSE |
-| Home screen (bare `sati`) on 5,000 tasks | under 300 ms | Three reads, then the menu; each menu entry is a command of its own |
+| Home screen (bare `sati`) with 5,000 open tasks, and on 50,000 records with 1 task in 10 open | under 300 ms | The inbox reads open tasks and the notes of the last two weeks, not every record; each menu entry is a command of its own |
 | `sati activity --follow` with nothing written | under 1% of one core | One `PRAGMA data_version` every 250 ms; rows are read only when it moved |
 | Install size (`@kongpda/sati`) | under 15 MB | Node's built-in SQLite (no native addon), UI shipped as static assets |
 
@@ -1028,6 +1028,13 @@ Added 2026-11-12 at the owner's request. sati already needs no server: every com
 
 - [x] `Tools:` line in the brief; `sati rules sync --cli-only`
 - [x] `docs/guide/headless.md`
+
+**10f — Follow-ups the owner approved on 2026-11-12**
+
+- [x] `inbox` reads open tasks and recent notes only: its cost follows the open work, not the age of the project
+- [x] `sati init --cli-only`
+- [x] `pnpm bench` runs in CI (`BENCH_FACTOR=3` on the shared runner) and fails the run on a missed budget
+- [x] `pnpm knip` reports nothing and runs in CI
 
 **Gate:** every CLI test from before Phase 10 passes unchanged (scripts and agents see no difference), no command prompts when stdin is not a terminal or an agent variable is set, the board's My work page and `sati inbox --json` list the same ids, and `pnpm lint && pnpm typecheck && pnpm test` and the Playwright board tests pass.
 

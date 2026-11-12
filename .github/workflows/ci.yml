@@ -37,6 +37,9 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.node == 24
       - run: pnpm typecheck
         if: matrix.os == 'ubuntu-latest' && matrix.node == 24
+      # Unused files, exports and dependencies.
+      - run: pnpm knip
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 24
       # The fish completion test runs only where fish is installed; one cell is enough.
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fish
         if: matrix.os == 'ubuntu-latest' && matrix.node == 24
@@ -155,6 +158,27 @@ jobs:
             e2e/playwright-report
             e2e/test-results
           retention-days: 7
+
+  # PLAN "Performance budgets". A shared runner is slower and less even than the laptop the
+  # budgets are written for, so the time budgets are tripled here: this catches a change that
+  # makes something several times slower. The budgets themselves are checked with `pnpm bench`
+  # on a developer machine before a release.
+  bench:
+    name: Benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm bench
+        env:
+          BENCH_FACTOR: "3"
 
   # PLAN Security: supply chain. Production dependencies must have no known advisories; dev
   # tooling advisories are accepted only through the lists in osv-scanner.toml and package.json.

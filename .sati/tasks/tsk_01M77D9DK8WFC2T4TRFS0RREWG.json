@@ -1,0 +1,52 @@
+{
+  "body": "Owner approved on 2026-11-12 (\"do it all as your best recommendation\"). 1) `inbox` reads only open tasks and recent notes, so bare `sati` meets its 300 ms budget on the 50,000-record fixture. 2) `sati init --cli-only`. 3) The benchmark runs in CI and fails on a missed budget. 4) knip reports nothing, and CI runs it. Then: version bump with `pnpm changeset version` for the owner to review. Not in scope: tag, npm publish.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "0ba0e332b1dadcea8dc06b3d39b398f339ec1df0",
+    "completedAt": "2026-11-12T08:26:57.273Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/core/src/domain/inbox.ts",
+      "packages/core/src/services/inbox.ts",
+      "packages/core/src/services/context.ts",
+      "packages/core/test/inbox.test.ts",
+      "packages/cli/src/commands/init.ts",
+      "packages/cli/src/prompt.ts",
+      "packages/cli/src/render.ts",
+      "packages/cli/src/term.ts",
+      "packages/cli/src/version.ts",
+      "packages/cli/test/rules.test.ts",
+      "packages/cli/bench/bench.ts",
+      ".github/workflows/ci.yml",
+      "turbo.json",
+      "knip.json",
+      "PLAN.md",
+      "README.md",
+      "docs/guide/headless.md",
+      "docs/progress.md",
+      "docs/ideas.md",
+      ".changeset/faster-inbox-init-cli-only.md"
+    ],
+    "releaseNote": "The inbox and the home screen stay fast on old projects, and `sati init --cli-only` sets up a project for agents with no MCP client.",
+    "summary": "Phase 10f. `inbox` reads open tasks and notes of the last 14 days, and gets mention titles by id: `sati inbox --json` on 50,000 records with 1 task in 10 open went from 289 ms to 141 ms (median of 12); a parity test compares it with `inboxOf` over every record. `sati init --cli-only` (also with --upgrade). Benchmark: old-project fixture, `BENCH_FACTOR`, a CI job with factor 3; all eight budgets pass locally. knip is clean and runs in CI. Verified: build, lint, typecheck, knip, unit tests (core 377, cli 280 + 3 skipped as before, mcp 32, store 92, sync 57, ui 40), Playwright 97, bench twice. Not verified yet: the new CI job on a real runner. The version bump is a separate commit."
+  },
+  "createdAt": "2026-11-12T08:16:49.256Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M77D9DK8WFC2T4TRFS0RREWG",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T08:16:49.259Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T08:17:02.410Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T08:26:57.275Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T08:26:57.275Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T08:26:57.275Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T08:17:02.410Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "review",
+  "title": "Phase 10f: faster inbox, init --cli-only, benchmark in CI, knip clean",
+  "updatedAt": "2026-11-12T08:26:57.275Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

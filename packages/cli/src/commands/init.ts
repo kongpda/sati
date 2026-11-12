@@ -147,6 +147,8 @@ async function plan(
     share?: boolean | undefined;
     /** Also chain into a global `core.hooksPath`, which every repo on the machine uses. */
     globalHooks?: boolean | undefined;
+    /** Rules as commands and no MCP configs, for agents with no MCP client. Unset: as it was. */
+    cliOnly?: boolean | undefined;
     /** The command hooks start, when not this binary (see `pendingUpgrade`). */
     self?: string[] | undefined;
   },
@@ -231,7 +233,9 @@ async function plan(
       hint: `Run \`${CLI_NAME} init\`.`,
     });
   }
-  if (found) return upgradePlan(root, db, found, args.tools, args.globalHooks, args.self);
+  if (found) {
+    return upgradePlan(root, db, found, args.tools, args.globalHooks, args.self, args.cliOnly);
+  }
 
   const name = args.name ?? basename(root);
   const files: FileChange[] =
@@ -239,7 +243,7 @@ async function plan(
       ? []
       : [{ path: shownPath(root, configPath), action: existing ? "keep" : "create" }];
   const tools = selectTools(root, args.tools);
-  const agentFiles = planAgentFiles(root, mode, db, kind, tools).files;
+  const agentFiles = planAgentFiles(root, mode, db, kind, tools, args.cliOnly).files;
   // The snapshot only exists in git mode, so only git mode routes it to the merge driver.
   if (mode === "git") agentFiles.push(planGitAttributes(fileReader(root)));
   files.push(...agentFiles.map(({ path, action }) => ({ path, action })));
@@ -285,11 +289,12 @@ function upgradePlan(
   askedTools: string | undefined,
   globalHooks: boolean | undefined,
   self: string[] | undefined,
+  cliOnly: boolean | undefined,
 ): InitPlan {
   const mode = project.mode;
   const kind = readSettings(project.settings).kind;
   const tools = selectTools(root, askedTools);
-  const agentFiles = planAgentFiles(root, mode, db, kind, tools).files;
+  const agentFiles = planAgentFiles(root, mode, db, kind, tools, cliOnly).files;
   if (mode === "git") agentFiles.push(planGitAttributes(fileReader(root)));
   const files: FileChange[] = agentFiles.map(({ path, action }) => ({ path, action }));
   const { hooks, mergeDriver } = planGit(root, mode, files, globalHooks, self);
@@ -577,7 +582,7 @@ interface DesktopEntry {
  * its own folder and without the shell's PATH, so the entry names Node, this script and the
  * project folder in full.
  */
-export function desktopEntry(cwd: string, script = process.argv[1] ?? CLI_NAME): DesktopEntry {
+function desktopEntry(cwd: string, script = process.argv[1] ?? CLI_NAME): DesktopEntry {
   const { root, path } = locateDb(cwd);
   if (!existsSync(path)) {
     throw new SatiError("NOT_INITIALIZED", `This project has no ${CLI_NAME} yet.`, {
@@ -688,6 +693,11 @@ export default defineCommand({
       description:
         "Print the Claude Desktop config entry for this initialized project, and write nothing",
     },
+    "cli-only": {
+      type: "boolean",
+      description:
+        "Write the rules as commands, for agents with no MCP client, and add no MCP configs. Kept by later runs; `rules sync --no-cli-only` goes back",
+    },
     "global-hooks": {
       type: "boolean",
       description:
@@ -710,6 +720,7 @@ export default defineCommand({
           upgrade: args.upgrade,
           share: args.share,
           globalHooks: args["global-hooks"],
+          cliOnly: args["cli-only"],
         };
         if (args["dry-run"]) return { dryRun: summary(await plan(cwd, opts)) };
         if (args.yes) return apply(await plan(cwd, opts));

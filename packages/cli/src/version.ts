@@ -12,8 +12,7 @@ declare const __SATI_BUILD_DATE__: string | undefined;
 export const BUILD: string = typeof __SATI_BUILD__ === "string" ? __SATI_BUILD__ : "";
 
 /** The date of the commit in `BUILD`. It tells the age of a build without looking up the commit. */
-export const BUILD_DATE: string =
-  typeof __SATI_BUILD_DATE__ === "string" ? __SATI_BUILD_DATE__ : "";
+const BUILD_DATE: string = typeof __SATI_BUILD_DATE__ === "string" ? __SATI_BUILD_DATE__ : "";
 
 /**
  * The package version with the build after `+`, as semver build metadata: `0.1.0+a8104c0`.

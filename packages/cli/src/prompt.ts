@@ -168,7 +168,7 @@ const EDIT_HELP =
  * file is private to the user, lives in a folder of its own, and is removed whatever happens.
  * An empty file is `Cancelled`.
  */
-export function editBody(env: Env = process.env): string | undefined {
+function editBody(env: Env = process.env): string | undefined {
   const editor = (env.VISUAL ?? "").trim() || (env.EDITOR ?? "").trim();
   if (editor === "") return undefined;
   // mkdtemp makes the folder 0700; the file is 0600 inside it.

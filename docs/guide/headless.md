@@ -74,7 +74,8 @@ Every step of the workflow is a command, and every command takes `--json`. Set t
 for it once:
 
 ```bash
-sati rules sync --cli-only
+sati init --cli-only          # a new project
+sati rules sync --cli-only    # a project that already has sati
 ```
 
 This writes the rules block in `AGENTS.md` (and the other rules files) with a command for each

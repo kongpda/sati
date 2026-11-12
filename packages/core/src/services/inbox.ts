@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { parseHandle, parseId } from "../domain/ids.js";
-import { inboxCount, inboxOf, waitingOn } from "../domain/inbox.js";
+import { CLOSED, inboxCount, inboxOf, mentionsSince, waitingOn } from "../domain/inbox.js";
 import type { Actor, Note, Task } from "../domain/schemas.js";
+import { TASK_STATUSES } from "../domain/status.js";
 import { listAll, parseInput, type ServiceContext, UNKNOWN_ACTOR } from "./context.js";
 import { resolveId } from "./query.js";
 
@@ -64,6 +65,15 @@ export type InboxOutput = z.infer<typeof InboxOutput>;
 export type InboxTaskRow = z.infer<typeof InboxTaskRow>;
 export type InboxMentionRow = z.infer<typeof InboxMentionRow>;
 
+const OPEN = TASK_STATUSES.filter((s) => !CLOSED.has(s));
+
+/** What a comment can be on, by id prefix. */
+const COMMENTED: Record<string, "task" | "note" | "decision"> = {
+  tsk: "task",
+  note: "note",
+  dec: "decision",
+};
+
 /** The actor named by a resolved id, or by name. A name is tried last: it may look like anything. */
 function whose(actors: readonly Actor[], ref: string, id: string | null): Actor {
   const lower = ref.toLowerCase();
@@ -86,6 +96,10 @@ function whose(actors: readonly Actor[], ref: string, id: string | null): Actor 
 /**
  * What waits for one actor: questions agents ask and blocked tasks, comments that call them,
  * tasks to approve, tasks assigned to them and tasks due this week. One read; nothing is stored.
+ *
+ * It reads open tasks and the notes changed in the time a mention lasts, not every record: the
+ * lists come out the same (`inboxOf` drops the rest), and the cost follows the open work, not
+ * the age of the project.
  */
 export async function inbox(ctx: ServiceContext, input: unknown = {}): Promise<InboxOutput> {
   const { for: ref } = parseInput(InboxInput, input);
@@ -97,8 +111,8 @@ export async function inbox(ctx: ServiceContext, input: unknown = {}): Promise<I
     const actors = await listAll(r, ctx, "actor");
     const me = ref ? whose(actors, ref, id) : actors.find((a) => a.id === ctx.actorId);
     if (!me) throw new SatiError("NOT_FOUND", "This actor is not known in this project.");
-    const tasks = await listAll(r, ctx, "task");
-    const notes = await listAll(r, ctx, "note");
+    const tasks = await listAll(r, ctx, "task", { status: OPEN });
+    const notes = await listAll(r, ctx, "note", { updatedSince: mentionsSince(now) });
     // An agent's sessions are one agent: an answer by an earlier session ends the mention.
     const handle = me.name.split("@")[0];
     const selves = new Set(
@@ -111,9 +125,15 @@ export async function inbox(ctx: ServiceContext, input: unknown = {}): Promise<I
     const lists = inboxOf({ you: me.id, tasks, notes, actors }, now, selves);
     const names = new Map(actors.map((a) => [a.id, a.displayName ?? a.name]));
     const name = (id: string) => names.get(id) ?? UNKNOWN_ACTOR;
-    const titles = new Map<string, string>(tasks.map((t) => [t.id, t.title]));
-    for (const n of notes) titles.set(n.id, n.title);
-    for (const d of await listAll(r, ctx, "decision")) titles.set(d.id, d.title);
+    // A mention may be on a closed task or an old note, which the lists above do not hold.
+    const titles = new Map<string, string>();
+    for (const on of new Set(lists.mentions.map((n) => n.links[0] ?? ""))) {
+      const entity = COMMENTED[parseId(on)?.prefix ?? ""];
+      const record = entity ? await r.get(entity, on) : undefined;
+      if (record && record.projectId === ctx.projectId && record.deletedAt === null) {
+        titles.set(on, record.title);
+      }
+    }
     const row = (t: Task): InboxTaskRow => {
       const asks = waitingOn(t, now.getTime());
       return {

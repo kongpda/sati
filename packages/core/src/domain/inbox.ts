@@ -35,10 +35,19 @@ export interface InboxActor {
 /** The tag of a note that is a comment on a task, note or decision. */
 export const COMMENT_TAG = "comment";
 
-const CLOSED = new Set(["done", "cancelled"]);
+/** Statuses of tasks that no list shows. A caller may leave these tasks out of `inboxOf`. */
+export const CLOSED: ReadonlySet<string> = new Set(["done", "cancelled"]);
 
 /** A mention older than this no longer asks for attention. */
 const MENTION_DAYS = 14;
+
+/**
+ * The time before which no comment counts. A caller may leave out notes not changed since: an
+ * older mention has left, and an older answer cannot come after a mention that still counts.
+ */
+export function mentionsSince(now: Date): string {
+  return new Date(now.getTime() - MENTION_DAYS * 86_400_000).toISOString();
+}
 
 /** The last day of this week (Sunday) in the reader's time zone, as YYYY-MM-DD. */
 export function weekEnd(now: Date): string {
@@ -78,7 +87,7 @@ export function mentionsOf<N extends InboxNote>(
   if (names.length === 0) return [];
   // Not inside a word or an email address: `x@ann.com` and `@annette` do not call Ann.
   const calls = new RegExp(`(?<![\\p{L}\\p{N}_.])@(?:${names.join("|")})(?![\\p{L}\\p{N}_])`, "iu");
-  const since = new Date(now.getTime() - MENTION_DAYS * 86_400_000).toISOString();
+  const since = mentionsSince(now);
   // The board's notes carry no `deletedAt`: its server sends live records only.
   const comments = notes.filter((n) => n.tags.includes(COMMENT_TAG) && n.deletedAt == null);
   // The latest comment of the actor's own on each record.

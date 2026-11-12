@@ -324,7 +324,7 @@ export function NewTask({
           Status
           <select name="status" defaultValue="todo">
             <option value="todo">{statusWord("todo")}</option>
-            <option value="backlog">Backlog</option>
+            <option value="backlog">{statusWord("backlog")}</option>
           </select>
         </label>
         <EffortSelect />

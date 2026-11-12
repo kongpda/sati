@@ -3,10 +3,12 @@ import type { Snapshot } from "../api.js";
 import { Changes } from "../changes.js";
 import { CODE_ONLY } from "../hooks/use-view.js";
 import { Memory } from "../memory.js";
-import { Activity, Decisions, Roadmap } from "../pages.js";
 import { Settings } from "../settings.js";
 import { BoardPage } from "./board-page.js";
 import { AgentsPage, FeaturesPage, MyWorkPage, NotesPage, type PageContext } from "./connected.js";
+import { Decisions } from "./knowledge.js";
+import { Activity } from "./log.js";
+import { Roadmap } from "./plan.js";
 
 /** The page the address names. */
 export function Routes({

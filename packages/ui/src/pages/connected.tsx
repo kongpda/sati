@@ -2,9 +2,12 @@ import type { QueryClient } from "@tanstack/react-query";
 import { api, type Deletable, type Snapshot } from "../api.js";
 import { approvedCommit } from "../hooks/use-moves.js";
 import { MyWork } from "../my-work.js";
-import { Agents, Features, Notes, TaskSheet } from "../pages.js";
 import { holderName } from "../people.js";
 import { statusWord } from "../words.js";
+import { Notes } from "./knowledge.js";
+import { Features } from "./plan.js";
+import { TaskSheet } from "./task-sheet.js";
+import { Agents } from "./team.js";
 
 /** What the pages need from the app to save, report and navigate. */
 export interface PageContext {

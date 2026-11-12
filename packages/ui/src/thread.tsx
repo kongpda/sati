@@ -263,3 +263,11 @@ export function Thread({
     </section>
   );
 }
+
+/** Adds and deletes comments; the board passes one to every page with a thread. */
+export interface ThreadActions {
+  onAdd: (on: string, body: string) => Promise<unknown>;
+  onDelete: (id: string, title: string) => void;
+  /** Whether a comment is typed but not sent on record `on`, so leaving can ask first. */
+  onDraft?: (typed: boolean, on: string) => void;
+}

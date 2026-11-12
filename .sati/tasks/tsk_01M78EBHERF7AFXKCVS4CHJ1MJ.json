@@ -1,0 +1,27 @@
+{
+  "body": "Review WP11 in docs/review-2026-11-12.md: 11.4, 11.5, 11.2, 11.3, 11.6, 11.1, 11.8, 11.10, 11.12, 11.11, each with bench numbers before and after.",
+  "branch": "wp11-perf",
+  "claim": {
+    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "heartbeatAt": "2026-11-12T17:54:51.556Z",
+    "leaseUntil": "2026-11-12T18:24:51.556Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-12T17:54:41.752Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M78EBHERF7AFXKCVS4CHJ1MJ",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T17:54:41.754Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T17:54:51.557Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T17:54:51.557Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T17:54:51.557Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T17:54:51.557Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "in_progress",
+  "title": "WP11: core and store performance (review 11.1-11.12)",
+  "updatedAt": "2026-11-12T17:54:51.560Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

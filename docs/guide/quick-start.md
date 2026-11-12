@@ -122,6 +122,9 @@ sati ui
 `sati ui` serves a board on `127.0.0.1` and opens a browser. Use `--no-open` to print the
 sign-in URL only. The URL holds a one-time token; do not share it.
 
+The board talks to a local HTTP API. Once signed in, `/api/openapi.json` on the same address
+lists its routes. It serves the board, not other programs: it can change in any release.
+
 For a person who does not use a terminal, write a launcher once:
 
 ```bash

@@ -91,6 +91,7 @@ describe("MCP server", () => {
       "inbox",
       "lock_acquire",
       "lock_release",
+      "milestone_upsert",
       "note_get",
       "note_upsert",
       "recall",
@@ -102,6 +103,7 @@ describe("MCP server", () => {
       "task_create",
       "task_get",
       "task_list",
+      "task_release",
       "task_update",
     ]);
     const resources = (await client.listResources()).resources.map((r) => r.uri);
@@ -139,7 +141,7 @@ describe("MCP server", () => {
     });
     expect(parent.isError).toBe(false);
     const kids = await call(client, "task_list", { parentId: parent.body.id, detail: "full" });
-    const byTitle = Object.fromEntries(kids.body.map((t: { title: string }) => [t.title, t]));
+    const byTitle = Object.fromEntries(kids.body.items.map((t: { title: string }) => [t.title, t]));
     expect(byTitle["Rename in code"].effort).toBe("light");
     expect(byTitle.Review.effort).toBeNull();
     expect(byTitle.Review.dependsOn).toEqual([byTitle["Rename in code"].id]);
@@ -209,7 +211,7 @@ describe("MCP server", () => {
       message: "reviewed, acknowledge apply only when updating a note.",
       hint: "Pass id to update an existing note, or leave them out to create one.",
     });
-    const plan = await call(client, "roadmap_upsert", { title: "M", expectedVersion: 1 });
+    const plan = await call(client, "milestone_upsert", { title: "M", expectedVersion: 1 });
     expect(plan.body.error).toMatchObject({
       code: "VALIDATION",
       message: "expectedVersion applies only when updating a milestone.",
@@ -304,13 +306,13 @@ describe("MCP server", () => {
 
     const ready = await call(client, "task_list", { ready: true });
     // Rows carry short handles, as the brief does; every tool takes them back (review 4.3).
-    expect(ready.body.map((t: { id: string }) => t.id)).toEqual([handle]);
+    expect(ready.body.items.map((t: { id: string }) => t.id)).toEqual([handle]);
     // Rows are short by default so a long list stays cheap; detail "full" returns whole tasks.
-    expect(ready.body[0]).toMatchObject({ title: "Add login", priority: "high", version: 1 });
-    expect(ready.body[0]).not.toHaveProperty("body");
-    expect(ready.body[0]).not.toHaveProperty("stamps");
+    expect(ready.body.items[0]).toMatchObject({ title: "Add login", priority: "high", version: 1 });
+    expect(ready.body.items[0]).not.toHaveProperty("body");
+    expect(ready.body.items[0]).not.toHaveProperty("stamps");
     const full = await call(client, "task_list", { ready: true, detail: "full" });
-    expect(full.body[0]).toHaveProperty("body");
+    expect(full.body.items[0]).toHaveProperty("body");
 
     const claimed = await call(client, "task_claim", { id: handle });
     expect(claimed.body).toMatchObject({ status: "in_progress", claim: { actorId: ctx.actorId } });
@@ -446,8 +448,74 @@ describe("MCP server", () => {
     expect(bad.text).toContain("VALIDATION");
   });
 
+  // Review 12.1: the tool is named for what it makes; the old name stays for installed rules.
+  it("milestone_upsert and roadmap_upsert create the same milestone", async () => {
+    const client = await connect();
+    const tools = (await client.listTools()).tools;
+    const schema = (name: string) => tools.find((t) => t.name === name)?.inputSchema;
+    expect(schema("roadmap_upsert")).toEqual(schema("milestone_upsert"));
+    const made = await call(client, "milestone_upsert", { title: "Beta" });
+    const old = await call(client, "roadmap_upsert", { title: "Beta" });
+    expect(old.isError).toBe(false);
+    expect(made.body).toMatchObject({ title: "Beta", status: "planned" });
+    expect(old.body).toMatchObject({ title: "Beta", status: "planned" });
+    expect(old.body.id).not.toBe(made.body.id);
+  });
+
+  // Review 12.2: an agent that stops without finishing can hand the task back, not just strand
+  // its claim and locks until the lease runs out.
+  it("task_release frees a claim and its locks", async () => {
+    const client = await connect();
+    const made = await call(client, "task_create", { title: "Half done" });
+    await call(client, "task_claim", { id: made.body.id });
+    const lock = await call(client, "lock_acquire", { paths: ["src/a.ts"], taskId: made.body.id });
+    expect(lock.isError).toBe(false);
+    const released = await call(client, "task_release", { id: made.body.id });
+    expect(released.body).toMatchObject({ status: "todo", claim: null });
+    const other = await connect({
+      ...ctx,
+      actorId: (
+        await ensureActor(ctx, {
+          name: "codex@main#2",
+          kind: "agent",
+          tool: "codex",
+          worktree: null,
+        })
+      ).id,
+    });
+    expect((await call(other, "lock_acquire", { paths: ["src/a.ts"] })).isError).toBe(false);
+    expect((await call(other, "task_claim", { id: made.body.id })).isError).toBe(false);
+  });
+
+  // Review 12.3: an agent that reads a cut list as the whole list draws wrong conclusions
+  // ("nothing else is ready"). The result says when rows were left out.
+  it("task_list says truncated when more rows exist than the limit", async () => {
+    for (const title of ["a", "b", "c"]) await createTask(ctx, { title });
+    const client = await connect();
+    const cut = await call(client, "task_list", { limit: 2 });
+    expect(cut.body.items).toHaveLength(2);
+    expect(cut.body.truncated).toBe(true);
+    const exact = await call(client, "task_list", { limit: 3 });
+    expect(exact.body).toMatchObject({ truncated: false });
+    const rest = await call(client, "task_list", { limit: 2, offset: 2 });
+    expect(rest.body).toMatchObject({ items: [expect.anything()], truncated: false });
+    const hits = await call(client, "search", { query: "a OR b OR c", match: "any", limit: 1 });
+    expect(hits.body.truncated).toBe(hits.body.items.length === 1);
+  });
+
+  // Review 12.4: every description is sent to every agent in every session, so its length is a
+  // token cost paid on each start. How-to detail lives in the workflow resource instead.
+  it("no tool description is over 350 characters and the total stays under 5,500", async () => {
+    const client = await connect();
+    const { tools } = await client.listTools();
+    const long = tools.filter((t) => (t.description ?? "").length > 350).map((t) => t.name);
+    expect(long).toEqual([]);
+    const total = tools.reduce((n, t) => n + (t.description ?? "").length, 0);
+    expect(total).toBeLessThan(5500);
+  });
+
   // PLAN Phase 7c: "plan our release for March 20" is one call, with the project's own templates.
-  it("plans from a template through roadmap_upsert, refusing fields a template ignores", async () => {
+  it("plans from a template through milestone_upsert, refusing fields a template ignores", async () => {
     const own = {
       name: "offsite",
       markdown: "# Offsite\n## Travel (-3d)\n- [ ] Book the bus\n",
@@ -457,12 +525,12 @@ describe("MCP server", () => {
     await createServer(ctx, undefined, "general", undefined, () => [own]).connect(serverSide);
     const client = new Client({ name: "test", version: "0" });
     await client.connect(clientSide);
-    const tool = (await client.listTools()).tools.find((t) => t.name === "roadmap_upsert");
+    const tool = (await client.listTools()).tools.find((t) => t.name === "milestone_upsert");
     expect(tool?.description).toContain(
       "meeting-notes, monthly-report, offsite, proposal, release",
     );
 
-    const plan = await call(client, "roadmap_upsert", {
+    const plan = await call(client, "milestone_upsert", {
       template: "release",
       title: "v2",
       targetDate: "2027-03-20",
@@ -475,9 +543,9 @@ describe("MCP server", () => {
       stage: "Scope",
       dueDate: "2027-02-20",
     });
-    const mine = await call(client, "roadmap_upsert", { template: "offsite" });
+    const mine = await call(client, "milestone_upsert", { template: "offsite" });
     expect(mine.body.tasks).toEqual([expect.objectContaining({ dueDate: null, stage: "Travel" })]);
-    const bad = await call(client, "roadmap_upsert", { template: "event", status: "active" });
+    const bad = await call(client, "milestone_upsert", { template: "event", status: "active" });
     expect(bad).toMatchObject({ isError: true, body: { error: { code: "VALIDATION" } } });
   });
 
@@ -502,7 +570,7 @@ describe("MCP server", () => {
       facts: ["Price: $2,400 for the day", "Valid until 1 December"],
     });
     const hits = await call(client, "search", { query: "december" });
-    expect(hits.body).toEqual([
+    expect(hits.body.items).toEqual([
       expect.objectContaining({ entity: "context", title: "venue/hall-b-quote.pdf" }),
     ]);
     const res = await client.callTool({
@@ -540,7 +608,7 @@ describe("MCP server", () => {
     const titles = async (args: Record<string, unknown>) => {
       const res = await call(client, "task_list", args);
       expect(res.isError).toBe(false);
-      return (res.body as { title: string }[]).map((t) => t.title).sort();
+      return (res.body.items as { title: string }[]).map((t) => t.title).sort();
     };
     const open = ["backlog", "todo", "in_progress", "review", "blocked"];
     expect(await titles({ milestoneId: launch.id, status: open })).toEqual([
@@ -571,7 +639,7 @@ describe("MCP server", () => {
       assigneeIds: [ctx.actorId],
     });
     const listed = await call(client, "task_list", { milestoneId: shortHandle(launch.id) });
-    expect((listed.body as { title: string }[]).map((t) => t.title).sort()).toEqual([
+    expect((listed.body.items as { title: string }[]).map((t) => t.title).sort()).toEqual([
       "Book hall",
       "Print signs",
     ]);
@@ -598,7 +666,9 @@ describe("MCP server", () => {
     expect(made.isError).toBe(false);
     await call(client, "task_create", { title: "Later", dueDate: "2026-12-20" });
     const due = await call(client, "task_list", { dueBy: "2026-12-01", assigneeId: ctx.actorId });
-    expect((due.body as { title: string }[]).map((t) => t.title)).toEqual(["Send invitations"]);
+    expect((due.body.items as { title: string }[]).map((t) => t.title)).toEqual([
+      "Send invitations",
+    ]);
     const ticked = await call(client, "task_update", {
       id: made.body.id,
       checklist: [
@@ -646,7 +716,8 @@ describe("MCP server", () => {
     expect(weak.body).toMatchObject({ title: "Login redirect loop after OAuth", version: 1 });
     expect(weak.body.similar).toHaveLength(1);
     const all = await call(client, "task_list", {});
-    expect(all.body).toHaveLength(2);
+    expect(all.body).toEqual({ items: expect.any(Array), truncated: false });
+    expect(all.body.items).toHaveLength(2);
   });
 
   it("returns a CONFLICT tool error naming the holder when another agent claims", async () => {
@@ -728,8 +799,8 @@ describe("MCP server", () => {
     });
     expect(dec.isError).toBe(false);
     const hits = await call(client, "search", { query: "cookies" });
-    expect(hits.body.map((h: { id: string }) => h.id)).toEqual([dec.body.id]);
-    expect(hits.body[0]).not.toHaveProperty("rank");
+    expect(hits.body.items.map((h: { id: string }) => h.id)).toEqual([dec.body.id]);
+    expect(hits.body.items[0]).not.toHaveProperty("rank");
   });
 
   it("serves the workflow, the roadmap and a feature with its tasks", async () => {

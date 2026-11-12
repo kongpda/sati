@@ -2354,3 +2354,14 @@ Item 9.7 is done (task `tsk_hnnbkx`). The rule is written above `SatiErrorCode` 
 - Moved to `INVALID_TRANSITION`: `updateProfile` and the person checks in `actor.ts`, an agent's take-over or forced release, "is not claimed", ask-for-input by a non-holder, editing another's comment, and the five `undo` refusals.
 - **Kept as `CONFLICT`, on purpose:** a claim or lock held by someone else, deleting a claimed task, and "changed since". The caller can retry those later, and the guide documents them as exit 4.
 - The quick-start exit-code table says the same. The test "every 'only a person' refusal has the same error code" checks six refusals.
+
+## 2026-11-13 — Review WP12: MCP surface
+
+Items 12.1, 12.2 and 12.4 to 12.7 are done, and the MCP half of 12.3 (task `tsk_01M78D1N0E754M1SYD44HQ2QQJ`).
+
+- **12.1:** `milestone_upsert` and `roadmap_upsert` share one schema and one handler; the old name's description is "Old name of milestone_upsert." Docs, PLAN, the skill, the workflow and `e2e/ui/parity.spec.ts` use the new name. History entries in `docs/progress.md` and `docs/review-followups.md` keep the old one.
+- **12.2:** `task_release` takes only `id`; core's `releaseTask` frees the claim and the locks tied to the task. All four rules blocks (MCP and CLI, code and general), `AGENTS.md` and PLAN gain "Stopping before done: handoff, then release". Installed blocks show as outdated until `init --upgrade`.
+- **12.3 (MCP):** `task_list` and `search` return `{ items, truncated }`. `task_list` reads one more row past a full page, with `offset`, so the 500 maximum works too. `search` has no offset: it asks for one more hit, and at its 200 maximum a full page counts as cut. **Open:** the CLI footer ("Showing the first N…") goes in after WP16 splits `commands/task.ts`.
+- **12.4:** descriptions total 5,058 characters with the two new tools (from 6,998 measured before), none over 350. The how-to detail that left them is in `docs/guide/agent-workflow*.md` (regenerated `workflow.ts`): truncated lists, card paths for parts, links and outside files, `approved` cards, whole-list fields with `expectedVersion`, release after a handoff.
+- **12.5, 12.6:** no change; decisions `dec_01M78DA1VFTXSFES9K1RVQQX7Q` and `dec_01M78DA3N4REENRD1XQ9VAQFY7`.
+- **12.7:** one paragraph under "Web board" in the quick start.

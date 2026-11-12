@@ -204,7 +204,8 @@ git-ignored files instead.
 | `recall` | `task_claim` | `lock_acquire` | `context_put` |
 | `changes` | `task_update` | `lock_release` | `note_get` |
 | `inbox` | `task_create` | | `note_upsert` |
-| | `task_complete` | | `roadmap_upsert` |
+| | `task_complete` | | `milestone_upsert` |
+| | `task_release` | | |
 
 Updates return only the id, version, status, claim and the fields the call set; `task_get` and
 `note_get` read the whole record. `task_list` rows use short handles, which every tool accepts.

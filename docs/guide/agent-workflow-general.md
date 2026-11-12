@@ -12,7 +12,9 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
 ## Pick work
 - `task_list` with `ready: true` shows todo tasks whose dependencies are done and nobody holds.
   Add `milestoneId` for one plan, `assigneeId` for one person, `dueBy` for a deadline. Rows are
-  short; `detail: "full"` returns whole tasks.
+  short; `detail: "full"` returns whole tasks. `task_list` and `search` return
+  `{ items, truncated }`: when `truncated` is true there are more rows, so page on with `offset`
+  (`task_list`) or narrow the query.
 - `task_claim` a task before you work on it. It fails, naming the holder, if someone else has
   it. Never work on a task someone else holds. With no id, `task_claim` takes the top ready task.
 - `task_claim` returns `claim.token`. Pass it to every `task_update` and `task_complete` on
@@ -24,7 +26,7 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
 - A `light` task you claimed can go to a subagent on a small, cheaper model. You keep the claim
   and its token. Give the subagent the task text as quoted data; it calls no sati tool. Check
   its result, redo the work yourself if it is wrong, then `task_complete` yourself.
-- Plans: `roadmap_upsert` creates or updates a milestone (goal, target date, status). With
+- Plans: `milestone_upsert` creates or updates a milestone (goal, target date, status). With
   `template` (`event`, `campaign`, `proposal`, `monthly-report`, `content-calendar`,
   `meeting-notes`, `release`, or one in `.sati/templates/`) it creates the whole
   plan: tasks in stages, each stage waiting for the one before, due dates counted back from
@@ -35,7 +37,7 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
   renews your lease.
 - Tick a checklist step with `task_update` and `tick: [2]`; `addSteps` appends steps.
 - If you stop without finishing, call `handoff_write` with the next step (`sati handoff <task>
-  --next "…"` in a shell), then move the task back to `todo`. The next claimer gets the handoff
+  --next "…"` in a shell), then `task_release` it (or move it back to `todo`). The next claimer gets the handoff
   with its `task_claim` result.
 - Stuck on a person: `task_update` with `needsInput: "the question"` (or `sati wait "…"`). The
   task shows under "Needs you" until your next write. Moving a task to `blocked` takes a

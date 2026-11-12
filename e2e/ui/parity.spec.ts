@@ -224,12 +224,12 @@ test("milestone: create with a goal and target date, then change its status", as
   await expect(edit).toHaveCount(0);
   expect(await problems()).toEqual([]);
 
-  const made = await call("roadmap_upsert", {
+  const made = await call("milestone_upsert", {
     title: named("mcp", "Launch event"),
     goal: "Guests in the room by 7 pm.",
     targetDate: "2026-12-04",
   });
-  await call("roadmap_upsert", { id: made.id, status: "active", expectedVersion: made.version });
+  await call("milestone_upsert", { id: made.id, status: "active", expectedVersion: made.version });
 
   const byUi = byTitle("milestone", named("ui", "Launch event"));
   expect(byUi).toMatchObject({ status: "active", targetDate: "2026-12-04" });

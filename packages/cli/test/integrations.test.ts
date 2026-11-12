@@ -41,9 +41,10 @@ describe("agent file planning", () => {
   it("keeps the block under 30 lines so it costs little context", () => {
     expect(RULES_BLOCK.trimEnd().split("\n").length).toBeLessThan(30);
     // Review 4.6 added words and kept both blocks within their 2026-11-10 size.
-    expect(RULES_BLOCK.length).toBeLessThanOrEqual(1345);
+    // Review 12.2 added the stop-before-done sentence (56 characters) to both blocks.
+    expect(RULES_BLOCK.length).toBeLessThanOrEqual(1345 + 56);
     // Phase 9d added one sentence on Office and PDF cards to the general block.
-    expect(GENERAL_RULES_BLOCK.length).toBeLessThanOrEqual(1305);
+    expect(GENERAL_RULES_BLOCK.length).toBeLessThanOrEqual(1305 + 56);
   });
 
   // Review 4.6: each gap made an agent's first try fail or skip a step.

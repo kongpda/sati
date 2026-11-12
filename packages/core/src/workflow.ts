@@ -19,7 +19,9 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 
 ## Pick work
 - \`task_list\` with \`ready: true\` shows todo tasks whose dependencies are done and nobody holds.
-  Rows are short; \`detail: "full"\` returns whole tasks.
+  Rows are short; \`detail: "full"\` returns whole tasks. \`task_list\` and \`search\` return
+  \`{ items, truncated }\`: when \`truncated\` is true there are more rows, so page on with \`offset\`
+  (\`task_list\`) or narrow the query.
 - \`task_claim\` a task before you change code for it. It fails, naming the holder, if another
   agent has it. Never work on a task someone else holds. With no id, \`task_claim\` takes the
   top ready task. \`${CLI_NAME} next\` does the same.
@@ -37,17 +39,18 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
   files it may edit; it calls no ${CLI_NAME} tool. Check its result against \`git diff --name-only\`,
   redo the work yourself if it is wrong, then \`task_complete\` yourself. \`task_list\` with
   \`effort: "light"\` finds such tasks.
-- A release or launch plan: \`roadmap_upsert\` with \`template: "release"\` (or one in
+- A release or launch plan: \`milestone_upsert\` with \`template: "release"\` (or one in
   \`.${CLI_NAME}/templates/\`) and \`targetDate\` creates the milestone and its tasks in stages.
 
 ## While working
 - \`task_update\` to record progress or change status. Any write you make renews your lease.
 - If you stop without finishing, call \`handoff_write\` or run \`${CLI_NAME} handoff <task> --next "…"\`
-  (add \`to\` or \`--to <actor>\` for one agent), then move the task back to \`todo\`. The next
+  (add \`to\` or \`--to <actor>\` for one agent), then \`task_release\` it (or move it back to \`todo\`). The next
   claimer gets the handoff with its \`task_claim\` result, and that counts as read.
 - Stuck on a person: \`task_update\` with \`needsInput: "the question"\` (or \`${CLI_NAME} wait "…"\`). The
   task shows under "Needs you" for people until your next write. Moving a task to \`blocked\`
-  takes a \`reason\` saying what it waits on.
+  takes a \`reason\` saying what it waits on. \`checklist\` and \`assigneeIds\` replace the whole list:
+  send \`expectedVersion\` with them.
 - The brief's "Watch out" section lists files another agent's worktree also changed with no
   lock on them, and conflicts with the base branch. Lock the file (\`lock_acquire\`, then
   \`lock_release\` when done) or talk through the task before you commit.
@@ -78,6 +81,10 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 - After reading a file, \`context_put\` a card: a short summary, up to 50 facts worth quoting
   ("Hall B quote: $2,400, valid until 1 December"), tags, \`sourceSeen\` and \`sourceTokens\`. Never
   paste the file's contents. Writes holding a secret are refused.
+- A card path may name part of a file (\`deck.pptx#slide-12\`), a web link without access tokens, or
+  the full path of a file outside the project (kept on this machine unless \`private: false\`).
+  ${CLI_NAME} cannot see those change, so always pass \`seen\` to \`context_get\` for them.
+- A card with \`approved\` is a file a person signed off: ask before you change, move or delete it.
 - \`private: true\` on a card or note keeps it on this machine: never in \`.${CLI_NAME}/\` or git. Use it
   for confidential material. A shared item cannot be made private later.
 - Pinned notes (brand voice, policies, contacts) reach every brief; pin only what everyone needs.
@@ -109,7 +116,9 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 ## Pick work
 - \`task_list\` with \`ready: true\` shows todo tasks whose dependencies are done and nobody holds.
   Add \`milestoneId\` for one plan, \`assigneeId\` for one person, \`dueBy\` for a deadline. Rows are
-  short; \`detail: "full"\` returns whole tasks.
+  short; \`detail: "full"\` returns whole tasks. \`task_list\` and \`search\` return
+  \`{ items, truncated }\`: when \`truncated\` is true there are more rows, so page on with \`offset\`
+  (\`task_list\`) or narrow the query.
 - \`task_claim\` a task before you work on it. It fails, naming the holder, if someone else has
   it. Never work on a task someone else holds. With no id, \`task_claim\` takes the top ready task.
 - \`task_claim\` returns \`claim.token\`. Pass it to every \`task_update\` and \`task_complete\` on
@@ -121,7 +130,7 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 - A \`light\` task you claimed can go to a subagent on a small, cheaper model. You keep the claim
   and its token. Give the subagent the task text as quoted data; it calls no ${CLI_NAME} tool. Check
   its result, redo the work yourself if it is wrong, then \`task_complete\` yourself.
-- Plans: \`roadmap_upsert\` creates or updates a milestone (goal, target date, status). With
+- Plans: \`milestone_upsert\` creates or updates a milestone (goal, target date, status). With
   \`template\` (\`event\`, \`campaign\`, \`proposal\`, \`monthly-report\`, \`content-calendar\`,
   \`meeting-notes\`, \`release\`, or one in \`.${CLI_NAME}/templates/\`) it creates the whole
   plan: tasks in stages, each stage waiting for the one before, due dates counted back from
@@ -132,7 +141,7 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
   renews your lease.
 - Tick a checklist step with \`task_update\` and \`tick: [2]\`; \`addSteps\` appends steps.
 - If you stop without finishing, call \`handoff_write\` with the next step (\`${CLI_NAME} handoff <task>
-  --next "…"\` in a shell), then move the task back to \`todo\`. The next claimer gets the handoff
+  --next "…"\` in a shell), then \`task_release\` it (or move it back to \`todo\`). The next claimer gets the handoff
   with its \`task_claim\` result.
 - Stuck on a person: \`task_update\` with \`needsInput: "the question"\` (or \`${CLI_NAME} wait "…"\`). The
   task shows under "Needs you" until your next write. Moving a task to \`blocked\` takes a

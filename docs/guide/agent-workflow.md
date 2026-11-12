@@ -11,7 +11,9 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
 
 ## Pick work
 - `task_list` with `ready: true` shows todo tasks whose dependencies are done and nobody holds.
-  Rows are short; `detail: "full"` returns whole tasks.
+  Rows are short; `detail: "full"` returns whole tasks. `task_list` and `search` return
+  `{ items, truncated }`: when `truncated` is true there are more rows, so page on with `offset`
+  (`task_list`) or narrow the query.
 - `task_claim` a task before you change code for it. It fails, naming the holder, if another
   agent has it. Never work on a task someone else holds. With no id, `task_claim` takes the
   top ready task. `sati next` does the same.
@@ -29,17 +31,18 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
   files it may edit; it calls no sati tool. Check its result against `git diff --name-only`,
   redo the work yourself if it is wrong, then `task_complete` yourself. `task_list` with
   `effort: "light"` finds such tasks.
-- A release or launch plan: `roadmap_upsert` with `template: "release"` (or one in
+- A release or launch plan: `milestone_upsert` with `template: "release"` (or one in
   `.sati/templates/`) and `targetDate` creates the milestone and its tasks in stages.
 
 ## While working
 - `task_update` to record progress or change status. Any write you make renews your lease.
 - If you stop without finishing, call `handoff_write` or run `sati handoff <task> --next "…"`
-  (add `to` or `--to <actor>` for one agent), then move the task back to `todo`. The next
+  (add `to` or `--to <actor>` for one agent), then `task_release` it (or move it back to `todo`). The next
   claimer gets the handoff with its `task_claim` result, and that counts as read.
 - Stuck on a person: `task_update` with `needsInput: "the question"` (or `sati wait "…"`). The
   task shows under "Needs you" for people until your next write. Moving a task to `blocked`
-  takes a `reason` saying what it waits on.
+  takes a `reason` saying what it waits on. `checklist` and `assigneeIds` replace the whole list:
+  send `expectedVersion` with them.
 - The brief's "Watch out" section lists files another agent's worktree also changed with no
   lock on them, and conflicts with the base branch. Lock the file (`lock_acquire`, then
   `lock_release` when done) or talk through the task before you commit.
@@ -70,6 +73,10 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
 - After reading a file, `context_put` a card: a short summary, up to 50 facts worth quoting
   ("Hall B quote: $2,400, valid until 1 December"), tags, `sourceSeen` and `sourceTokens`. Never
   paste the file's contents. Writes holding a secret are refused.
+- A card path may name part of a file (`deck.pptx#slide-12`), a web link without access tokens, or
+  the full path of a file outside the project (kept on this machine unless `private: false`).
+  sati cannot see those change, so always pass `seen` to `context_get` for them.
+- A card with `approved` is a file a person signed off: ask before you change, move or delete it.
 - `private: true` on a card or note keeps it on this machine: never in `.sati/` or git. Use it
   for confidential material. A shared item cannot be made private later.
 - Pinned notes (brand voice, policies, contacts) reach every brief; pin only what everyone needs.

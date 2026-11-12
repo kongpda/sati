@@ -27,15 +27,37 @@ export async function linkProblems(
   /** Every task, deleted ones too, when the caller has read them already. */
   all?: readonly Task[],
 ): Promise<string[]> {
-  all ??= await listAll(r, ctx, "task", { includeDeleted: true });
-  const tasks = new Map(all.map((t) => [t.id, t]));
+  if (!all && !ids) all = await listAll(r, ctx, "task", { includeDeleted: true });
+  const tasks = new Map((all ?? []).map((t) => [t.id, t]));
+  if (!all && ids) {
+    // Read only the checked tasks, their parents and every task their dependencies reach:
+    // a cycle through a checked task runs along its dependencies, so nothing else matters.
+    const seen = new Set<string>();
+    const queue = [...ids];
+    for (let id = queue.pop(); id !== undefined; id = queue.pop()) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const t = await r.get("task", id);
+      if (!t) continue;
+      tasks.set(id, t);
+      queue.push(...t.dependsOn);
+      if (t.parentId && ids.includes(id)) queue.push(t.parentId);
+    }
+  }
+  const known = new Map<string, boolean>();
   const live = async (entity: "feature" | "milestone", id: string) => {
-    const rec = await r.get(entity, id);
-    return rec !== undefined && rec.deletedAt === null;
+    const key = `${entity}:${id}`;
+    let ok = known.get(key);
+    if (ok === undefined) {
+      const rec = await r.get(entity, id);
+      ok = rec !== undefined && rec.deletedAt === null;
+      known.set(key, ok);
+    }
+    return ok;
   };
   const out: string[] = [];
   const cycles = new Set<string>();
-  const check = ids ? ids.flatMap((id) => tasks.get(id) ?? []) : all;
+  const check = ids ? ids.flatMap((id) => tasks.get(id) ?? []) : (all ?? []);
   for (const t of check.filter((x: Task) => x.deletedAt === null)) {
     const h = shortHandle(t.id);
     if (t.featureId && !(await live("feature", t.featureId))) {

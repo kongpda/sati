@@ -1057,7 +1057,7 @@ Added 2026-11-12 at the owner's request: the whole-project review found the mode
 - [ ] WP12 MCP surface
 - [ ] WP10 Core: concepts
 - [ ] WP4 Board: performance
-- [ ] WP11 Core and store: performance
+- [x] WP11 Core and store: performance
 - [ ] WP13 Docs
 - [ ] WP14 Housekeeping
 

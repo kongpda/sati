@@ -224,7 +224,7 @@ export async function checkChanges(ctx: ServiceContext, input: unknown): Promise
   return ctx.store.read(async (r) => {
     const findings: GuardFinding[] = [];
 
-    for (const card of await listAll(r, ctx, "context")) {
+    for (const card of await listAll(r, ctx, "context", { approved: true })) {
       const approved = card.approved;
       if (approved === undefined) continue;
       const touched = changes.filter(

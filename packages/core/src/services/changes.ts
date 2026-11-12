@@ -148,25 +148,37 @@ export async function readChanges(
   const { since } = opts;
   const now = nowIso(ctx);
   const today = isoDay(now);
-  const changed = { updatedSince: since, limit: 500 } as const;
-  const pages = async <E extends "task" | "feature" | "decision" | "note">(entity: E) => {
-    const out = [];
-    for (let offset = 0; ; offset += 500) {
-      const page = await r.list(entity, ctx.projectId, { ...changed, offset });
-      out.push(...page);
-      if (page.length < 500) return out;
-    }
-  };
-  const features = await listAll(r, ctx, "feature");
+  // Changed rows page by cursor, not offset: each page seeks instead of skipping (review 11.8).
+  const changed = { updatedSince: since } as const;
+  const tasks = await listAll(r, ctx, "task", changed);
+  const features = await listAll(r, ctx, "feature", changed);
+  const decisions = await listAll(r, ctx, "decision", changed);
+  const open = ["backlog", "todo", "in_progress", "review", "blocked"];
+  // Read in full: a cap of 500 dropped the rest without saying so and made the counts wrong.
+  const blockedTasks = await listAll(r, ctx, "task", { status: ["blocked"] });
+  const dueTasks = (await listAll(r, ctx, "task", { status: open, dueBy: today })).filter(
+    (t) => typeof t.dueDate === "string" && t.dueDate < today,
+  );
+  // Every milestone: the board offers them all as a filter. They are few.
   const milestones = (await listAll(r, ctx, "milestone")).sort(
     (a: Milestone, b: Milestone) => a.order - b.order || a.id.localeCompare(b.id),
   );
+  // Only the features the rows above name, for their milestone; not the whole table.
   const featureById = new Map(features.map((f) => [f.id, f]));
+  const named = [
+    ...[...tasks, ...blockedTasks, ...dueTasks].map((t) => t.featureId),
+    ...decisions.map((d) => d.featureIds[0] ?? null),
+  ];
+  for (const id of new Set(named)) {
+    if (id === null || featureById.has(id)) continue;
+    const f = await r.get("feature", id);
+    if (f && f.deletedAt === null) featureById.set(id, f);
+  }
   const milestoneOf = (t: Pick<Task, "milestoneId" | "featureId">) =>
     t.milestoneId ?? (t.featureId ? (featureById.get(t.featureId)?.milestoneId ?? null) : null);
 
   const items: ChangeItem[] = [];
-  for (const t of await pages("task")) {
+  for (const t of tasks) {
     const c = t.completion;
     if (t.status !== "done" || !c || c.completedAt < since) continue;
     items.push({
@@ -200,7 +212,7 @@ export async function readChanges(
       status: f.status,
     });
   }
-  for (const d of await pages("decision")) {
+  for (const d of decisions) {
     if (d.createdAt < since) continue;
     const featureId = d.featureIds[0] ?? null;
     items.push({
@@ -213,7 +225,7 @@ export async function readChanges(
       featureId,
     });
   }
-  const notes: Note[] = (await pages("note")).filter(
+  const notes: Note[] = (await listAll(r, ctx, "note", changed)).filter(
     (n) => !n.tags.includes(COMMENT_TAG) && !n.tags.includes(HANDOFF_TAG),
   );
   for (const n of notes) {
@@ -229,13 +241,6 @@ export async function readChanges(
       edited,
     });
   }
-
-  const open = ["backlog", "todo", "in_progress", "review", "blocked"];
-  // Read in full: a cap of 500 dropped the rest without saying so and made the counts wrong.
-  const blockedTasks = await listAll(r, ctx, "task", { status: ["blocked"] });
-  const dueTasks = (await listAll(r, ctx, "task", { status: open, dueBy: today })).filter(
-    (t) => typeof t.dueDate === "string" && t.dueDate < today,
-  );
 
   const scope = opts.milestoneId;
   const inScope = (milestoneId: string | null) => scope === undefined || milestoneId === scope;
@@ -531,9 +536,7 @@ export function formatChanges(c: Changes, format: ChangeFormat = "plain"): strin
 export async function featureList(ctx: ServiceContext): Promise<string> {
   const { project, features, milestones } = await ctx.store.read(async (r) => ({
     project: await r.getProject(),
-    features: (await listAll(r, ctx, "feature")).filter(
-      (f) => f.status === "shipped" || f.status === "deprecated",
-    ),
+    features: await listAll(r, ctx, "feature", { status: ["shipped", "deprecated"] }),
     milestones: (await listAll(r, ctx, "milestone")).sort(
       (a, b) => a.order - b.order || a.id.localeCompare(b.id),
     ),

@@ -330,6 +330,13 @@ export class SqliteStore implements StorageAdapter {
         );
       }
       if (q.path !== undefined) where.push(sql`json_extract(${t.data}, '$.path') = ${q.path}`);
+      if (q.approved) where.push(sql`json_extract(${t.data}, '$.approved') IS NOT NULL`);
+      if (q.pinned) where.push(sql`json_extract(${t.data}, '$.pinned') = 1`);
+      if (q.linkTo !== undefined) {
+        where.push(
+          sql`exists (select 1 from json_each(${t.data}, '$.links') where value = ${q.linkTo})`,
+        );
+      }
       if (q.dueBy) where.push(sql`json_extract(${t.data}, '$.dueDate') <= ${q.dueBy}`);
       if (q.effort) {
         where.push(sql`coalesce(json_extract(${t.data}, '$.effort'), 'standard') = ${q.effort}`);
@@ -405,6 +412,10 @@ export class SqliteStore implements StorageAdapter {
 
     search: async (projectId: string, query: string, opts: SearchOptions = {}) => {
       const entities = opts.entities?.length ? opts.entities : SEARCHABLE;
+      // Inside the query, so closed tasks do not use up the limit (review 11.2).
+      const openOnly = opts.openTasksOnly
+        ? ` AND (entity <> 'task' OR id IN (SELECT id FROM tasks WHERE status NOT IN ('done', 'cancelled')))`
+        : "";
       if (NO_SPACE_SCRIPT.test(query)) {
         // The index splits on spaces and marks: a Chinese sentence is one token there and a
         // Thai word is cut at its tone marks, so MATCH finds neither. These queries scan the
@@ -422,7 +433,7 @@ export class SqliteStore implements StorageAdapter {
             `SELECT entity, id, title, substr(body, 1, 120) AS snippet, -(${count}) AS rank
              FROM search_fts
              WHERE project_id = ? AND entity IN (${entities.map(() => "?").join(",")})
-               AND (${count}) >= ?
+               AND (${count}) >= ?${openOnly}
              ORDER BY rank, rowid DESC LIMIT ?`,
           )
           .all(
@@ -444,7 +455,7 @@ export class SqliteStore implements StorageAdapter {
              bm25(search_fts, 0, 0, 0, 5.0, 1.0) AS rank
            FROM search_fts
            WHERE search_fts MATCH ? AND project_id = ?
-             AND entity IN (${entities.map(() => "?").join(",")})
+             AND entity IN (${entities.map(() => "?").join(",")})${openOnly}
            ORDER BY rank LIMIT ?`,
         )
         .all(match, projectId, ...entities, clampLimit(opts.limit));

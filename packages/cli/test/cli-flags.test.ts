@@ -9,10 +9,20 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createIdFactory, initProject, SEARCHABLE, systemClock, TASK_STATUSES } from "@sati/core";
+import {
+  createIdFactory,
+  initProject,
+  recordDecision,
+  SEARCHABLE,
+  type StorageAdapter,
+  type StorageReader,
+  systemClock,
+  TASK_STATUSES,
+} from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
 import { describe, expect, it } from "vitest";
 import pkg from "../package.json" with { type: "json" };
+import { rangeDecisions } from "../src/commands/review.js";
 import { pruneProjects, readProjects, rememberProject } from "../src/projects.js";
 import { readStdin } from "../src/runtime/input.js";
 import { createUiApp, sessionToken } from "../src/ui/server.js";
@@ -346,6 +356,47 @@ describe("review", () => {
     const ids = r.data.decisions.map((d) => d.id);
     expect(ids).toContain(fresh.id);
     expect(ids).not.toContain(old.id);
+  });
+
+  // Review 11.12: review read every decision the project ever made to find the few in range.
+  it("review reads only decisions inside the range", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "sati-review-"));
+    const store = await SqliteStore.open(join(dir, "sati.db"));
+    let now = new Date("2026-01-01T00:00:00.000Z");
+    const clock = { now: () => now };
+    const ids = createIdFactory();
+    const { project, actor } = await initProject(
+      { store, clock, ids },
+      { slug: "review", name: "Review" },
+      { name: "tester", kind: "human" },
+    );
+    const base = { clock, ids, projectId: project.id, actorId: actor.id, branch: "main" };
+    const ctx = { ...base, store };
+    const old = await recordDecision(ctx, { title: "Old", decision: "x" });
+    now = new Date("2026-06-01T00:00:00.000Z");
+    const fresh = await recordDecision(ctx, { title: "Fresh", decision: "y" });
+    const read: string[] = [];
+    const wrap = <R extends StorageReader>(r: R): R => ({
+      ...r,
+      list: async (...args: Parameters<StorageReader["list"]>) => {
+        const rows = await r.list(...args);
+        read.push(...rows.map((x) => x.id));
+        return rows;
+      },
+    });
+    const counting: StorageAdapter = {
+      read: (fn) => store.read((r) => fn(wrap(r))),
+      write: (fn) => store.write(fn),
+      close: () => store.close(),
+    };
+    const found = await rangeDecisions(
+      { ...base, store: counting },
+      "2026-05-01T00:00:00.000Z",
+      new Set(),
+    );
+    expect(found.map((d) => d.id)).toEqual([fresh.id]);
+    expect(read).not.toContain(old.id);
+    await store.close();
   });
 });
 

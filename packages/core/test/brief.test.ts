@@ -6,6 +6,7 @@ import {
   claimTask,
   completeTask,
   createFeature,
+  createNote,
   createTask,
   ensureActor,
   estimateTokens,
@@ -13,9 +14,31 @@ import {
   recordDecision,
   shortHandle,
 } from "../src/index.js";
+import { countingReads } from "./support/count-reads.js";
 import { setup } from "./support/setup.js";
 
 describe("buildBrief", () => {
+  // Every session starts with a brief. It read the card table three times and every note ever
+  // written; on a big project that was most of its cost (review 11.1).
+  it("the brief reads the card table once", async () => {
+    const { ctx, clock } = await setup();
+    const t = await createTask(ctx, { title: "Mine", labels: ["auth"] });
+    await claimTask(ctx, t.id);
+    const old = await createNote(ctx, { title: "Old meeting" });
+    clock.advance(30 * 24 * 60 * 60 * 1000);
+    await claimTask(ctx, t.id);
+    const cards = [
+      await putContext(ctx, { path: "src/auth", summary: "Login", tags: ["auth"] }),
+      await putContext(ctx, { path: "src/billing", summary: "Payments" }),
+    ];
+    const counting = countingReads(ctx);
+    const brief = await buildBrief(counting.ctx);
+    expect(brief.markdown).toContain("src/auth");
+    expect(counting.listed("context").sort()).toEqual(cards.map((c) => c.id).sort());
+    // A month-old note that is not pinned, not a handoff and not on my task is not read.
+    expect(counting.listed("note")).not.toContain(old.id);
+  });
+
   // An agent reads the rules once and the brief every session. The last line tells it which form
   // of each step works here, so an agent with no MCP client does not call tools it does not have.
   it("ends with the form of the tools in use, and only when the caller names it", async () => {

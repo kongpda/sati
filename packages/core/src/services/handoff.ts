@@ -64,7 +64,7 @@ export async function writeHandoff(ctx: ServiceContext, input: unknown) {
   return ctx.store.write(async (w) => {
     const task = await mustGet(w, ctx, "task", data.taskId);
     const addressee = data.to ? await mustGet(w, ctx, "actor", data.to) : undefined;
-    const existing = (await listAll(w, ctx, "note", { handoff: "any" })).find(
+    const existing = (await listAll(w, ctx, "note", { handoff: "any", linkTo: task.id })).find(
       (n) => n.tags.includes(HANDOFF_TAG) && n.links.includes(task.id),
     );
     const to = addressee ? { handoffTo: addressee.id, handoffToName: addressee.name } : {};

@@ -111,6 +111,10 @@ export async function listAll<E extends StoredEntity>(
     | "anyLabel"
     | "dueBy"
     | "updatedSince"
+    | "milestoneId"
+    | "approved"
+    | "linkTo"
+    | "pinned"
   > = {},
 ): Promise<EntityMap[E][]> {
   const out: EntityMap[E][] = [];

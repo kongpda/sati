@@ -152,7 +152,7 @@ export async function recall(ctx: ServiceContext, input: unknown): Promise<Recal
   const words = subjectWords(question);
   const query = words.join(" ");
   const found = await ctx.store.read(async (r) => {
-    const opts = { entities: KINDS, limit: CANDIDATES };
+    const opts = { entities: KINDS, limit: CANDIDATES, openTasksOnly: true };
     // Records holding every subject word first, then those holding any, best first in each.
     const hits: SearchHit[] = [...(await r.search(ctx.projectId, query, opts))];
     const all = new Set(hits.map((h) => h.id));

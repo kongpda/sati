@@ -1,6 +1,7 @@
 import micromatch from "micromatch";
 import { z } from "zod";
 import { shortHandle } from "../domain/ids.js";
+import { mentionsSince } from "../domain/inbox.js";
 import { pathsOverlap } from "../domain/locks.js";
 import { isGuardedFeature } from "../domain/rules.js";
 import {
@@ -15,11 +16,11 @@ import type { StorageReader } from "../ports/storage.js";
 import { type ChangeItem, lastSession, readChanges } from "./changes.js";
 import { COMMENT_TAG, isThreadNote, mentionsOf } from "./comment.js";
 import { actorName, listAll, nowIso, parseInput, type ServiceContext } from "./context.js";
-import { approvalStates, getContext } from "./context-cache.js";
+import { approvalStates, contextViews } from "./context-cache.js";
 import { handoffFor, handoffNext, unreadHandoff } from "./handoff.js";
 import { warningLines, worktreeWarnings } from "./overlap.js";
 import { readSettings } from "./project.js";
-import { releaseExpiredClaims, reviewDrift } from "./task.js";
+import { reviewDrift, sweepExpiredClaims } from "./task.js";
 import { clip, inert } from "./text.js";
 
 /** PLAN: the brief stays under 1,500 tokens so it is cheap to inject at every session start. */
@@ -117,14 +118,16 @@ export async function buildBrief(
   // Before releasing leases below: that release is a write of ours, not the end of a session.
   const session = short ? null : await ctx.store.read((r) => lastSession(r, ctx));
   // "Every brief clears expired leases" (PLAN), so abandoned tasks show up as ready again.
-  await releaseExpiredClaims(ctx);
+  // The active tasks it read, when it released none; otherwise they are read again below.
+  const { active: swept } = await sweepExpiredClaims(ctx);
 
   const data = await ctx.store.read(async (r) => {
     const project = await r.getProject();
     const actor = await r.get("actor", ctx.actorId);
     // Every list here is read in full: a cap of 500 cut lists without saying so, and past 500
     // active tasks your own claimed task could drop out of your brief.
-    const active = await listAll(r, ctx, "task", { status: ["in_progress", "review", "blocked"] });
+    const active =
+      swept ?? (await listAll(r, ctx, "task", { status: ["in_progress", "review", "blocked"] }));
     const mine = active.filter((t) => t.claim?.actorId === ctx.actorId && t.claim.leaseUntil > now);
     const ready = await r.readyTasks(ctx.projectId, now, short ? 3 : 5);
     // A claim of mine that an import replaced with someone else's in the last day (two machines
@@ -161,18 +164,21 @@ export async function buildBrief(
     for (const l of locks) held.push({ ...l, holder: await actorName(r, l.actorId) });
     // A short brief reads notes only for the latest comment on your tasks, so a resumed agent
     // still hears "use the blue logo"; with no claimed task there is nothing to read them for.
-    const notes = short && mine.length === 0 ? [] : await listAll(r, ctx, "note");
-    // Unread handoffs only: an acknowledged one has been delivered and drops out of the brief.
-    // With no notes read (a short brief and no claimed task), the index finds handoffs for me.
-    const unread =
+    // Notes are read by filter, not in full (review 11.1): the threads of my tasks, the window
+    // a mention can be in, unread handoffs and pinned notes.
+    const threads: Note[] = [];
+    for (const t of mine) threads.push(...(await listAll(r, ctx, "note", { linkTo: t.id })));
+    const notes =
       short && mine.length === 0
-        ? await listAll(r, ctx, "note", { handoff: "unread" })
-        : notes.filter(unreadHandoff);
+        ? []
+        : await listAll(r, ctx, "note", { updatedSince: mentionsSince(ctx.clock.now()) });
+    // Unread handoffs only: an acknowledged one has been delivered and drops out of the brief.
+    const unread = (await listAll(r, ctx, "note", { handoff: "unread" })).filter(unreadHandoff);
     const handoffs = new Map<string, string>();
     // The newest comment by someone else on each record: a person's "use the blue logo" reaches
     // the agent. The caller's own replies are left out; they already know what they said.
     const comments = new Map<string, Note>();
-    for (const note of notes) {
+    for (const note of threads) {
       if (!note.tags.includes(COMMENT_TAG) || note.createdBy === ctx.actorId) continue;
       for (const link of note.links) {
         const seen = comments.get(link);
@@ -213,14 +219,15 @@ export async function buildBrief(
     }
     // Knowledge: pinned notes (brand voice, policies, contacts), newest first, and the cards
     // tied to my tasks, through their feature's paths or a label shared with the card's tags.
-    const pinned = (short ? [] : notes)
+    const pinned = (short ? [] : await listAll(r, ctx, "note", { pinned: true }))
       .filter((n) => n.pinned && !isThreadNote(n))
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .slice(0, PINNED_NOTES);
-    const cards = short || mine.length === 0 ? [] : await listAll(r, ctx, "context");
+    // Read once for the linked cards, the approval warnings and the stale list (review 11.1).
+    const cards = short ? [] : await listAll(r, ctx, "context");
     const owned = [...features.values()].flatMap((f) => f.paths);
     const labels = new Set(mine.flatMap((t) => t.labels));
-    const linkedCards = cards
+    const linkedCards = (mine.length === 0 ? [] : cards)
       .filter(
         (c) =>
           (!isExternalKey(c.path) && owned.some((p) => pathsOverlap(p, c.path))) ||
@@ -267,6 +274,7 @@ export async function buildBrief(
       othersTotal,
       pinned,
       linkedCards,
+      cards,
       mine,
       lost,
       ready,
@@ -296,7 +304,7 @@ export async function buildBrief(
   }
   // The guard blocks a commit that changes an approved file; this tells before the work is done,
   // and tells the person when a file changed with no commit at all (a shared folder).
-  for (const { card, state } of short ? [] : await approvalStates(ctx)) {
+  for (const { card, state } of short ? [] : await approvalStates(ctx, data.cards)) {
     if (state === "changed") {
       warnings.push(
         `${card.path} changed since a person approved it. A person looks, then approves it again with \`${CLI_NAME} card approve ${card.path}\`.`,
@@ -337,7 +345,7 @@ export async function buildBrief(
         );
 
   // Read after the DB snapshot: staleness needs the git index, which is outside the store.
-  const stale = short ? [] : (await getContext(ctx)).filter((e) => e.stale === true);
+  const stale = short ? [] : (await contextViews(ctx, data.cards)).filter((e) => e.stale === true);
 
   const name = data.project?.name ?? "this project";
   // Names are up to 200 characters; clipped, the header stays a fixed size under any cap.

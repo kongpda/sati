@@ -28,6 +28,7 @@ interface State {
 type AnyRecord = EntityMap[StoredEntity] & Record<string, unknown>;
 
 /** Like SQL's DEFAULT_LIMIT and MAX_LIMIT: 50 rows unless asked, never more than 500. */
+const CLOSED = new Set(["done", "cancelled"]);
 const clampLimit = (n: number | undefined) => Math.min(Math.max(n ?? 50, 1), 500);
 
 /** The SQL store's `rank` column: priority for tasks, `order` for milestones, 0 otherwise. */
@@ -160,6 +161,12 @@ export class MemoryStore implements StorageAdapter {
         }
         if (q.taskId) rows = rows.filter((r) => r.taskId === q.taskId);
         if (q.path !== undefined) rows = rows.filter((r) => r.path === q.path);
+        if (q.approved) rows = rows.filter((r) => r.approved !== undefined);
+        if (q.pinned) rows = rows.filter((r) => r.pinned === true);
+        if (q.linkTo !== undefined) {
+          const id = q.linkTo;
+          rows = rows.filter((r) => ((r.links as string[] | undefined) ?? []).includes(id));
+        }
         const order = byRankThenId(e);
         rows.sort(q.newestFirst ? (a, b) => order(b, a) : order);
         if (q.after !== undefined) {
@@ -206,6 +213,7 @@ export class MemoryStore implements StorageAdapter {
         const test = opts.match === "any" ? "some" : "every";
         for (const entity of opts.entities ?? SEARCHABLE) {
           for (const r of live(entity, projectId)) {
+            if (opts.openTasksOnly && entity === "task" && CLOSED.has(String(r.status))) continue;
             const text = JSON.stringify(r).toLowerCase();
             if (terms.length && terms[test]((t) => text.includes(t))) {
               const title = String(entity === "context" ? r.path : r.title);

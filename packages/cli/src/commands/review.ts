@@ -2,7 +2,6 @@ import {
   CLI_NAME,
   type Decision,
   listAll,
-  listRecords,
   reviewDrift,
   SatiError,
   type ServiceContext,
@@ -24,21 +23,26 @@ const SNAPSHOT = ".sati/";
  * Decisions that belong to the range: made since it started, or about a feature it touches.
  * Newest first, at most 50, so an old project does not list its whole history.
  */
-async function rangeDecisions(
+export async function rangeDecisions(
   ctx: ServiceContext,
   since: string | undefined,
   features: ReadonlySet<string>,
 ): Promise<Decision[]> {
+  const inRange = (d: Decision) =>
+    (since !== undefined && d.createdAt >= since) || d.featureIds.some((id) => features.has(id));
+  // With no feature touched only recent decisions count, and the store filters those. A
+  // decision's `updatedAt` is never before its `createdAt`, so the filter drops none of them.
+  if (features.size === 0 && since === undefined) return [];
+  const query = features.size === 0 ? { updatedSince: since } : {};
   const out: Decision[] = [];
-  for (let offset = 0; ; offset += 500) {
-    const page = await listRecords(ctx, "decision", { limit: 500, offset });
-    for (const d of page) {
-      const recent = since !== undefined && d.createdAt >= since;
-      if (recent || d.featureIds.some((id) => features.has(id))) out.push(d);
-    }
-    // Pages run oldest first.
-    if (page.length < 500) return out.reverse().slice(0, 50);
+  for (let offset = 0; out.length < 50; offset += 500) {
+    const page = await ctx.store.read((r) =>
+      r.list("decision", ctx.projectId, { ...query, newestFirst: true, limit: 500, offset }),
+    );
+    out.push(...page.filter(inRange));
+    if (page.length < 500) break;
   }
+  return out.slice(0, 50);
 }
 
 export default defineCommand({

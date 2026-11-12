@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { shortHandle } from "../domain/ids.js";
-import { findDependencyCycle, PRIORITY_RANK } from "../domain/rules.js";
+import { findDependencyCycle } from "../domain/rules.js";
 import {
   BodyText,
   type Claim,
@@ -522,7 +522,7 @@ async function deliverHandoff(
   taskId: string,
 ): Promise<DeliveredHandoff | undefined> {
   // Only unread handoffs: every claim runs this inside the write lock, so it must not read all notes.
-  const notes = await listAll(w, ctx, "note", { handoff: "unread" });
+  const notes = await listAll(w, ctx, "note", { handoff: "unread", linkTo: taskId });
   const me = await w.get("actor", ctx.actorId);
   const note = notes.find(
     (n: Note) => unreadHandoff(n) && n.links.includes(taskId) && handoffFor(n, me),
@@ -636,11 +636,8 @@ export async function claimNext(
 ): Promise<{ task: Task & { handoff?: DeliveredHandoff }; acceptance: string[] }> {
   const { leaseMinutes } = parseInput(ClaimTaskInput, input);
   return ctx.store.write(async (w) => {
-    const ready = await w.readyTasks(ctx.projectId, nowIso(ctx), 500);
-    ready.sort(
-      (a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || (a.id < b.id ? -1 : 1),
-    );
-    const top = ready[0];
+    // The store orders ready tasks by priority rank, then id, so the first row is the one.
+    const [top] = await w.readyTasks(ctx.projectId, nowIso(ctx), 1);
     if (!top) {
       throw new SatiError("NOT_FOUND", "No ready task.", {
         hint: `Create one with \`${CLI_NAME} task create\`, or see \`${CLI_NAME} task list\`.`,
@@ -731,6 +728,16 @@ const LOCK_SWEEP_MAX = 200;
  * only when something is released. Returns the released tasks.
  */
 export async function releaseExpiredClaims(ctx: ServiceContext): Promise<Task[]> {
+  return (await sweepExpiredClaims(ctx)).released;
+}
+
+/**
+ * `releaseExpiredClaims`, and the active tasks it read when it released none of them: those
+ * are still current, so the brief does not read the table again (review 11.1).
+ */
+export async function sweepExpiredClaims(
+  ctx: ServiceContext,
+): Promise<{ released: Task[]; active: Task[] | undefined }> {
   const now = nowIso(ctx);
   const expired = (t: Task) => t.claim !== null && t.claim.leaseUntil <= now;
   const [active, locks] = await ctx.store.read(async (r) => [
@@ -742,8 +749,8 @@ export async function releaseExpiredClaims(ctx: ServiceContext): Promise<Task[]>
   // Expired locks with no task, or that outlived their claim, would otherwise wait for the next
   // acquire or `doctor`. Bounded, so one sweep stays one short transaction.
   const staleLocks = locks.filter((l) => l.leaseUntil <= now).slice(0, LOCK_SWEEP_MAX);
-  if (candidates.length === 0 && staleLocks.length === 0) return [];
-  return ctx.store.write(async (w) => {
+  if (candidates.length === 0 && staleLocks.length === 0) return { released: [], active };
+  const released = await ctx.store.write(async (w) => {
     for (const { id } of staleLocks) {
       const lock = await w.get("lock", id);
       if (!lock || lock.deletedAt !== null || lock.leaseUntil > now) continue;
@@ -767,6 +774,8 @@ export async function releaseExpiredClaims(ctx: ServiceContext): Promise<Task[]>
     }
     return released;
   });
+  // A lock sweep alone leaves the tasks as they were read.
+  return { released, active: released.length === 0 ? active : undefined };
 }
 
 /**
@@ -947,9 +956,7 @@ export async function listTasks(ctx: ServiceContext, input: unknown = {}): Promi
     const inMilestone = milestoneId
       ? {
           milestoneId,
-          featureIds: (await listAll(r, ctx, "feature"))
-            .filter((f) => f.milestoneId === milestoneId)
-            .map((f) => f.id),
+          featureIds: (await listAll(r, ctx, "feature", { milestoneId })).map((f) => f.id),
         }
       : undefined;
     if (!ready) return r.list("task", ctx.projectId, { ...query, inMilestone });

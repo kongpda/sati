@@ -24,6 +24,12 @@ export interface ListQuery {
   taskId?: string | undefined;
   /** Context entries for exactly this path. */
   path?: string | undefined;
+  /** Context entries a person approved (`approved` is set). */
+  approved?: boolean | undefined;
+  /** Notes whose `links` hold this id. */
+  linkTo?: string | undefined;
+  /** Pinned notes. */
+  pinned?: boolean | undefined;
   includeDeleted?: boolean | undefined;
   /** Reverse the usual order (rank, then id); with equal ranks this means newest first. */
   newestFirst?: boolean | undefined;
@@ -55,6 +61,8 @@ export interface SearchOptions {
   limit?: number | undefined;
   /** `all` = every term must match (default); `any` = at least one term. */
   match?: "all" | "any" | undefined;
+  /** Leaves out done and cancelled tasks before the limit, so closed work takes no hit slot. */
+  openTasksOnly?: boolean | undefined;
 }
 
 export interface ActivityQuery {

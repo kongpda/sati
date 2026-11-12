@@ -10,6 +10,7 @@ import {
   snapshotRecords,
   updateTask,
 } from "../src/index.js";
+import { countingReads } from "./support/count-reads.js";
 import { setup } from "./support/setup.js";
 
 const LATER = "2026-11-04T09:00:00.000Z";
@@ -89,6 +90,26 @@ describe("importRecords", () => {
     expect((await doctorChecks(ctx)).find((c) => c.name === "links")?.detail).not.toContain(
       "cycle",
     );
+  });
+
+  // Review 11.10: a pull that brings one task must not read every task in a large project.
+  // The cycle check still sees the whole dependency chain the task waits on.
+  it("importing one task does not read every task", async () => {
+    const { ctx } = await setup();
+    const bystander = await createTask(ctx, { title: "Unrelated" });
+    const a = await createTask(ctx, { title: "A" });
+    const b = await createTask(ctx, { title: "B", dependsOn: [a.id] });
+    const c = await createTask(ctx, { title: "C", dependsOn: [b.id] });
+    const counted = countingReads(ctx);
+    const r = await importRecords(counted.ctx, [
+      {
+        entity: "task",
+        source: "tasks/a.json",
+        record: { ...a, dependsOn: [c.id], version: 2, updatedAt: LATER },
+      },
+    ]);
+    expect(counted.listed("task")).not.toContain(bystander.id);
+    expect(r.problems).toEqual([expect.stringMatching(/^Dependency cycle: .* -> .* -> .* -> /u)]);
   });
 
   // PLAN: import upserts records whose version or updatedAt is newer. A stale snapshot file

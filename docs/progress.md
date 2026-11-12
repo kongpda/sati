@@ -2387,3 +2387,16 @@ Items 15.1 to 15.4 are done (task `tsk_01M78CRMVQCCPECXPW417CEMH1`). Moves only:
 - **15.3:** tokens for space, type, radius, nav and sheet width, and target size are in `styles/tokens.css`. Only values equal to a token were replaced; the resolved CSS equals the old CSS (checked by script), so no computed value moved. `--sheet-width` is 440px, today's value, not the review's `clamp(360px, 32vw, 440px)`, which would narrow the panel between 900 and 1125 px. `--rail-width` and `--column-min` are defined but unused: nothing in the CSS has those sizes today. Off-scale values (6px, 10px, 18px, 260px columns) were left alone.
 - **15.4:** `styles.css` is now eleven `@import`s of `styles/*.css`, in the old rule order. The review names six files, but the old file interleaves areas, and reordering could change which rule wins. Extra names: `task-sheet-planning`, `my-work`, `thread`, `changes-memory`, `crash`.
 - One full run had two e2e failures (an axe test that stalled for 6 minutes, and a Memory answer wait) while another agent was using the machine. Both passed on rerun.
+
+## 2026-11-13 — Review WP11: core and store performance
+
+Items 11.1 to 11.6, 11.8 and 11.10 to 11.12 are done (task `tsk_01M78EBHERF7AFXKCVS4CHJ1MJ`). 11.7 and 11.9 were already closed in the review. Each test checks which records were read (`packages/core/test/support/count-reads.ts`), not how long a call took, and each was checked to fail without its change.
+
+- **Port:** `ListQuery` gains `approved`, `linkTo` and `pinned`, and `SearchOptions` gains `openTasksOnly`. The SQLite store filters with `json_extract` and `json_each`, and the memory store does the same. Each caller keeps its in-memory check, so an older `sati serve` that ignores a field still gives the right answer.
+- **11.1:** `sweepExpiredClaims` returns the active tasks it read when it released none. The brief reads cards once and passes them to the approval and stale checks. Notes are read by filter: the threads of my tasks, the mention window, unread handoffs and pinned notes.
+- **11.3:** the test is in `context-cache.test.ts`, not `guard.test.ts`, because the helpers for approving a card live there.
+- **11.10:** `linkProblems` memoises feature and milestone lookups. For an import it reads only the imported tasks, their parents and the tasks their dependencies reach, so the cycle check still sees the whole chain.
+- **11.11:** no change; decision `dec_01M78EZA4N3WSFPC3VE0WVZ4BA`.
+- **11.12:** `rangeDecisions` reads newest first and stops at 50 matches. With no feature touched it asks the store only for decisions updated since the range started.
+- **No migration 0008** and no `note_links` table: the scans are fast enough (decision recorded).
+- **Bench** (three new lines without a PLAN budget, printed as INFO; load average about 5): guard with 2,000 cards p95 4.6 ms before, 2.2 ms after; brief with 50,000 records p95 207.4 ms, 198.9 ms; import of 5,000 records 171.7 ms, 94.0 ms. Every budget passed. `recall` p95 went from 33.4 ms to 42.2 ms, still under its 50 ms budget. The open-task subquery in the search may cost a little; watch it on the next bench run.

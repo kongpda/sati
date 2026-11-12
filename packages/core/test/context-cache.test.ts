@@ -12,6 +12,7 @@ import {
   type ServiceContext,
   shortHandle,
 } from "../src/index.js";
+import { countingReads } from "./support/count-reads.js";
 import { setup } from "./support/setup.js";
 
 /** A git index the test edits in place, standing in for `git ls-files -s`. */
@@ -187,6 +188,26 @@ describe("context cache", () => {
         code: "VALIDATION",
       });
     }
+  });
+
+  // The guard runs on every commit. With thousands of cards, reading each one to find the few a
+  // person signed off made every commit pay for the whole card table.
+  it("the guard loads only approved cards", async () => {
+    const { ctx: agent } = await withRepo([
+      { path: "deck.pptx", blob: "1" },
+      { path: "notes.md", blob: "2" },
+    ]);
+    const ctx = await asPerson(agent);
+    await putContext(ctx, { path: "notes.md", summary: "Meeting notes" });
+    await putContext(ctx, { path: "deck.pptx", summary: "Launch deck" });
+    const deck = await approveCard(ctx, { path: "deck.pptx", hash: "a".repeat(64) });
+    const counting = countingReads(ctx);
+    const result = await checkChanges(counting.ctx, {
+      changes: [{ path: "deck.pptx" }],
+      approvedOnly: true,
+    });
+    expect(result.verdict).toBe("blocked");
+    expect(counting.listed("context")).toEqual([deck.id]);
   });
 
   // PLAN Phase 9: a general project has no features, so nothing protected a signed-off file.

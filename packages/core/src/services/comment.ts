@@ -98,7 +98,7 @@ export async function listComments(ctx: ServiceContext, on: string): Promise<Not
   return ctx.store.read(async (r) => {
     // A deleted record has no thread to show, whether it is named by handle or full id.
     await mustGet(r, ctx, targetOf(on), on);
-    return (await listAll(r, ctx, "note"))
+    return (await listAll(r, ctx, "note", { linkTo: on }))
       .filter((n) => isThreadNote(n, on))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
   });

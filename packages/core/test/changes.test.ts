@@ -23,6 +23,7 @@ import {
   updateSettings,
   updateTask,
 } from "../src/index.js";
+import { countingReads } from "./support/count-reads.js";
 import { setup } from "./support/setup.js";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -195,6 +196,27 @@ describe("listChanges", () => {
     const after = await listChanges(ctx, { since: shortHandle(v1.id) });
     expect(after.since).toBe("2026-11-04T12:00:00.000Z");
     expect(after.basis).toBe("v1 was done (2026-11-04)");
+  });
+});
+
+describe("listChanges reads", () => {
+  // A weekly digest on a project with years of features must cost the week, not the history.
+  it("changes pages with a cursor and reads only the features it names", async () => {
+    const { ctx, clock } = await setup();
+    await updateSettings(ctx, { review: "none" });
+    const named = await createFeature(ctx, { title: "Checkout" });
+    const quiet: string[] = [];
+    for (const title of ["Search", "Export", "Import"]) {
+      quiet.push((await createFeature(ctx, { title })).id);
+    }
+    const t = await createTask(ctx, { title: "Pay button", featureId: named.id });
+    clock.advance(30 * DAY);
+    await finish(ctx, t.id);
+    const counting = countingReads(ctx);
+    const c = await listChanges(counting.ctx, { since: "7d" });
+    expect(c.items.map((i) => i.id)).toEqual([t.id]);
+    expect(counting.listed("feature").filter((id) => quiet.includes(id))).toEqual([]);
+    expect(counting.queries.filter(([, , q]) => q?.offset !== undefined)).toEqual([]);
   });
 });
 

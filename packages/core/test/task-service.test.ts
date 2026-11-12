@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  claimNext,
   claimTask,
   completeTask,
   createFeature,
@@ -14,6 +15,7 @@ import {
   updateSettings,
   updateTask,
 } from "../src/index.js";
+import { countingReads } from "./support/count-reads.js";
 import { START, setup } from "./support/setup.js";
 
 const done = { summary: "did it", filesTouched: ["src/a.ts"] };
@@ -291,6 +293,21 @@ describe("task milestones", () => {
       createTask(ctx, { title: "x", milestoneId: "mil_01M6GMFKG0QFF1E44RZG05GC7W" }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
+
+  // A plan view on a project with many features must not read every feature to find one
+  // milestone's: the store filters features by milestone.
+  it("listing by milestone reads only that milestone's features", async () => {
+    const { ctx } = await setup();
+    const launch = await createMilestone(ctx, { title: "Spring launch" });
+    const other = await createMilestone(ctx, { title: "Autumn" });
+    const tickets = await createFeature(ctx, { title: "Tickets", milestoneId: launch.id });
+    for (const title of ["A", "B", "C"]) await createFeature(ctx, { title, milestoneId: other.id });
+    await createTask(ctx, { title: "Sell tickets", featureId: tickets.id });
+    const counting = countingReads(ctx);
+    const tasks = await listTasks(counting.ctx, { milestoneId: launch.id });
+    expect(tasks.map((t) => t.title)).toEqual(["Sell tickets"]);
+    expect(counting.listed("feature")).toEqual([tickets.id]);
+  });
 });
 
 describe("task planning fields", () => {
@@ -437,6 +454,21 @@ describe("claimTask", () => {
     ).rejects.toMatchObject({ code: "CONFLICT" });
     const after = await store.read((r) => r.get("task", t.id));
     expect(after).toMatchObject({ body: "", claim: claimed.claim });
+  });
+});
+
+describe("claimNext", () => {
+  // The store returns ready tasks by priority then id; claimNext takes its first row, so an
+  // agent asking for work always gets the most urgent, oldest task.
+  it("claimNext picks the highest-priority ready task, ties by id", async () => {
+    const { ctx } = await setup();
+    const low = await createTask(ctx, { title: "low", priority: "low" });
+    const firstHigh = await createTask(ctx, { title: "high 1", priority: "high" });
+    const secondHigh = await createTask(ctx, { title: "high 2", priority: "high" });
+    const picked = [];
+    for (let i = 0; i < 3; i++) picked.push((await claimNext(ctx)).task.id);
+    expect(picked).toEqual([firstHigh.id, secondHigh.id, low.id]);
+    await expect(claimNext(ctx)).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });
 

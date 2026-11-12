@@ -48,7 +48,9 @@ export default defineCommand({
         const shown = args.id ?? shortHandle(taskId);
         // With nothing to write, read the handoff: an empty write would wipe the last one.
         if (args.ack || !writing) {
-          const notes = await ctx.store.read((r) => listAll(r, ctx, "note"));
+          const notes = await ctx.store.read((r) =>
+            listAll(r, ctx, "note", { handoff: "any", linkTo: taskId }),
+          );
           const note = notes.find((n) => n.tags.includes(HANDOFF_TAG) && n.links.includes(taskId));
           if (!note) {
             throw new SatiError("NOT_FOUND", `Task ${shown} has no handoff.`, {

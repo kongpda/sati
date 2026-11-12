@@ -2,17 +2,20 @@ import { describe, expect, it } from "vitest";
 import {
   acknowledgeHandoff,
   acquireLock,
+  addComment,
   adoptClaims,
   buildBrief,
   claimHealth,
   claimTask,
   completeTask,
+  createNote,
   createTask,
   deleteRecord,
   doctorChecks,
   ensureActor,
   getRecord,
   importRecords,
+  listComments,
   markWaiting,
   type ProcessProbe,
   type RepoIndex,
@@ -28,6 +31,7 @@ import {
   worktreeWarnings,
   writeHandoff,
 } from "../src/index.js";
+import { countingReads } from "./support/count-reads.js";
 import { setup } from "./support/setup.js";
 
 const A = "a".repeat(40);
@@ -262,6 +266,23 @@ describe("claims of stopped agents", () => {
 });
 
 describe("handoffs", () => {
+  // A task's thread and its handoff are a few notes; a project has thousands. Reading them all
+  // on each comment list or claim made both cost the size of the project.
+  it("comments on a task are found without reading every note", async () => {
+    const { ctx } = await setup();
+    const t = await createTask(ctx, { title: "Migrate" });
+    const other = await createTask(ctx, { title: "Other" });
+    for (let i = 0; i < 5; i++) await createNote(ctx, { title: `Unrelated ${i}` });
+    await addComment(ctx, { on: other.id, body: "Not this one" });
+    const mine = await addComment(ctx, { on: t.id, body: "Start with the users table" });
+    await claimTask(ctx, t.id);
+    const handoff = await writeHandoff(ctx, { taskId: t.id, next: "Run the second migration" });
+    const counting = countingReads(ctx);
+    const thread = await listComments(counting.ctx, t.id);
+    expect(thread.map((n) => n.id)).toEqual([mine.id, handoff.id]);
+    expect(counting.listed("note").sort()).toEqual([mine.id, handoff.id].sort());
+  });
+
   it("reach the next claimer once, with the claim", async () => {
     const { ctx } = await setup();
     const b = await as(ctx, "codex@b", "agent");

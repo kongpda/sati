@@ -16,12 +16,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  buildBrief,
   type ContextEntry,
+  checkChanges,
   claimTask,
   createIdFactory,
   createNote,
   createTask,
   ensureActor,
+  importRecords,
   type Note,
   putContext,
   recall,
@@ -48,6 +51,8 @@ const IDLE_MS = 5_000;
  * work; 5,000 open tasks is far more than a real project has.
  */
 const HOME_TASKS = 5_000;
+/** Tasks one import brings in, as a large `git pull` would. */
+const IMPORTED = 5_000;
 /** How much slower than the budgets this machine may be (see the top of the file). */
 const FACTOR = Number(process.env.BENCH_FACTOR ?? "1");
 if (!(FACTOR >= 1)) throw new Error("BENCH_FACTOR must be a number, 1 or more.");
@@ -262,7 +267,8 @@ async function concurrentClaims(dir: string, ctx: ServiceContext): Promise<numbe
 interface Result {
   measure: string;
   value: number;
-  budget: number;
+  /** Undefined: printed only, never fails the run. */
+  budget: number | undefined;
   /** Defaults to milliseconds. */
   unit?: string;
 }
@@ -315,6 +321,32 @@ async function bench(): Promise<void> {
       asked.push(performance.now() - start);
     }
   }
+  // Review WP11 lines. No PLAN budget covers them: they are printed to compare a change against.
+  const guarded: number[] = [];
+  for (let i = 0; i < RUNS; i++) {
+    const start = performance.now();
+    await checkChanges(ctx, { changes: [{ path: "src/auth/token.ts" }] });
+    guarded.push(performance.now() - start);
+  }
+  const briefed: number[] = [];
+  for (let i = 0; i < 10; i++) {
+    const start = performance.now();
+    await buildBrief(ctx);
+    briefed.push(performance.now() - start);
+  }
+  const pulled = await ctx.store.read((r) =>
+    r.list("task", ctx.projectId, { limit: IMPORTED, offset: 1 }),
+  );
+  const importStart = performance.now();
+  await importRecords(
+    ctx,
+    pulled.map((t) => ({
+      entity: "task",
+      source: `tasks/${t.id}.json`,
+      record: { ...t, version: t.version + 1 },
+    })),
+  );
+  const imported = performance.now() - importStart;
   const claims = await concurrentClaims(dir, ctx);
   await ctx.store.close();
 
@@ -354,6 +386,17 @@ async function bench(): Promise<void> {
       value: percentile(claims, 95),
       budget: 50,
     },
+    {
+      measure: `guard with ${CARDS} cards, p95`,
+      value: percentile(guarded, 95),
+      budget: undefined,
+    },
+    {
+      measure: `brief with ${RECORDS} records, p95`,
+      value: percentile(briefed, 95),
+      budget: undefined,
+    },
+    { measure: `import of ${IMPORTED} records`, value: imported, budget: undefined },
   ];
   const drawn = home.filter((ms): ms is number => ms !== undefined);
   if (drawn.length === home.length) {
@@ -383,12 +426,15 @@ async function bench(): Promise<void> {
   if (FACTOR !== 1) console.log(`Time budgets are multiplied by ${FACTOR} (BENCH_FACTOR).`);
   for (const r of results) {
     // The idle share is a share of a core, not a time: a slow machine does not raise it much.
+    const line = `${r.measure.padEnd(52)} ${r.value.toFixed(1).padStart(7)} ${r.unit ?? "ms"}`;
+    if (r.budget === undefined) {
+      console.log(`INFO  ${line}`);
+      continue;
+    }
     const budget = r.unit === undefined ? r.budget * FACTOR : r.budget;
     const ok = r.value < budget;
     failed ||= !ok;
-    console.log(
-      `${ok ? "PASS" : "FAIL"}  ${r.measure.padEnd(52)} ${r.value.toFixed(1).padStart(7)} ${r.unit ?? "ms"}  (budget ${budget} ${r.unit ?? "ms"})`,
-    );
+    console.log(`${ok ? "PASS" : "FAIL"}  ${line}  (budget ${budget} ${r.unit ?? "ms"})`);
   }
   if (failed) process.exitCode = 1;
 }

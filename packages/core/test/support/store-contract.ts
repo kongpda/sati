@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import type { Actor, Lock, Milestone, Project, StorageAdapter, Task } from "../../src/index.js";
+import type {
+  Actor,
+  ContextEntry,
+  Lock,
+  Milestone,
+  Note,
+  Project,
+  StorageAdapter,
+  Task,
+} from "../../src/index.js";
 
 /**
  * What every StorageAdapter must do, run against the in-memory test store and SqliteStore.
@@ -110,6 +119,64 @@ export function storeContract(name: string, open: () => Promise<StorageAdapter>)
       const list = (q: { newestFirst?: boolean }) => store.read((r) => r.list("task", PROJECT, q));
       expect(await ids()).toEqual([urgent.id, mediumA.id, mediumB.id, low.id]);
       expect(await ids({ newestFirst: true })).toEqual([low.id, mediumB.id, mediumA.id, urgent.id]);
+      await store.close();
+    });
+
+    // Recall asks for 40 hits; closed tasks that match must not push open work out of them.
+    it("leaves closed tasks out of a search before the limit with openTasksOnly", async () => {
+      const closed = Array.from({ length: 5 }, (_, i) =>
+        task({ title: `venue ${i}`, status: i % 2 ? "done" : "cancelled" }),
+      );
+      const open = task({ title: "venue booking" });
+      const store = await seeded(...closed, open);
+      const hits = (openTasksOnly: boolean) =>
+        store.read((r) => r.search(PROJECT, "venue", { limit: 3, openTasksOnly }));
+      expect((await hits(true)).map((h) => h.id)).toEqual([open.id]);
+      expect((await hits(false)).length).toBe(3);
+      await store.close();
+    });
+
+    // The guard reads approved cards on every commit, and a thread reads the notes linked to one
+    // record: both must come from the store's filter, not from reading the whole table.
+    it("filters cards by approval and notes by link or pin", async () => {
+      const card = (path: string, approved: boolean): ContextEntry => ({
+        id: id("ctx"),
+        ...base(),
+        path,
+        summary: path,
+        keyFiles: [],
+        contentHash: "",
+        gitCommit: null,
+        ...(approved ? { approved: { hash: "a".repeat(64), by: ACTOR, at: NOW } } : {}),
+      });
+      const note = (links: string[], pinned = false): Note => ({
+        id: id("note"),
+        ...base(),
+        title: "n",
+        body: "",
+        tags: [],
+        links,
+        pinned,
+      });
+      const target = task();
+      const signed = card("deck.pptx", true);
+      const linked = note([target.id, "dec_01JD0000000000000000000099"]);
+      const pin = note([], true);
+      const store = await seeded(target);
+      await store.write(async (w) => {
+        await w.insert("context", signed);
+        await w.insert("context", card("notes.md", false));
+        await w.insert("note", linked);
+        await w.insert("note", note(["dec_01JD0000000000000000000099"]));
+        await w.insert("note", pin);
+      });
+      const ids = (rows: { id: string }[]) => rows.map((r) => r.id);
+      const cards = await store.read((r) => r.list("context", PROJECT, { approved: true }));
+      const notes = await store.read((r) => r.list("note", PROJECT, { linkTo: target.id }));
+      expect(ids(cards)).toEqual([signed.id]);
+      expect(ids(notes)).toEqual([linked.id]);
+      const pinned = await store.read((r) => r.list("note", PROJECT, { pinned: true }));
+      expect(ids(pinned)).toEqual([pin.id]);
       await store.close();
     });
 

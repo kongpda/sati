@@ -176,6 +176,16 @@ function cardsOverlap(a: string, b: string): boolean {
 export async function getContext(ctx: ServiceContext, input: unknown = {}): Promise<ContextView[]> {
   const { path, seen } = parseInput(GetContextInput, input);
   const all = await ctx.store.read((r) => listAll(r, ctx, "context"));
+  return contextViews(ctx, all, path, seen);
+}
+
+/** `getContext` on cards already read: the brief reads the card table once (review 11.1). */
+export async function contextViews(
+  ctx: ServiceContext,
+  all: readonly ContextEntry[],
+  path?: string,
+  seen?: string,
+): Promise<ContextView[]> {
   const entries = path === undefined ? all : all.filter((e) => cardsOverlap(path, e.path));
   if (entries.length === 0) return [];
   const files = ctx.repo ? await ctx.repo.files() : undefined;
@@ -276,6 +286,7 @@ export async function approvalStates(
 
 /** The approved cards, read without the file list: the guard asks on every commit. */
 export async function approvedCards(ctx: ServiceContext): Promise<ContextEntry[]> {
-  const all = await ctx.store.read((r) => listAll(r, ctx, "context"));
+  const all = await ctx.store.read((r) => listAll(r, ctx, "context", { approved: true }));
+  // An older `sati serve` ignores the filter; the check keeps the answer right with it.
   return all.filter((c) => c.approved !== undefined);
 }

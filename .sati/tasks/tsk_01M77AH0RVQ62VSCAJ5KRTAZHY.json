@@ -1,0 +1,33 @@
+{
+  "body": "CI for 390e001: `home.test.ts` \"sati activity --follow\" fails on windows-latest (node 24 and 26) with `expected null to be 0`. Node on Windows ends a child at once for `kill(\"SIGINT\")`; no handler runs. The command is correct at a real console. Fix the test only. The macOS failure in the same run (bare sati menu, status 247) was the pty-run race fixed in dfa30a0.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "dfa30a0b74c9b6212f0774569facd5eba39f7128",
+    "completedAt": "2026-11-12T07:30:20.559Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/cli/test/home.test.ts"
+    ],
+    "summary": "Test only. The two `activity --follow` tests now expect exit 0 after SIGINT everywhere but Windows, where Node ends the child at once and the close code is null. Lint, typecheck and all unit tests pass locally; Windows result is checked by CI on the pushed commit."
+  },
+  "createdAt": "2026-11-12T07:28:32.539Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "effort": "light",
+  "id": "tsk_01M77AH0RVQ62VSCAJ5KRTAZHY",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T07:28:32.539Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T07:28:55.477Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T07:30:20.561Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T07:30:20.561Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T07:30:20.561Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T07:28:55.477Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "review",
+  "title": "CI red on Windows: activity --follow tests expect exit 0 after a signal Windows cannot deliver",
+  "updatedAt": "2026-11-12T07:30:20.561Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

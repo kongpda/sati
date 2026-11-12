@@ -125,6 +125,12 @@ function start(dir: string, args: string[]) {
   return { child, closed, until, text: () => out };
 }
 
+/**
+ * What a followed command ends with after Ctrl-C. Windows has no signal to send to a child:
+ * Node ends it at once and no handler runs, so there the test can only see that it stopped.
+ */
+const STOPPED = process.platform === "win32" ? null : 0;
+
 describe("sati activity --follow", () => {
   // The live view for a person with no board open: a write by another process must show up
   // without a restart, and Ctrl-C is the normal way out, not an error.
@@ -138,7 +144,7 @@ describe("sati activity --follow", () => {
     // Each row is printed once.
     expect(f.text().split(later.id)).toHaveLength(2);
     f.child.kill("SIGINT");
-    expect(await f.closed).toBe(0);
+    expect(await f.closed).toBe(STOPPED);
   });
 
   it("prints one JSON object per line with --json, for the task asked for", async () => {
@@ -151,7 +157,7 @@ describe("sati activity --follow", () => {
     expect(sati(dir, "task", "update", mine.id, "--priority", "high").code).toBe(0);
     await f.until(/"verb":"update"/u);
     f.child.kill("SIGINT");
-    expect(await f.closed).toBe(0);
+    expect(await f.closed).toBe(STOPPED);
     const rows = f
       .text()
       .trim()

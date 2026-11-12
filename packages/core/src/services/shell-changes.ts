@@ -51,7 +51,9 @@ function segments(command: string): string[] {
       if (ch === "'") quote = undefined;
       continue;
     }
-    if (ch === "\\" && quote !== '"') {
+    // Outside quotes and inside double quotes a backslash takes the next character with it,
+    // so `\"` does not close the string. Single quotes returned above: a backslash is literal there.
+    if (ch === "\\") {
       current += ch + (command[i + 1] ?? "");
       i++;
       continue;

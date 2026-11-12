@@ -1,0 +1,36 @@
+{
+  "body": "docs/review-2026-11-12.md item 0.1. segments() in packages/core/src/services/shell-changes.ts skips backslash handling inside double quotes, so \\\" ends the quote early.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "22c2ecbc47085196ff437658be2c45d2b602c4fd",
+    "completedAt": "2026-11-12T16:23:56.073Z",
+    "completedBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "filesTouched": [
+      "packages/core/src/services/shell-changes.ts",
+      "packages/core/test/shell-changes.test.ts",
+      ".changeset/guard-escaped-quote.md",
+      "docs/review-2026-11-12.md"
+    ],
+    "releaseNote": "guard: a command after an escaped quote is now checked",
+    "summary": "segments() in shell-changes.ts now consumes the character after a backslash inside double quotes too, so \\\" no longer ends the quote early and a later rm or git push --no-verify is split and checked. Single-quote handling unchanged. Test: \"an escaped quote inside a double-quoted string does not hide a later rm\" (3 failing inputs + 1 control)."
+  },
+  "createdAt": "2026-11-12T16:21:58.164Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "id": "tsk_01M7891R8MV29N9BF1GBFX3WBE",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T16:21:58.164Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "branch": "2026-11-12T16:22:03.872Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "claim": "2026-11-12T16:23:56.075Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "completion": "2026-11-12T16:23:56.075Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "status": "2026-11-12T16:23:56.075Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "worktree": "2026-11-12T16:22:03.872Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "status": "done",
+  "title": "WP0 0.1: guard misses a delete after an escaped quote",
+  "updatedAt": "2026-11-12T16:23:56.076Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

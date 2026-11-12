@@ -154,6 +154,24 @@ describe("parseShellChanges bypasses", () => {
     expect(hookBypass("mv /tmp/new .husky/pre-commit")).toBeUndefined();
   });
 
+  // Review 0.1: inside double quotes `\"` is a literal quote. Reading it as the closing quote
+  // swallows the rest of the line into one string, so a delete after it was never checked.
+  it("an escaped quote inside a double-quoted string does not hide a later rm", () => {
+    expect(parseShellChanges('echo "a \\"b\\"" && rm src/x.ts')).toEqual([
+      { path: "src/x.ts", kind: "deleted" },
+    ]);
+    expect(parseShellChanges('echo "\\"" ; rm src/a.ts')).toEqual([
+      { path: "src/a.ts", kind: "deleted" },
+    ]);
+    expect(hookBypass('git commit -m "say \\"hi\\"" && git push --no-verify')).toBe(
+      "`git push --no-verify` skips the git hooks.",
+    );
+    // A backslash is literal inside single quotes, so `'a\'` closes there and `&&` still splits.
+    expect(parseShellChanges("echo 'a\\' && rm src/x.ts")).toEqual([
+      { path: "src/x.ts", kind: "deleted" },
+    ]);
+  });
+
   // The guard checks the path a record points at; a wrong new path hides the move from it.
   it("drops a closing slash from the moved folder's name", () => {
     expect(parseShellChanges("mv src/a/ dest/")).toEqual(parseShellChanges("mv src/a dest/"));

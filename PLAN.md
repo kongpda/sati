@@ -416,7 +416,7 @@ The biggest risks are a local server that any website can reach, secrets leaking
 
 ## Performance budgets
 
-Agents call sati dozens of times per session, so the CLI must feel instant. `pnpm bench` measures the CLI budgets (brief, a read command, `recall`, `task_claim` under 10 agents) and exits 1 when one is missed; the brief and board budgets are also checked by tests. **Not built yet:** CI does not run the benchmark, so a regression is found only when someone runs it (moved to Phase 6).
+Agents call sati dozens of times per session, so the CLI must feel instant. `pnpm bench` measures the CLI budgets (brief, a read command, `recall`, `task_claim` under 10 agents, the home screen, `activity --follow` at rest) and exits 1 when one is missed; the brief and board budgets are also checked by tests. **Not built yet:** CI does not run the benchmark, so a regression is found only when someone runs it (moved to Phase 6).
 
 | Measure | Budget | How we hit it |
 | --- | --- | --- |
@@ -431,6 +431,8 @@ Agents call sati dozens of times per session, so the CLI must feel instant. `pnp
 | UI first load | under 1 s; JS under 250 KB gzipped | Route-level code splitting, no heavy chart library |
 | Board with 2,000 cards | 60 fps scroll and drag | TanStack Virtual, memoised cards |
 | Live update latency (agent write → UI) | under 500 ms | `PRAGMA data_version` poll every 250 ms + SSE |
+| Home screen (bare `sati`) on 5,000 tasks | under 300 ms | Three reads, then the menu; each menu entry is a command of its own |
+| `sati activity --follow` with nothing written | under 1% of one core | One `PRAGMA data_version` every 250 ms; rows are read only when it moved |
 | Install size (`@kongpda/sati`) | under 15 MB | Node's built-in SQLite (no native addon), UI shipped as static assets |
 
 **Database hygiene:** indexes on `(projectId, status)`, `(projectId, featureId)`, and claim lease expiry; `PRAGMA optimize` on close; a weekly `VACUUM` run by `sati doctor`. Old activity is compacted into daily summaries after 90 days (configurable).
@@ -1018,9 +1020,9 @@ Added 2026-11-12 at the owner's request. sati already needs no server: every com
 
 **10d (H4) — Home screen and live view**
 
-- [ ] Bare `sati` shows a status and a menu to a person at a terminal
-- [ ] `sati activity --follow`
-- [ ] `sati task list --board`
+- [x] Bare `sati` shows a status and a menu to a person at a terminal
+- [x] `sati activity --follow`
+- [x] `sati task list --board`
 
 **10e (H5) — Agents without MCP, and docs**
 

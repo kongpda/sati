@@ -1,0 +1,45 @@
+{
+  "body": "Phase 10d of PLAN.md, phase H4 of docs/headless-cli-plan.md. Bare `sati` shows a status and a menu to a person at a terminal (help with exit 2 otherwise, as today). `sati activity --follow`. `sati task list --board`. Budgets: home under 300 ms on the 5,000-task fixture; --follow idle under 1% of one core.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "ab9ef9c5c639839a570273bf9ea26c143257baa4",
+    "completedAt": "2026-11-12T07:07:07.316Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/cli/src/home.ts",
+      "packages/cli/src/board.ts",
+      "packages/cli/src/main.ts",
+      "packages/cli/src/commands/task.ts",
+      "packages/cli/src/commands/activity.ts",
+      "packages/cli/bench/bench.ts",
+      "packages/cli/test/home.test.ts",
+      "PLAN.md",
+      "README.md",
+      "docs/headless-cli-plan.md",
+      "docs/progress.md",
+      "docs/ideas.md",
+      ".changeset/home-follow-board.md"
+    ],
+    "releaseNote": "Bare `sati` shows a status and a menu; `sati task list --board` and `sati activity --follow` are new.",
+    "summary": "H4: a bare `sati` shows a person at a terminal a status (needs you, in progress, ready) and a menu that runs the common commands as child processes; agents, pipes, --no-input and non-projects still get help with exit 2. `task list --board` prints the board's columns (side by side, stacked, plain, or grouped JSON). `activity --follow` prints new rows as they are written by polling data_version every 250 ms; SIGINT exits 0. Bench gained two budgets: home on 5,000 tasks 195 ms (budget 300), follow idle under 0.2% of a core (budget 1%). 12 new tests; gate and 97 Playwright tests pass. Found, not fixed: inbox reads every task and note (275 ms on 50,000 records), noted in docs/ideas.md."
+  },
+  "createdAt": "2026-11-12T06:51:16.962Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M778CSK27NPDR9EV84TJQJFC",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T06:51:16.962Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T06:51:18.862Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T07:07:07.316Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T07:07:07.316Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T07:07:07.316Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T06:51:18.862Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "review",
+  "title": "H4: home screen for bare sati, activity --follow, task list --board",
+  "updatedAt": "2026-11-12T07:07:07.317Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

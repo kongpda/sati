@@ -1,6 +1,6 @@
 # Plan: sati in the terminal, with no server
 
-- Status: approved by the owner (2026-11-12), with the recommended answers to the four open decisions. Phases H1, H2 and H3 are done; H4 is next. Progress is tracked in the checklist under "Implementation notes" below.
+- Status: approved by the owner (2026-11-12), with the recommended answers to the four open decisions. Phases H1 to H4 are done; H5 is next. Progress is tracked in the checklist under "Implementation notes" below.
 - Asked by the owner: use sati without its server, headless, with an interactive CLI; can an agent talk to it with or without a server; does MCP need a server.
 
 ## Short answers
@@ -161,10 +161,10 @@ Gate: every existing CLI test passes unchanged. That proves scripts and agents s
 
 ### Phase H4: home screen and live view (about 1 to 2 days)
 
-- [ ] Bare `sati` home for a person at a terminal
-- [ ] `activity --follow`
-- [ ] `task list --board`
-- [ ] Performance check added to the budgets: home screen drawn in under 300 ms on the 5,000-task fixture; `--follow` idle cost under 1% of one core
+- [x] Bare `sati` home for a person at a terminal
+- [x] `activity --follow`
+- [x] `task list --board`
+- [x] Performance check added to the budgets: home screen drawn in under 300 ms on the 5,000-task fixture; `--follow` idle cost under 1% of one core
 
 ### Phase H5: agents and docs (about half a day)
 
@@ -270,11 +270,13 @@ As built, where it differs from the three points above: see the "10c (H3)" entry
 3. `task list --board`: columns side by side when the terminal is wide enough, stacked otherwise; plain layout for a pipe.
 4. Budgets in `packages/cli/bench` and `PLAN.md`: home under 300 ms on the 5,000-task fixture; `--follow` idle under 1% of one core.
 
-- [ ] Home screen
-- [ ] `activity --follow`
-- [ ] `task list --board`
-- [ ] Budgets measured and written down
-- [ ] Gate, Playwright, changeset, progress entry
+- [x] Home screen
+- [x] `activity --follow`
+- [x] `task list --board`
+- [x] Budgets measured and written down
+- [x] Gate, Playwright, changeset, progress entry
+
+As built, where it differs from the four points above: see the "10d (H4)" entry in `docs/progress.md`.
 
 ### Phase H5 in detail
 

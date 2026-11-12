@@ -3,8 +3,8 @@
  * after a build. Exits 1 if any budget is missed.
  *
  * Budgets checked here: CLI cold start, CLI read p95, full-text search and `recall` on 50,000
- * records and cards, and `task_claim` under 10 concurrent agents. The other budgets belong to
- * later phases.
+ * records and cards, `task_claim` under 10 concurrent agents, the home screen of a bare `sati`,
+ * and the idle cost of `sati activity --follow`. The other budgets belong to later phases.
  */
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, realpathSync } from "node:fs";
@@ -35,6 +35,14 @@ const CARDS = 2_000;
 const RUNS = 30;
 const AGENTS = 10;
 const CLAIMS_PER_AGENT = 50;
+const PTY = fileURLToPath(new URL("../test/support/pty-run.py", import.meta.url));
+/** How long `activity --follow` is left idle while its CPU time is read. */
+const IDLE_MS = 5_000;
+/**
+ * Tasks in the project the home screen is timed on, with as many notes. The inbox it shows reads
+ * every task and note, so its cost grows with the project; 5,000 tasks is a large real one.
+ */
+const HOME_TASKS = 5_000;
 
 const WORDS = (
   "auth token session cache index query schema migration router handler parser render " +
@@ -74,8 +82,67 @@ function cli(cwd: string, args: string[]): void {
   if (r.status !== 0) throw new Error(`sati ${args.join(" ")} failed: ${r.stderr}`);
 }
 
-/** Inserts `RECORDS` tasks and notes in one transaction, cloned from service-made templates. */
-async function seed(dir: string): Promise<ServiceContext> {
+/** A person's environment: no agent variable, so questions may be asked. */
+const person = (): NodeJS.ProcessEnv => ({
+  ...process.env,
+  SATI_ACTOR: "bench",
+  CLAUDECODE: "",
+  AI_AGENT: "",
+  SATI_NO_INPUT: "",
+});
+
+/**
+ * Milliseconds from starting a bare `sati` in a pseudo-terminal until its menu is drawn and
+ * Ctrl-C has closed it. This is more than the time to draw: it includes Python and the exit.
+ * Undefined where there is no Python with `pty` (Windows).
+ */
+function homeDrawn(cwd: string): number | undefined {
+  const start = performance.now();
+  const r = spawnSync("python3", [PTY, "What next", "\\x03", process.execPath, bin], {
+    cwd,
+    env: person(),
+    encoding: "utf8",
+  });
+  if (r.error !== undefined || !r.stdout.includes("What next")) return undefined;
+  return performance.now() - start;
+}
+
+/** CPU seconds a process has used, from `ps` ("0:00.09"). */
+function cpuSeconds(pid: number): number {
+  const text = execFileSync("ps", ["-o", "time=", "-p", String(pid)], { encoding: "utf8" }).trim();
+  return text
+    .split(":")
+    .map(Number)
+    .reduce((sum, part) => sum * 60 + part, 0);
+}
+
+/**
+ * Percent of one core `sati activity --follow` uses while nothing is written. Undefined on
+ * Windows, which has no `ps`.
+ */
+async function followIdle(cwd: string): Promise<number | undefined> {
+  if (process.platform === "win32") return undefined;
+  const child = spawn(process.execPath, [bin, "activity", "--follow"], {
+    cwd,
+    env: person(),
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      child.stdout.once("data", () => resolve());
+      child.once("close", () => reject(new Error("activity --follow stopped early")));
+    });
+    if (child.pid === undefined) return undefined;
+    const before = cpuSeconds(child.pid);
+    await new Promise((resolve) => setTimeout(resolve, IDLE_MS));
+    return ((cpuSeconds(child.pid) - before) / (IDLE_MS / 1000)) * 100;
+  } finally {
+    child.kill("SIGINT");
+  }
+}
+
+/** Inserts `records` tasks, notes and cards in one transaction, cloned from service-made templates. */
+async function seed(dir: string, records = RECORDS, cards = CARDS): Promise<ServiceContext> {
   clearLocateCache();
   const store = await SqliteStore.open(locateDb(dir).path);
   const project = await store.read((r) => r.getProject());
@@ -91,7 +158,7 @@ async function seed(dir: string): Promise<ServiceContext> {
   const note: Note = await createNote(ctx, { title: "template note" });
   const card: ContextEntry = await putContext(ctx, { path: "template", summary: "template" });
   await store.write(async (w) => {
-    for (let i = 0; i < CARDS; i++) {
+    for (let i = 0; i < cards; i++) {
       await w.insert("context", {
         ...card,
         id: ids("context"),
@@ -101,7 +168,7 @@ async function seed(dir: string): Promise<ServiceContext> {
         tags: [words(i + 23, 1)],
       });
     }
-    for (let i = 0; i < (RECORDS - CARDS) / 2; i++) {
+    for (let i = 0; i < (records - cards) / 2; i++) {
       await w.insert("task", {
         ...task,
         id: ids("task"),
@@ -171,6 +238,8 @@ interface Result {
   measure: string;
   value: number;
   budget: number;
+  /** Defaults to milliseconds. */
+  unit?: string;
 }
 
 async function main(): Promise<void> {
@@ -212,6 +281,14 @@ async function main(): Promise<void> {
   const claims = await concurrentClaims(dir, ctx);
   await ctx.store.close();
 
+  const small = realpathSync(mkdtempSync(join(tmpdir(), "sati-bench-home-")));
+  execFileSync("git", ["init", "-q", "-b", "main"], { cwd: small });
+  cli(small, ["init", "--yes"]);
+  await (await seed(small, HOME_TASKS * 2, 0)).store.close();
+  homeDrawn(small);
+  const home = Array.from({ length: 10 }, () => homeDrawn(small));
+  const idle = await followIdle(dir);
+
   const results: Result[] = [
     {
       measure: "CLI cold start (sati --version), p95",
@@ -235,12 +312,28 @@ async function main(): Promise<void> {
       budget: 50,
     },
   ];
+  const drawn = home.filter((ms): ms is number => ms !== undefined);
+  if (drawn.length === home.length) {
+    results.push({
+      measure: `Home screen (bare sati) on ${HOME_TASKS} tasks, p95`,
+      value: percentile(drawn, 95),
+      budget: 300,
+    });
+  } else console.log("SKIP  Home screen: no python3 with pty here.");
+  if (idle !== undefined) {
+    results.push({
+      measure: "activity --follow, idle, share of one core",
+      value: idle,
+      budget: 1,
+      unit: "%",
+    });
+  } else console.log("SKIP  activity --follow idle cost: no ps here.");
   let failed = false;
   for (const r of results) {
     const ok = r.value < r.budget;
     failed ||= !ok;
     console.log(
-      `${ok ? "PASS" : "FAIL"}  ${r.measure.padEnd(48)} ${r.value.toFixed(1).padStart(7)} ms  (budget ${r.budget} ms)`,
+      `${ok ? "PASS" : "FAIL"}  ${r.measure.padEnd(48)} ${r.value.toFixed(1).padStart(7)} ${r.unit ?? "ms"}  (budget ${r.budget} ${r.unit ?? "ms"})`,
     );
   }
   if (failed) process.exitCode = 1;

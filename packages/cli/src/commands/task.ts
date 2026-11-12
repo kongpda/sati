@@ -23,6 +23,7 @@ import {
 } from "@sati/core";
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination, taskId } from "../args.js";
+import { BOARD_STATUSES, type BoardColumn, boardText } from "../board.js";
 import {
   askFiles,
   askSelect,
@@ -45,7 +46,7 @@ import {
   refs,
   someChange,
 } from "../runtime.js";
-import { when } from "../term.js";
+import { term, when } from "../term.js";
 
 const token = {
   token: {
@@ -211,6 +212,61 @@ const create = defineCommand({
   },
 });
 
+/** Rows read for one column of `task list --board`; a fuller column shows its count as "500+". */
+const COLUMN_CAP = 500;
+
+interface BoardArgs {
+  status?: string | undefined;
+  feature?: string | undefined;
+  milestone?: string | undefined;
+  label?: string | undefined;
+  "due-by"?: string | undefined;
+  assignee?: string | undefined;
+  effort?: string | undefined;
+  ready?: boolean | undefined;
+  limit?: string | undefined;
+  offset?: string | undefined;
+  json?: boolean | undefined;
+}
+
+/** `task list --board`: the tasks under their status, as the board lays them out. Printed once. */
+function board(args: BoardArgs): Promise<void> {
+  if (args.ready || args.offset !== undefined) {
+    throw new SatiError(
+      "USAGE",
+      `--board does not go with ${args.ready ? "--ready" : "--offset"}.`,
+      {
+        hint: `Run \`${CLI_NAME} task list --help\` for usage.`,
+      },
+    );
+  }
+  const perColumn = int(args.limit, "limit") ?? 10;
+  if (perColumn < 1) throw new SatiError("USAGE", `--limit must be 1 or more, got ${perColumn}.`);
+  return execute(
+    args.json,
+    async ({ ctx }) => {
+      const filter = {
+        featureId: await ref(ctx, "feature", args.feature),
+        milestoneId: await ref(ctx, "milestone", args.milestone),
+        label: args.label,
+        dueBy: args["due-by"],
+        assigneeId: await oneAssignee(ctx, args.assignee),
+        effort: args.effort,
+      };
+      const columns: BoardColumn[] = [];
+      for (const status of list(args.status) ?? BOARD_STATUSES) {
+        const tasks = await listTasks(ctx, { ...filter, status: [status], limit: COLUMN_CAP });
+        columns.push({ status, tasks: tasks.map(taskRow), capped: tasks.length === COLUMN_CAP });
+      }
+      return columns;
+    },
+    (columns: BoardColumn[]) =>
+      columns.some((c) => c.tasks.length)
+        ? boardText(columns, { rich: term().rich, width: term().width, perColumn })
+        : `No tasks. Create one with \`${CLI_NAME} task create "title"\`.`,
+  );
+}
+
 const ls = defineCommand({
   meta: { name: "list", description: "List tasks" },
   args: {
@@ -235,11 +291,17 @@ const ls = defineCommand({
       type: "boolean",
       description: "Whole records with --json (body, completion); by default short rows",
     },
+    board: {
+      type: "boolean",
+      description:
+        "The board's columns as text; --limit is then the rows shown per column (default 10)",
+    },
     ...pagination,
     ...json,
   },
-  run: ({ args }) =>
-    execute(
+  run: ({ args }) => {
+    if (args.board) return board(args);
+    return execute(
       args.json,
       async ({ ctx }) => {
         const tasks = await listTasks(ctx, {
@@ -259,7 +321,8 @@ const ls = defineCommand({
       },
       (tasks: (Task | TaskRow)[]) =>
         rows(tasks, `No tasks. Create one with \`${CLI_NAME} task create "title"\`.`),
-    ),
+    );
+  },
 });
 
 /** A task id that a person at a terminal may leave out, to choose from a list. */

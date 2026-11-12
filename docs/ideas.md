@@ -45,3 +45,7 @@ From the 2026-11-12 final pass (9n), not bugs:
 - **Snapshot caching for the board**: `/api/snapshot` reads every record on each change. Fine at the tested sizes; a per-entity version check would cut the work on large projects.
 - **Long comment threads and note lists** are drawn in full; a windowed list would help past a few hundred rows.
 - **A queue of toasts**: since 9o a delete's Undo is kept, and a plain message that arrives in its 10 seconds is not shown. A short stack would show both.
+
+From Phase 10d (H4), 2026-11-12:
+
+- **A faster inbox on very large projects**: `inbox` (CLI, MCP and the home screen) lists every task and note and filters in memory, the same way the board does, so the two cannot disagree. That is 275 ms on 50,000 records. Filtered queries (open tasks by assignee, status and due date; comments from the last 14 days) would make it constant, at the price of a second implementation to keep equal to the board's.

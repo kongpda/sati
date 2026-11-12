@@ -1,0 +1,15 @@
+{
+  "body": "Phase 10e of PLAN.md and H5 of docs/headless-cli-plan.md. The brief ends with a `Tools:` line naming the form in use (MCP or CLI with --json). `sati rules --cli-only` writes the rules block for agents without MCP. `docs/guide/headless.md`, a README section, completions checked. Close the Phase 10 gate.",
+  "createdAt": "2026-11-12T07:07:09.004Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M7799VACX0R6RX0M0MWM0ZEQ",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T07:07:09.004Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "todo",
+  "title": "H5: Tools line in the brief, sati rules --cli-only, headless guide",
+  "updatedAt": "2026-11-12T07:07:09.004Z",
+  "version": 1
+}

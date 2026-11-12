@@ -241,6 +241,10 @@ If you are an agent working in a repo that uses sati:
   `decision record` ask a person for what is missing. `task complete` offers the files git says
   you changed. A note's text and a decision open in `$VISUAL` or `$EDITOR` when one is set; save
   an empty file to cancel.
+- **Type `sati` alone** at a terminal for a short status (what needs you, what is in progress,
+  what is ready) and a menu of the common commands. `sati task list --board` prints the board's
+  columns as text, and `sati activity --follow` prints each change as it is written (Ctrl-C
+  stops). Scripts, pipes and agents get the help text from a bare `sati`, as before.
 - **After you update sati**, run `sati upgrade` in each project.
 - **Never** edit `.sati/` by hand or commit with `--no-verify`.
 

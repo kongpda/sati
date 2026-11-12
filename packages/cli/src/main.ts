@@ -234,6 +234,12 @@ export async function main(root: CommandDef, layout: HelpLayout): Promise<void> 
     process.stdout.write(`${versionLine(CLI_NAME)}\n`);
     return;
   }
+  // A bare `sati` is a person asking "what now": at a terminal, in a project, they get the home
+  // menu. Checked here first so that a pipe or a script never loads the core for it.
+  if (argv.length === 0 && process.stdin.isTTY === true && process.stdout.isTTY === true) {
+    const { home } = await import("./home.js");
+    if (await home()) return;
+  }
   if (argv.length === 0 || argv.some((a) => HELP.has(a))) {
     const path = await commandWords(root, words(argv));
     process.stdout.write(`${await usage(root, path, layout)}\n`);

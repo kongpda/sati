@@ -3,8 +3,8 @@
   "branch": "wp11-perf",
   "claim": {
     "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
-    "heartbeatAt": "2026-11-12T17:54:51.556Z",
-    "leaseUntil": "2026-11-12T18:24:51.556Z",
+    "heartbeatAt": "2026-11-12T18:04:28.772Z",
+    "leaseUntil": "2026-11-12T18:34:28.772Z",
     "token": 2
   },
   "createdAt": "2026-11-12T17:54:41.752Z",
@@ -15,13 +15,13 @@
   "stamps": {
     "*": "2026-11-12T17:54:41.754Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "branch": "2026-11-12T17:54:51.557Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "claim": "2026-11-12T17:54:51.557Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T18:04:28.774Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "status": "2026-11-12T17:54:51.557Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "worktree": "2026-11-12T17:54:51.557Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
   },
   "status": "in_progress",
   "title": "WP11: core and store performance (review 11.1-11.12)",
-  "updatedAt": "2026-11-12T17:54:51.560Z",
-  "version": 2,
+  "updatedAt": "2026-11-12T18:04:28.775Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

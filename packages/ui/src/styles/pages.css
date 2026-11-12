@@ -1,12 +1,12 @@
 .page {
-  padding: 16px 18px 32px;
+  padding: var(--space-4) 18px var(--space-6);
   overflow: auto;
 }
 .timeline {
   display: flex;
-  gap: 16px;
+  gap: var(--space-4);
   overflow: auto;
-  padding-bottom: 12px;
+  padding-bottom: var(--space-3);
 }
 .tick {
   min-width: 140px;
@@ -16,25 +16,25 @@
 .tick time {
   display: block;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .page h1 {
   font-size: 22px;
   font-weight: 600;
   letter-spacing: -0.03em;
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
 }
 .list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   max-width: 720px;
 }
 .row {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  padding: 10px var(--space-3);
 }
 
 /* A heading for outline and screen-reader navigation, styled like the bold title it replaced. */
@@ -49,16 +49,16 @@
    visible beside it instead of under it. */
 @media (min-width: 900px) {
   .app:has(> .sheet) .main {
-    padding-right: min(440px, 100%);
+    padding-right: min(var(--sheet-width), 100%);
   }
 }
 .sheet {
   position: fixed;
   inset: 0 0 0 auto;
-  width: min(440px, 100%);
+  width: min(var(--sheet-width), 100%);
   background: var(--panel);
   border-left: 1px solid var(--line);
-  padding: 16px;
+  padding: var(--space-4);
   overflow: auto;
   box-shadow: -12px 0 40px rgb(0 0 0 / 8%);
 }
@@ -69,14 +69,14 @@
   transform: translateX(-50%);
   background: var(--ink);
   color: var(--paper);
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   width: max-content;
   max-width: min(480px, calc(100% - 24px));
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 12px;
+  gap: 6px var(--space-3);
   z-index: 30;
 }
 /* A dialog keeps its actions on its bottom edge; the toast moves up so it never covers them. */
@@ -87,8 +87,8 @@ body:has(.palette) .toast {
 /* With the task panel beside the board, the toast centres over the board, never on the panel. */
 @media (min-width: 900px) {
   .app:has(.sheet) .toast {
-    left: calc((100% - 440px) / 2);
-    max-width: min(480px, calc(100% - 440px - 24px));
+    left: calc((100% - var(--sheet-width)) / 2);
+    max-width: min(480px, calc(100% - var(--sheet-width) - 24px));
   }
 }
 .toast-text {
@@ -97,7 +97,7 @@ body:has(.palette) .toast {
 }
 .toast-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   margin-left: auto;
 }
 .toast button {
@@ -113,14 +113,14 @@ body:has(.palette) .toast {
 }
 .bulk {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
-  padding: 0 14px 8px;
+  padding: 0 14px var(--space-2);
 }
 .column-empty {
   color: var(--muted);
-  font-size: 13px;
-  margin: 4px 8px;
+  font-size: var(--text-sm);
+  margin: var(--space-1) var(--space-2);
 }
 
 .empty {
@@ -152,8 +152,8 @@ body:has(.palette) .toast {
 }
 .prose code {
   background: var(--paper);
-  border-radius: 4px;
-  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 0.9em;
 }
@@ -162,15 +162,15 @@ body:has(.palette) .toast {
   padding: 0;
 }
 .row-sub {
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--muted);
-  margin: 8px 0 0;
+  margin: var(--space-2) 0 0;
 }
 .prose pre {
   overflow: auto;
   background: var(--paper);
-  padding: 8px;
+  padding: var(--space-2);
   border-radius: 6px;
 }
 .prose a {
@@ -193,7 +193,7 @@ body:has(.palette) .toast {
 .prose th,
 .prose td {
   border: 1px solid var(--line);
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   text-align: left;
   vertical-align: top;
 }
@@ -227,7 +227,7 @@ body:has(.palette) .toast {
   background: var(--panel);
   border-radius: 10px;
   border: 1px solid var(--line);
-  padding: 8px;
+  padding: var(--space-2);
   max-height: 70vh;
   overflow: auto;
 }
@@ -235,7 +235,7 @@ body:has(.palette) .toast {
   width: 100%;
   border: 0;
   background: transparent;
-  padding: 8px;
+  padding: var(--space-2);
 }
 .palette form button {
   overflow-wrap: anywhere;
@@ -244,7 +244,7 @@ body:has(.palette) .toast {
   text-align: left;
   background: none;
   border: 0;
-  padding: 6px 8px;
+  padding: 6px var(--space-2);
   border-radius: 6px;
 }
 .mobile-status {
@@ -310,7 +310,7 @@ body:has(.palette) .toast {
   }
   .mobile-status {
     display: block;
-    margin: 8px 14px 0;
+    margin: var(--space-2) 14px 0;
   }
   .sheet {
     width: 100%;

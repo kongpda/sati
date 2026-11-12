@@ -1,7 +1,7 @@
 .board {
   display: flex;
-  gap: 8px;
-  padding: 10px 12px 16px;
+  gap: var(--space-2);
+  padding: 10px var(--space-3) var(--space-4);
   overflow: auto;
   flex: 1;
   min-height: 0;
@@ -45,7 +45,7 @@
   gap: 10px;
   padding: 10px 0;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 .rail:focus-visible {
@@ -70,16 +70,16 @@
 }
 .fold:focus-visible {
   outline: 2px solid var(--moss);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 .column-head input {
   margin: 6px 0 0;
 }
 .column h2 {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   margin: 0;
-  padding: 10px 10px 4px;
+  padding: 10px 10px var(--space-1);
 }
 .column .count {
   color: var(--muted);
@@ -92,7 +92,7 @@
   min-height: 80px;
 }
 .lane {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--muted);
   padding: 6px 2px 2px;
 }
@@ -100,8 +100,8 @@
   overflow-wrap: anywhere;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 8px;
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
   margin-bottom: 6px;
   text-align: left;
   width: 100%;
@@ -115,7 +115,7 @@
   font-weight: 600;
   margin-right: 6px;
   text-transform: uppercase;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .card.ghost {
   opacity: 0.4;
@@ -126,7 +126,7 @@
 }
 .card-head {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   align-items: flex-start;
 }
 .card-head .title {
@@ -144,7 +144,7 @@
 .banner {
   overflow-wrap: anywhere;
   margin: 0;
-  padding: 8px 14px;
+  padding: var(--space-2) 14px;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
   color: var(--clay);
@@ -169,17 +169,17 @@
 .meta {
   overflow-wrap: anywhere;
   color: var(--muted);
-  font-size: 12px;
-  margin-top: 4px;
+  font-size: var(--text-xs);
+  margin-top: var(--space-1);
 }
 .meta button {
-  margin-left: 8px;
+  margin-left: var(--space-2);
 }
 /* A card's meta: the text wraps as prose (labels clear of the date), select stays at the end. */
 .card .meta {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .card .meta-text {
   flex: 1;

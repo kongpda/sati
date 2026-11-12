@@ -1,10 +1,10 @@
 /* Comments: a short thread under a task, note or decision. */
 .thread {
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 .thread h3,
 .thread summary {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   margin: 0 0 6px;
 }
@@ -19,9 +19,9 @@
 .thread ol {
   list-style: none;
   padding: 0;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .thread ol > li {
   border-left: 3px solid var(--line);
@@ -43,7 +43,7 @@
 .thread-add,
 .sheet form.thread-add {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: flex-end;
 }
 .thread-box {
@@ -66,7 +66,7 @@
   min-width: 180px;
   max-width: 100%;
   margin: 2px 0 0;
-  padding: 4px;
+  padding: var(--space-1);
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -74,9 +74,9 @@
 }
 .mention-list [role="option"] {
   display: flex;
-  gap: 8px;
-  padding: 4px 8px;
-  border-radius: 4px;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   overflow-wrap: anywhere;
 }
@@ -89,5 +89,5 @@
 .page-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }

@@ -2377,3 +2377,13 @@ Items 16.1 to 16.6 are done (task `tsk_01M78D0E30JJGPHA21VAEDQWAT`). Pure moves:
 - **16.6:** left alone. Nothing in `packages/cli/src` is over 600 lines except `ui/server.ts` (672); the largest new file is `runtime/git.ts` (316).
 - **Bench:** CLI cold start p95 67.2 ms (budget 80). The database-bound lines failed on that run (read 340 ms, search 97.5, recall 125, home screen 830 and 1,215) with the machine's load average near 100 from parallel test runs; no query code changed here. WP11 reruns them with before and after numbers.
 
+
+## 2026-11-13 — Review WP15 part A: board structure
+
+Items 15.1 to 15.4 are done (task `tsk_01M78CRMVQCCPECXPW417CEMH1`). Moves only: the 103 Playwright tests passed unchanged after each commit, and there is no changeset.
+
+- **15.1:** `app.tsx` went from 1306 to 299 lines. It composes `hooks/` (`use-route`, `use-live`, `use-moves`, `use-keys`, `use-toast`, `use-selection`, `use-view`, `use-cards`), `shell/` (`nav`, `top-bar`, `palette`, `toast`, `banners`) and `pages/` (`board-page`, `connected`, `routes`). The review's `REDIRECTS` part of `use-route.ts` does not exist in the code, so there was nothing to move.
+- **15.2:** `pages.tsx` is gone: `pages/team`, `plan`, `knowledge`, `log`, `task-sheet`. `ThreadActions` moved to `thread.tsx`. From 3.10: the `TaskSignals` docblock sits on `TaskSignals`, the Backlog option uses `statusWord`, and the mid-file import is at the top. The `weekEnd` and `mentionsOf` exports stay for WP3, so 3.10 is still open.
+- **15.3:** tokens for space, type, radius, nav and sheet width, and target size are in `styles/tokens.css`. Only values equal to a token were replaced; the resolved CSS equals the old CSS (checked by script), so no computed value moved. `--sheet-width` is 440px, today's value, not the review's `clamp(360px, 32vw, 440px)`, which would narrow the panel between 900 and 1125 px. `--rail-width` and `--column-min` are defined but unused: nothing in the CSS has those sizes today. Off-scale values (6px, 10px, 18px, 260px columns) were left alone.
+- **15.4:** `styles.css` is now eleven `@import`s of `styles/*.css`, in the old rule order. The review names six files, but the old file interleaves areas, and reordering could change which rule wins. Extra names: `task-sheet-planning`, `my-work`, `thread`, `changes-memory`, `crash`.
+- One full run had two e2e failures (an axe test that stalled for 6 minutes, and a Memory answer wait) while another agent was using the machine. Both passed on rerun.

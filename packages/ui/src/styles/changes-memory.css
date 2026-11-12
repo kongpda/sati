@@ -1,38 +1,38 @@
 .changes-filters {
   border: 0;
   padding: 0;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: var(--space-2) var(--space-4);
   max-width: 720px;
 }
 .changes-filters label {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 .changes-filters select,
 .changes-filters input {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--ink);
   min-height: 34px;
 }
 .changes-basis {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
 }
 .change-day {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .change-day + .change-day {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 .change-day h2 {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 650;
   color: var(--muted);
   margin: 0;
@@ -63,7 +63,7 @@
 }
 .dialog-form .dialog-choices label.plan-template {
   align-items: flex-start;
-  padding: 4px 0;
+  padding: var(--space-1) 0;
 }
 .plan-template > span {
   display: flex;
@@ -74,7 +74,7 @@
 }
 .plan-stages p,
 .plan-stages ol {
-  margin: 0 0 4px;
+  margin: 0 0 var(--space-1);
 }
 .plan-stages ol {
   padding-left: 20px;
@@ -83,18 +83,18 @@
 /* Memory: the Ask box, its answer, then cards by folder. */
 .ask {
   max-width: 720px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 .ask label {
   display: block;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 .ask-row,
 .memory-filter {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
 }
 .ask-row .field {
@@ -104,7 +104,7 @@
 }
 .memory-filter {
   max-width: 720px;
-  margin: 16px 0 12px;
+  margin: var(--space-4) 0 var(--space-3);
 }
 .memory-filter .field {
   flex: 1;
@@ -114,16 +114,16 @@
   max-width: 720px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
+  gap: var(--space-2);
+  padding: var(--space-3);
   border: 1px solid var(--moss);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 .answer-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 .answer-head h2 {
@@ -153,14 +153,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 .note-actions .dialog-check {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
 /* Pinned notes on the board: one line of links above the columns. */
@@ -168,8 +168,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 12px;
-  padding: 0 14px 8px;
+  gap: var(--space-1) var(--space-3);
+  padding: 0 14px var(--space-2);
 }
 .pinned .meta {
   margin: 0;
@@ -178,29 +178,29 @@
 .pinned a {
   overflow-wrap: anywhere;
   color: var(--moss);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 /* Phase 5c: what agents wait on people for, review drift and handoffs. */
 .needs-badge {
   color: var(--clay);
   border: 1px solid currentColor;
-  border-radius: 4px;
-  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
   font-weight: 700;
   margin-right: 6px;
   text-transform: uppercase;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 /* Someone else holds the task: quieter than "needs you", it is a fact and not a request. */
 .held-badge {
   color: var(--muted);
   border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
   font-weight: 600;
   margin-right: 6px;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .blocked-reason {
   color: var(--clay);
@@ -217,7 +217,7 @@
 .asking .quote {
   display: block;
   margin-top: 2px;
-  padding-left: 8px;
+  padding-left: var(--space-2);
   border-left: 3px solid var(--line);
   white-space: pre-wrap;
 }
@@ -226,14 +226,14 @@
   font-weight: 600;
 }
 .row .hint {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .signals {
   display: grid;
-  gap: 4px;
-  padding: 8px 10px;
+  gap: var(--space-1);
+  padding: var(--space-2) 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--panel);
@@ -262,13 +262,13 @@ button.link {
 /* Markdown headings render one level down (# is h3, ## is h4) so they nest under the h2 of a
    row or panel. These keep the look each had when they were h2 and h3. */
 .sheet .prose h3 {
-  margin: 4px 0 12px;
+  margin: var(--space-1) 0 var(--space-3);
   font-size: 1.125rem;
   font-weight: 700;
   line-height: 1.35;
 }
 .sheet .prose h4 {
-  margin: 16px 0 6px;
+  margin: var(--space-4) 0 6px;
   font-size: 0.875rem;
   font-weight: 700;
 }
@@ -282,6 +282,6 @@ button.link {
 }
 .thread .prose h4 {
   margin: 0 0 6px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
 }

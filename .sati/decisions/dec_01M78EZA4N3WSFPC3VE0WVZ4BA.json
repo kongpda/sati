@@ -1,0 +1,15 @@
+{
+  "consequences": "Dropping the unused index would need a migration for a write cost too small to measure. Revisit only if a bench line shows task writes slowing.",
+  "context": "Review item 11.11 asked to verify two small leads. listActivity callers always bound it by time, so the json_extract filter runs on a small window. The only query that reads claim_lease_until is readyTasks in packages/store-sqlite/src/store.ts, which filters on project and status first (tasks_project_status) and checks the lease inside that set.",
+  "createdAt": "2026-11-12T18:05:29.621Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "No change. listActivity keeps filtering the verb with json_extract, and the tasks_claim_lease index stays.",
+  "id": "dec_01M78EZA4N3WSFPC3VE0WVZ4BA",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T18:05:29.622Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "Review 11.11: leave listActivity and the tasks_claim_lease index as they are",
+  "updatedAt": "2026-11-12T18:05:29.621Z",
+  "version": 1
+}

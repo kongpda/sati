@@ -5,7 +5,7 @@
 .my-section h2 {
   font-size: 15px;
   font-weight: 650;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
 }
 .my-section .count {
   color: var(--muted);
@@ -35,8 +35,8 @@
 .send-back {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 .my-section form.send-back .field {
   flex: 1 1 200px;
@@ -54,15 +54,15 @@
   gap: 10px;
 }
 .kind-choices legend {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .kind-option {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 10px var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--panel);
   cursor: pointer;
 }
@@ -84,7 +84,7 @@
   display: inline-grid;
   place-items: center;
   flex: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--avatar-ink);
   font-weight: 650;
   line-height: 1;
@@ -92,8 +92,8 @@
 .avatar {
   min-width: 22px;
   height: 22px;
-  padding: 0 4px;
-  font-size: 12px;
+  padding: 0 var(--space-1);
+  font-size: var(--text-xs);
   margin-right: 6px;
   vertical-align: middle;
 }
@@ -143,7 +143,7 @@
 .row.person .avatar {
   min-width: 32px;
   height: 32px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   margin: 0;
 }
 .who {
@@ -153,13 +153,13 @@
 .person-preview {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   font-weight: 600;
 }
 .palette form.dialog-form .swatches {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 8px 10px;
+  gap: var(--space-2) 10px;
   max-height: none;
 }
 /* WCAG 2.2 target size: each radio is at least 20 px with room around it. */

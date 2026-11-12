@@ -1049,7 +1049,7 @@ Added 2026-11-12 at the owner's request: the whole-project review found the mode
 - [ ] WP16 CLI code refactor (split `runtime.ts`, `commands/task.ts`, `commands/init.ts`)
 - [ ] WP6 CLI: one command per job
 - [ ] WP7 CLI: one flag per idea, one way to print
-- [ ] WP15 part A Board structure: split `app.tsx`, `pages.tsx`, `styles.css`; design tokens
+- [x] WP15 part A Board structure: split `app.tsx`, `pages.tsx`, `styles.css`; design tokens
 - [ ] WP2 Board: merge pages (11 to 6)
 - [ ] WP3 Board: correctness
 - [ ] WP5 Board: wording

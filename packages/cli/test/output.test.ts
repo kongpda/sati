@@ -22,8 +22,8 @@ describe("help", () => {
     for (const heading of ["START", "WORK", "MEMORY", "HISTORY", "PROJECT", "GLOBAL OPTIONS"]) {
       expect(r.stdout).toContain(heading);
     }
-    // An alias sits beside its command instead of taking a second row.
-    expect(r.stdout).toMatch(/^ {2}card, context\s/mu);
+    // A hidden name (review 6.5) takes no row and sits beside no command.
+    expect(r.stdout).toMatch(/^ {2}card\s/mu);
     expect(r.stdout).not.toMatch(/^ {2}context\s/mu);
     expect(r.stdout).toContain("--no-color");
     for (const line of r.stdout.split("\n")) expect(line.length).toBeLessThanOrEqual(100);
@@ -333,6 +333,25 @@ describe("usage errors teach the command", () => {
       at(new RegExp(`^ {2}${name} `, "mu")) < at(new RegExp(`^${next}$`, "mu"));
     expect(inside("doctor", "PROJECT", "RUN BY TOOLS"), "doctor under Project").toBe(true);
     expect(inside("completion", "START", "WORK"), "completion under Start").toBe(true);
+  });
+
+  // Review 6.5: `card show` was `card get` under another name, and `context` the same card
+  // command under another top-level name. One spelling is listed; the old ones still run.
+  it("lists card get, not card show or context, and the old names still run", async () => {
+    const dir = await tempRepo({ init: true });
+    const root = run(dir, ["--help"], { COLUMNS: "100" }).stdout;
+    expect(root).not.toMatch(/^ {2}card,/mu);
+    expect(root).not.toContain("sati context");
+    const help = sati(dir, "card", "--help").stdout;
+    expect(help).toMatch(/^ {2}get /mu);
+    expect(help).not.toMatch(/^ {2}show /mu);
+    const words = /^ {4}""\) words="([^"]*)"/mu.exec(sati(dir, "completion", "bash").stdout)?.[1];
+    expect(words?.split(" ")).not.toContain("context");
+    expect(sati(dir, "card", "put", "a.ts", "--summary", "A file").code).toBe(0);
+    const shown = sati(dir, "card", "show", "a.ts");
+    expect(shown.code).toBe(0);
+    expect(shown.stdout).toBe(sati(dir, "card", "get", "a.ts").stdout);
+    expect(sati(dir, "context", "get", "a.ts").stdout).toBe(shown.stdout);
   });
 
   // The root list is scanned; exit codes and flag lists belong in the command's own help.

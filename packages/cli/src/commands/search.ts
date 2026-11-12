@@ -8,7 +8,7 @@ import { execute } from "../runtime/output.js";
 export default defineCommand({
   meta: {
     name: "search",
-    description: "Full-text search across tasks, features, notes, decisions and context cards",
+    description: "Exact full-text search with filters (--entities, --limit, --any)",
   },
   args: {
     query: { type: "positional", required: true, description: "Words to find" },

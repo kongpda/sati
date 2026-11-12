@@ -8,7 +8,8 @@ import { markdown } from "../term.js";
 export default defineCommand({
   meta: {
     name: "recall",
-    description: "What do we know about…? The best cards, notes, decisions and open tasks",
+    description:
+      "Ranked answer within a token budget: the best cards, notes, decisions and open tasks",
   },
   args: {
     question: { type: "positional", required: true, description: "A question or a few words" },

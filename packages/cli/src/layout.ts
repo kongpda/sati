@@ -12,7 +12,7 @@ export const layout: HelpLayout = {
     Project: ["settings", "projects", "ui", "sync", "doctor"],
     "Run by tools": ["mcp", "serve", "nudge", "merge-driver"],
   },
-  aliases: { context: "card" },
-  hidden: ["rules", "export", "import", "app"],
+  aliases: {},
+  hidden: ["rules", "export", "import", "app", "context"],
   hiddenFlags: HIDDEN_FLAGS,
 };

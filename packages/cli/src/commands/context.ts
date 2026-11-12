@@ -202,8 +202,13 @@ const approve = defineCommand({
 export default defineCommand({
   meta: {
     name: "card",
-    description: "Cards: what agents learned about files and modules (also `sati context`)",
+    description: "Cards: what agents learned about files and modules",
   },
-  // `show` reads better for a person; `get` matches the MCP tool.
-  subCommands: { show: { ...get, meta: { ...getMeta, name: "show" } }, get, put, approve },
+  // `show` is the old name of `get` (the MCP tool's name); it still runs but is not listed.
+  subCommands: {
+    show: { ...get, meta: { ...getMeta, name: "show", hidden: true } },
+    get,
+    put,
+    approve,
+  },
 });

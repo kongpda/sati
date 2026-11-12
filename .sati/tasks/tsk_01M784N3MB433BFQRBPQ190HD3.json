@@ -1,0 +1,33 @@
+{
+  "body": "\"saves context and flags it stale\" makes 55 tool calls; on windows-latest it took 6.9 s against the 5 s default (run 43242666569). Give the test a longer limit.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "aaab864c18b960ff74721ba3d0772bcb6a6c704c",
+    "completedAt": "2026-11-12T15:06:09.571Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/mcp/test/server.test.ts"
+    ],
+    "summary": "The card test makes 55 tool calls and took 6.9 s on windows-latest against the 5 s default. It now has a 20 s limit. Test-only change; gate green locally."
+  },
+  "createdAt": "2026-11-12T15:05:09.515Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "effort": "light",
+  "id": "tsk_01M784N3MB433BFQRBPQ190HD3",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T15:05:09.516Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T15:05:13.494Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T15:06:09.572Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T15:06:09.572Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T15:06:09.572Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T15:05:13.494Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "done",
+  "title": "MCP card test times out on the Windows CI runner",
+  "updatedAt": "2026-11-12T15:06:09.572Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

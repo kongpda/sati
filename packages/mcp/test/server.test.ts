@@ -820,7 +820,8 @@ describe("MCP server", () => {
     expect((await call(client, "context_get", { path: "src/auth/login.ts" })).body).toEqual([
       expect.objectContaining({ stale: true }),
     ]);
-  });
+    // 55 tool calls: a slow CI disk needs more than the default 5 s.
+  }, 20_000);
 
   it("fills prompt arguments into the instructions", async () => {
     const client = await connect();

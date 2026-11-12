@@ -1,3 +1,5 @@
+import { waitingOn as claimWaits } from "../../core/src/domain/inbox.js";
+
 export interface Claim {
   actorId: string;
   leaseUntil: string;
@@ -243,8 +245,7 @@ interface Drift {
 
 /** True while the agent holding the task waits on a person. */
 export function waitingOn(task: Task, now = Date.now()): Claim["waiting"] | undefined {
-  const c = task.claim;
-  return c?.waiting && Date.parse(c.leaseUntil) > now ? c.waiting : undefined;
+  return claimWaits(task, now);
 }
 
 /** Records a person can delete from the board and bring back with Undo. */

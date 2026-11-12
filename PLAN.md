@@ -185,7 +185,7 @@ Activity and locks are **not** exported to `.sati/`: they are high-churn and mac
 
 Agents use sati through a small MCP toolset, with the CLI as a fallback. Hooks enforce the important steps, because agents forget instructions but cannot skip hooks.
 
-**MCP tools (20, kept small to save context)**
+**MCP tools (22, kept small to save context)**
 
 | Tool | What it does |
 | --- | --- |
@@ -207,10 +207,12 @@ Agents use sati through a small MCP toolset, with the CLI as a fallback. Hooks e
 | `note_get` | Read one note in full by id or short handle |
 | `roadmap_upsert` | Create or update a milestone; with `template`, the whole plan (milestone and staged tasks) |
 | `changes` | What changed since a time, `last-session` or a done milestone; `format` plain, changelog or digest |
+| `handoff_write` | Leave a note for the next session on a task |
+| `inbox` | Read-only: what waits for a person or agent (questions, blocked tasks, mentions, approvals, assigned, due this week); `for` takes a name or actor id |
 
 MCP **resources**: `sati://workflow` (the rules agents follow), `sati://project/roadmap`, `sati://feature/{id}`. MCP **prompts**: `start-task`, `finish-task`, `plan-feature`.
 
-**CLI** mirrors the tools: `sati init | brief | next | task … | feature … | lock … | decision … | note … | comment … | handoff | plan | milestone … | context … | card … | search | recall | activity | undo | settings | projects | ui | serve | sync | guard | doctor | review | scan | export | import | mcp`. Every command supports `--json`, so agents without MCP can still use it.
+**CLI** mirrors the tools: `sati init | brief | next | inbox | task … | feature … | lock … | decision … | note … | comment … | handoff | plan | milestone … | context … | card … | search | recall | activity | undo | settings | projects | ui | serve | sync | guard | doctor | review | scan | export | import | mcp`. Every command supports `--json`, so agents without MCP can still use it.
 
 **Hooks installed by `sati init`**
 
@@ -987,6 +989,45 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 **Not in Phase 9:** registry collisions (two folders with one slug, a copied folder sharing a database) are fixed under task `tsk_01M74P…VB2MP62GRN1XC90AKCE` by another agent.
 
 **Gate:** the Phase 8 gate folder, on a machine with no git, driven through MCP by a client that sets no agent variable: the caller is recorded as an agent, cards with anchors go stale when the file changes, and Khmer questions recall Khmer cards. `pnpm lint && pnpm typecheck && pnpm test` pass and the performance budgets are unchanged.
+
+### Phase 10 — sati in the terminal, with no server
+
+Added 2026-11-12 at the owner's request. sati already needs no server: every command opens the database itself and `sati mcp` speaks over stdio. What is missing is a comfortable terminal for a person. The full plan, the findings and a checklist per phase are in [`docs/headless-cli-plan.md`](docs/headless-cli-plan.md). No new dependency and no daemon.
+
+**10a (H1) — The inbox in the core**
+
+- [x] `inboxOf` in `packages/core/src/domain/inbox.ts`: the rule behind the board's My work page, in a file with no runtime imports, with the one mention rule (the board had a copy)
+- [x] `inbox` service with a Zod output schema
+- [x] The board builds My work from the core's function; its bundle gains no library
+- [x] `sati inbox` (sections for a person, one line per item in a pipe, `--json`, `--for`)
+- [x] MCP tool `inbox`, read-only (22 tools; update the Agent integration table)
+- [x] The board's tests of the rule moved to the core with their inputs and expectations unchanged
+
+**10b (H2) — Review verbs and the picker**
+
+- [ ] `pickTask` replaces the code behind `task claim --pick`
+- [ ] `sati task approve`, `sati task send-back`
+- [ ] A picker for `task show`, `task update`, `task claim` when the id is missing and a person is at a terminal
+- [ ] The equivalent command printed after each interactive action
+- [ ] `--no-input` and `SATI_NO_INPUT`
+
+**10c (H3) — Prompts for missing arguments**
+
+- [ ] `task create`, `task complete`, `comment add`, `note create`, `decision record` ask for what is missing
+- [ ] `$EDITOR` for bodies
+
+**10d (H4) — Home screen and live view**
+
+- [ ] Bare `sati` shows a status and a menu to a person at a terminal
+- [ ] `sati activity --follow`
+- [ ] `sati task list --board`
+
+**10e (H5) — Agents without MCP, and docs**
+
+- [ ] `Tools:` line in the brief; `sati rules --cli-only`
+- [ ] `docs/guide/headless.md`
+
+**Gate:** every CLI test from before Phase 10 passes unchanged (scripts and agents see no difference), no command prompts when stdin is not a terminal or an agent variable is set, the board's My work page and `sati inbox --json` list the same ids, and `pnpm lint && pnpm typecheck && pnpm test` and the Playwright board tests pass.
 
 ## Testing, CI and release
 

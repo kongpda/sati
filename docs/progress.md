@@ -2174,3 +2174,13 @@ Task `tsk_fevjbr`.
 - Still ideas, not measured as a problem: caching the board snapshot and windowed long lists. The performance budgets pass.
 - Found on the way: every `dist/` folder in the main checkout was gone, so the installed `sati` and its MCP server did not start. Cause not found. `pnpm build` restored it.
 
+## 2026-11-12 — 10a (H1): the inbox in the core
+
+- The board package imports nothing from `@sati/core` (it has its own record types and no Zod in its bundle), so the shared rule is `packages/core/src/domain/inbox.ts`, a file with no runtime imports that the board reads by relative path, the way `vite.config.ts` reads the product name. It is generic over the task and note types: the board gets its own records back, the service gets stored ones. The board's main bundle is 424 KB before and after.
+- The mention rule existed twice, in the board and in `services/comment.ts`. The core's version is kept (it skips deleted comments, treats an agent's sessions as one actor and breaks ties by id) and `comment.ts` re-exports it, so the brief is untouched. The board passes each person's shown name (`ann` for `ann@laptop`) as before.
+- The week ends on Sunday in the local time zone, in the terminal as on the board. They run on the same machine, so they agree.
+- `sati inbox` keeps the board's section names and order. In a pipe each line starts with its section (`needs`, `mention`, `approve`, `assigned`, `due`), so `grep ^approve` works; empty sections print nothing there.
+- `--for` and the MCP tool's `for` take an actor id, a full name, a shown name or a person's user part. With no `for`, the MCP tool answers for the calling agent. Guessing "the person this agent works for" was left out: nothing stored says who that is.
+- The service resolves an actor handle before it opens its read: a store does not nest reads.
+- The MCP tool returns short handles, as `task_list` does.
+

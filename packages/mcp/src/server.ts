@@ -38,6 +38,8 @@ import {
   getProject,
   getRecord,
   HandoffInput,
+  InboxInput,
+  inbox,
   isSatiError,
   LIMITS,
   ListTasksInput,
@@ -383,6 +385,31 @@ function registerTools(
         return fail(err);
       }
     },
+  );
+
+  server.registerTool(
+    "inbox",
+    {
+      description:
+        "What waits for one actor, as the board's My work page lists it: needsAnswer (questions agents ask them and blocked tasks), mentions (comments that call them by name), approval (tasks in review), assigned and due (this week). Default: you. Pass `for` with a person's name or actor id to see what waits on them, for example before you ask them something. Read-only: approving stays with people.",
+      inputSchema: InboxInput,
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    (input) =>
+      run(async () => {
+        const out = await inbox(ctx, input);
+        const short = <T extends { id: string }>(rows: T[]) =>
+          rows.map((r) => ({ ...r, id: shortHandle(r.id) }));
+        return {
+          ...out,
+          for: { ...out.for, id: shortHandle(out.for.id) },
+          needsAnswer: short(out.needsAnswer),
+          mentions: short(out.mentions).map((m) => ({ ...m, on: shortHandle(m.on) })),
+          approval: short(out.approval),
+          assigned: short(out.assigned),
+          due: short(out.due),
+        };
+      }),
   );
 
   server.registerTool(

@@ -13,6 +13,7 @@ import {
   ensureActor,
   fixedClock,
   GENERAL_WORKFLOW,
+  getRecord,
   initProject,
   type ServiceContext,
   shortHandle,
@@ -87,6 +88,7 @@ describe("MCP server", () => {
       "feature_check",
       "feature_upsert",
       "handoff_write",
+      "inbox",
       "lock_acquire",
       "lock_release",
       "note_get",
@@ -381,9 +383,41 @@ describe("MCP server", () => {
       ["task_list", { detail: "full" }],
       ["search", { query: "instructions" }],
       ["changes", {}],
+      ["inbox", {}],
     ] as const) {
       expect(fenced(await raw(name, args)), name).not.toContain("`");
     }
+  });
+
+  // PLAN Phase 10 (H1): an agent can see what waits on the person it works for before it adds
+  // one more question, and it reads the same lists the board and `sati inbox` show.
+  it("lists what waits for a person, by name, and changes nothing", async () => {
+    const kim = await ensureActor(ctx, {
+      name: "kim@main",
+      kind: "human",
+      tool: null,
+      worktree: null,
+    });
+    const t = await createTask(ctx, { title: "Build the export", assigneeIds: [kim.id] });
+    const client = await connect();
+    const claimed = await call(client, "task_claim", { id: t.id });
+    await call(client, "task_complete", {
+      id: t.id,
+      summary: "CSV writer",
+      filesTouched: ["src/csv.ts"],
+      token: claimed.body.claim.token,
+    });
+    const before = await getRecord(ctx, "task", t.id);
+    const res = await call(client, "inbox", { for: "kim" });
+    expect(res.isError).toBe(false);
+    expect(res.body.for).toEqual({ id: shortHandle(kim.id), name: "kim@main" });
+    expect(res.body.approval).toMatchObject([
+      { id: shortHandle(t.id), title: "Build the export", summary: "CSV writer", files: 1 },
+    ]);
+    expect(res.body.count).toBe(1);
+    expect(await getRecord(ctx, "task", t.id)).toEqual(before);
+    const nobody = await call(client, "inbox", { for: "zed" });
+    expect(nobody.body.error.code).toBe("NOT_FOUND");
   });
 
   // PLAN Phase 7b: "write the changelog for v1" is one call, with the release note first.

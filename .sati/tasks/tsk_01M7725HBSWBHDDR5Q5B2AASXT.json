@@ -1,0 +1,53 @@
+{
+  "body": "Phase H1 of docs/headless-cli-plan.md. Move the My work lists into a core file with no runtime imports, shared by the board, a new `sati inbox` command and a read-only MCP `inbox` tool.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "100e899667971231a3ba5fa280853b14401acf2e",
+    "completedAt": "2026-11-12T05:12:27.860Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/core/src/domain/inbox.ts",
+      "packages/core/src/services/inbox.ts",
+      "packages/core/src/services/comment.ts",
+      "packages/core/src/services/index.ts",
+      "packages/core/src/workflow.ts",
+      "packages/core/test/inbox.test.ts",
+      "packages/ui/src/my-work.tsx",
+      "packages/ui/src/api.ts",
+      "packages/ui/test/my-work.test.ts",
+      "packages/cli/src/commands/inbox.ts",
+      "packages/cli/src/index.ts",
+      "packages/cli/test/inbox.test.ts",
+      "packages/mcp/src/server.ts",
+      "packages/mcp/test/server.test.ts",
+      "PLAN.md",
+      "README.md",
+      "docs/progress.md",
+      "docs/headless-cli-plan.md",
+      "docs/guide/agent-workflow.md",
+      "docs/guide/agent-workflow-general.md",
+      ".changeset/terminal-inbox.md"
+    ],
+    "releaseNote": "`sati inbox` and the MCP tool `inbox` show what waits for you: questions, mentions, approvals, assigned and due tasks.",
+    "summary": "H1 of docs/headless-cli-plan.md. The rule behind the board's My work page now lives in packages/core/src/domain/inbox.ts (no runtime imports; the board reads it by relative path, bundle unchanged at 424 KB). New inbox service with a Zod output schema, `sati inbox` (sections for a person, one prefixed line per item in a pipe, --json, --for) and a read-only MCP tool `inbox` (22 tools). The duplicate mention rule in the board is gone; comment.ts re-exports the core one. Gate: lint, typecheck, tests (245 pass, 3 skipped: 2 Windows-only, 1 in output.test.ts as before), 97 Playwright tests pass."
+  },
+  "createdAt": "2026-11-12T05:02:27.705Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M7725HBSWBHDDR5Q5B2AASXT",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T05:02:27.708Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T05:02:29.821Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T05:12:27.861Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T05:12:27.861Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T05:12:27.861Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T05:02:29.821Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "review",
+  "title": "H1: inbox in the core, sati inbox, MCP inbox tool",
+  "updatedAt": "2026-11-12T05:12:27.861Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

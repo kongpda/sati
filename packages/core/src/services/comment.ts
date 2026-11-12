@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { parseHandle, parseId } from "../domain/ids.js";
+import { COMMENT_TAG } from "../domain/inbox.js";
 import { LIMITS, type Note } from "../domain/schemas.js";
 import { refuseSecrets } from "../domain/secrets.js";
 import type { StorageReader } from "../ports/storage.js";
@@ -18,9 +19,10 @@ import { resolveId } from "./query.js";
 /**
  * A comment is a note tagged `comment` and linked to the task, note or decision it is on, the way
  * a handoff is. So it needs no table, migration, snapshot folder or MCP tool of its own: notes are
- * already exported, merged, searchable and restorable.
+ * already exported, merged, searchable and restorable. The tag and the mention rule live in
+ * `domain/inbox.ts`, which the board shares.
  */
-export const COMMENT_TAG = "comment";
+export { COMMENT_TAG, mentionsOf } from "../domain/inbox.js";
 
 /** The records a comment can be on, by id prefix. */
 const TARGETS = { tsk: "task", note: "note", dec: "decision" } as const;
@@ -83,50 +85,6 @@ export async function addComment(ctx: ServiceContext, input: unknown): Promise<N
       ...(about.private ? { private: true } : {}),
     });
   });
-}
-
-/** A mention older than this no longer asks for attention. Kept in step with the board. */
-const MENTION_DAYS = 14;
-
-/**
- * Comments that call `actor` by name (`@ann`, `@claude-code`), newest first: by the shown name,
- * its first word, or the user part of `user@worktree`. A mention is done once the actor comments
- * on the same record after it, so nothing is stored about what was read; one nobody answers
- * leaves after two weeks. The same rule as the board's My work.
- */
-export function mentionsOf(
-  notes: readonly Note[],
-  actor: { id: string; name: string; displayName?: string | undefined },
-  now: Date,
-  /** Other actors that are the same one: every session of an agent is an actor of its own. */
-  selves: ReadonlySet<string> = new Set(),
-): Note[] {
-  const mine = (id: string) => id === actor.id || selves.has(id);
-  const shown = actor.displayName ?? actor.name;
-  const names = [shown, shown.split(/\s+/u)[0] ?? "", actor.name.split("@")[0] ?? ""]
-    .filter((n) => n.length > 0)
-    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"));
-  if (names.length === 0) return [];
-  // Not inside a word or an email address: `x@ann.com` and `@annette` do not call Ann.
-  const calls = new RegExp(`(?<![\\p{L}\\p{N}_.])@(?:${names.join("|")})(?![\\p{L}\\p{N}_])`, "iu");
-  const since = new Date(now.getTime() - MENTION_DAYS * 86_400_000).toISOString();
-  const comments = notes.filter((n) => n.tags.includes(COMMENT_TAG) && n.deletedAt === null);
-  const answered = new Map<string, string>();
-  for (const n of comments) {
-    const on = n.links[0];
-    if (on && mine(n.createdBy) && n.createdAt > (answered.get(on) ?? "")) {
-      answered.set(on, n.createdAt);
-    }
-  }
-  return comments
-    .filter(
-      (n) =>
-        !mine(n.createdBy) &&
-        n.createdAt >= since &&
-        n.createdAt > (answered.get(n.links[0] ?? "") ?? "") &&
-        calls.test(n.body),
-    )
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
 }
 
 /** True for the notes shown in a record's thread: comments and handoffs linked to it. */

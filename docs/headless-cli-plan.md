@@ -1,6 +1,6 @@
 # Plan: sati in the terminal, with no server
 
-- Status: approved by the owner (2026-11-12), with the recommended answers to the four open decisions. Phase H1 is being read in; no code is committed yet. Progress is tracked in the checklist under "Implementation notes" below.
+- Status: approved by the owner (2026-11-12), with the recommended answers to the four open decisions. Phase H1 is done; H2 is next. Progress is tracked in the checklist under "Implementation notes" below.
 - Asked by the owner: use sati without its server, headless, with an interactive CLI; can an agent talk to it with or without a server; does MCP need a server.
 
 ## Short answers
@@ -133,11 +133,11 @@ Each phase ends with `pnpm lint && pnpm typecheck && pnpm test` and the Playwrig
 
 ### Phase H1: inbox in the core (about 1 day)
 
-- [ ] `packages/core/src/services/inbox.ts` with the function and its Zod output schema
-- [ ] The board imports it; `my-work.tsx` keeps only rendering
-- [ ] `sati inbox` with rich, plain and `--json` output
-- [ ] MCP tool `inbox`
-- [ ] Tests moved from `packages/ui/test/my-work.test.ts`; one CLI test per section; one MCP test
+- [x] `packages/core/src/services/inbox.ts` with the function and its Zod output schema
+- [x] The board imports it; `my-work.tsx` keeps only rendering
+- [x] `sati inbox` with rich, plain and `--json` output
+- [x] MCP tool `inbox`
+- [x] Tests moved from `packages/ui/test/my-work.test.ts`; one CLI test per section; one MCP test
 
 Gate: the board's My work page shows the same items as before for the e2e fixtures, and `sati inbox --json` lists the same ids.
 
@@ -223,16 +223,16 @@ Written 2026-11-12 after reading the code at `8a9a8eb`, so the work can be picke
 3. `packages/ui/src/my-work.tsx` imports `inboxOf`, `weekEnd` from `../../core/src/domain/inbox.ts` (the way `vite.config.ts` reads the name) and keeps only rendering. `myWork(data, now)` stays as a thin wrapper so the component and `app.tsx` do not change. `api.ts` re-exports `waitingOn`.
 4. Tests: the `weekEnd`, `myWork` and `mentions` cases of `packages/ui/test/my-work.test.ts` move to `packages/core/test/inbox.test.ts` with the same inputs and expectations. The board keeps one test that `myWork` is the core function, and the tests of its own code (`mentionNames`, `mentionAt`, `oneFile`, board words).
 5. `packages/cli/src/commands/inbox.ts`: sections "Needs you", "Mentions", "Waiting for your approval", "Assigned to you", "Due by <day>"; empty sections say so in the rich layout and are left out of the plain one; `--json` prints the service output. Stored text goes through the sanitiser. Registered in `main.ts` and in completions.
-6. MCP tool `inbox` in `packages/mcp/src/server.ts`: read-only, optional `for` (an actor id or name; default: the person the agent works for where known, else the caller). Result text inside the data fence.
+6. MCP tool `inbox` in `packages/mcp/src/server.ts`: read-only, optional `for` (an actor id or name; default: the caller, since nothing stored says which person an agent works for). Result text inside the data fence.
 7. `PLAN.md`: a new block "Phase 10 — sati in the terminal" with one sub-block per phase; `docs/progress.md` entry; `.changeset/terminal-inbox.md`.
 
-- [ ] `domain/inbox.ts`, with `comment.ts` re-exporting `mentionsOf`
-- [ ] `services/inbox.ts` and `InboxOutput`
-- [ ] The board imports it; bundle size checked before and after (no Zod in `packages/ui/dist`)
-- [ ] Tests moved; one CLI test per section; one MCP test
-- [ ] `sati inbox` (rich, plain, `--json`)
-- [ ] MCP `inbox`
-- [ ] Gate, Playwright, changeset, progress entry
+- [x] `domain/inbox.ts`, with `comment.ts` re-exporting `mentionsOf`
+- [x] `services/inbox.ts` and `InboxOutput`
+- [x] The board imports it; bundle size checked before and after (no Zod in `packages/ui/dist`)
+- [x] Tests moved; one CLI test per section; one MCP test
+- [x] `sati inbox` (rich, plain, `--json`)
+- [x] MCP `inbox`
+- [x] Gate, Playwright, changeset, progress entry
 
 ### Phase H2 in detail
 

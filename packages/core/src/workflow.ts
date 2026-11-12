@@ -67,6 +67,7 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
   \`releaseNote\` when people who use the product would notice: one line in their words. Label
   work they never see \`internal\` to keep it out of changelogs.
 - Asked what changed, or for a changelog or digest: \`changes\` with \`since\` and \`format\`.
+- Before you ask a person for something: \`inbox\` with \`for\` shows what already waits on them.
 
 ## Memory
 - Ask first: \`recall\` with the question returns what people and agents already know (cards,
@@ -150,6 +151,7 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
   outside files needs none). A person may need to approve it; it then waits for approval.
   Add a \`releaseNote\` when it is news for others: one line in plain words.
 - Asked what changed, or for a weekly digest: \`changes\` with \`since\` and \`format: "digest"\`.
+- Before you ask a person for something: \`inbox\` with \`for\` shows what already waits on them.
 
 ## Memory
 - Ask first: \`recall\` with the question returns what people and agents already know (cards,

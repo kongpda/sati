@@ -203,7 +203,7 @@ git-ignored files instead.
 | `search` | `task_get` | `feature_upsert` | `context_get` |
 | `recall` | `task_claim` | `lock_acquire` | `context_put` |
 | `changes` | `task_update` | `lock_release` | `note_get` |
-| | `task_create` | | `note_upsert` |
+| `inbox` | `task_create` | | `note_upsert` |
 | | `task_complete` | | `roadmap_upsert` |
 
 Updates return only the id, version, status, claim and the fields the call set; `task_get` and
@@ -250,6 +250,7 @@ sati lock acquire 'src/auth/**'
 sati decision record "Drop the v1 API" --decision "…"
 sati recall "webhooks"         # best cards, notes, decisions and open tasks on a topic
 sati changes --since 7d        # what changed, as a digest or changelog
+sati inbox                     # what waits for you: questions, mentions, approvals, assigned, due
 sati undo <activity-id>        # revert one change if nothing changed since
 sati -v                        # sati 0.1.0 (48a630b 2026-11-11): version, commit, commit date
 sati doctor                    # node, system, install and store paths; then leases, locks, integrity, hooks, a stale build

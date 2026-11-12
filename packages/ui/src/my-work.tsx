@@ -1,98 +1,32 @@
 import { type ReactNode, useState } from "react";
-import { dueLabel, type Note, type Snapshot, type Task, today, waitingOn } from "./api.js";
+import { inboxCount as count, inboxOf, weekEnd as lastDay } from "../../core/src/domain/inbox.js";
+import { dueLabel, type Note, type Snapshot, type Task, waitingOn } from "./api.js";
 import { answerRefusal, moveRefusal } from "./moves.js";
 import { holderName, knownName, nameOf, personName } from "./people.js";
-import { COMMENT_TAG } from "./thread.js";
 import { capital, statusWord } from "./words.js";
 
-const CLOSED = new Set(["done", "cancelled"]);
-
 /** The last day of this week (Sunday) in the reader's time zone, as YYYY-MM-DD. */
-export function weekEnd(now = new Date()): string {
-  const days = (7 - now.getDay()) % 7;
-  return today(new Date(now.getFullYear(), now.getMonth(), now.getDate() + days));
-}
+export const weekEnd = (now = new Date()): string => lastDay(now);
 
-/** Due soonest first; undated last; then the higher priority. */
-const RANK: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
-function byDue(a: Task, b: Task): number {
-  const left = a.dueDate ?? "9999";
-  const right = b.dueDate ?? "9999";
-  if (left !== right) return left < right ? -1 : 1;
-  return (RANK[a.priority] ?? 9) - (RANK[b.priority] ?? 9);
-}
-
-/** A mention older than this no longer asks for attention. */
-const MENTION_DAYS = 14;
-
-/**
- * Comments that call you by name (`@ann`), newest first. You are called by your shown name, its
- * first word, or the user part of `user@worktree`. A mention is done once you comment on the same
- * record after it, so nothing is stored about what you have read; one nobody answers leaves after
- * two weeks.
- */
+/** Comments that call you by name (`@ann`), newest first, until you answer on that record. */
 export function mentionsOf(data: Snapshot, now = new Date()): Note[] {
-  const me = (data.actors ?? []).find((a) => a.id === data.you);
-  if (!me) return [];
-  const shown = personName(me);
-  const names = [shown, shown.split(/\s+/u)[0] ?? "", me.name.split("@")[0] ?? ""]
-    .filter((n) => n.length > 0)
-    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"));
-  if (names.length === 0) return [];
-  // Not inside a word or an email address: `x@ann.com` and `@annette` do not call Ann.
-  const calls = new RegExp(`(?<![\\p{L}\\p{N}_.])@(?:${names.join("|")})(?![\\p{L}\\p{N}_])`, "iu");
-  const since = new Date(now.getTime() - MENTION_DAYS * 86_400_000).toISOString();
-  const comments = (data.notes ?? []).filter((n) => n.tags.includes(COMMENT_TAG));
-  // The latest comment of yours on each record.
-  const answered = new Map<string, string>();
-  for (const n of comments) {
-    const on = n.links[0];
-    if (on && n.createdBy === data.you && n.createdAt > (answered.get(on) ?? "")) {
-      answered.set(on, n.createdAt);
-    }
-  }
-  return comments
-    .filter(
-      (n) =>
-        n.createdBy !== data.you &&
-        n.createdAt >= since &&
-        n.createdAt > (answered.get(n.links[0] ?? "") ?? "") &&
-        calls.test(n.body),
-    )
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return myWork(data, now).mentions;
 }
 
 /** How many things wait for you: the number next to "My work". Assigned and due tasks are plans, not calls. */
 export function inboxCount(data: Snapshot, now = new Date()): number {
-  const { needs, approval, mentions } = myWork(data, now);
-  return needs.length + approval.length + mentions.length;
+  return count(myWork(data, now));
 }
 
 /**
- * The lists a person starts the day with. Each task shows once, in the first list it fits:
- * needs you (an agent asks a question or waits for a permission, or the task is blocked), then
- * waiting for approval (in review), both for tasks assigned to you or to nobody; then assigned to
- * you, then due by Sunday (late ones included), so the same task never asks for attention twice.
+ * The lists a person starts the day with: needs you, mentions, waiting for approval, assigned to
+ * you and due by Sunday. The rule is `inboxOf` in the core, which `sati inbox` and the MCP
+ * `inbox` tool call too, so the terminal and this page show the same items.
  */
 export function myWork(data: Snapshot, now = new Date()) {
-  const you = data.you;
-  const open = data.tasks.filter((t) => !CLOSED.has(t.status));
-  const yours = (t: Task) => (t.assigneeIds ?? []).length === 0 || t.assigneeIds?.includes(you);
-  const asking = open
-    .filter((t) => yours(t) && waitingOn(t, now.getTime()))
-    .sort((a, b) => ((a.claim?.waiting?.since ?? "") < (b.claim?.waiting?.since ?? "") ? -1 : 1));
-  const blocked = open.filter((t) => yours(t) && t.status === "blocked" && !asking.includes(t));
-  const needs = [...asking, ...blocked];
-  const shown = new Set(needs.map((t) => t.id));
-  const approval = open.filter((t) => !shown.has(t.id) && t.status === "review" && yours(t));
-  for (const t of approval) shown.add(t.id);
-  const assigned = open.filter((t) => !shown.has(t.id) && t.assigneeIds?.includes(you)).sort(byDue);
-  for (const t of assigned) shown.add(t.id);
-  const end = weekEnd(now);
-  const due = open
-    .filter((t) => !shown.has(t.id) && t.dueDate != null && t.dueDate <= end)
-    .sort(byDue);
-  return { needs, approval, assigned, due, end, mentions: mentionsOf(data, now) };
+  // A person's shown name is the user part of `user@worktree`: the name they are called by.
+  const actors = (data.actors ?? []).map((a) => ({ ...a, displayName: personName(a) }));
+  return inboxOf({ you: data.you, tasks: data.tasks, notes: data.notes, actors }, now);
 }
 
 export function MyWork({

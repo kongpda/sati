@@ -9,6 +9,7 @@ export * from "./doctor.js";
 export * from "./feature.js";
 export * from "./guard.js";
 export * from "./handoff.js";
+export * from "./inbox.js";
 export * from "./lock.js";
 export * from "./milestone.js";
 export * from "./note.js";

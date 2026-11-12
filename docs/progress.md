@@ -2365,3 +2365,15 @@ Items 12.1, 12.2 and 12.4 to 12.7 are done, and the MCP half of 12.3 (task `tsk_
 - **12.4:** descriptions total 5,058 characters with the two new tools (from 6,998 measured before), none over 350. The how-to detail that left them is in `docs/guide/agent-workflow*.md` (regenerated `workflow.ts`): truncated lists, card paths for parts, links and outside files, `approved` cards, whole-list fields with `expectedVersion`, release after a handoff.
 - **12.5, 12.6:** no change; decisions `dec_01M78DA1VFTXSFES9K1RVQQX7Q` and `dec_01M78DA3N4REENRD1XQ9VAQFY7`.
 - **12.7:** one paragraph under "Web board" in the quick start.
+
+## 2026-11-13 — Review WP16: CLI code refactor
+
+Items 16.1 to 16.6 are done (task `tsk_01M78D0E30JJGPHA21VAEDQWAT`). Pure moves: the CLI suite passed unchanged after every commit, and there is no changeset.
+
+- **16.1:** `runtime.ts` (937 lines) is gone; its code is in six `runtime/` modules by job. Callers import the module they need, with no barrel. Two test imports moved with it.
+- **16.2, 16.3:** `commands/task.ts` and `commands/init.ts` are folders; `index.ts` points at `commands/task/index.js` and `commands/init/command.js`. The desktop text in `init` moved into `desktopText` in `init/desktop.ts`; its output is unchanged.
+- **16.4:** `REPEATABLE` and `HIDDEN_FLAGS` live in `flags.ts`, the help layout in `layout.ts`. The field-to-flag map of 7.4 does not exist yet; WP7 adds it to `flags.ts`.
+- **16.5:** "every visible command is in exactly one help group, and no two visible commands share a description" in `output.test.ts` reads the real root `--help`. It was checked to fail three ways (a command missing from its group, listed twice, a copied description). It found no current violation.
+- **16.6:** left alone. Nothing in `packages/cli/src` is over 600 lines except `ui/server.ts` (672); the largest new file is `runtime/git.ts` (316).
+- **Bench:** CLI cold start p95 67.2 ms (budget 80). The database-bound lines failed on that run (read 340 ms, search 97.5, recall 125, home screen 830 and 1,215) with the machine's load average near 100 from parallel test runs; no query code changed here. WP11 reruns them with before and after numbers.
+

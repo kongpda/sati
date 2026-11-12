@@ -1,5 +1,20 @@
 {
   "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "44dc1a6cddbe0159a4869f0a8f7c162d5d8167bf",
+    "completedAt": "2026-11-12T18:06:22.454Z",
+    "completedBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "filesTouched": [
+      "packages/ui/src/app.tsx",
+      "packages/ui/src/pages",
+      "packages/ui/src/hooks",
+      "packages/ui/src/shell",
+      "packages/ui/src/styles",
+      "packages/ui/src/styles.css"
+    ],
+    "summary": "WP15 part A done: app.tsx 1306->299 lines via hooks/shell/pages modules, pages.tsx split into pages/*, styles.css split into 11 ordered chunks, design tokens added (exact-value). Commits b0beecb, 6917ee5, 0578643, d4f892e, 8f3c0e4, 44dc1a6. Gate and 103 e2e green."
+  },
   "createdAt": "2026-11-12T17:26:54.071Z",
   "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
   "id": "tsk_01M78CRMVQCCPECXPW417CEMH1",
@@ -8,13 +23,14 @@
   "stamps": {
     "*": "2026-11-12T17:26:54.071Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
     "branch": "2026-11-12T17:26:55.459Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
-    "claim": "2026-11-12T18:01:22.541Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "status": "2026-11-12T18:01:22.541Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T18:06:22.454Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "completion": "2026-11-12T18:06:22.454Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "status": "2026-11-12T18:06:22.454Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
     "worktree": "2026-11-12T17:26:55.459Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
   },
-  "status": "todo",
+  "status": "done",
   "title": "WP15 part A: split app.tsx, pages.tsx, styles.css; design tokens (15.1-15.4)",
-  "updatedAt": "2026-11-12T18:01:22.542Z",
-  "version": 3,
+  "updatedAt": "2026-11-12T18:06:22.454Z",
+  "version": 5,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

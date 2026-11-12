@@ -1046,7 +1046,7 @@ Added 2026-11-12 at the owner's request: the whole-project review found the mode
 - [x] WP1 Board: approve in bulk, and columns that fit
 - [ ] WP8 CLI: bugs and gaps
 - [ ] WP9 Core: correctness
-- [ ] WP16 CLI code refactor (split `runtime.ts`, `commands/task.ts`, `commands/init.ts`)
+- [x] WP16 CLI code refactor (split `runtime.ts`, `commands/task.ts`, `commands/init.ts`)
 - [ ] WP6 CLI: one command per job
 - [ ] WP7 CLI: one flag per idea, one way to print
 - [x] WP15 part A Board structure: split `app.tsx`, `pages.tsx`, `styles.css`; design tokens

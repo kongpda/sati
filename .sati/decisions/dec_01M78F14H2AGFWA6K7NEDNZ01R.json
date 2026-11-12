@@ -1,0 +1,15 @@
+{
+  "consequences": "No schema change in WP11. Revisit if a bench line for comments or the guard grows past a few milliseconds.",
+  "context": "Review 11.3 and 11.6 allowed both only if the bench showed a need. With 50,000 records and 2,000 cards, guard p95 fell from 4.6 ms to 2.2 ms with the scan alone.",
+  "createdAt": "2026-11-12T18:06:29.410Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "Skip the partial index on approved cards (migration 0008) and the note_links table. The approved, linkTo and pinned filters run as json_extract and json_each scans.",
+  "id": "dec_01M78F14H2AGFWA6K7NEDNZ01R",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T18:06:29.411Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "Review WP11: no migration 0008 and no note_links table",
+  "updatedAt": "2026-11-12T18:06:29.410Z",
+  "version": 1
+}

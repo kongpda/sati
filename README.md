@@ -15,7 +15,7 @@ same task, edit each other's files or delete code that already ships.
 ![Node.js 24.15+](https://img.shields.io/badge/node-%E2%89%A524.15-informational.svg)
 ![Local-first](https://img.shields.io/badge/data-local--first-informational.svg)
 
-> **Status:** v0.1.0, private. `@kongpda/sati` is not on npm yet; install it
+> **Status:** v0.2.0, private. `@kongpda/sati` is not on npm yet; install it
 > [from source](#install-from-source). The `npm install` lines below work after the first
 > publish.
 

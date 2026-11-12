@@ -7,7 +7,7 @@ work in one repository and see the same tasks, features and decisions.
 
 sati needs Node.js 24.15 or newer.
 
-> `@kongpda/sati` is not on npm yet (v0.1.0 is private). Until it is, build it from source and
+> `@kongpda/sati` is not on npm yet (v0.2.0 is private). Until it is, build it from source and
 > install the packed tarball; the commands are in the
 > [README](https://github.com/kongpda/sati#install-from-source). Use the tarball path wherever
 > this guide says `@kongpda/sati`.

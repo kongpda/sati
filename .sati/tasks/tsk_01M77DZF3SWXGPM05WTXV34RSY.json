@@ -1,0 +1,38 @@
+{
+  "body": "Run `pnpm changeset version` (36 changesets, minor), review packages/cli/CHANGELOG.md, update the version in the README status line and the quick-start note. No npm publish (ADR 0006).",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "e7fc7a2f0ecbb4c7ce7a5b95c8e3a00bcfd4d952",
+    "completedAt": "2026-11-12T08:29:54.336Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/cli/package.json",
+      "packages/cli/CHANGELOG.md",
+      "README.md",
+      "docs/guide/quick-start.md",
+      "docs/progress.md",
+      ".changeset"
+    ],
+    "summary": "Applied 36 changesets with `pnpm changeset version`: @kongpda/sati 0.1.0 -> 0.2.0 (20 minor, 16 patch entries in the changelog). README status line and quick-start note name 0.2.0. Gate green (build, lint, typecheck, knip, tests). Nothing published (ADR 0006)."
+  },
+  "createdAt": "2026-11-12T08:28:51.705Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "effort": "light",
+  "id": "tsk_01M77DZF3SWXGPM05WTXV34RSY",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T08:28:51.705Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T08:28:56.774Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T08:29:54.336Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T08:29:54.336Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T08:29:54.336Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T08:28:56.774Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "review",
+  "title": "Version 0.2.0: apply the changesets and update the status lines",
+  "updatedAt": "2026-11-12T08:29:54.337Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -2243,3 +2243,7 @@ The owner approved four items that were not in the plan ("do it all as your best
 - **Benchmark in CI.** A `Benchmark` job runs `pnpm bench` on ubuntu with `BENCH_FACTOR=3`, which triples the time budgets (not the idle share). A shared runner cannot prove an 80 ms budget; it can catch a change that makes something several times slower. `turbo.json` passes the variable through (turbo hides undeclared variables from tasks).
 - **`sati init --cli-only`**, also with `--upgrade`. Same meaning as on `rules sync`.
 - **knip** reported 5 unused exports and one binary: `desktopEntry`, `editBody`, `status` and `BUILD_DATE` are no longer exported, `blue` is removed, `fish` is listed as a known binary (the completion test skips without it). CI runs `pnpm knip` in the lint cell.
+
+## 2026-11-12 — Version 0.2.0
+
+`pnpm changeset version` applied 36 changesets: `@kongpda/sati` goes from 0.1.0 to 0.2.0 (20 minor, 16 patch entries in `packages/cli/CHANGELOG.md`). The README status line and the quick-start note name the new version. Nothing is published: ADR 0006 still holds, and the Release workflow publishes only when it is run by hand with `publish` ticked.

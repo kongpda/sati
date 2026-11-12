@@ -1,12 +1,13 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { ApiError, api, COLUMNS, type Deletable, phoneColumn, type Task } from "./api.js";
-import { Board, boardOrder } from "./board.js";
+import { ApiError, api, type Deletable, phoneColumn, type Task } from "./api.js";
+import { boardOrder } from "./board.js";
 import { Changes } from "./changes.js";
 import { NewTask, SendBack } from "./forms.js";
 import { useKeys } from "./hooks/use-keys.js";
 import { useLive } from "./hooks/use-live.js";
 import { approvedCommit, useMoves } from "./hooks/use-moves.js";
+import { useRoute } from "./hooks/use-route.js";
 import { Memory } from "./memory.js";
 import {
   allInReview,
@@ -17,11 +18,14 @@ import {
   personOnly,
 } from "./moves.js";
 import { inboxCount, MyWork } from "./my-work.js";
+import { BoardPage } from "./pages/board-page.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
 import { holderName } from "./people.js";
 import { Settings } from "./settings.js";
+import { Nav } from "./shell/nav.js";
 import { Palette } from "./shell/palette.js";
 import { toastBox } from "./shell/toast.js";
+import { TopBar } from "./shell/top-bar.js";
 import { COMMENT_TAG, threadOf } from "./thread.js";
 import { plainError, statusWord } from "./words.js";
 
@@ -50,15 +54,10 @@ const PHONE = "(max-width: 700px)";
 /** Matches the stylesheet, which shows the board beside the task panel from this width. */
 const WIDE = "(min-width: 900px)";
 
-const DISCARD_COMMENT = "Discard the comment you typed?";
-
 export function App() {
   const query = useQuery({ queryKey: ["snapshot"], queryFn: api.snapshot });
   const client = useQueryClient();
-  const [path, setPath] = useState(window.location.pathname);
-  const [task, setTask] = useState<string | null>(
-    new URLSearchParams(window.location.search).get("task"),
-  );
+  const { path, task, cursor, go, setSheetDirty, setDraft } = useRoute();
   const [filter, setFilter] = useState("");
   const [feature, setFeature] = useState("");
   // On a phone, null until the person picks a column: the board picks one that has tasks.
@@ -100,29 +99,10 @@ export function App() {
   const [expired, setExpired] = useState(false);
   /** Board moves waiting for the server; live refetches wait too, or a card would jump back. */
   const moving = useRef(0);
-  /** The task j/k steps from: the open one, or the last one opened. */
-  const cursor = useRef<string | null>(null);
   /** The cards as the board shows them, set on each render for the key handler. */
   const visible = useRef<Task[]>([]);
   /** On a wide screen the task panel sits beside the board, which stays usable. */
   const [wide, setWide] = useState(() => window.matchMedia(WIDE).matches);
-  /** The open task, for `go`, which must not change on every render. */
-  const shownTask = useRef(task);
-  /** The task panel has edits that are not saved yet. */
-  const sheetDirty = useRef(false);
-  /** Records on the current page (Notes, Decisions) with a comment typed but not sent. */
-  const drafts = useRef(new Set<string>());
-  // The URL on screen, to put back when a Back or Forward is declined.
-  const here = useRef(window.location.pathname + window.location.search);
-
-  const setSheetDirty = useCallback((dirty: boolean) => {
-    sheetDirty.current = dirty;
-  }, []);
-  const setDraft = useCallback((typed: boolean, on: string) => {
-    if (typed) drafts.current.add(on);
-    else drafts.current.delete(on);
-  }, []);
-
   useEffect(() => {
     const media = window.matchMedia(WIDE);
     const onChange = () => setWide(media.matches);
@@ -137,76 +117,6 @@ export function App() {
     const onChange = () => setColumn(phone.matches ? null : "all");
     phone.addEventListener("change", onChange);
     return () => phone.removeEventListener("change", onChange);
-  }, []);
-
-  useEffect(() => {
-    shownTask.current = task;
-    if (task) cursor.current = task;
-  }, [task]);
-
-  useEffect(() => {
-    const onPop = () => {
-      const next = new URLSearchParams(window.location.search).get("task");
-      // Back and Forward ask too. Declining puts the panel's URL back.
-      if (
-        sheetDirty.current &&
-        next !== shownTask.current &&
-        !window.confirm("Discard your unsaved changes to this task?")
-      ) {
-        window.history.pushState(null, "", here.current);
-        return;
-      }
-      if (
-        drafts.current.size > 0 &&
-        window.location.pathname !== new URL(here.current, window.location.origin).pathname &&
-        !window.confirm(DISCARD_COMMENT)
-      ) {
-        window.history.pushState(null, "", here.current);
-        return;
-      }
-      if (next !== shownTask.current) sheetDirty.current = false;
-      shownTask.current = next;
-      here.current = window.location.pathname + window.location.search;
-      setPath(window.location.pathname);
-      setTask(next);
-    };
-    // Reloading or closing the tab with unsaved edits gets the browser's own prompt.
-    const onUnload = (e: BeforeUnloadEvent) => {
-      if (sheetDirty.current || drafts.current.size > 0) e.preventDefault();
-    };
-    window.addEventListener("popstate", onPop);
-    window.addEventListener("beforeunload", onUnload);
-    return () => {
-      window.removeEventListener("popstate", onPop);
-      window.removeEventListener("beforeunload", onUnload);
-    };
-  }, []);
-
-  const go = useCallback((next: string, taskId: string | null = null) => {
-    // Leaving a panel with unsaved edits asks first. On a wide screen the board stays clickable
-    // beside the panel, so one stray click would otherwise throw the edits away.
-    if (
-      sheetDirty.current &&
-      taskId !== shownTask.current &&
-      !window.confirm("Discard your unsaved changes to this task?")
-    ) {
-      return false;
-    }
-    // A comment typed on Notes or Decisions is lost when the page changes.
-    if (drafts.current.size > 0 && next !== window.location.pathname) {
-      if (!window.confirm(DISCARD_COMMENT)) return false;
-      drafts.current.clear();
-    }
-    // Clicking the open task again keeps its edits, so it stays dirty.
-    if (taskId !== shownTask.current) sheetDirty.current = false;
-    shownTask.current = taskId;
-    const url = taskId ? `${next}?task=${taskId}` : next;
-    // The same URL again (the open card clicked) adds no history entry for Back to step through.
-    if (url !== here.current) window.history.pushState(null, "", url);
-    here.current = url;
-    setPath(next);
-    setTask(taskId);
-    return true;
   }, []);
 
   /** Opens a list page scrolled to one record, with focus on it, as a link to it would. */
@@ -433,73 +343,25 @@ export function App() {
 
   return (
     <div className="app">
-      <nav className="nav" inert={modal} data-modal={modal ? "" : undefined}>
-        <p className="brand">{data?.project?.name ?? __PRODUCT_NAME__}</p>
-        {pages.map(([href, label]) => (
-          <a
-            key={href}
-            href={href}
-            aria-current={path === href ? "page" : undefined}
-            // The link keeps its name; the count is its description, read after it.
-            aria-describedby={href === "/my-work" && inbox ? "inbox-count" : undefined}
-            onClick={(e) => {
-              e.preventDefault();
-              go(href);
-            }}
-          >
-            {label}
-            {href === "/my-work" && inbox ? (
-              <span className="nav-count" aria-hidden="true">
-                {inbox > 99 ? "99+" : inbox}
-              </span>
-            ) : null}
-          </a>
-        ))}
-        {inbox ? (
-          <span id="inbox-count" hidden>
-            {inbox === 1 ? "1 thing waits for you" : `${inbox} things wait for you`}
-          </span>
-        ) : null}
-      </nav>
+      <Nav
+        pages={pages}
+        path={path}
+        projectName={data?.project?.name}
+        inbox={inbox}
+        modal={modal}
+        go={go}
+      />
       <main className="main" inert={modal} data-modal={modal ? "" : undefined}>
-        <div className="top">
-          {/* The filters only narrow the board, so other pages do not show them. */}
-          {path === "/" ? (
-            <>
-              <input
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                placeholder="Filter tasks"
-                aria-label="Filter tasks"
-              />
-              {data && data.features.length === 0 ? null : (
-                <select
-                  value={feature}
-                  onChange={(e) => setFeature(e.target.value)}
-                  aria-label="Feature"
-                >
-                  <option value="">All features</option>
-                  {data?.features.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.title}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </>
-          ) : null}
-          <button type="button" onClick={() => setPalette(true)}>
-            Search
-          </button>
-          <button
-            type="button"
-            className="primary"
-            onClick={() => setCreating(true)}
-            aria-keyshortcuts="c"
-          >
-            New task
-          </button>
-        </div>
+        <TopBar
+          onBoard={path === "/"}
+          filter={filter}
+          setFilter={setFilter}
+          feature={feature}
+          setFeature={setFeature}
+          features={data?.features}
+          setPalette={setPalette}
+          setCreating={setCreating}
+        />
         {expired ? (
           <p className="banner" role="alert">
             This board link has expired, so changes are no longer shown or saved. Start the board
@@ -546,125 +408,31 @@ export function App() {
           </p>
         ) : null}
         {path === "/" ? (
-          <>
-            <h1 className="sr-only">Board</h1>
-            {pinned.length > 0 ? (
-              <nav className="pinned" aria-label="Pinned notes">
-                <span className="meta">Pinned</span>
-                {pinned.map((n) => (
-                  <a
-                    key={n.id}
-                    href="/notes"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      go("/notes");
-                    }}
-                  >
-                    {n.title}
-                  </a>
-                ))}
-              </nav>
-            ) : null}
-            {working.length > 0 ? (
-              <div className="live">
-                {working.map((t) => (
-                  <span className="pill" key={t.id}>
-                    <strong>{data ? holderName(data, t.claim?.actorId) : ""}</strong> · {t.title}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-            <select
-              className="mobile-status"
-              value={column}
-              onChange={(e) => setColumn(e.target.value)}
-              aria-label="Status"
-            >
-              <option value="all">All columns</option>
-              {COLUMNS.map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            {selected.size > 0 ? (
-              <div className="bulk">
-                <span>{selected.size} selected</span>
-                {reviewing ? (
-                  <>
-                    <button
-                      type="button"
-                      className="primary"
-                      aria-disabled={approveRefusal !== null}
-                      title={approveRefusal ?? undefined}
-                      onClick={() => {
-                        if (approveRefusal) {
-                          setToastState({ message: approveRefusal, error: true });
-                          return;
-                        }
-                        if (window.confirm(`Approve ${selected.size} tasks?`)) {
-                          void moveMany([...selected], "done", true);
-                        }
-                      }}
-                    >
-                      Approve
-                    </button>
-                    <button type="button" onClick={() => requestMove([...selected], "todo", true)}>
-                      Send back
-                    </button>
-                  </>
-                ) : null}
-                <select
-                  aria-label="Move selected"
-                  defaultValue=""
-                  onChange={(e) => {
-                    const status = e.target.value;
-                    e.target.value = "";
-                    if (!status) return;
-                    requestMove([...selected], status, true);
-                  }}
-                >
-                  <option value="">Move to…</option>
-                  {/* Only where at least one selected task can go; the rest say why they stayed. */}
-                  {COLUMNS.filter(([id]) => id !== "done" && bulkTargets.has(id)).map(
-                    ([id, label]) => (
-                      <option key={id} value={id}>
-                        {label}
-                      </option>
-                    ),
-                  )}
-                </select>
-                {bulkTargets.size === 0 ? (
-                  <span className="hint">None of these can be moved from here.</span>
-                ) : null}
-              </div>
-            ) : null}
-            {!data ? null : data.tasks.length === 0 ? (
-              <p className="empty page">
-                No tasks yet. Use New task (or press c), or ask your agent to plan the work.
-              </p>
-            ) : tasks.length === 0 ? (
-              <p className="empty page">No tasks match the filter.</p>
-            ) : (
-              <Board
-                tasks={tasks}
-                allTasks={data?.tasks ?? []}
-                features={data?.features ?? []}
-                actors={data?.actors ?? []}
-                fresh={fresh}
-                selected={selected}
-                open={task}
-                column={column}
-                onOpen={openTask}
-                onToggle={toggle}
-                onSelectColumn={selectColumn}
-                onReviewed={reviewed}
-                onMove={moveCard}
-                refusal={refusal}
-                heldBy={heldBy}
-              />
-            )}
-          </>
+          <BoardPage
+            data={data}
+            tasks={tasks}
+            pinned={pinned}
+            working={working}
+            column={column}
+            setColumn={setColumn}
+            selected={selected}
+            reviewing={reviewing}
+            approveRefusal={approveRefusal}
+            bulkTargets={bulkTargets}
+            fresh={fresh}
+            task={task}
+            go={go}
+            moveMany={moveMany}
+            requestMove={requestMove}
+            setToastState={setToastState}
+            openTask={openTask}
+            toggle={toggle}
+            selectColumn={selectColumn}
+            reviewed={reviewed}
+            moveCard={moveCard}
+            refusal={refusal}
+            heldBy={heldBy}
+          />
         ) : null}
         {data && path === "/my-work" ? (
           <MyWork

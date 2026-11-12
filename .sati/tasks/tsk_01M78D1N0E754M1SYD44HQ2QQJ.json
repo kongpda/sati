@@ -1,0 +1,27 @@
+{
+  "body": "milestone_upsert, task_release, truncated lists, shorter tool descriptions, record no-change decisions, openapi doc line.",
+  "branch": "wp12-mcp",
+  "claim": {
+    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "heartbeatAt": "2026-11-12T17:31:49.251Z",
+    "leaseUntil": "2026-11-12T18:01:49.251Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-12T17:31:49.134Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M78D1N0E754M1SYD44HQ2QQJ",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T17:31:49.136Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T17:31:49.253Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T17:31:49.253Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T17:31:49.253Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T17:31:49.253Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "in_progress",
+  "title": "WP12: MCP surface (review 12.1-12.7)",
+  "updatedAt": "2026-11-12T17:31:49.256Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

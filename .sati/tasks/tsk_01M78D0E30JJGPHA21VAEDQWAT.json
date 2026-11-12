@@ -1,0 +1,27 @@
+{
+  "body": "Pure moves in packages/cli/src: split runtime.ts, commands/task.ts, commands/init.ts; flags.ts and layout.ts; help-honesty test. No behaviour change.",
+  "branch": "wp16-runtime",
+  "claim": {
+    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "heartbeatAt": "2026-11-12T17:31:09.394Z",
+    "leaseUntil": "2026-11-12T18:01:09.394Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-12T17:31:09.279Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M78D0E30JJGPHA21VAEDQWAT",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T17:31:09.282Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T17:31:09.395Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T17:31:09.395Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T17:31:09.395Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T17:31:09.395Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "in_progress",
+  "title": "WP16: CLI code refactor (review 16.1-16.5)",
+  "updatedAt": "2026-11-12T17:31:09.398Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -141,8 +141,8 @@ sati doctor              # stale leases, orphan locks, DB integrity, hook health
 sati doctor --vacuum     # also compact the database
 sati doctor --fix        # release expired locks, remove cards whose file is gone
 sati doctor --reviewed <id>   # clear the "needs review" flag a merge left on a record
-sati export              # write every record to .sati/
-sati import              # load records from .sati/ into the live database
+sati sync export         # load newer records from .sati/, then write the changed ones
+sati sync import         # load records from .sati/ into the live database
 ```
 
 A backup of the database is written before each schema migration.

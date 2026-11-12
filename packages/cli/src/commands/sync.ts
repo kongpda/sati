@@ -41,7 +41,7 @@ export const exportCmd = defineCommand({
       (r: ExportResult) =>
         `Exported ${r.written.length} changed, ${r.unchanged} unchanged.${
           r.newer.length > 0
-            ? `\n${r.newer.length} newer in .sati/ left as they are. Run \`${CLI_NAME} import\` to load them.`
+            ? `\n${r.newer.length} newer in .sati/ left as they are. Run \`${CLI_NAME} sync import\` to load them.`
             : ""
         }`,
     ),

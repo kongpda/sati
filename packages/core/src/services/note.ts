@@ -12,7 +12,7 @@ import {
   type ServiceContext,
   updateWithLog,
 } from "./context.js";
-import { acknowledgeHandoff } from "./handoff.js";
+import { acknowledgeHandoff, HANDOFF_TAG } from "./handoff.js";
 
 const fields = Note.pick({ title: true, tags: true, links: true, pinned: true }).extend({
   body: BodyText,
@@ -60,7 +60,13 @@ function guardComment(
   if (!was) {
     if (patch.tags?.includes(COMMENT_TAG)) {
       throw new SatiError("VALIDATION", "Comments are added to a task, note or decision.", {
-        hint: "Use `comment add <id> <text>`, or note_upsert with only body, tags [comment] and one link.",
+        hint: "Use `comment add <id> <text>`, or the MCP note_upsert with only body, tags [comment] and one link.",
+      });
+    }
+    // The same for a handoff: the next agent to claim the task is shown it as one.
+    if (patch.tags?.includes(HANDOFF_TAG) && !before?.tags.includes(HANDOFF_TAG)) {
+      throw new SatiError("VALIDATION", "A handoff is written on a task.", {
+        hint: "Use `handoff <task-id>`, or handoff_write.",
       });
     }
     return;

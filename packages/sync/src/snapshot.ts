@@ -320,7 +320,8 @@ function scanSnapshot(
         fail("not valid JSON");
       }
       const id = (record as { id?: unknown } | null)?.id;
-      if (String(id) !== expected) fail("the file name does not match the record id");
+      // Not String(id): an object whose `toString` is not a function makes that throw.
+      if (id !== expected) fail("the file name does not match the record id");
       // A record of another entity in this folder stays as it is, and validation names it.
       const full = snapshotEntityOf(record) === entity ? decodeRecord(record) : record;
       return { entity, source, record: full };

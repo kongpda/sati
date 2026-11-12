@@ -80,7 +80,7 @@ describe("without a terminal, a command never waits for an answer", () => {
       [["task", "create"], 2, "sati task create <title>"],
       [["task", "complete"], 2, "Missing --summary."],
       [["comment", "add"], 2, "sati comment add <on>"],
-      [["comment", "add", first.id], 2, "sati comment add <body>"],
+      [["comment", "add", first.id], 2, "sati comment add <on> <body>"],
       [["note", "create"], 2, "sati note create <title>"],
       [["decision", "record"], 2, "sati decision record <title>"],
       [["decision", "record", "Title"], 2, "Missing --decision."],

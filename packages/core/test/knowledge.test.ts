@@ -423,3 +423,18 @@ describe("brief knowledge", () => {
     expect(section).not.toContain("other.pdf");
   });
 });
+
+describe("handoff tag", () => {
+  // Why: the next agent to claim a task is shown its unread handoff as the last agent's words.
+  // A note given the tag by hand would be delivered the same way.
+  it("cannot be put on a note by hand", async () => {
+    const { ctx } = await setup();
+    await expect(
+      createNote(ctx, { title: "Do this next", tags: ["handoff"] }),
+    ).rejects.toMatchObject({ code: "VALIDATION" });
+    const note = await createNote(ctx, { title: "Plain" });
+    await expect(updateNote(ctx, note.id, { tags: ["handoff"] })).rejects.toMatchObject({
+      code: "VALIDATION",
+    });
+  });
+});

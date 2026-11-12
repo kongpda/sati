@@ -61,7 +61,7 @@ import { defaultBase, samePath } from "./git.js";
 import { runHint } from "./install.js";
 import { Cancelled, printSameAs } from "./prompt.js";
 import { loadFolder, markSeen } from "./shared-folder.js";
-import { cleanDeep, errorText, pager, pipeTo, polish } from "./term.js";
+import { cleanDeep, errorText, pager, pipeTo, polish, warn } from "./term.js";
 
 export interface Runtime {
   ctx: ServiceContext;
@@ -770,7 +770,7 @@ export async function withExport<T>(rt: Runtime, fn: (rt: Runtime) => Promise<T>
   const dir = sharedDir(rt);
   if (!dir) return fn(rt);
   const { afterWrites } = await import("@sati/sync");
-  const warn = (err: unknown) => {
+  const notUpdated = (err: unknown) => {
     warn("the .sati/ snapshot was not updated.");
     printError(err, false);
   };
@@ -788,10 +788,10 @@ export async function withExport<T>(rt: Runtime, fn: (rt: Runtime) => Promise<T>
     // Never fires: flush() below runs the export when the command ends.
     2 ** 31 - 1,
     async (written) => {
-      const files = await exportWritten(rt.ctx, dir, written, warn);
+      const files = await exportWritten(rt.ctx, dir, written, notUpdated);
       if (folder) await markSeen(dir, db, files);
     },
-    warn,
+    notUpdated,
   );
   try {
     return await fn({ ...rt, ctx: { ...rt.ctx, store: synced.store } });

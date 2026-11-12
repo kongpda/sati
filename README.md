@@ -280,7 +280,7 @@ sati inbox                     # what waits for you: questions, mentions, approv
 sati task approve              # approve a task in review (a person only); with no id, choose from a list
 sati task send-back <id> --reason "Add a test"   # return it with what to change
 sati undo <activity-id>        # revert one change if nothing changed since
-sati -v                        # sati 0.1.0 (48a630b 2026-11-11): version, commit, commit date
+sati -v                        # sati 0.2.0 (b5ba08a 2026-11-12): version, commit, commit date
 sati doctor                    # node, system, install and store paths; then leases, locks, integrity, hooks, a stale build
 sati doctor --fix              # release expired locks, remove cards whose file is gone
 sati card approve deck.pptx    # sign off a file (a person only); the guard blocks a change to it

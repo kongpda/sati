@@ -222,6 +222,20 @@ describe("completeTask", () => {
     });
   });
 
+  // Why: a second complete replaced the summary and the files of the first, with no trace on
+  // the task of what was approved.
+  it("refuses to complete a task that is already done, and keeps its completion", async () => {
+    const { ctx } = await setup();
+    await updateSettings(ctx, { review: "none" });
+    const t = await createTask(ctx, { title: "x" });
+    const { claim } = await updateTask(ctx, t.id, { status: "in_progress" });
+    await completeTask(ctx, t.id, { ...done, token: claim?.token });
+    await expect(
+      completeTask(ctx, t.id, { summary: "other words", filesTouched: ["src/b.ts"] }),
+    ).rejects.toMatchObject({ code: "INVALID_TRANSITION" });
+    expect((await getRecord(ctx, "task", t.id)).completion).toMatchObject(done);
+  });
+
   it("clears the completion when a done task is reopened", async () => {
     const { ctx } = await setup();
     await updateSettings(ctx, { review: "none" });

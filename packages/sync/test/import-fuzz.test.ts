@@ -145,4 +145,12 @@ describe("readSnapshot fuzz", () => {
       { numRuns: 300 },
     );
   });
+
+  // Found by the property above on one random seed: comparing the id as text threw a TypeError.
+  it("refuses a record whose id is an object that cannot be read as text", () => {
+    const dir = join(root, "snap-object-id");
+    mkdirSync(join(dir, "tasks"), { recursive: true });
+    writeFileSync(join(dir, "tasks", "tsk_x.json"), JSON.stringify({ id: { toString: false } }));
+    expect(() => readSnapshot(dir)).toThrow(/file name does not match the record id/);
+  });
 });

@@ -391,6 +391,12 @@ export async function completeTask(ctx: ServiceContext, id: string, input: unkno
       });
     }
     const status = gated ? "review" : "done";
+    // `assertTransition` lets a status stay as it is; here that would replace the completion.
+    if (before.status === "done") {
+      throw new SatiError("INVALID_TRANSITION", `Task ${id} is already done.`, {
+        hint: "Reopen it first (status todo) if there is more work.",
+      });
+    }
     if (before.claim === null && (before.status === "todo" || before.status === "backlog")) {
       throw new SatiError("INVALID_TRANSITION", `Task ${id} was never started.`, {
         hint: `Claim it first (task_claim, or \`${CLI_NAME} task claim\`), do the work, then complete it.`,

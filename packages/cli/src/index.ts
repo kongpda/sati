@@ -70,7 +70,7 @@ const root: CommandDef = defineCommand({
 
 await main(root, {
   groups: {
-    Start: ["init", "upgrade", "brief", "next", "doctor"],
+    Start: ["init", "upgrade", "brief", "inbox", "next", "doctor"],
     Work: ["task", "feature", "milestone", "plan", "template", "handoff", "wait"],
     Memory: ["note", "comment", "decision", "card", "recall", "search"],
     "Work together": ["lock", "guard", "review", "scan"],

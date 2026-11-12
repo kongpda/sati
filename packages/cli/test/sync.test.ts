@@ -137,6 +137,36 @@ describe("git hooks", () => {
 
 // PLAN Security: a secret in a record must never reach a commit.
 describe("secret scanner", () => {
+  // Why: the warning called itself, so a write on such a record ended in "Maximum call stack
+  // size exceeded" and "This is a bug", though the write itself was kept.
+  it("warns and keeps the write when the export refuses the record", async () => {
+    const dir = await tempRepo();
+    sati(dir, "init", "--yes", "--tools", "");
+    const secret = `gh${"p_"}${"a1".repeat(18)}`;
+    const note = satiJson<Rec & { version: number }>(dir, "note", "create", "Setup").data;
+    const store = await SqliteStore.open(locateDb(dir).path);
+    try {
+      await store.write(async (w) => {
+        const before = await w.get("note", note.id);
+        if (before)
+          await w.update(
+            "note",
+            { ...before, body: `token ${secret}`, version: note.version + 1 },
+            note.version,
+          );
+      });
+    } finally {
+      await store.close();
+    }
+    const pinned = sati(dir, "note", "update", note.id, "--pinned");
+    expect(pinned.stderr).not.toContain("call stack");
+    expect(pinned.stderr).toContain("the .sati/ snapshot was not updated");
+    expect(pinned.stderr).toContain("field body: GitHub token");
+    expect(pinned.stderr).not.toContain(secret);
+    expect(pinned.code).toBe(0);
+    expect(satiJson<{ pinned: boolean }>(dir, "note", "show", note.id).data.pinned).toBe(true);
+  });
+
   it("blocks the commit and names the record, without printing the secret", async () => {
     const dir = await tempRepo();
     sati(dir, "init", "--yes", "--tools", "");

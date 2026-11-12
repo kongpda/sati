@@ -1,0 +1,49 @@
+{
+  "body": "Owner asked for a full review (board, CLI, core, MCP) and for the certain findings to be fixed. Scope of this task: the bugs that were verified in the code. Merges, renames and removals of pages, commands and tools are listed for the owner and not done here.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "b5ba08a7b65ec1c28171f9386c1056174c61b6b7",
+    "completedAt": "2026-11-12T14:57:28.599Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/cli/src/runtime.ts",
+      "packages/cli/src/index.ts",
+      "packages/cli/src/commands/comment.ts",
+      "packages/cli/src/commands/sync.ts",
+      "packages/core/src/services/task.ts",
+      "packages/core/src/services/note.ts",
+      "packages/sync/src/snapshot.ts",
+      "packages/core/test/task-service.test.ts",
+      "packages/core/test/knowledge.test.ts",
+      "packages/cli/test/sync.test.ts",
+      "packages/cli/test/prompt.test.ts",
+      "packages/sync/test/import-fuzz.test.ts",
+      "README.md",
+      "docs/guide/quick-start.md",
+      "docs/guide/faq.md",
+      "docs/ideas.md",
+      "docs/progress.md",
+      ".changeset/review-certain-fixes.md"
+    ],
+    "summary": "Review of board, CLI, core and MCP by three read-only audits. Fixed what was verified: recursive warn in withExport (stack overflow on a refused export), completing an already-done task replaced its completion, the handoff tag could be set by hand on a note, readSnapshot threw a TypeError on an object id (found by the fuzz test), clearer `comment add` error, inbox in the help's Start group, docs name `sync export`/`sync import`, README version example, stale idea removed. Each bug has a test. Gate green: core 379, cli 281 (+3 skipped), sync 58, store 92, mcp 32, ui 40. Consolidation of pages, commands and tools is listed for the owner, not done."
+  },
+  "createdAt": "2026-11-12T14:51:53.031Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M783WST7FMT0338PFQWCEYK5",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T14:51:53.036Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T14:52:00.062Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T14:57:28.600Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T14:57:28.600Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T14:57:28.600Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T14:52:00.062Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "done",
+  "title": "Whole-project review: fix the certain bugs and stale docs it found",
+  "updatedAt": "2026-11-12T14:57:28.600Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

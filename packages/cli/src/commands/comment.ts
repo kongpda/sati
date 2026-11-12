@@ -44,7 +44,12 @@ const add = defineCommand({
   run: ({ args }) => {
     if (!canAsk(args.json)) {
       if (args.on === undefined) throw missing("on", "comment add");
-      if (args.body === undefined) throw missing("body", "comment add");
+      // One word given: it was read as the record, which is rarely what was meant.
+      if (args.body === undefined) {
+        throw new SatiError("USAGE", `Missing <body>: ${CLI_NAME} comment add <on> <body>`, {
+          hint: `The first word is the record to comment on. Run \`${CLI_NAME} comment add --help\` for usage.`,
+        });
+      }
     }
     return execute(
       args.json,

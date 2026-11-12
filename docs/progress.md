@@ -2247,3 +2247,13 @@ The owner approved four items that were not in the plan ("do it all as your best
 ## 2026-11-12 — Version 0.2.0
 
 `pnpm changeset version` applied 36 changesets: `@kongpda/sati` goes from 0.1.0 to 0.2.0 (20 minor, 16 patch entries in `packages/cli/CHANGELOG.md`). The README status line and the quick-start note name the new version. Nothing is published: ADR 0006 still holds, and the Release workflow publishes only when it is run by hand with `publish` ticked.
+
+## 2026-11-12 — Whole-project review: the certain fixes
+
+The owner asked for a review of every surface (board, CLI, core, MCP) and for the certain findings to be fixed. Three read-only audits ran; each fix below was checked in the code first. Merging or removing pages, commands and tools is the owner's choice and is not done.
+
+- `withExport` in the CLI: the warning closure was named `warn` and called itself. A write on a record the export refuses ended in a stack overflow. Fixed, with a test.
+- `completeTask` accepted a task that was already done and replaced its completion (a person, or `review: none`). Refused now, with a test.
+- A note could be given the `handoff` tag through `note create` or `note_upsert`; the next agent to claim the task would be shown it as a handoff. Refused now, with a test.
+- `readSnapshot` threw a TypeError for a record whose `id` is an object with a `toString` that is not a function. The fuzz test found it on a random seed during this gate; there is a fixed test for it now.
+- Small: `comment add` with one argument has a clearer error, `inbox` is in the Start group of the help, the docs name `sati sync export` and `sati sync import`, the README version example is current, and the terminal board idea is removed from `docs/ideas.md` (`sati task list --board` exists).

@@ -74,7 +74,7 @@ Code hooks to `node_modules/.bin/sati`. Entries you wrote by hand are left alone
 
 ## How do I back up or move a project?
 
-`sati export` writes every record to `.sati/`. Copy the folder and run `sati import` in the
+`sati sync export` writes every record to `.sati/`. Copy the folder and run `sati sync import` in the
 new place. `sati doctor` checks the database, leases, locks and hooks.
 
 ## How do I undo a change?

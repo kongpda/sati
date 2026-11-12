@@ -1,17 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import {
-  ApiError,
-  api,
-  COLUMNS,
-  type Deletable,
-  phoneColumn,
-  type Snapshot,
-  type Task,
-} from "./api.js";
+import { ApiError, api, COLUMNS, type Deletable, phoneColumn, type Task } from "./api.js";
 import { Board, boardOrder } from "./board.js";
 import { Changes } from "./changes.js";
 import { NewTask, SendBack } from "./forms.js";
+import { useKeys } from "./hooks/use-keys.js";
+import { useLive } from "./hooks/use-live.js";
+import { approvedCommit, useMoves } from "./hooks/use-moves.js";
 import { Memory } from "./memory.js";
 import {
   allInReview,
@@ -25,8 +20,10 @@ import { inboxCount, MyWork } from "./my-work.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
 import { holderName } from "./people.js";
 import { Settings } from "./settings.js";
+import { Palette } from "./shell/palette.js";
+import { toastBox } from "./shell/toast.js";
 import { COMMENT_TAG, threadOf } from "./thread.js";
-import { kindLabel, plainError, statusWord } from "./words.js";
+import { plainError, statusWord } from "./words.js";
 
 const PAGES = [
   ["/", "Board"],
@@ -52,23 +49,6 @@ const CODE_ONLY = new Set<string>(["/agents", "/features"]);
 const PHONE = "(max-width: 700px)";
 /** Matches the stylesheet, which shows the board beside the task panel from this width. */
 const WIDE = "(min-width: 900px)";
-
-/** Where a search hit of each kind opens, and the tag it shows. */
-const HIT_PAGES: Record<string, string> = {
-  note: "/notes",
-  decision: "/decisions",
-  feature: "/features",
-  context: "/memory",
-};
-
-/** The branch commit a person sees when approving, so a later push is not approved unseen. */
-function approvedCommit(data: Snapshot, id: string): { approvedCommit?: string } {
-  const head = data.drift?.[id]?.head;
-  return head ? { approvedCommit: head } : {};
-}
-
-/** The board's search returns at most this many hits (the `/api/search` limit). */
-const SEARCH_LIMIT = 20;
 
 const DISCARD_COMMENT = "Discard the comment you typed?";
 
@@ -120,8 +100,6 @@ export function App() {
   const [expired, setExpired] = useState(false);
   /** Board moves waiting for the server; live refetches wait too, or a card would jump back. */
   const moving = useRef(0);
-  /** The last move of each task still in flight; the next move of that task waits for it. */
-  const moveQueue = useRef(new Map<string, Promise<boolean>>());
   /** The task j/k steps from: the open one, or the last one opened. */
   const cursor = useRef<string | null>(null);
   /** The cards as the board shows them, set on each render for the key handler. */
@@ -134,8 +112,6 @@ export function App() {
   const sheetDirty = useRef(false);
   /** Records on the current page (Notes, Decisions) with a comment typed but not sent. */
   const drafts = useRef(new Set<string>());
-  /** Clears the "new" highlight; a newer event restarts it, so it is kept to cancel. */
-  const freshTimer = useRef<number | undefined>(undefined);
   // The URL on screen, to put back when a Back or Forward is declined.
   const here = useRef(window.location.pathname + window.location.search);
 
@@ -205,38 +181,6 @@ export function App() {
       window.removeEventListener("beforeunload", onUnload);
     };
   }, []);
-
-  useEffect(() => {
-    const source = new EventSource("/events");
-    // No refetch on (re)connect: the server sends a message at once when anything was written
-    // since the last event this tab saw (Last-Event-ID), and stays quiet when nothing was.
-    source.onopen = () => setOffline(false);
-    source.onerror = () => {
-      setOffline(true);
-      // EventSource retries a dropped connection itself, but gives up for good on a refused
-      // one (401): the link this tab signed in with is gone.
-      if (source.readyState === EventSource.CLOSED) setExpired(true);
-    };
-    source.onmessage = () => {
-      // A move in flight invalidates the snapshot itself when it settles.
-      if (moving.current > 0) return;
-      const previous = client.getQueryData<Snapshot>(["snapshot"]);
-      void client.invalidateQueries({ queryKey: ["snapshot"] }).then(() => {
-        const next = client.getQueryData<Snapshot>(["snapshot"]);
-        if (!previous || !next) return;
-        const before = new Map(previous.tasks.map((t) => [t.id, t.updatedAt]));
-        const changed = next.tasks.filter((t) => before.get(t.id) !== t.updatedAt).map((t) => t.id);
-        if (changed.length === 0) return;
-        setFresh(new Set(changed));
-        window.clearTimeout(freshTimer.current);
-        freshTimer.current = window.setTimeout(() => setFresh(new Set()), 1600);
-      });
-    };
-    return () => {
-      source.close();
-      window.clearTimeout(freshTimer.current);
-    };
-  }, [client]);
 
   const go = useCallback((next: string, taskId: string | null = null) => {
     // Leaving a panel with unsaved edits asks first. On a wide screen the board stays clickable
@@ -334,197 +278,27 @@ export function App() {
 
   const closePalette = useCallback(() => setPalette(false), []);
 
-  /**
-   * Resolves true when the task moved. Pass `onFail` to report the reason yourself. A second
-   * move of the same card waits for the first: sent at once, it carried the version from
-   * before the first move and the server refused it as a conflict.
-   */
-  function move(
-    id: string,
-    status: string,
-    onFail?: (reason: string) => void,
-    reason?: string,
-  ): Promise<boolean> {
-    const run = (moveQueue.current.get(id) ?? Promise.resolve(true)).then(() =>
-      moveNow(id, status, onFail, reason),
-    );
-    moveQueue.current.set(id, run);
-    void run.finally(() => {
-      if (moveQueue.current.get(id) === run) moveQueue.current.delete(id);
-    });
-    return run;
-  }
-
-  async function moveNow(
-    id: string,
-    status: string,
-    onFail?: (reason: string) => void,
-    reason?: string,
-  ): Promise<boolean> {
-    const current = client.getQueryData<Snapshot>(["snapshot"]);
-    const item = current?.tasks.find((t) => t.id === id);
-    if (!current || !item || item.status === status) return false;
-    // What core is certain to refuse is not sent: the card would jump to the column and back.
-    const refusal = moveRefusal(current, item, status);
-    if (refusal) {
-      (onFail ?? ((message: string) => setToastState({ message, error: true })))(refusal);
-      return false;
-    }
-    // A refetch already in flight would overwrite the optimistic status with the old one.
-    moving.current++;
-    await client.cancelQueries({ queryKey: ["snapshot"] });
-    client.setQueryData<Snapshot>(["snapshot"], (snap) =>
-      snap ? { ...snap, tasks: snap.tasks.map((t) => (t.id === id ? { ...t, status } : t)) } : snap,
-    );
-    try {
-      const updated = await api.patchTask(id, {
-        status,
-        expectedVersion: item.version,
-        ...(reason ? { reason } : {}),
-        ...(status === "done" ? approvedCommit(current, id) : {}),
-      });
-      // The refetch waits for the other moves; a queued move of this card needs the version now.
-      client.setQueryData<Snapshot>(["snapshot"], (snap) =>
-        snap
-          ? {
-              ...snap,
-              tasks: snap.tasks.map((t) =>
-                t.id === id ? { ...t, status: updated.status, version: updated.version } : t,
-              ),
-            }
-          : snap,
-      );
-      moving.current--;
-      // Refetch once the last move lands: an earlier refetch would bring back the old status of
-      // the cards still in flight, and they would jump back.
-      if (moving.current === 0) await client.invalidateQueries({ queryKey: ["snapshot"] });
-      return true;
-    } catch (err) {
-      moving.current--;
-      // Revert only this task: other moves may be in flight, and a whole-snapshot restore
-      // would undo them or bring back their refused state.
-      client.setQueryData<Snapshot>(["snapshot"], (snap) =>
-        snap
-          ? {
-              ...snap,
-              tasks: snap.tasks.map((t) => (t.id === id ? { ...t, status: item.status } : t)),
-            }
-          : snap,
-      );
-      if (onFail) onFail(plainError(err));
-      else fail(err);
-      if (moving.current === 0) await client.invalidateQueries({ queryKey: ["snapshot"] });
-      return false;
-    }
-  }
-
-  /**
-   * Moves the tasks and says what did not move, each reason once with how many tasks it stopped.
-   * Tasks already in the column are left out of the count.
-   */
-  async function moveMany(ids: string[], status: string, bulk: boolean, reason?: string) {
-    const why = new Map<string, number>();
-    const results = await Promise.all(
-      ids.map((id) =>
-        move(id, status, (message) => why.set(message, (why.get(message) ?? 0) + 1), reason),
-      ),
-    );
-    const failed = ids.filter((_, i) => !results[i]);
-    if (bulk) setSelected(new Set(failed));
-    if (why.size === 0) return;
-    const stopped = [...why.values()].reduce((a, b) => a + b, 0);
-    const reasons = [...why].map(([message, n]) =>
-      why.size === 1 ? message : `${n} ${n === 1 ? "task" : "tasks"}: ${message}`,
-    );
-    // An error toast stays until it is closed; the plain one is gone after 6 seconds.
-    setToastState({
-      message: !bulk
-        ? (reasons[0] ?? "")
-        : `${stopped} of ${ids.length} tasks did not move. ${reasons.join(" ")}`,
-      error: true,
-    });
-  }
-
-  /** A move from a drag or the bulk menu. Work sent back from review asks for the reason first. */
-  function requestMove(ids: string[], status: string, bulk = false) {
-    const current = client.getQueryData<Snapshot>(["snapshot"]);
-    const asks = ids.some((id) => {
-      const item = current?.tasks.find((t) => t.id === id);
-      return current && item && needsReason(item, status) && !moveRefusal(current, item, status);
-    });
-    if (asks) setSendingBack({ ids, status, bulk });
-    else void moveMany(ids, status, bulk);
-  }
-
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      const target = event.target as HTMLElement | null;
-      const typing =
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.tagName === "SELECT" ||
-          target.isContentEditable);
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setPalette(true);
-        return;
-      }
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-      if (event.key === "Escape") {
-        if (palette) closePalette();
-        else if (document.querySelector(".palette"))
-          return; // a form dialog closes itself
-        else if (typing)
-          target?.blur(); // The sheet stays open, so typed edits are kept.
-        else if (task) go(path);
-        return;
-      }
-      // Ctrl+C, Cmd+X and other chords belong to the browser, not to the board's letters.
-      // Any open dialog (search, or a create or edit form on any page) owns the keyboard.
-      const dialog = document.querySelector(".palette") !== null;
-      if (dialog || typing || event.metaKey || event.ctrlKey || event.altKey) return;
-      const step = event.key === "j" || event.key === "k";
-      // Buttons and links use these keys themselves, and the sheet is a dialog of its own; only
-      // j/k pass from the sheet's heading (where it puts focus) and from a card (where closing
-      // the sheet puts it back), to step to the next card.
-      const stepsFrom = target?.id === "sheet-title" || target?.matches("button[data-task]");
-      if (!(step && stepsFrom) && target?.closest(".sheet, button, a")) return;
-      if (step && path === "/") {
-        // The order the board shows, with its filters and the phone's column choice.
-        const list = visible.current;
-        if (list.length === 0) return;
-        const at = list.findIndex((t) => t.id === (task ?? cursor.current));
-        const forward = event.key === "j";
-        const index =
-          at === -1
-            ? forward
-              ? 0
-              : list.length - 1
-            : (at + (forward ? 1 : -1) + list.length) % list.length;
-        const item = list[index];
-        if (item) go("/", item.id);
-      }
-      // Enter and x act on the board's cards; on other pages they would jump to the board or
-      // select a card that is not shown.
-      if (event.key === "Enter" && task && path === "/") go("/", task);
-      if (event.key === "c") {
-        // Keep the "c" from being typed into the title field the dialog focuses.
-        event.preventDefault();
-        setCreating(true);
-      }
-      if (event.key === "x" && task && path === "/") {
-        setSelected((cur) => {
-          const next = new Set(cur);
-          if (next.has(task)) next.delete(task);
-          else next.add(task);
-          return next;
-        });
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [closePalette, go, palette, path, task]);
+  useLive(client, moving, setOffline, setExpired, setFresh);
+  const { moveMany, requestMove } = useMoves(
+    client,
+    moving,
+    setToastState,
+    fail,
+    setSelected,
+    setSendingBack,
+  );
+  useKeys({
+    palette,
+    closePalette,
+    setPalette,
+    setCreating,
+    setSelected,
+    go,
+    path,
+    task,
+    visible,
+    cursor,
+  });
 
   useEffect(() => {
     if (!toast || toast.error) return;
@@ -1140,167 +914,6 @@ export function App() {
       <div role="alert" className="toast-region">
         {toast?.error ? toastBox(toast, setToast) : null}
       </div>
-    </div>
-  );
-}
-
-/** The toast itself, for either live region. */
-function toastBox(
-  toast: { message: string; undo?: () => void; error?: boolean },
-  setToast: (message: string | null) => void,
-) {
-  return (
-    <div className={toast.error ? "toast error" : "toast"}>
-      <span className="toast-text">{toast.message}</span>
-      <span className="toast-actions">
-        {toast.undo ? (
-          <button
-            type="button"
-            className="undo"
-            onClick={() => {
-              toast.undo?.();
-              setToast(null);
-            }}
-          >
-            Undo
-          </button>
-        ) : null}
-        <button type="button" onClick={() => setToast(null)}>
-          Dismiss
-        </button>
-      </span>
-    </div>
-  );
-}
-
-/**
- * Search. Its text and results live here, so typing does not re-render the board behind it.
- * Closing unmounts it, which clears them and puts focus back where it was.
- */
-function Palette({
-  data,
-  onClose,
-  onGo,
-  onShow,
-  onToast,
-  onError,
-}: {
-  data: Snapshot | undefined;
-  onClose: () => void;
-  onGo: (path: string, taskId?: string | null) => void;
-  /** Opens a list page at one record. */
-  onShow: (path: string, id: string) => void;
-  onToast: (message: string) => void;
-  onError: (err: unknown) => void;
-}) {
-  const [queryText, setQueryText] = useState("");
-  const [hits, setHits] = useState<{ entity: string; id: string; title: string }[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [searched, setSearched] = useState(false);
-  const searchRef = useRef<HTMLInputElement>(null);
-  const searchRun = useRef(0);
-  useEffect(() => {
-    const previous = document.activeElement;
-    searchRef.current?.focus();
-    return () => {
-      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
-    };
-  }, []);
-  return (
-    <div className="palette" role="dialog" aria-modal="true" aria-label="Search">
-      <button
-        type="button"
-        className="palette-dismiss"
-        aria-label="Close search"
-        tabIndex={-1}
-        onClick={onClose}
-      />
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const text = queryText.trim();
-          if (!text) return;
-          setSearching(true);
-          setSearched(false);
-          // Only the latest search may show: an earlier, slower answer is dropped.
-          const run = ++searchRun.current;
-          void api
-            .search(text)
-            .then((res) => {
-              if (run !== searchRun.current) return;
-              // A general project has no Features page to open a feature on.
-              const general = data?.project?.kind === "general";
-              setHits(res.hits.filter((h) => !(general && h.entity === "feature")));
-              setSearched(true);
-            })
-            .catch((err: unknown) => {
-              if (run === searchRun.current) onError(err);
-            })
-            .finally(() => {
-              if (run === searchRun.current) setSearching(false);
-            });
-        }}
-      >
-        <input
-          ref={searchRef}
-          value={queryText}
-          onChange={(e) => {
-            setQueryText(e.target.value);
-            // Hits for the old text would read as answers to the new one.
-            searchRun.current++;
-            setHits([]);
-            setSearched(false);
-            setSearching(false);
-          }}
-          placeholder="Search tasks, notes, decisions, features"
-          aria-label="Search"
-        />
-        <div role="status" className="meta">
-          {searching
-            ? "Searching…"
-            : !searched
-              ? "Press Enter to search."
-              : hits.length === 0
-                ? "No results"
-                : hits.length >= SEARCH_LIMIT
-                  ? `First ${SEARCH_LIMIT} results`
-                  : `${hits.length} result${hits.length === 1 ? "" : "s"}`}
-        </div>
-        {hits.map((hit) => {
-          const titleOf = (id: string) =>
-            (id.startsWith("tsk_")
-              ? data?.tasks
-              : id.startsWith("dec_")
-                ? data?.decisions
-                : data?.notes
-            )?.find((r) => r.id === id)?.title;
-          const note = data?.notes.find((n) => n.id === hit.id);
-          const on = note ? threadOf(note) : undefined;
-          const about = on ? titleOf(on) : undefined;
-          return (
-            <button
-              type="button"
-              key={`${hit.entity}-${hit.id}`}
-              onClick={() => {
-                onClose();
-                // A comment opens what it is on; one whose record was deleted says so.
-                if (on && about === undefined) onToast("That comment is on something deleted.");
-                else if (hit.entity === "task") onGo("/", hit.id);
-                else if (on?.startsWith("tsk_")) onGo("/", on);
-                else
-                  onShow(
-                    HIT_PAGES[on ? (on.startsWith("dec_") ? "decision" : "note") : hit.entity] ??
-                      "/",
-                    on ?? hit.id,
-                  );
-              }}
-            >
-              <span className="badge">{on ? "Comment" : kindLabel(hit.entity)}</span>{" "}
-              {about ? `on ${about}` : hit.title}
-            </button>
-          );
-        })}
-      </form>
     </div>
   );
 }

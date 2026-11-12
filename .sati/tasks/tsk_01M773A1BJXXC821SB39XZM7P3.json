@@ -1,0 +1,55 @@
+{
+  "body": "Phase H3 of docs/headless-cli-plan.md: task create, task complete, comment add, note create, decision record ask a person at a terminal for what is missing; $VISUAL/$EDITOR for note and decision bodies.",
+  "branch": "main",
+  "checklist": [
+    {
+      "done": false,
+      "text": "Code, tests, docs and changeset written in worktree sati-h3; lint, typecheck and tests pass"
+    },
+    {
+      "done": false,
+      "text": "Playwright run to finish, then task_complete, commit, merge, push"
+    }
+  ],
+  "completion": {
+    "branch": "main",
+    "commit": "af9c54b6e6ef87234aeb2993931ce72f1c4474ef",
+    "completedAt": "2026-11-12T06:50:53.579Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/cli/src/prompt.ts",
+      "packages/cli/src/commands/task.ts",
+      "packages/cli/src/commands/comment.ts",
+      "packages/cli/src/commands/note.ts",
+      "packages/cli/src/commands/decision.ts",
+      "packages/cli/test/prompt.test.ts",
+      "packages/cli/test/support/pty-run.py",
+      "PLAN.md",
+      "docs/headless-cli-plan.md",
+      "docs/progress.md",
+      "README.md",
+      ".changeset/ask-missing-arguments.md"
+    ],
+    "releaseNote": "At a terminal, sati asks for arguments you leave out of task create, task complete, comment add, note create and decision record.",
+    "summary": "Phase 10c (H3): at a terminal, task create, task complete, comment add, note create and decision record ask for what was left out and print the command that does the same. task complete offers the files git says changed. Note text and decisions open in $VISUAL/$EDITOR (0600 file in a mkdtemp folder, removed in finally; empty file cancels; failed editor stores nothing). Without a terminal, for agents, --json and --no-input, the usage errors are the same words as before. Gate passes; Playwright 97 passed."
+  },
+  "createdAt": "2026-11-12T05:22:23.730Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M773A1BJXXC821SB39XZM7P3",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T05:22:23.730Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T05:22:28.605Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "checklist": "2026-11-12T05:40:45.514Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T06:50:53.579Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T06:50:53.579Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T06:50:53.579Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T05:22:28.605Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "review",
+  "title": "H3: prompts for missing arguments, $EDITOR for bodies",
+  "updatedAt": "2026-11-12T06:50:53.580Z",
+  "version": 4,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -2198,3 +2198,14 @@ Task `tsk_fevjbr`.
 - `task claim --pick` now also refuses an agent that runs it in a pseudo-terminal. It used to open the list there.
 - `sati inbox` names the new verbs in its hint line. The core's refusal hint still names `task update --status done`, which works as before.
 
+
+## 2026-11-12 — 10c (H3): questions for what was left out
+
+- `task create`, `task complete`, `comment add`, `note create` and `decision record` took required arguments from citty; they are optional now so a question can be asked. Where nobody can be asked, each command throws the error citty printed before, word for word, before the project is opened (`missing`, `missingFlag` in `prompt.ts`). Help shows `[TITLE]` and says the argument is asked at a terminal.
+- A question is asked only for what the person left out, and only the first missing thing starts the flow: `note create "Title"` with no `--body` still makes a note with no text, as before. `task create "Title"` asks nothing.
+- The plan named one `ask(kind, opts)`. It is four small functions (`askText`, `askSelect`, `askFiles`, `askBody`): each has one return type, and no caller needed a kind chosen at run time. No confirm question was needed.
+- `task complete` offers the files git says the worktree changed (the same `changedFiles` the brief uses: committed since the merge base, staged, unstaged, untracked), all ticked, without `.sati/`. With nothing to offer, or more than 100 paths, it asks for a comma-separated line; Enter means none. The core checks the paths as it does for `--files`.
+- `editBody` runs `$VISUAL`, then `$EDITOR`, through the shell with the terminal attached, so `code --wait` works. The file is `TEXT.md`, mode 0600, in a `mkdtemp` folder (0700) under the OS temp folder; the folder is removed in `finally`. A non-zero exit is a usage error and nothing is stored; an empty file is `Cancelled`.
+- The plan said lines starting with `#` are the help text. A `#` line is a Markdown heading, which a note may start with, so the help is one HTML comment line and only that exact line is cut.
+- With no editor set, the text is one line at a prompt. A note's text is asked only in the question flow (when the title was asked too).
+- `pty-run.py` takes several prompts and key groups joined with `|||`: keys typed ahead of a question are lost, so each group waits for its prompt.

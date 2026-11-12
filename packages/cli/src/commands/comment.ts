@@ -5,10 +5,12 @@ import {
   listAll,
   listComments,
   type Note,
+  SatiError,
   shortHandle,
 } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
+import { askText, canAsk, missing, pickTask, sameAs } from "../prompt.js";
 import { bodyText, execute } from "../runtime.js";
 import { bold, dim, LISTED, term, when, wrap, yellow } from "../term.js";
 
@@ -26,21 +28,42 @@ const line = (n: Note, names: Map<string, string>) => {
 const add = defineCommand({
   meta: { name: "add", description: "Comment on a task, note or decision" },
   args: {
-    on: { type: "positional", required: true, description: "Task, note or decision id or handle" },
+    on: {
+      type: "positional",
+      required: false,
+      description:
+        "Task, note or decision id or handle (at a terminal: leave it out to choose a task)",
+    },
     body: {
       type: "positional",
-      required: true,
-      description: "The comment, in Markdown (- reads stdin)",
+      required: false,
+      description: "The comment, in Markdown (- reads stdin; at a terminal: asked when left out)",
     },
     ...json,
   },
-  run: ({ args }) =>
-    execute(
+  run: ({ args }) => {
+    if (!canAsk(args.json)) {
+      if (args.on === undefined) throw missing("on", "comment add");
+      if (args.body === undefined) throw missing("body", "comment add");
+    }
+    return execute(
       args.json,
-      async ({ ctx }) =>
-        addComment(ctx, { on: await commentTarget(ctx, args.on), body: bodyText(args.body) ?? "" }),
+      async ({ ctx }) => {
+        const on =
+          args.on === undefined
+            ? await pickTask(ctx, {}, "Comment on which task?", {
+                empty: new SatiError("NOT_FOUND", "No tasks to comment on.", {
+                  hint: `A note or decision takes its id: \`${CLI_NAME} comment add <id> "text"\`.`,
+                }),
+              })
+            : await commentTarget(ctx, args.on);
+        const body = args.body === undefined ? await askText("Comment") : bodyText(args.body);
+        if (args.body === undefined) sameAs("comment", "add", shortHandle(on), body ?? "");
+        return addComment(ctx, { on, body: body ?? "" });
+      },
       (n: Note) => `Commented on ${shortHandle(n.links[0] ?? "")} (${shortHandle(n.id)})`,
-    ),
+    );
+  },
 });
 
 const ls = defineCommand({

@@ -13,6 +13,7 @@ import {
 } from "@sati/core";
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination } from "../args.js";
+import { askBody, askText, canAsk, missing, sameAs } from "../prompt.js";
 import { record, row, rows } from "../render.js";
 import { bodyText, execute, int, list, someChange } from "../runtime.js";
 
@@ -37,27 +38,56 @@ const fields = {
   },
 } as const;
 
+/** The flags a person typed after the command word, for the "Same as" line. */
+function typedAfter(word: string): string[] {
+  const argv = process.argv.slice(2);
+  return argv.slice(argv.indexOf(word) + 1);
+}
+
 const create = defineCommand({
   meta: { name: "create", description: "Write a note" },
   args: {
-    title: { type: "positional", required: true, description: "Note title" },
+    title: {
+      type: "positional",
+      required: false,
+      description: "Note title (at a terminal: asked when left out)",
+    },
     ...fields,
     ...json,
   },
-  run: ({ args }) =>
-    execute(
+  run: ({ args }) => {
+    if (args.title === undefined && !canAsk(args.json)) throw missing("title", "note create");
+    return execute(
       args.json,
-      async ({ ctx }) =>
-        createNote(ctx, {
-          title: args.title,
-          body: bodyText(args.body),
+      async ({ ctx }) => {
+        // A person who typed no title is asked for it, then writes the text: in their editor
+        // when $VISUAL or $EDITOR is set, else on one line.
+        const title = args.title ?? (await askText("Note title"));
+        const body =
+          args.title === undefined && args.body === undefined
+            ? await askBody("Note text")
+            : bodyText(args.body);
+        if (args.title === undefined) {
+          sameAs(
+            "note",
+            "create",
+            title,
+            ...(args.body === undefined ? ["--body", body ?? ""] : []),
+            ...typedAfter("create"),
+          );
+        }
+        return createNote(ctx, {
+          title,
+          body,
           tags: list(args.tags),
           links: await linksOf(ctx, args.links),
           pinned: args.pinned,
           private: args.private,
-        }),
+        });
+      },
       (n: Note) => `Created ${row(n)}`,
-    ),
+    );
+  },
 });
 
 const ls = defineCommand({

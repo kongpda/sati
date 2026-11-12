@@ -1,6 +1,6 @@
 # Plan: sati in the terminal, with no server
 
-- Status: approved by the owner (2026-11-12), with the recommended answers to the four open decisions. Phases H1 and H2 are done; H3 is next. Progress is tracked in the checklist under "Implementation notes" below.
+- Status: approved by the owner (2026-11-12), with the recommended answers to the four open decisions. Phases H1, H2 and H3 are done; H4 is next. Progress is tracked in the checklist under "Implementation notes" below.
 - Asked by the owner: use sati without its server, headless, with an interactive CLI; can an agent talk to it with or without a server; does MCP need a server.
 
 ## Short answers
@@ -154,10 +154,10 @@ Gate: every existing CLI test passes unchanged. That proves scripts and agents s
 
 ### Phase H3: prompts for missing arguments (about 1 to 2 days)
 
-- [ ] `ask` helper
-- [ ] `task create`, `task complete`, `comment add`, `note create`, `decision record`
-- [ ] `$EDITOR` for bodies, with a temp file removed afterwards and an empty file meaning cancel
-- [ ] Pseudo-terminal test per command; a test that a piped stdin never prompts
+- [x] `ask` helper (built as `askText`, `askSelect`, `askFiles`, `askBody`)
+- [x] `task create`, `task complete`, `comment add`, `note create`, `decision record`
+- [x] `$EDITOR` for bodies, with a temp file removed afterwards and an empty file meaning cancel
+- [x] Pseudo-terminal test per command; a test that a piped stdin never prompts
 
 ### Phase H4: home screen and live view (about 1 to 2 days)
 
@@ -256,10 +256,12 @@ Written 2026-11-12 after reading the code at `8a9a8eb`, so the work can be picke
 2. `editBody(initial)`: `$VISUAL`, then `$EDITOR`; a 0600 file in a 0700 folder made with `mkdtemp` under the OS temp folder; removed in `finally`; an empty or unchanged file cancels; lines starting with `#` at the top are a help text and are cut.
 3. Commands: `task create` (title, priority), `task complete` (summary; files offered from `git diff --name-only` against the merge base, multi-select), `comment add` (record, text), `note create`, `decision record` (title, body).
 
-- [ ] `ask`, `editBody`
-- [ ] `task create`, `task complete`, `comment add`, `note create`, `decision record`
-- [ ] Pseudo-terminal test per command; piped stdin never prompts; the temp file is gone after a cancel and after an editor that exits non-zero
-- [ ] Gate, Playwright, changeset, progress entry
+- [x] `ask`, `editBody`
+- [x] `task create`, `task complete`, `comment add`, `note create`, `decision record`
+- [x] Pseudo-terminal test per command; piped stdin never prompts; the temp file is gone after a cancel and after an editor that exits non-zero
+- [x] Gate, Playwright, changeset, progress entry
+
+As built, where it differs from the three points above: see the "10c (H3)" entry in `docs/progress.md`.
 
 ### Phase H4 in detail
 

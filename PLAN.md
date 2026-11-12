@@ -1013,8 +1013,8 @@ Added 2026-11-12 at the owner's request. sati already needs no server: every com
 
 **10c (H3) — Prompts for missing arguments**
 
-- [ ] `task create`, `task complete`, `comment add`, `note create`, `decision record` ask for what is missing
-- [ ] `$EDITOR` for bodies
+- [x] `task create`, `task complete`, `comment add`, `note create`, `decision record` ask for what is missing
+- [x] `$EDITOR` for bodies
 
 **10d (H4) — Home screen and live view**
 

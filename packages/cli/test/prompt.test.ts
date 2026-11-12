@@ -1,4 +1,6 @@
 import { spawnSync } from "node:child_process";
+import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { canAsk } from "../src/prompt.js";
@@ -75,6 +77,13 @@ describe("without a terminal, a command never waits for an answer", () => {
       [["task", "update", "--priority", "high"], 2, "sati task update <id>"],
       [["task", "show"], 2, "You hold no task"],
       [["task", "claim", "--pick"], 2, "task list --ready"],
+      [["task", "create"], 2, "sati task create <title>"],
+      [["task", "complete"], 2, "Missing --summary."],
+      [["comment", "add"], 2, "sati comment add <on>"],
+      [["comment", "add", first.id], 2, "sati comment add <body>"],
+      [["note", "create"], 2, "sati note create <title>"],
+      [["decision", "record"], 2, "sati decision record <title>"],
+      [["decision", "record", "Title"], 2, "Missing --decision."],
     ];
     for (const [args, code, text] of cases) {
       const r = closed(...args);
@@ -124,7 +133,10 @@ const python =
   process.platform !== "win32" &&
   spawnSync("python3", ["-c", "import pty, os; os.waitstatus_to_exitcode"]).status === 0;
 
-/** Runs in a pseudo-terminal and types `keys` once `prompt` shows. See output.test.ts. */
+/**
+ * Runs in a pseudo-terminal and types `keys` once `prompt` shows. Several questions: join the
+ * prompts, and the keys, with `|||`. See output.test.ts.
+ */
 const typed = (dir: string, prompt: string, keys: string, args: string[], env = {}) =>
   spawnSync("python3", [PTY, prompt, keys, process.execPath, bin, ...args], {
     cwd: dir,
@@ -217,5 +229,150 @@ describe.skipIf(!python)("a person at a terminal", () => {
       expect(r.stdout).not.toContain("which task?");
     }
     expect(status(dir, first.id)).toBe("review");
+  });
+});
+
+interface Stored {
+  id: string;
+  title: string;
+  body?: string;
+  decision?: string;
+  priority?: string;
+}
+
+/** An editor that writes `text` to the file it is given, as a person would and then save. */
+const editor = (text: string) => `sh -c 'echo "${text}" > "$1"' --`;
+
+/** An empty folder for the editor's temp file, so a test can see that nothing is left in it. */
+function tempFolder(dir: string): string {
+  const tmp = join(dir, ".tmp-edit");
+  mkdirSync(tmp);
+  return tmp;
+}
+
+describe.skipIf(!python)("a person who left an argument out", () => {
+  // What is typed at the questions must be what a flag would have stored, and the line printed
+  // after must be a command that stores the same.
+  it("is asked for a task's title and priority", async () => {
+    const dir = await tempRepo({ init: true });
+    const r = typed(dir, "Task title|||Priority", `Fix login\\r|||${DOWN_ENTER}`, [
+      "task",
+      "create",
+      "--labels",
+      "auth",
+    ]);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain(
+      "Same as: sati task create 'Fix login' --priority high --labels auth",
+    );
+    const [task] = satiJson<(Stored & { labels: string[] })[]>(dir, "task", "list").data;
+    expect(task).toMatchObject({ title: "Fix login", priority: "high", labels: ["auth"] });
+  });
+
+  // The files are the record of what a task changed; the guard and the next agent read them.
+  // Offering what git saw keeps a person from typing paths, and from leaving them out.
+  it("is asked for the summary and offered the changed files on complete", async () => {
+    const dir = await tempRepo({ init: true });
+    const task = satiJson<Stored>(dir, "task", "create", "Work").data;
+    expect(sati(dir, "task", "claim", task.id).code).toBe(0);
+    writeFileSync(join(dir, "changed.txt"), "x");
+    const r = typed(dir, "What was done?|||Files touched", "Did it\\r|||\\r", ["task", "complete"]);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("--summary 'Did it'");
+    const after = satiJson<{ status: string; completion: { filesTouched: string[] } }>(
+      dir,
+      "task",
+      "show",
+      task.id,
+    ).data;
+    expect(after.status).toBe("done");
+    expect(after.completion.filesTouched).toContain("changed.txt");
+    expect(after.completion.filesTouched.some((f) => f.startsWith(".sati/"))).toBe(false);
+  });
+
+  it("writes nothing when the summary question is left", async () => {
+    const dir = await tempRepo({ init: true });
+    const task = satiJson<Stored>(dir, "task", "create", "Work").data;
+    expect(sati(dir, "task", "claim", task.id).code).toBe(0);
+    const r = typed(dir, "What was done?", CTRL_C, ["task", "complete"]);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("Nothing changed.");
+    expect(status(dir, task.id)).toBe("in_progress");
+  });
+
+  it("is asked which task and what to say for a comment", async () => {
+    const dir = await tempRepo({ init: true });
+    const task = satiJson<Stored>(dir, "task", "create", "Work").data;
+    const r = typed(dir, "Comment on which task?|||Comment", "\\r|||Looks good\\r", [
+      "comment",
+      "add",
+    ]);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/Same as: sati comment add tsk_[0-9a-z]{6} 'Looks good'/u);
+    const listed = sati(dir, "comment", "list", task.id);
+    expect(listed.stdout).toContain("Looks good");
+  });
+
+  // A note's text is often several lines. It is written in the person's editor, and the file it
+  // was written in must not outlive the command: it can hold what a private note holds.
+  it("opens the editor for a note's text and removes the file", async () => {
+    const dir = await tempRepo({ init: true });
+    const tmp = tempFolder(dir);
+    const r = typed(dir, "Note title", "Deploy steps\\r", ["note", "create"], {
+      EDITOR: editor("Run the script"),
+      VISUAL: "",
+      TMPDIR: tmp,
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("Same as: sati note create 'Deploy steps' --body 'Run the script'");
+    const [note] = satiJson<Stored[]>(dir, "note", "list").data;
+    const full = satiJson<Stored>(dir, "note", "show", note?.id ?? "").data;
+    expect(full.body).toBe("Run the script");
+    expect(readdirSync(tmp)).toEqual([]);
+  });
+
+  it("asks for one line when no editor is set", async () => {
+    const dir = await tempRepo({ init: true });
+    const r = typed(
+      dir,
+      "Decision title|||What was decided?",
+      "Store\\r|||Use SQLite\\r",
+      ["decision", "record"],
+      { EDITOR: "", VISUAL: "" },
+    );
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("Same as: sati decision record Store --decision 'Use SQLite'");
+    const [decision] = satiJson<Stored[]>(dir, "decision", "list").data;
+    expect(decision?.title).toBe("Store");
+  });
+
+  // An editor that crashes, or a file saved empty, must store nothing and leave nothing behind.
+  it("stores nothing and leaves no file when the editor fails or the text is empty", async () => {
+    const dir = await tempRepo({ init: true });
+    const tmp = tempFolder(dir);
+    const record = (EDITOR: string) =>
+      typed(dir, "Decision title", "Store\\r", ["decision", "record"], {
+        EDITOR,
+        VISUAL: "",
+        TMPDIR: tmp,
+      });
+    const failed = record("false");
+    expect(failed.status).toBe(2);
+    expect(failed.stdout).toContain("did not finish");
+    expect(readdirSync(tmp)).toEqual([]);
+
+    const empty = record("true");
+    expect(empty.status).toBe(0);
+    expect(empty.stdout).toContain("Nothing changed.");
+    expect(readdirSync(tmp)).toEqual([]);
+    expect(satiJson<Stored[]>(dir, "decision", "list").data).toEqual([]);
+  });
+
+  it("asks nothing of an agent in a pseudo-terminal", async () => {
+    const dir = await tempRepo({ init: true });
+    const r = typed(dir, "Task title", CTRL_C, ["task", "create"], { CLAUDECODE: "1" });
+    expect(r.status).toBe(2);
+    expect(r.stdout).toContain("Missing <title>");
+    expect(r.stdout).not.toContain("Task title");
   });
 });

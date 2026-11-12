@@ -10,34 +10,62 @@ import {
 } from "@sati/core";
 import { defineCommand } from "citty";
 import { id, json, pagination } from "../args.js";
+import { askBody, askText, canAsk, missing, missingFlag, sameAs } from "../prompt.js";
 import { record, row, rows } from "../render.js";
 import { execute, int, ref, refs } from "../runtime.js";
 
 const create = defineCommand({
   meta: { name: "record", description: "Record a decision and why it was made" },
   args: {
-    title: { type: "positional", required: true, description: "Decision title" },
-    decision: { type: "string", required: true, description: "What was decided" },
+    title: {
+      type: "positional",
+      required: false,
+      description: "Decision title (at a terminal: asked when left out)",
+    },
+    decision: {
+      type: "string",
+      description: "What was decided (required; at a terminal: asked when left out)",
+    },
     context: { type: "string", description: "The situation that forced the decision" },
     consequences: { type: "string", description: "What follows from it" },
     supersedes: { type: "string", description: "Decision id this one replaces" },
     features: { type: "string", description: "Comma-separated feature ids it affects" },
     ...json,
   },
-  run: ({ args }) =>
-    execute(
+  run: ({ args }) => {
+    if (!canAsk(args.json)) {
+      if (args.title === undefined) throw missing("title", "decision record");
+      if (args.decision === undefined) throw missingFlag("decision", "decision record");
+    }
+    return execute(
       args.json,
-      async ({ ctx }) =>
-        recordDecision(ctx, {
-          title: args.title,
-          decision: args.decision,
+      async ({ ctx }) => {
+        const title = args.title ?? (await askText("Decision title"));
+        // The decision itself is often a paragraph: the editor when one is set, else one line.
+        const decision = args.decision ?? (await askBody("What was decided?"));
+        if (args.title === undefined || args.decision === undefined) {
+          const argv = process.argv.slice(2);
+          const flags = argv.slice(argv.indexOf("record") + 1).filter((w) => w !== args.title);
+          sameAs(
+            "decision",
+            "record",
+            title,
+            ...(args.decision === undefined ? ["--decision", decision] : []),
+            ...flags,
+          );
+        }
+        return recordDecision(ctx, {
+          title,
+          decision,
           context: args.context,
           consequences: args.consequences,
           supersedes: await ref(ctx, "decision", args.supersedes),
           featureIds: await refs(ctx, "feature", args.features),
-        }),
+        });
+      },
       (d: Decision) => `Recorded ${row(d)}`,
-    ),
+    );
+  },
 });
 
 const ls = defineCommand({

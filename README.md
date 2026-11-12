@@ -237,6 +237,10 @@ If you are an agent working in a repo that uses sati:
   `task update`, `task show` and `task claim` then show a list to choose from, and print the
   command that does the same. Scripts, pipes, agents and `--json` are never asked: they get the
   usage error. `--no-input` or `SATI_NO_INPUT=1` turns the questions off for a person too.
+- **Or leave the rest out.** `sati task create`, `task complete`, `comment add`, `note create` and
+  `decision record` ask a person for what is missing. `task complete` offers the files git says
+  you changed. A note's text and a decision open in `$VISUAL` or `$EDITOR` when one is set; save
+  an empty file to cancel.
 - **After you update sati**, run `sati upgrade` in each project.
 - **Never** edit `.sati/` by hand or commit with `--no-verify`.
 

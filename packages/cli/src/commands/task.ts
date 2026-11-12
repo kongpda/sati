@@ -23,7 +23,16 @@ import {
 } from "@sati/core";
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination, taskId } from "../args.js";
-import { askText, canAsk, missing, pickTask, sameAs } from "../prompt.js";
+import {
+  askFiles,
+  askSelect,
+  askText,
+  canAsk,
+  missing,
+  missingFlag,
+  pickTask,
+  sameAs,
+} from "../prompt.js";
 import { record, row, rows } from "../render.js";
 import {
   bodyText,
@@ -145,7 +154,11 @@ const fields = {
 const create = defineCommand({
   meta: { name: "create", description: "Create a task" },
   args: {
-    title: { type: "positional", required: true, description: "Task title" },
+    title: {
+      type: "positional",
+      required: false,
+      description: "Task title (at a terminal: asked when left out)",
+    },
     status: { type: "string", description: "backlog | todo (default todo)" },
     ...fields,
     subtasks: {
@@ -155,15 +168,31 @@ const create = defineCommand({
     },
     ...json,
   },
-  run: ({ args }) =>
-    execute(
+  run: ({ args }) => {
+    if (args.title === undefined && !canAsk(args.json)) throw missing("title", "task create");
+    return execute(
       args.json,
-      async ({ ctx }) =>
-        createTask(ctx, {
-          title: args.title,
+      async ({ ctx }) => {
+        // A person who typed no title is asked for it, then for the priority.
+        const title = args.title ?? (await askText("Task title"));
+        const priority =
+          args.title === undefined && args.priority === undefined
+            ? await askSelect("Priority", ["low", "medium", "high", "urgent"], "medium")
+            : args.priority;
+        if (args.title === undefined) {
+          sameAs(
+            "task",
+            "create",
+            title,
+            ...(args.priority === undefined ? ["--priority", priority ?? "medium"] : []),
+            ...typedAfter("create"),
+          );
+        }
+        return createTask(ctx, {
+          title,
           body: bodyText(args.body),
           status: args.status,
-          priority: args.priority,
+          priority,
           effort: orNone(args.effort),
           featureId: await link(ctx, "feature", args.feature),
           parentId: await link(ctx, "task", args.parent),
@@ -175,9 +204,11 @@ const create = defineCommand({
           milestoneId: await link(ctx, "milestone", args.milestone),
           assigneeIds: await assignees(ctx, args.assign),
           subtasks: args.subtasks ? parseJson(args.subtasks, "--subtasks", "USAGE") : undefined,
-        }),
+        });
+      },
       (t: Task) => `Created ${row(t)}`,
-    ),
+    );
+  },
 });
 
 const ls = defineCommand({
@@ -579,7 +610,10 @@ const complete = defineCommand({
   },
   args: {
     ...taskId,
-    summary: { type: "string", required: true, description: "What was done" },
+    summary: {
+      type: "string",
+      description: "What was done (required; at a terminal: asked when left out)",
+    },
     "release-note": {
       type: "string",
       description: "One line for users, for the changelog (default: the summary)",
@@ -592,15 +626,38 @@ const complete = defineCommand({
     ...token,
     ...json,
   },
-  run: ({ args }) =>
-    execute(
+  run: ({ args }) => {
+    if (args.summary === undefined && !canAsk(args.json)) {
+      throw missingFlag("summary", "task complete");
+    }
+    return execute(
       args.json,
-      async ({ ctx }) => {
+      async ({ ctx, location }) => {
         const taskId = await heldTask(ctx, args.id);
+        // A person who typed no summary is asked for it, and for the files when none were given:
+        // the ones git says this worktree changed are offered, already ticked.
+        const summary = args.summary ?? (await askText("What was done?"));
+        let files = list(args.files);
+        if (args.summary === undefined && files === undefined) {
+          const changed = (await ctx.repo?.changedFiles?.(location.root)) ?? [];
+          const offered = changed.filter((f) => !f.startsWith(".sati/")).sort();
+          files = await askFiles("Files touched", offered);
+        }
+        if (args.summary === undefined) {
+          sameAs(
+            "task",
+            "complete",
+            shortHandle(taskId),
+            "--summary",
+            summary,
+            ...(files?.length && args.files === undefined ? ["--files", files.join(",")] : []),
+            ...typedAfter("complete").filter((w) => w !== args.id),
+          );
+        }
         return completeTask(ctx, taskId, {
-          summary: args.summary,
+          summary,
           releaseNote: args["release-note"],
-          filesTouched: list(args.files),
+          filesTouched: files?.length ? files : undefined,
           expectedVersion: int(args["expected-version"], "expected-version"),
           token: await claimToken(ctx, taskId, args.token),
         });
@@ -609,7 +666,8 @@ const complete = defineCommand({
         t.status === "review"
           ? `Completed ${row(t)}\n  Waiting for a person to approve it (settings --review).`
           : `Completed ${row(t)}`,
-    ),
+    );
+  },
 });
 
 const noneInReview = () =>

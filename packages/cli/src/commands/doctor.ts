@@ -30,7 +30,8 @@ import { worktreePaths } from "../runtime/git.js";
 import { closeRuntime, openRuntime } from "../runtime/location.js";
 import { execute, output } from "../runtime/output.js";
 import { versionLine } from "../version.js";
-import { pendingUpgrade, syncedDbWarning } from "./init.js";
+import { syncedDbWarning } from "./init/apply.js";
+import { pendingUpgrade } from "./init/plan.js";
 
 /**
  * The git hooks of this clone: the pre-commit runner init writes under the git common dir, and

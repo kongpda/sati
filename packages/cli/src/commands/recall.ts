@@ -20,5 +20,6 @@ export default defineCommand({
       ({ ctx }) =>
         recall(ctx, { question: args.question, maxTokens: int(args["max-tokens"], "max-tokens") }),
       (r: Recall) => markdown(r.markdown.trimEnd()),
+      { readOnly: true },
     ),
 });

@@ -758,8 +758,9 @@ export async function execute<T>(
   json: boolean | undefined,
   fn: (rt: Runtime) => Promise<T>,
   render: (value: T) => string,
+  opts: { readOnly?: boolean } = {},
 ): Promise<void> {
-  return output(json, async () => withExport(await openRuntime(), fn), render);
+  return output(json, async () => withExport(await openRuntime(), fn, opts), render);
 }
 
 /**
@@ -767,9 +768,16 @@ export async function execute<T>(
  * is already dirty when git looks: `git commit -a` decides there is nothing to commit before the
  * pre-commit hook runs. A failed export (say, a secret in a record) warns but keeps the write.
  */
-export async function withExport<T>(rt: Runtime, fn: (rt: Runtime) => Promise<T>): Promise<T> {
+export async function withExport<T>(
+  rt: Runtime,
+  fn: (rt: Runtime) => Promise<T>,
+  opts: { readOnly?: boolean } = {},
+): Promise<T> {
   const dir = sharedDir(rt);
   if (!dir) return fn(rt);
+  // A command that never writes has nothing to export, so git mode skips loading @sati/sync
+  // (review 8.6). A shared folder still loads first: that brings in teammates' edits.
+  if (opts.readOnly && rt.project.mode !== "standalone") return fn(rt);
   const { afterWrites } = await import("@sati/sync");
   const notUpdated = (err: unknown) => {
     warn("the .sati/ snapshot was not updated.");

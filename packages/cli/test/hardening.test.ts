@@ -491,3 +491,53 @@ describe("mcp process", () => {
     20_000,
   );
 });
+
+describe("read-only commands", () => {
+  // Why: these commands skip the `.sati/` export to start faster (review 8.6). A command marked
+  // read-only that wrote would leave its write out of the snapshot, so each must write nothing.
+  it("a read-only command never writes", async () => {
+    const dir = await tempRepo();
+    expect(run(dir, ["init", "--yes", "--tools", ""]).code).toBe(0);
+    const id = (...args: string[]) => {
+      const r = satiJson<{ id: string }>(dir, ...args);
+      expect(r.code).toBe(0);
+      return r.data.id;
+    };
+    const task = id("task", "create", "Read me");
+    const note = id("note", "create", "A note", "--body", "text");
+    const decision = id("decision", "record", "A decision", "--decision", "Keep it");
+    const feature = id("feature", "create", "A feature");
+    const milestone = id("milestone", "create", "A milestone");
+    expect(sati(dir, "comment", "add", task, "A comment").code).toBe(0);
+    expect(sati(dir, "lock", "acquire", "src/a.ts").code).toBe(0);
+    const count = () => satiJson<unknown[]>(dir, "activity", "--limit", "500").data.length;
+    const snapshot = () =>
+      execFileSync("git", ["status", "--porcelain", "--", ".sati"], { cwd: dir, encoding: "utf8" });
+    const before = count();
+    const files = snapshot();
+    const reads = [
+      ["task", "list"],
+      ["task", "show", task],
+      ["note", "list"],
+      ["note", "show", note],
+      ["decision", "list"],
+      ["decision", "show", decision],
+      ["feature", "list"],
+      ["feature", "show", feature],
+      ["milestone", "list"],
+      ["milestone", "show", milestone],
+      ["search", "Read"],
+      ["recall", "what is read me"],
+      ["activity"],
+      ["changes"],
+      ["lock", "list"],
+      ["comment", "list", task],
+      ["inbox"],
+    ];
+    for (const args of reads) {
+      expect(sati(dir, ...args, "--json").code, args.join(" ")).toBe(0);
+      expect(count(), args.join(" ")).toBe(before);
+    }
+    expect(snapshot()).toBe(files);
+  }, 60_000);
+});

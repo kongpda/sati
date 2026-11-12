@@ -226,6 +226,7 @@ export default defineCommand({
         );
       },
       (rows: Activity[]) => (rows.length ? lines(rows, names) : "No activity."),
+      { readOnly: true },
     );
   },
 });

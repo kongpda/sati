@@ -48,6 +48,7 @@ export default defineCommand({
         const text = formatChanges(c, format).trimEnd();
         return format === "plain" ? markdown(text) : text;
       },
+      { readOnly: true },
     );
   },
 });

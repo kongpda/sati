@@ -121,5 +121,6 @@ export default defineCommand({
       args.json,
       ({ ctx }) => inbox(ctx, args.for === undefined ? {} : { for: args.for }),
       (out: InboxOutput) => (term().rich ? sections(out) : compact(out)),
+      { readOnly: true },
     ),
 });

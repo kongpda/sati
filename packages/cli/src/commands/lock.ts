@@ -92,6 +92,7 @@ const ls = defineCommand({
           { flex: 2 },
         );
       },
+      { readOnly: true },
     ),
 });
 

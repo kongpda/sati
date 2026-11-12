@@ -94,6 +94,7 @@ const ls = defineCommand({
             ? `${LISTED}${items.map((n) => line(n, names)).join("\n\n")}`
             : items.map((n) => line(n, names)).join("\n")
           : `No comments. Add one with \`${CLI_NAME} comment add ${args.on} "text"\`.`,
+      { readOnly: true },
     );
   },
 });

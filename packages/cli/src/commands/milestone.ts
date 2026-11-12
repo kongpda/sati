@@ -42,6 +42,7 @@ const ls = defineCommand({
         }),
       (items: Milestone[]) =>
         rows(items, `No milestones. Create one with \`${CLI_NAME} milestone create\`.`),
+      { readOnly: true },
     ),
 });
 
@@ -53,6 +54,7 @@ const show = defineCommand({
       args.json,
       async ({ ctx }) => getRecord(ctx, "milestone", await resolveId(ctx, "milestone", args.id)),
       record,
+      { readOnly: true },
     ),
 });
 

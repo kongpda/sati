@@ -84,6 +84,7 @@ const ls = defineCommand({
           items,
           `No decisions. Record one with \`${CLI_NAME} decision record "title" --decision "…"\`.`,
         ),
+      { readOnly: true },
     ),
 });
 
@@ -95,6 +96,7 @@ const show = defineCommand({
       args.json,
       async ({ ctx }) => getRecord(ctx, "decision", await resolveId(ctx, "decision", args.id)),
       record,
+      { readOnly: true },
     ),
 });
 

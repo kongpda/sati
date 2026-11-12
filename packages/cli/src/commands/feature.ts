@@ -91,6 +91,7 @@ const ls = defineCommand({
         typeof out === "string"
           ? out.trimEnd()
           : rows(out, `No features. Create one with \`${CLI_NAME} feature create "title"\`.`),
+      { readOnly: true },
     ),
 });
 
@@ -102,6 +103,7 @@ const show = defineCommand({
       args.json,
       async ({ ctx }) => getRecord(ctx, "feature", await resolveId(ctx, "feature", args.id)),
       record,
+      { readOnly: true },
     ),
 });
 

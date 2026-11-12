@@ -1,0 +1,14 @@
+{
+  "context": "Review item 8.7 asked to profile first and stop if the saving is under 10 ms.",
+  "createdAt": "2026-11-12T17:22:29.624Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "Leave the per-command spawns as they are. Measured on macOS, `task list` spawns twice: git rev-parse (7.9 ms, needed to find the repo) and mount (6.2 ms, filesystem kind). The branch is already read from .git/HEAD. Caching the filesystem kind would save about 6 ms, under the 10 ms bar the review set, and adds a cache file that can go stale when a folder moves to another disk.",
+  "id": "dec_01M78CGJKREQ8F79J0VQNSG5QP",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T17:22:29.625Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "Review 8.7: no spawn cache",
+  "updatedAt": "2026-11-12T17:22:29.624Z",
+  "version": 1
+}

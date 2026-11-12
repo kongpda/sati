@@ -103,6 +103,7 @@ const ls = defineCommand({
         }),
       (items: Note[]) =>
         rows(items, `No notes. Write one with \`${CLI_NAME} note create "title"\`.`),
+      { readOnly: true },
     ),
 });
 
@@ -114,6 +115,7 @@ const show = defineCommand({
       args.json,
       async ({ ctx }) => getRecord(ctx, "note", await resolveId(ctx, "note", args.id)),
       record,
+      { readOnly: true },
     ),
 });
 

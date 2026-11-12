@@ -27,5 +27,6 @@ export default defineCommand({
           match: args.any ? "any" : undefined,
         }),
       (items: SearchHit[]) => hits(items),
+      { readOnly: true },
     ),
 });

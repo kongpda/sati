@@ -313,6 +313,7 @@ const ls = defineCommand({
       },
       (tasks: (Task | TaskRow)[]) =>
         rows(tasks, `No tasks. Create one with \`${CLI_NAME} task create "title"\`.`),
+      { readOnly: true },
     );
   },
 });
@@ -374,6 +375,7 @@ const show = defineCommand({
         return getRecord(ctx, "task", taskId);
       },
       record,
+      { readOnly: true },
     ),
 });
 

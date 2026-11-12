@@ -5,7 +5,7 @@ import { LIMITS } from "../domain/schemas.js";
 import { refuseSecrets } from "../domain/secrets.js";
 import { CLI_NAME } from "../name.js";
 import type { StorageReader, StorageWriter } from "../ports/storage.js";
-import { listAll, parseInput, type ServiceContext } from "./context.js";
+import { listAll, parseInput, type ServiceContext, writeTx } from "./context.js";
 import { CreateMilestoneInput, createMilestoneIn } from "./milestone.js";
 import { createTaskIn } from "./task.js";
 
@@ -105,9 +105,14 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
       }),
     };
     const result: PlanImport = { added: [], skipped: [] };
-    // Live milestones only: a task must not land in a deleted one.
+    // Open milestones only: a task must not land in a deleted or cancelled one.
     const milestoneIds = new Map(
-      existing.milestones.filter((m) => m.deletedAt === null).map((m) => [m.title, m.id]),
+      existing.milestones
+        .filter((m) => m.deletedAt === null && m.status !== "cancelled")
+        .map((m) => [m.title, m.id]),
+    );
+    const cancelled = new Set(
+      existing.milestones.filter((m) => m.status === "cancelled").map((m) => m.title),
     );
     const milestoneTitles = new Set(existing.milestones.map((m) => m.title));
     const taskKeys = new Set(
@@ -122,12 +127,16 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
     for (const title of headings) {
       const key = `plan:${createHash("sha256").update(title).digest("hex").slice(0, 16)}`;
       if (milestoneTitles.has(title)) {
-        const deleted = !milestoneIds.has(title);
+        const gone = milestoneIds.has(title)
+          ? undefined
+          : cancelled.has(title)
+            ? "cancelled"
+            : "deleted";
         result.skipped.push({
           kind: "milestone",
           title,
           key,
-          ...(deleted && { reason: "the milestone is deleted: its tasks are created without it" }),
+          ...(gone && { reason: `the milestone is ${gone}: its tasks are created without it` }),
         });
         continue;
       }
@@ -166,5 +175,5 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
     }
     return result;
   };
-  return dryRun ? ctx.store.read((r) => run(r, undefined)) : ctx.store.write((w) => run(w, w));
+  return dryRun ? ctx.store.read((r) => run(r, undefined)) : writeTx(ctx, (w) => run(w, w));
 }

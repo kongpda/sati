@@ -9,6 +9,7 @@ This repo builds **Sati** (`sati`). The full spec is in `PLAN.md`. `AGENT_KICKOF
 - Run `pnpm lint && pnpm typecheck && pnpm test` before every commit.
 - Strict TypeScript, ESM only, no `any`. Validate all inputs with Zod.
 - Every write in `core` runs in one transaction and writes an activity row.
+  One exception: the actor's sync stamp (`issueStamp`) is bookkeeping and writes no activity row.
 - Follow the tech stack in `PLAN.md`. To change it, write an ADR in `docs/decisions/` and ask first.
 - No features outside `PLAN.md`. Put ideas in `docs/ideas.md`.
 - The product name lives only in `packages/core/src/name.ts`.

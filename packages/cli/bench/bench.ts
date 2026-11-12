@@ -24,11 +24,13 @@ import {
   createNote,
   createTask,
   ensureActor,
+  importPlan,
   importRecords,
   type Note,
   putContext,
   recall,
   type ServiceContext,
+  type StorageWriter,
   search,
   systemClock,
   type Task,
@@ -53,6 +55,8 @@ const IDLE_MS = 5_000;
 const HOME_TASKS = 5_000;
 /** Tasks one import brings in, as a large `git pull` would. */
 const IMPORTED = 5_000;
+/** Review 10.5: one plan import, the largest one write, and the share of it spent stamping. */
+const PLANNED = 500;
 /** How much slower than the budgets this machine may be (see the top of the file). */
 const FACTOR = Number(process.env.BENCH_FACTOR ?? "1");
 if (!(FACTOR >= 1)) throw new Error("BENCH_FACTOR must be a number, 1 or more.");
@@ -217,6 +221,39 @@ async function seed(
 }
 
 /**
+ * Times one plan import of PLANNED tasks, and the part of it spent reading and writing the
+ * actor row that `issueStamp` bumps on every record (review 10.5: batch it only past 20%).
+ */
+async function planImport(ctx: ServiceContext): Promise<{ total: number; actor: number }> {
+  let actor = 0;
+  const timed = (w: StorageWriter): StorageWriter =>
+    new Proxy(w, {
+      get(target, key, receiver) {
+        const value: unknown = Reflect.get(target, key, receiver);
+        if ((key !== "get" && key !== "update") || typeof value !== "function") return value;
+        return async (entity: string, ...rest: unknown[]) => {
+          const start = performance.now();
+          try {
+            return await value.call(target, entity, ...rest);
+          } finally {
+            if (entity === "actor") actor += performance.now() - start;
+          }
+        };
+      },
+    });
+  const store = new Proxy(ctx.store, {
+    get(target, key, receiver) {
+      if (key !== "write") return Reflect.get(target, key, receiver);
+      return <T>(fn: (w: StorageWriter) => Promise<T>) => target.write((w) => fn(timed(w)));
+    },
+  });
+  const lines = Array.from({ length: PLANNED }, (_, i) => `- [ ] ${words(i + 29, 6)} ${i}`);
+  const start = performance.now();
+  await importPlan({ ...ctx, store }, { markdown: `## Bench plan\n${lines.join("\n")}\n` });
+  return { total: performance.now() - start, actor };
+}
+
+/**
  * One simulated agent: a long-lived process (like the MCP server) with its own DB connection
  * and actor, claiming its tasks. Waits until `startAt` so all agents contend at once, then
  * prints the claim latencies as JSON.
@@ -347,6 +384,7 @@ async function bench(): Promise<void> {
     })),
   );
   const imported = performance.now() - importStart;
+  const planned = await planImport(ctx);
   const claims = await concurrentClaims(dir, ctx);
   await ctx.store.close();
 
@@ -397,6 +435,12 @@ async function bench(): Promise<void> {
       budget: undefined,
     },
     { measure: `import of ${IMPORTED} records`, value: imported, budget: undefined },
+    { measure: `plan import of ${PLANNED} tasks`, value: planned.total, budget: undefined },
+    {
+      measure: `  of which the actor stamp row (${Math.round((100 * planned.actor) / planned.total)}%)`,
+      value: planned.actor,
+      budget: undefined,
+    },
   ];
   const drawn = home.filter((ms): ms is number => ms !== undefined);
   if (drawn.length === home.length) {

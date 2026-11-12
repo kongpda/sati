@@ -20,6 +20,7 @@ import {
   parseInput,
   type ServiceContext,
   updateWithLog,
+  writeTx,
 } from "./context.js";
 
 export const DEFAULT_LEASE_MINUTES = 30;
@@ -85,7 +86,7 @@ export type UpdateSettingsInput = z.input<typeof UpdateSettingsInput>;
 /** Changes project settings. Missing fields keep their current value. */
 export async function updateSettings(ctx: ServiceContext, input: unknown): Promise<Project> {
   const data = parseInput(UpdateSettingsInput, input);
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const project = await w.getProject();
     if (!project || project.id !== ctx.projectId) {
       throw new SatiError("NOT_INITIALIZED", "This repository has no project.", {
@@ -109,7 +110,7 @@ const RenameProjectInput = z.strictObject({ name: z.string().trim().min(1).max(3
 /** Renames the project. Only a person may: the name is what everyone sees on the board. */
 export async function renameProject(ctx: ServiceContext, input: unknown): Promise<Project> {
   const data = parseInput(RenameProjectInput, input);
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const project = await w.getProject();
     if (!project || project.id !== ctx.projectId) {
       throw new SatiError("NOT_INITIALIZED", "This repository has no project.", {

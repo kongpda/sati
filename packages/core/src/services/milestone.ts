@@ -13,6 +13,7 @@ import {
   parseInput,
   type ServiceContext,
   updateWithLog,
+  writeTx,
 } from "./context.js";
 
 const fields = Milestone.pick({
@@ -32,7 +33,7 @@ export const UpdateMilestoneInput = fields.partial().extend(ExpectedVersion);
 
 export async function createMilestone(ctx: ServiceContext, input: unknown): Promise<Milestone> {
   const data = parseInput(CreateMilestoneInput, input);
-  return ctx.store.write((w) => createMilestoneIn(w, ctx, data));
+  return writeTx(ctx, (w) => createMilestoneIn(w, ctx, data));
 }
 
 /** `createMilestone` inside a caller's transaction. */
@@ -67,7 +68,7 @@ export async function updateMilestone(
 ): Promise<Milestone> {
   const { expectedVersion, ...patch } = parseInput(UpdateMilestoneInput, input);
   refuseSecrets("milestone", patch);
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const before = await mustGet(w, ctx, "milestone", id);
     if (patch.status)
       assertTransition(MILESTONE_TRANSITIONS, "milestone", before.status, patch.status);

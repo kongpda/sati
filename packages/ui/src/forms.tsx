@@ -46,14 +46,16 @@ export function EffortSelect({
 
 /** Where a milestone may go next; mirrors MILESTONE_TRANSITIONS in core, which enforces it. */
 export const MILESTONE_NEXT: Record<string, string[]> = {
-  planned: ["active"],
-  active: ["planned", "done"],
+  planned: ["active", "cancelled"],
+  active: ["planned", "done", "cancelled"],
   done: ["active"],
+  cancelled: ["planned"],
 };
 const MILESTONE_LABELS: Record<string, string> = {
   planned: "Planned",
   active: "Active",
   done: "Done",
+  cancelled: "Cancelled",
 };
 
 /** Comma-separated labels as typed, trimmed and without blanks or repeats. */

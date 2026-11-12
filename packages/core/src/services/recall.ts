@@ -11,9 +11,10 @@ import {
 import type { RepoFile } from "../ports/repo.js";
 import type { SearchableEntity, SearchHit } from "../ports/storage.js";
 import { estimateTokens } from "./brief.js";
+import { staleness } from "./card.js";
 import { COMMENT_TAG } from "./comment.js";
 import { parseInput, type ServiceContext } from "./context.js";
-import { staleness } from "./context-cache.js";
+import { supersededBy } from "./decision.js";
 import { clip, inert, splitWords } from "./text.js";
 
 /** PLAN Phase 8: a recall answer stays under 1,000 tokens, so asking is cheaper than reading. */
@@ -151,7 +152,7 @@ export async function recall(ctx: ServiceContext, input: unknown): Promise<Recal
   const { question, maxTokens = RECALL_TOKEN_CAP } = parseInput(RecallInput, input);
   const words = subjectWords(question);
   const query = words.join(" ");
-  const found = await ctx.store.read(async (r) => {
+  const { records: found, replaced } = await ctx.store.read(async (r) => {
     const opts = { entities: KINDS, limit: CANDIDATES, openTasksOnly: true };
     // Records holding every subject word first, then those holding any, best first in each.
     const hits: SearchHit[] = [...(await r.search(ctx.projectId, query, opts))];
@@ -175,7 +176,8 @@ export async function recall(ctx: ServiceContext, input: unknown): Promise<Recal
       if (!all.has(hit.id) && shared(words, textOf(record)) < needed(words)) continue;
       records.push({ hit, record, whole: all.has(hit.id) });
     }
-    return records;
+    const decisions = records.filter((x) => x.hit.entity === "decision").map((x) => x.record.id);
+    return { records, replaced: await supersededBy(r, ctx, decisions) };
   });
 
   const cards = found.filter((f) => f.hit.entity === "context");
@@ -211,7 +213,10 @@ export async function recall(ctx: ServiceContext, input: unknown): Promise<Recal
     }
     if (hit.entity === "decision") {
       const d = record as Decision;
-      return { ...base, kind: "decision", title: d.title, text: d.decision || d.context };
+      const next = replaced.get(d.id);
+      // A replaced decision still matches; the reader must know it no longer holds.
+      const by = next ? `Superseded by ${next.title} (${shortHandle(next.id)}). ` : "";
+      return { ...base, kind: "decision", title: d.title, text: `${by}${d.decision || d.context}` };
     }
     if (hit.entity === "task") {
       const t = record as Task;

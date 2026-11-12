@@ -12,6 +12,7 @@ import {
   mustGet,
   parseInput,
   type ServiceContext,
+  writeTx,
 } from "./context.js";
 import { HANDOFF_TAG } from "./handoff.js";
 import { resolveId } from "./query.js";
@@ -72,7 +73,7 @@ async function targetRecord(r: StorageReader, ctx: ServiceContext, id: string) {
 export async function addComment(ctx: ServiceContext, input: unknown): Promise<Note> {
   const { on, body } = parseInput(AddCommentInput, input);
   refuseSecrets("note", { body });
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const about = await targetRecord(w, ctx, on);
     return insertWithLog(w, ctx, "note", {
       ...baseFields(ctx, "note"),

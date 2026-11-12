@@ -13,15 +13,15 @@ import {
 } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
 import type { StorageReader } from "../ports/storage.js";
+import { approvalStates, contextViews } from "./card.js";
 import { type ChangeItem, lastSession, readChanges } from "./changes.js";
 import { COMMENT_TAG, isThreadNote, mentionsOf } from "./comment.js";
 import { actorName, listAll, nowIso, parseInput, type ServiceContext } from "./context.js";
-import { approvalStates, contextViews } from "./context-cache.js";
 import { handoffFor, handoffNext, unreadHandoff } from "./handoff.js";
-import { warningLines, worktreeWarnings } from "./overlap.js";
 import { readSettings } from "./project.js";
 import { reviewDrift, sweepExpiredClaims } from "./task.js";
 import { clip, inert } from "./text.js";
+import { warningLines, worktreeWarnings } from "./worktree-overlap.js";
 
 /** PLAN: the brief stays under 1,500 tokens so it is cheap to inject at every session start. */
 export const BRIEF_TOKEN_CAP = 1_500;

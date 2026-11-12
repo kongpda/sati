@@ -25,15 +25,14 @@ describe("sati CLI", () => {
     expect(sati(dir, "task", "list").stderr).toContain("hint: Run `sati init`.");
   });
 
-  // Agents pass the short handles the CLI prints. `decision delete` once looked a live decision up
-  // among deleted ones, so a handle failed with "not found" while a full id worked.
-  it("deletes and restores tasks, notes and decisions by short handle", async () => {
+  // Agents pass the short handles the CLI prints. A delete once looked a live record up among
+  // deleted ones, so a handle failed with "not found" while a full id worked.
+  it("deletes and restores tasks and notes by short handle", async () => {
     const dir = await tempRepo({ init: true });
     const handle = (id: string) => `${id.split("_")[0]}_${id.slice(-6).toLowerCase()}`;
     const made = {
       task: satiJson<Rec>(dir, "task", "create", "Old task").data,
       note: satiJson<Rec>(dir, "note", "create", "Old note", "--body", "x").data,
-      decision: satiJson<Rec>(dir, "decision", "record", "Old call", "--decision", "x").data,
     };
     for (const [entity, rec] of Object.entries(made)) {
       const gone = satiJson<Rec>(dir, entity, "delete", handle(rec.id));
@@ -43,6 +42,23 @@ describe("sati CLI", () => {
       expect(back.code, `${entity} restore`).toBe(0);
       expect(back.data.deletedAt).toBeNull();
     }
+  });
+
+  // A decision protects the features it names from removal, so it is never deleted: a newer
+  // decision replaces it, and showing the old one says so.
+  it("has no decision delete, and shows which decision replaced an old one", async () => {
+    const dir = await tempRepo({ init: true });
+    const old = satiJson<Rec>(dir, "decision", "record", "Use REST", "--decision", "x").data;
+    expect(sati(dir, "decision", "delete", old.id).code).not.toBe(0);
+    satiJson<Rec>(dir, "decision", "record", "Use gRPC", "--decision", "y", "--supersedes", old.id);
+    const shown = satiJson<Rec & { supersededBy: { title: string } }>(
+      dir,
+      "decision",
+      "show",
+      old.id,
+    );
+    expect(shown.data.supersededBy).toMatchObject({ title: "Use gRPC" });
+    expect(sati(dir, "decision", "show", old.id).stdout).toContain("Use gRPC");
   });
 
   // Trial: `task list --json` and `show --json` were mostly merge stamps; agents read them often.

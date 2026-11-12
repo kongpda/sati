@@ -33,6 +33,7 @@ import {
   parseInput,
   type ServiceContext,
   updateWithLog,
+  writeTx,
 } from "./context.js";
 import { handoffFor, unreadHandoff } from "./handoff.js";
 import { releaseTaskLocks, renewTaskLocks } from "./lock.js";
@@ -177,7 +178,7 @@ const UNCLAIMED_STATUSES: readonly string[] = ["backlog", "todo", "cancelled"];
 
 export async function createTask(ctx: ServiceContext, input: unknown): Promise<Task> {
   const data = parseInput(CreateTaskInput, input);
-  return ctx.store.write((w) => createTaskIn(w, ctx, data));
+  return writeTx(ctx, (w) => createTaskIn(w, ctx, data));
 }
 
 /** `createTask` inside a caller's transaction, for services that write several records at once. */
@@ -265,7 +266,7 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
     approvedCommit && approving?.head
       ? await movedBeyondSnapshot(ctx, approvedCommit, approving.head)
       : false;
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const before = await mustGet(w, ctx, "task", id);
     // A claim whose lease ran out protects nobody's work. A person may edit the task without
     // waiting for the next brief to release it; an agent still claims first.
@@ -378,7 +379,7 @@ export async function completeTask(ctx: ServiceContext, id: string, input: unkno
   refuseSecrets("task", { completion: data });
   // The commit the work was finished at, so a reviewer can see what moved after it.
   const commit = (await ctx.repo?.head()) ?? null;
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const before = await mustGet(w, ctx, "task", id);
     checkToken(before, token, ctx.actorId);
     const actor = await w.get("actor", ctx.actorId);
@@ -544,7 +545,7 @@ export async function claimTask(
   input: unknown = {},
 ): Promise<Task & { handoff?: DeliveredHandoff }> {
   const { leaseMinutes } = parseInput(ClaimTaskInput, input);
-  return ctx.store.write(async (w) =>
+  return writeTx(ctx, async (w) =>
     applyClaim(w, ctx, await mustGet(w, ctx, "task", id), leaseMinutes),
   );
 }
@@ -601,7 +602,7 @@ export async function releaseTask(
   input: unknown = {},
 ): Promise<Task> {
   const { force } = parseInput(ReleaseTaskInput, input);
-  return ctx.store.write(async (w) =>
+  return writeTx(ctx, async (w) =>
     applyRelease(w, ctx, await mustGet(w, ctx, "task", id), force ?? false),
   );
 }
@@ -617,7 +618,7 @@ export async function takeOverTask(
   input: unknown = {},
 ): Promise<Task & { handoff?: DeliveredHandoff }> {
   const { leaseMinutes } = parseInput(ClaimTaskInput, input);
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     let task = await mustGet(w, ctx, "task", id);
     if (task.claim && task.claim.actorId !== ctx.actorId) {
       task = await applyRelease(w, ctx, task, true);
@@ -635,7 +636,7 @@ export async function claimNext(
   input: unknown = {},
 ): Promise<{ task: Task & { handoff?: DeliveredHandoff }; acceptance: string[] }> {
   const { leaseMinutes } = parseInput(ClaimTaskInput, input);
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     // The store orders ready tasks by priority rank, then id, so the first row is the one.
     const [top] = await w.readyTasks(ctx.projectId, nowIso(ctx), 1);
     if (!top) {
@@ -704,7 +705,7 @@ export async function adoptClaims(ctx: ServiceContext): Promise<Task[]> {
   const self = probe?.self;
   if (!probe || !self) return [];
   const now = nowIso(ctx);
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const tasks = await listAll(w, ctx, "task", { status: ["in_progress", "review", "blocked"] });
     const adopted: Task[] = [];
     for (const t of tasks) {
@@ -750,7 +751,7 @@ export async function sweepExpiredClaims(
   // acquire or `doctor`. Bounded, so one sweep stays one short transaction.
   const staleLocks = locks.filter((l) => l.leaseUntil <= now).slice(0, LOCK_SWEEP_MAX);
   if (candidates.length === 0 && staleLocks.length === 0) return { released: [], active };
-  const released = await ctx.store.write(async (w) => {
+  const released = await writeTx(ctx, async (w) => {
     for (const { id } of staleLocks) {
       const lock = await w.get("lock", id);
       if (!lock || lock.deletedAt !== null || lock.leaseUntil > now) continue;
@@ -841,7 +842,7 @@ async function lease(
 export async function markWaiting(ctx: ServiceContext, input: unknown): Promise<Task[]> {
   const { taskId, waiting } = parseInput(WaitingInput, input);
   refuseSecrets("task", { waiting });
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const now = nowIso(ctx);
     const caller = await w.get("actor", ctx.actorId);
     const person = caller?.kind === "human";

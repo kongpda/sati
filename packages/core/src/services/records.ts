@@ -1,18 +1,22 @@
 import { SatiError } from "../domain/errors.js";
 import type { EntityMap, StoredEntity } from "../domain/schemas.js";
-import { featureRemovalNeedsDecision } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
-import { actorName, nowIso, type ServiceContext, updateWithLog } from "./context.js";
+import { actorName, nowIso, type ServiceContext, updateWithLog, writeTx } from "./context.js";
 import { releaseTaskLocks } from "./lock.js";
 
-const SOFT = ["task", "note", "decision", "feature"] as const;
+/**
+ * Records a person may delete and restore. Not decisions: one that is deleted stops protecting
+ * its feature from removal, so a decision is append-only and a newer one supersedes it. Not
+ * features: a shipped one is removed with a Decision and status `removed`.
+ */
+const SOFT = ["task", "note"] as const;
 type Soft = (typeof SOFT)[number];
 
 function isSoft(entity: string): entity is Soft {
   return (SOFT as readonly string[]).includes(entity);
 }
 
-/** Soft-deletes a task, note or decision. A shipped feature still needs a Decision and `removed`. */
+/** Soft-deletes a task or note. */
 export async function deleteRecord(
   ctx: ServiceContext,
   entity: StoredEntity,
@@ -21,27 +25,13 @@ export async function deleteRecord(
   if (!isSoft(entity)) {
     throw new SatiError("USAGE", `${entity} cannot be deleted this way.`);
   }
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const rec = await w.get(entity, id);
     const projectId = rec && "projectId" in rec ? rec.projectId : undefined;
     if (!rec || projectId !== ctx.projectId || rec.deletedAt !== null) {
       throw new SatiError("NOT_FOUND", `No ${entity} with id ${id}.`, {
         hint: `Run \`${CLI_NAME} ${entity} list\` to see ids.`,
       });
-    }
-    if (entity === "feature") {
-      const feature = rec as EntityMap["feature"];
-      if (featureRemovalNeedsDecision(feature.status, "removed")) {
-        throw new SatiError(
-          "VALIDATION",
-          `A ${feature.status} feature is removed with a Decision.`,
-          {
-            hint:
-              `Run \`${CLI_NAME} decision record --features ${id}\`, then ` +
-              `\`${CLI_NAME} feature update ${id} --status removed --decision <id>\`.`,
-          },
-        );
-      }
     }
     if (entity === "task") {
       const claim = (rec as EntityMap["task"]).claim;
@@ -76,7 +66,7 @@ export async function restoreRecord(
   if (!isSoft(entity)) {
     throw new SatiError("USAGE", `${entity} cannot be restored this way.`);
   }
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const rec = await w.get(entity, id);
     const projectId = rec && "projectId" in rec ? rec.projectId : undefined;
     if (!rec || projectId !== ctx.projectId) {

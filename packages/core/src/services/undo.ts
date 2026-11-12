@@ -10,6 +10,7 @@ import {
   nowIso,
   type ServiceContext,
   updateWithLog,
+  writeTx,
 } from "./context.js";
 import { checkLinks } from "./task.js";
 
@@ -111,7 +112,7 @@ async function findActivity(r: StorageReader, projectId: string, input: string) 
  * The revert is its own activity row. A later edit is CONFLICT.
  */
 export async function undoActivity(ctx: ServiceContext, activityId: string) {
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const act = await findActivity(w, ctx.projectId, activityId);
     if (!isEntity(act.entity)) {
       throw new SatiError("INVALID_TRANSITION", `Activity ${activityId} is not a record change.`);

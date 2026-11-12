@@ -39,9 +39,10 @@ Every tool also exists as a CLI command (`sati <entity> <verb> --json`).
 - If you stop without finishing, call `handoff_write` with the next step (`sati handoff <task>
   --next "…"` in a shell), then `task_release` it (or move it back to `todo`). The next claimer gets the handoff
   with its `task_claim` result.
-- Stuck on a person: `task_update` with `needsInput: "the question"` (or `sati wait "…"`). The
-  task shows under "Needs you" until your next write. Moving a task to `blocked` takes a
-  `reason` saying what it waits on.
+- Three ways to say a task waits. The work cannot go on: status `blocked` with a `reason`.
+  You hold the claim and wait for a person's answer: `task_update` with `needsInput: "the
+  question"` (or `sati wait "…"`); it shows under "Needs you" until your next write.
+  Anything else: a comment.
 
 ## Record what you learn
 - `note_upsert` for knowledge worth keeping: facts, contacts, research, meeting notes. Tag it

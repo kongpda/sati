@@ -229,25 +229,55 @@ function stampMap(value: object): Record<string, string> {
 }
 
 /**
- * Issues one stamp for this write and remembers it on the actor. The actor row is bookkeeping:
- * it shares the transaction, and it does not get its own activity row.
+ * The last stamp issued in each open `writeTx` transaction, keyed by its writer. A writer not in
+ * the map is not inside `writeTx`, and its stamps are written to the actor row at once.
+ */
+const lastStamp = new WeakMap<StorageWriter, string | null>();
+
+/**
+ * `ctx.store.write`, with the actor's stamp row written once at the end instead of once per
+ * record: a 500-task plan import spent about 29% of its time on that row. Every core write goes
+ * through here. It wraps the callback, not the store, so a remote store flushes the row too.
+ */
+export function writeTx<T>(ctx: ServiceContext, fn: (w: StorageWriter) => Promise<T>): Promise<T> {
+  return ctx.store.write(async (w) => {
+    lastStamp.set(w, null);
+    const out = await fn(w);
+    const stamp = lastStamp.get(w);
+    lastStamp.delete(w);
+    if (stamp) await saveStamp(w, ctx, stamp);
+    return out;
+  });
+}
+
+async function saveStamp(w: StorageWriter, ctx: ServiceContext, stamp: string): Promise<void> {
+  // Read now, not when the first stamp was issued: the transaction may have changed the actor.
+  const actor = await w.get("actor", ctx.actorId);
+  if (!actor) return;
+  const next = checkRecord("actor", {
+    ...actor,
+    lastHlc: maxHlc([actor.lastHlc, stamp]) ?? stamp,
+    updatedAt: nowIso(ctx),
+    version: actor.version + 1,
+  });
+  await w.update("actor", next, actor.version);
+}
+
+/**
+ * Issues one stamp for this write and remembers it for the actor. The actor row is bookkeeping:
+ * it shares the transaction, and it does not get its own activity row. Each stamp is later than
+ * the one before it in the same transaction.
  */
 async function issueStamp(
   w: StorageWriter,
   ctx: ServiceContext,
   seen: readonly (string | undefined)[],
 ): Promise<string> {
-  const actor = await w.get("actor", ctx.actorId);
-  const stamp = tickHlc(ctx.clock.now(), maxHlc([actor?.lastHlc, ...seen]), ctx.actorId);
-  if (actor) {
-    const next = checkRecord("actor", {
-      ...actor,
-      lastHlc: stamp,
-      updatedAt: nowIso(ctx),
-      version: actor.version + 1,
-    });
-    await w.update("actor", next, actor.version);
-  }
+  const pending = lastStamp.get(w);
+  const last = pending ?? (await w.get("actor", ctx.actorId))?.lastHlc;
+  const stamp = tickHlc(ctx.clock.now(), maxHlc([last, ...seen]), ctx.actorId);
+  if (pending !== undefined) lastStamp.set(w, stamp);
+  else await saveStamp(w, ctx, stamp);
   return stamp;
 }
 

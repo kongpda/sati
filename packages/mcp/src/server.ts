@@ -512,7 +512,7 @@ function registerTools(
     "task_update",
     {
       description:
-        "Update a task's fields or status; returns id, version, status, claim and the fields set. Pass the token from task_claim; a stale token means your claim was lost: stop. tick and addSteps edit the checklist; null clears a field; needsInput asks a person; blocked needs a reason.",
+        "Update a task's fields or status. Pass the token from task_claim; a stale token means your claim was lost: stop. tick and addSteps edit the checklist; null clears a field. To wait: status blocked plus reason if the work cannot go on; needsInput on your claim to wait for a person's answer; otherwise a comment.",
       inputSchema: linkable(UpdateTaskInput).extend({ id: Ref, tick: Steps, addSteps: StepTexts }),
       annotations: { destructiveHint: false, openWorldHint: false },
     },

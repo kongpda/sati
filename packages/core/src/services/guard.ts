@@ -3,7 +3,14 @@ import { normalizeLockPath, pathsOverlap } from "../domain/locks.js";
 import { isGuardedFeature } from "../domain/rules.js";
 import { type ContextEntry, type Feature, LIMITS, type Lock, Sha256 } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
-import { actorName, listAll, logActivity, parseInput, type ServiceContext } from "./context.js";
+import {
+  actorName,
+  listAll,
+  logActivity,
+  parseInput,
+  type ServiceContext,
+  writeTx,
+} from "./context.js";
 import { othersLiveLocks } from "./lock.js";
 
 export const CHANGE_KINDS = ["added", "modified", "deleted", "renamed"] as const;
@@ -280,7 +287,7 @@ export async function recordGuard(
   opts: { override?: boolean } = {},
 ): Promise<void> {
   if (result.findings.length === 0) return;
-  await ctx.store.write(async (w) => {
+  await writeTx(ctx, async (w) => {
     for (const f of result.findings) {
       const [entity, entityId] = f.featureId
         ? (["feature", f.featureId] as const)

@@ -11,6 +11,7 @@ import {
   parseInput,
   type ServiceContext,
   updateWithLog,
+  writeTx,
 } from "./context.js";
 import { acknowledgeHandoff, HANDOFF_TAG } from "./handoff.js";
 
@@ -103,7 +104,7 @@ export async function createNote(ctx: ServiceContext, input: unknown): Promise<N
   const { private: hidden, ...data } = parseInput(CreateNoteInput, input);
   guardComment(ctx, undefined, data);
   refuseSecrets("note", data);
-  return ctx.store.write((w) =>
+  return writeTx(ctx, (w) =>
     insertWithLog(w, ctx, "note", {
       ...baseFields(ctx, "note"),
       body: "",
@@ -131,7 +132,7 @@ export async function updateNote(ctx: ServiceContext, id: string, input: unknown
     return acknowledgeHandoff(ctx, id);
   }
   refuseSecrets("note", patch);
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const before = await mustGet(w, ctx, "note", id);
     guardComment(ctx, before, patch);
     const clear = [

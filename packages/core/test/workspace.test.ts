@@ -256,13 +256,14 @@ describe("daily workspace", () => {
     expect(tasks.filter((t) => t.title === "Same")).toHaveLength(1);
   });
 
-  it("soft-deletes and restores a note, and refuses to delete a shipped feature", async () => {
+  // A feature is retired with status `removed` and a Decision, never deleted.
+  it("soft-deletes and restores a note, and refuses to delete a feature", async () => {
     const { ctx } = await setup();
     const feature = await createFeature(ctx, { title: "Login", paths: ["src/login/**"] });
     await updateFeature(ctx, feature.id, { status: "building" });
     await updateFeature(ctx, feature.id, { status: "shipped" });
     await expect(deleteRecord(ctx, "feature", feature.id)).rejects.toMatchObject({
-      code: "VALIDATION",
+      code: "USAGE",
     });
     const decision = await recordDecision(ctx, {
       title: "Retire login",

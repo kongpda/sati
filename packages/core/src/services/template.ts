@@ -5,7 +5,7 @@ import { IsoDay, LIMITS, type Milestone, type Task } from "../domain/schemas.js"
 import { refuseSecrets } from "../domain/secrets.js";
 import { CLI_NAME } from "../name.js";
 import type { StorageReader, StorageWriter } from "../ports/storage.js";
-import { listAll, parseInput, type ServiceContext } from "./context.js";
+import { listAll, parseInput, type ServiceContext, writeTx } from "./context.js";
 import { CreateMilestoneInput, createMilestoneIn } from "./milestone.js";
 import { CreateTaskInput, createTaskIn } from "./task.js";
 
@@ -478,7 +478,7 @@ export async function applyTemplate(
     return { ...result, milestone: null, taskIds: [] };
   }
 
-  return ctx.store.write(async (w: StorageWriter) => {
+  return writeTx(ctx, async (w: StorageWriter) => {
     await refuseSameName(w);
     const milestone = await createMilestoneIn(w, ctx, milestoneInput);
     const created: Task[] = [];

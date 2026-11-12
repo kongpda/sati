@@ -13,6 +13,7 @@ import {
   parseInput,
   type ServiceContext,
   updateWithLog,
+  writeTx,
 } from "./context.js";
 
 const fields = Feature.pick({
@@ -49,7 +50,7 @@ export type UpdateFeatureInput = z.input<typeof UpdateFeatureInput>;
 export async function createFeature(ctx: ServiceContext, input: unknown): Promise<Feature> {
   const data = parseInput(CreateFeatureInput, input);
   refuseSecrets("feature", data);
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     if (data.milestoneId) await mustGet(w, ctx, "milestone", data.milestoneId);
     return insertWithLog(w, ctx, "feature", {
       ...baseFields(ctx, "feature"),
@@ -76,7 +77,7 @@ export async function updateFeature(
 ): Promise<Feature> {
   const { expectedVersion, decisionId, reviewed, ...patch } = parseInput(UpdateFeatureInput, input);
   refuseSecrets("feature", patch);
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const before = await mustGet(w, ctx, "feature", id);
     if (patch.milestoneId) await mustGet(w, ctx, "milestone", patch.milestoneId);
     if (patch.status) {

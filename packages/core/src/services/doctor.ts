@@ -4,7 +4,14 @@ import { findDependencyCycle } from "../domain/rules.js";
 import type { ContextEntry, Task } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
 import type { StorageReader } from "../ports/storage.js";
-import { listAll, mustGet, nowIso, type ServiceContext, updateWithLog } from "./context.js";
+import {
+  listAll,
+  mustGet,
+  nowIso,
+  type ServiceContext,
+  updateWithLog,
+  writeTx,
+} from "./context.js";
 import { resolveId } from "./query.js";
 import { claimHealth } from "./task.js";
 
@@ -106,7 +113,7 @@ export async function markReviewed(ctx: ServiceContext, ref: string): Promise<{ 
     });
   }
   const id = await resolveId(ctx, entity, ref);
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const before = await mustGet(w, ctx, entity, id);
     const after = await updateWithLog(w, ctx, entity, before, {}, { clear: ["needsReview"] });
     return { id: after.id };
@@ -243,7 +250,7 @@ export async function leanCleanup(
   ctx: ServiceContext,
   cardIds: readonly string[],
 ): Promise<{ locks: number; cards: string[] }> {
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const now = nowIso(ctx);
     const expired = (await listAll(w, ctx, "lock")).filter((l) => l.leaseUntil <= now);
     for (const l of expired) {

@@ -542,7 +542,6 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   for (const [plural, entity] of [
     ["tasks", "task"],
     ["notes", "note"],
-    ["decisions", "decision"],
   ] as const) {
     app.delete(`/api/${plural}/:id`, async (c) =>
       c.json(await deleteRecord(rt.ctx, entity, c.req.param("id"))),

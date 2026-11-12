@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addComment,
   buildBrief,
+  checkChanges,
   claimTask,
   createFeature,
   createNote,
@@ -10,6 +11,7 @@ import {
   doctorChecks,
   estimateTokens,
   getContext,
+  getDecision,
   importRecords,
   putContext,
   RECALL_TOKEN_CAP,
@@ -32,6 +34,49 @@ const code = async (fn: () => Promise<unknown>) => {
   }
 };
 const KEY = "ghp_abcdefghijklmnopqrstuvwxyz0123456789AB";
+
+describe("decisions", () => {
+  // A decision that lists a feature lets the guard pass a change to that feature. If it could be
+  // deleted, deleting it would silently take that permission back; so a newer decision replaces it.
+  it("a recorded decision cannot be deleted, so it keeps protecting its feature", async () => {
+    const { ctx } = await setup();
+    const f = await createFeature(ctx, {
+      title: "Billing",
+      status: "shipped",
+      protected: true,
+      paths: ["src/billing/**"],
+    });
+    const d = await recordDecision(ctx, {
+      title: "Drop invoices",
+      decision: "Invoices move to the new service.",
+      featureIds: [f.id],
+    });
+    expect(await code(() => deleteRecord(ctx, "decision", d.id))).toBe("USAGE");
+    const r = await checkChanges(ctx, {
+      changes: [{ path: "src/billing/invoice.ts", kind: "deleted" }],
+    });
+    expect(r.findings[0]).toMatchObject({ rule: "protected-delete", decisionId: d.id });
+  });
+
+  // A replaced decision still matches a search; whoever reads it must learn it no longer holds.
+  it("names the decision that replaced an old one, in show and in recall", async () => {
+    const { ctx } = await setup();
+    const old = await recordDecision(ctx, { title: "Venue Hall A", decision: "Hall A venue." });
+    expect((await getDecision(ctx, old.id)).supersededBy).toBeNull();
+    const next = await recordDecision(ctx, {
+      title: "Venue Hall B",
+      decision: "Hall B venue; A is too small.",
+      supersedes: old.id,
+    });
+    expect((await getDecision(ctx, old.id)).supersededBy).toEqual({
+      id: next.id,
+      title: "Venue Hall B",
+    });
+    const r = await recall(ctx, { question: "venue hall" });
+    expect(r.items.find((i) => i.id === old.id)?.text).toMatch(/^Superseded by Venue Hall B /);
+    expect(r.items.find((i) => i.id === next.id)?.text).not.toContain("Superseded");
+  });
+});
 
 describe("cards", () => {
   it("keeps facts and the file version read, and replaces them on the next put", async () => {

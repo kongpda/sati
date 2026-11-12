@@ -2,7 +2,7 @@ import { basename } from "node:path";
 import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { type Actor, Actor as ActorSchema } from "../domain/schemas.js";
-import { mustGet, parseInput, type ServiceContext, updateWithLog } from "./context.js";
+import { mustGet, parseInput, type ServiceContext, updateWithLog, writeTx } from "./context.js";
 import type { ActorIdentity } from "./project.js";
 
 export interface IdentityEnv {
@@ -83,7 +83,7 @@ export async function updateProfile(
   input: unknown,
 ): Promise<Actor> {
   const data = parseInput(UpdateProfileInput, input);
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const caller = await mustGet(w, ctx, "actor", ctx.actorId);
     if (caller.kind !== "human") {
       throw new SatiError("INVALID_TRANSITION", "Only a person can change how people are shown.");

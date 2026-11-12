@@ -323,7 +323,8 @@ async function resolveSince(
   const id = await resolveId(ctx, "milestone", input);
   const m = await ctx.store.read((r) => r.get("milestone", id));
   if (m?.status !== "done") {
-    throw new SatiError("VALIDATION", `Milestone ${shortHandle(id)} is not done yet.`, {
+    const state = m?.status === "cancelled" ? "was cancelled, not done" : "is not done yet";
+    throw new SatiError("VALIDATION", `Milestone ${shortHandle(id)} ${state}.`, {
       hint: "To list what is in it, pass it as the milestone filter instead.",
     });
   }

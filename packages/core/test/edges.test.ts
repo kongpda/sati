@@ -118,15 +118,24 @@ describe("edge branches", () => {
     expect(await code(() => undoActivity(ctx, removal))).toBe("CONFLICT");
 
     // Moving a task from feature A to B, then deleting A: undo would link the task to a deleted A.
+    // A feature is deleted only on another clone, so the delete arrives as a snapshot tombstone.
     const a = await createFeature(ctx, { title: "A" });
+    const sync = (version: number, deletedAt: string | null) =>
+      importRecords(ctx, [
+        {
+          entity: "feature",
+          source: "features/a.json",
+          record: { ...a, version, deletedAt, updatedAt: `2027-01-0${version}T00:00:00.000Z` },
+        },
+      ]);
     const b = await createFeature(ctx, { title: "B" });
     const task = await createTask(ctx, { title: "Linked", featureId: a.id });
     await updateTask(ctx, task.id, { featureId: b.id });
     const move = await lastRow(task.id, "featureId");
-    await deleteRecord(ctx, "feature", a.id);
+    await sync(2, "2027-01-02T00:00:00.000Z");
     expect(await code(() => undoActivity(ctx, move))).toBe("CONFLICT");
     // With A back, the same undo goes through.
-    await restoreRecord(ctx, "feature", a.id);
+    await sync(3, null);
     expect(await undoActivity(ctx, move)).toMatchObject({ featureId: a.id });
   });
 

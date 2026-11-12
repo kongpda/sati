@@ -13,6 +13,7 @@ import {
   parseInput,
   type ServiceContext,
   updateWithLog,
+  writeTx,
 } from "./context.js";
 import { DEFAULT_LEASE_MINUTES } from "./project.js";
 
@@ -84,7 +85,7 @@ export async function listLocks(ctx: ServiceContext): Promise<Lock[]> {
 export async function acquireLock(ctx: ServiceContext, input: unknown): Promise<AcquireLockResult> {
   const data = parseInput(AcquireLockInput, input);
   const paths = [...new Set(data.paths)];
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const now = nowIso(ctx);
     if (data.taskId) {
       // A lock tagged with a task is freed when that task finishes, so it must not be a task
@@ -168,7 +169,7 @@ export async function releaseLock(
   input: unknown = {},
 ): Promise<Lock> {
   const { force } = parseInput(ReleaseLockInput, input);
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const lock = await mustGet(w, ctx, "lock", id);
     if (lock.actorId !== ctx.actorId && isLive(lock, nowIso(ctx)) && !force) {
       const name = await actorName(w, lock.actorId);

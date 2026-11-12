@@ -1,0 +1,19 @@
+{
+  "body": "Already done in the WP10 commit so constants.test.ts stays green: packages/ui/src/forms.tsx MILESTONE_NEXT gained cancelled (planned/active to cancelled, cancelled to planned) and MILESTONE_LABELS gained Cancelled. The rest of this task is still open.",
+  "createdAt": "2026-11-12T18:27:35.815Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "note_01M78G7S87AS7XR5NFS4HJBJ9C",
+  "links": [
+    "tsk_01M78FSCKSN39HAZXDG222AP41"
+  ],
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T18:27:35.817Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "tags": [
+    "comment"
+  ],
+  "title": "Comment on WP10 board parts: decisions without delete, Superseded by, cancelled milestones (review 10.1, 10.2)",
+  "updatedAt": "2026-11-12T18:27:35.815Z",
+  "version": 1
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  compareHlc,
   createFeature,
   createMilestone,
   createNote,
@@ -7,7 +8,9 @@ import {
   ensureActor,
   getProject,
   getRecord,
+  importPlan,
   initProject,
+  listChanges,
   listRecords,
   recordDecision,
   updateFeature,
@@ -102,6 +105,61 @@ describe("milestone", () => {
     });
     await updateMilestone(ctx, m.id, { status: "active" });
     expect((await updateMilestone(ctx, m.id, { status: "done" })).status).toBe("done");
+  });
+
+  // A dropped plan is not a finished one: "done" would claim its work shipped, and a `changes
+  // --since <milestone>` would start from it. Reopening starts the plan again from planned.
+  it("a cancelled milestone can be reopened but not marked done directly", async () => {
+    const { ctx } = await setup();
+    const m = await createMilestone(ctx, { title: "Spring fair" });
+    await updateMilestone(ctx, m.id, { status: "active" });
+    expect((await updateMilestone(ctx, m.id, { status: "cancelled" })).status).toBe("cancelled");
+    for (const status of ["done", "active"] as const) {
+      await expect(updateMilestone(ctx, m.id, { status })).rejects.toMatchObject({
+        code: "INVALID_TRANSITION",
+      });
+    }
+    await expect(listChanges(ctx, { since: m.id })).rejects.toMatchObject({
+      message: expect.stringContaining("was cancelled"),
+    });
+    expect((await updateMilestone(ctx, m.id, { status: "planned" })).status).toBe("planned");
+  });
+
+  // Review 10.5: the actor's stamp row was rewritten for every record, 29% of a 500-task import.
+  // It is now written once per transaction; each record must still get a later stamp than the
+  // one before, or a merge on another clone would pick the wrong field.
+  it("a 50-record import bumps the actor version once and stamps stay in order", async () => {
+    const { ctx, store } = await setup();
+    const version = async () => (await store.read((r) => r.get("actor", ctx.actorId)))?.version;
+    const before = await version();
+    const lines = Array.from({ length: 50 }, (_, i) => `- [ ] Step ${i}`).join("\n");
+    await importPlan(ctx, { markdown: `## Launch\n${lines}\n` });
+    expect(await version()).toBe((before ?? 0) + 1);
+    const tasks = (await listRecords(ctx, "task", { limit: 100 })).sort((a, b) =>
+      a.id.localeCompare(b.id),
+    );
+    const stamps = tasks.map((t) => t.stamps?.title ?? "");
+    expect(stamps).toHaveLength(50);
+    for (let i = 1; i < stamps.length; i++) {
+      expect(compareHlc(stamps[i] ?? "", stamps[i - 1] ?? "")).toBeGreaterThan(0);
+    }
+    const actor = await store.read((r) => r.get("actor", ctx.actorId));
+    expect(actor?.lastHlc).toBe(stamps.at(-1));
+  });
+
+  // A re-run plan import must not put new tasks into a plan someone dropped.
+  it("a plan import does not add tasks to a cancelled milestone", async () => {
+    const { ctx } = await setup();
+    await importPlan(ctx, { markdown: "## Spring fair\n- [ ] Book hall\n" });
+    const [m] = await listRecords(ctx, "milestone");
+    await updateMilestone(ctx, m?.id ?? "", { status: "cancelled" });
+    const r = await importPlan(ctx, {
+      markdown: "## Spring fair\n- [ ] Book hall\n- [ ] Print flyers\n",
+    });
+    expect(r.skipped[0]?.reason).toContain("cancelled");
+    const flyers = (await listRecords(ctx, "task")).find((t) => t.title === "Print flyers");
+    expect(flyers).toBeDefined();
+    expect(flyers?.milestoneId ?? null).toBeNull();
   });
 });
 

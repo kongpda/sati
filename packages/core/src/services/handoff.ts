@@ -11,6 +11,7 @@ import {
   parseInput,
   type ServiceContext,
   updateWithLog,
+  writeTx,
 } from "./context.js";
 
 export const HANDOFF_TAG = "handoff";
@@ -61,7 +62,7 @@ export async function writeHandoff(ctx: ServiceContext, input: unknown) {
   refuseSecrets("handoff", data);
   const body = handoffBody(data);
   // One transaction: two concurrent handoffs must not both see "no note" and each create one.
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const task = await mustGet(w, ctx, "task", data.taskId);
     const addressee = data.to ? await mustGet(w, ctx, "actor", data.to) : undefined;
     const existing = (await listAll(w, ctx, "note", { handoff: "any", linkTo: task.id })).find(
@@ -115,7 +116,7 @@ export const unreadHandoff = (n: Note): boolean =>
  * for whoever comes next, by anyone but its author.
  */
 export async function acknowledgeHandoff(ctx: ServiceContext, noteId: string): Promise<Note> {
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const note = await mustGet(w, ctx, "note", noteId);
     if (!note.tags.includes(HANDOFF_TAG)) {
       throw new SatiError("VALIDATION", `Note ${noteId} is not a handoff.`);

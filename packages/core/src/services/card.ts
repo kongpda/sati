@@ -22,6 +22,7 @@ import {
   parseInput,
   type ServiceContext,
   updateWithLog,
+  writeTx,
 } from "./context.js";
 import { alreadyShared } from "./note.js";
 
@@ -119,7 +120,7 @@ export async function putContext(ctx: ServiceContext, input: unknown): Promise<C
     ...(data.sourceSeen ? { sourceSeen: data.sourceSeen } : {}),
     ...(data.sourceTokens !== undefined ? { sourceTokens: data.sourceTokens } : {}),
   };
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     // Looked up by path in SQL, not by reading every card.
     // The path check also guards against a store that ignores the filter (an old daemon).
     const existing = (await listAll(w, ctx, "context", { path: data.path })).find(
@@ -225,7 +226,7 @@ export async function approveCard(ctx: ServiceContext, input: unknown): Promise<
   }
   const files = ctx.repo && hash !== null ? await ctx.repo.files() : undefined;
   const gitCommit = ctx.repo && hash !== null ? await ctx.repo.head() : null;
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     // The sign-off is a person's word that the file is right. An agent that could give or take
     // it away could unlock any file it wants to change.
     if ((await w.get("actor", ctx.actorId))?.kind !== "human") {

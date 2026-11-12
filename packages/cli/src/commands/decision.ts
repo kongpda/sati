@@ -1,12 +1,12 @@
 import {
   CLI_NAME,
   type Decision,
-  deleteRecord,
-  getRecord,
+  type DecisionView,
+  getDecision,
   listRecords,
   recordDecision,
   resolveId,
-  restoreRecord,
+  shortHandle,
 } from "@sati/core";
 import { defineCommand } from "citty";
 import { id, json, pagination } from "../args.js";
@@ -95,45 +95,17 @@ const show = defineCommand({
   run: ({ args }) =>
     execute(
       args.json,
-      async ({ ctx }) => getRecord(ctx, "decision", await resolveId(ctx, "decision", args.id)),
-      record,
+      async ({ ctx }) => getDecision(ctx, await resolveId(ctx, "decision", args.id)),
+      ({ supersededBy: by, ...d }: DecisionView) =>
+        record({
+          ...d,
+          supersededBy: by ? `${by.title} (${shortHandle(by.id)})` : null,
+        }),
       { readOnly: true },
-    ),
-});
-
-const remove = defineCommand({
-  meta: { name: "delete", description: "Soft-delete a decision" },
-  args: { ...id("Decision"), ...json },
-  run: ({ args }) =>
-    execute(
-      args.json,
-      async ({ ctx }) =>
-        deleteRecord(
-          ctx,
-          "decision",
-          await resolveId(ctx, "decision", args.id),
-        ) as Promise<Decision>,
-      (d: Decision) => `Deleted ${row(d)}`,
-    ),
-});
-
-const restore = defineCommand({
-  meta: { name: "restore", description: "Restore a soft-deleted decision" },
-  args: { ...id("Decision"), ...json },
-  run: ({ args }) =>
-    execute(
-      args.json,
-      async ({ ctx }) =>
-        restoreRecord(
-          ctx,
-          "decision",
-          await resolveId(ctx, "decision", args.id, { deleted: true }),
-        ) as Promise<Decision>,
-      (d: Decision) => `Restored ${row(d)}`,
     ),
 });
 
 export default defineCommand({
   meta: { name: "decision", description: "Log decisions" },
-  subCommands: { record: create, list: ls, show, delete: remove, restore },
+  subCommands: { record: create, list: ls, show },
 });

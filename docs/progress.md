@@ -2408,3 +2408,15 @@ Items 11.1 to 11.6, 11.8 and 11.10 to 11.12 are done (task `tsk_01M78EBHERF7AFXK
 - **Batching:** the layout-only items 6.4, 6.6, 6.11 and 6.12 shared one gate and one commit (`ba38d52`); each has its own test line and review box. 6.5 and 6.14 shared one (`2e5fb9f`).
 - **Aliases:** `layout.aliases` is now empty (`app` and `context` are hidden names). The mechanism stays for later use.
 - **6.10:** the desktop entry module already existed (`init/desktop.ts`); `mcp --desktop` calls it. The docs for it are 13.3.
+
+## 2026-11-13 — Review WP10: core concepts
+
+Items 10.1 to 10.7 are done for core, the CLI and the server (task `tsk_01M78FAP8P71ANY4VAWZF0NH6J`), with 13.7 and 8.5. The board parts of 10.1 and 10.2 (remove the decision Delete button, show "Superseded by", label and filter cancelled milestones) are task `tsk_01M78FSCKSN39HAZXDG222AP41` for the board agent.
+
+- **10.1:** `decision` is out of `SOFT`; `decision delete|restore` and the board API routes are gone (decision `dec_01M78FHB5W7F66J0F0EKH55SKZ`). `decision show` and `recall` name the newer decision ("Superseded by <title> (<handle>)"); when two decisions supersede the same one, the newest wins. `e2e/ui/flows.spec.ts` has no decision-delete test (its delete test removes a comment), and `guard.test.ts` and `store.test.ts` never deleted a decision, so none needed a change.
+- **10.2:** `cancelled` is a milestone status. The test "a cancelled milestone can be reopened but not marked done directly" is in `services.test.ts` with the other milestone tests: `workflow.test.ts` tests the workflow text. `brief.ts` reads no milestones, and a template always makes a new milestone, so neither needed a change. A plan import skips a cancelled milestone the way it skips a deleted one. `changes` says "was cancelled, not done". The board's copy of the transitions in `packages/ui/src/forms.tsx` gained `cancelled` in the same commit, because `constants.test.ts` requires it to match core; the rest of the board work is in the board task.
+- **10.3, 10.6:** as written. 10.3 shares decision `dec_01M78FHB5W7F66J0F0EKH55SKZ` with 10.1.
+- **10.4:** the text is in `docs/guide/agent-workflow.md` and `agent-workflow-general.md`, from which `workflow.ts` is generated, and in the `task_update` description (310 characters).
+- **10.5:** profiled first: a plan import of 500 tasks took 227.1 ms, of which the actor row was 65.4 ms (29%), over the 20% bar. `writeTx` in `context.ts` wraps `ctx.store.write` at all 36 core call sites and writes the actor row once at the end; `issueStamp` outside it writes at once, as before. After: 162.0 ms, actor row 0.3 ms (0%). The test fails without the change (actor version up by 52, not 2).
+- **10.7:** no change; decision `dec_01M78FS7DBS4YYD8DJYEQGGMCQ`.
+- **Bench** (load average about 20): every budget passed. Cold start p95 42.6 ms, read 118.2 ms, search 42.2 ms, recall 42.8 ms, claim 4.6 ms, home 246.1 and 192.3 ms.

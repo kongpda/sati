@@ -68,7 +68,8 @@ const update = defineCommand({
     date: { type: "string", description: "Target date YYYY-MM-DD, or none to clear" },
     status: {
       type: "string",
-      description: "planned | active | done (planned and done change through active)",
+      description:
+        "planned | active | done | cancelled (planned and done change through active; cancelled reopens as planned)",
     },
     ...expectedVersion,
     ...json,

@@ -18,7 +18,7 @@ export const FEATURE_STATUSES = [
 ] as const;
 export type FeatureStatus = (typeof FEATURE_STATUSES)[number];
 
-export const MILESTONE_STATUSES = ["planned", "active", "done"] as const;
+export const MILESTONE_STATUSES = ["planned", "active", "done", "cancelled"] as const;
 export type MilestoneStatus = (typeof MILESTONE_STATUSES)[number];
 
 type Machine<S extends string> = Readonly<Record<S, readonly S[]>>;
@@ -42,9 +42,11 @@ export const FEATURE_TRANSITIONS: Machine<FeatureStatus> = {
 };
 
 export const MILESTONE_TRANSITIONS: Machine<MilestoneStatus> = {
-  planned: ["active"],
-  active: ["planned", "done"],
+  planned: ["active", "cancelled"],
+  active: ["planned", "done", "cancelled"],
   done: ["active"],
+  // Reopened as planned, never straight to done: its work was dropped, not finished.
+  cancelled: ["planned"],
 };
 
 /** A feature that has been shipped can only be removed with a linked Decision. */

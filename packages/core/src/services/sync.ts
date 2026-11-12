@@ -2,7 +2,14 @@ import { z } from "zod";
 import { SatiError } from "../domain/errors.js";
 import { shortHandle } from "../domain/ids.js";
 import { ENTITY_SCHEMAS, type EntityMap, LIMITS, type Task } from "../domain/schemas.js";
-import { listAll, logActivity, nowIso, parseInput, type ServiceContext } from "./context.js";
+import {
+  listAll,
+  logActivity,
+  nowIso,
+  parseInput,
+  type ServiceContext,
+  writeTx,
+} from "./context.js";
 import { linkProblems } from "./doctor.js";
 
 /** The records the git snapshot carries. Actors, locks and activity stay machine-local. */
@@ -109,8 +116,12 @@ export async function importRecords(ctx: ServiceContext, input: unknown): Promis
     const r = ENTITY_SCHEMAS[entity].safeParse(record);
     if (!r.success) {
       const issue = r.error.issues[0];
-      // Fields this version does not know: the files come from a newer sati on another clone.
-      newer ||= r.error.issues.some((i) => i.code === "unrecognized_keys");
+      // Fields or a status this version does not know: a newer sati on another clone wrote them.
+      newer ||= r.error.issues.some(
+        (i) =>
+          i.code === "unrecognized_keys" ||
+          (i.code === "invalid_value" && i.path.at(-1) === "status"),
+      );
       bad.push(`${source}: ${issue?.path.join(".") || "record"}: ${issue?.message}`);
     } else if (r.data.projectId !== ctx.projectId) {
       bad.push(`${source}: belongs to project ${r.data.projectId}, not ${ctx.projectId}`);
@@ -127,7 +138,7 @@ export async function importRecords(ctx: ServiceContext, input: unknown): Promis
     });
   }
 
-  return ctx.store.write(async (w) => {
+  return writeTx(ctx, async (w) => {
     const result: ImportResult = { imported: [], unchanged: 0, problems: [] };
     const now = nowIso(ctx);
     const lost: string[] = [];

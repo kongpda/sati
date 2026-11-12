@@ -47,9 +47,10 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 - If you stop without finishing, call \`handoff_write\` or run \`${CLI_NAME} handoff <task> --next "…"\`
   (add \`to\` or \`--to <actor>\` for one agent), then \`task_release\` it (or move it back to \`todo\`). The next
   claimer gets the handoff with its \`task_claim\` result, and that counts as read.
-- Stuck on a person: \`task_update\` with \`needsInput: "the question"\` (or \`${CLI_NAME} wait "…"\`). The
-  task shows under "Needs you" for people until your next write. Moving a task to \`blocked\`
-  takes a \`reason\` saying what it waits on. \`checklist\` and \`assigneeIds\` replace the whole list:
+- Three ways to say a task waits. The work cannot go on (a missing service, another task):
+  status \`blocked\` with a \`reason\`. You hold the claim and wait for a person's answer:
+  \`task_update\` with \`needsInput: "the question"\` (or \`${CLI_NAME} wait "…"\`); it shows under
+  "Needs you" until your next write. Anything else: a comment. \`checklist\` and \`assigneeIds\` replace the whole list:
   send \`expectedVersion\` with them.
 - The brief's "Watch out" section lists files another agent's worktree also changed with no
   lock on them, and conflicts with the base branch. Lock the file (\`lock_acquire\`, then
@@ -143,9 +144,10 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 - If you stop without finishing, call \`handoff_write\` with the next step (\`${CLI_NAME} handoff <task>
   --next "…"\` in a shell), then \`task_release\` it (or move it back to \`todo\`). The next claimer gets the handoff
   with its \`task_claim\` result.
-- Stuck on a person: \`task_update\` with \`needsInput: "the question"\` (or \`${CLI_NAME} wait "…"\`). The
-  task shows under "Needs you" until your next write. Moving a task to \`blocked\` takes a
-  \`reason\` saying what it waits on.
+- Three ways to say a task waits. The work cannot go on: status \`blocked\` with a \`reason\`.
+  You hold the claim and wait for a person's answer: \`task_update\` with \`needsInput: "the
+  question"\` (or \`${CLI_NAME} wait "…"\`); it shows under "Needs you" until your next write.
+  Anything else: a comment.
 
 ## Record what you learn
 - \`note_upsert\` for knowledge worth keeping: facts, contacts, research, meeting notes. Tag it

@@ -161,6 +161,23 @@ describe("importRecords", () => {
     expect(await store.read((r) => r.get("task", good.id))).toBeUndefined();
     expect(store.activity.length).toBe(before);
   });
+
+  // A status added later (a cancelled milestone) reaches an older clone as an unknown value.
+  // That is a version gap, not a broken file, so the hint says to update.
+  it("an unknown status in a snapshot says a newer sati wrote it", async () => {
+    const { ctx } = await setup();
+    const task = await createTask(ctx, { title: "From the future" });
+    await expect(
+      importRecords(ctx, [
+        { entity: "task", source: "tasks/x.json", record: { ...task, status: "parked" } },
+      ]),
+    ).rejects.toMatchObject({ hint: expect.stringContaining("newer sati") });
+    await expect(
+      importRecords(ctx, [
+        { entity: "task", source: "tasks/x.json", record: { ...task, priority: "whenever" } },
+      ]),
+    ).rejects.toMatchObject({ hint: expect.stringContaining("Fix or restore") });
+  });
 });
 
 describe("timestamps", () => {

@@ -13,7 +13,9 @@ import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { fileSha256 } from "../file-hash.js";
 import { handle } from "../render.js";
-import { execute, int, list, parseJson, type Runtime } from "../runtime.js";
+import { int, list, parseJson } from "../runtime/input.js";
+import type { Runtime } from "../runtime/location.js";
+import { execute } from "../runtime/output.js";
 import { bold, dim, green, red, term, wrap, yellow } from "../term.js";
 import { projectPath } from "./guard.js";
 

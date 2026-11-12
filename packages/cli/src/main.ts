@@ -299,7 +299,7 @@ export async function main(root: CommandDef, layout: HelpLayout): Promise<void> 
     // Loaded only here: the core and SQLite stay out of `--version` and `--help`.
     const [{ SatiError, isSatiError }, { printError }] = await Promise.all([
       import("@sati/core"),
-      import("./runtime.js"),
+      import("./runtime/output.js"),
     ]);
     // A command that does not wrap its own errors (e.g. `serve`) keeps their code and hint.
     if (isSatiError(err)) {

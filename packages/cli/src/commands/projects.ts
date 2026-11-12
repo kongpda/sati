@@ -4,7 +4,7 @@ import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { forgetProject, pruneProjects, readProjects } from "../projects.js";
 import { Cancelled, canAsk } from "../prompt.js";
-import { output } from "../runtime.js";
+import { output } from "../runtime/output.js";
 import { bold, dim, red, table, term, tilde } from "../term.js";
 
 const forget = defineCommand({

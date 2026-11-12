@@ -1,7 +1,8 @@
 import { importPlan, type PlanImport } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { execute, readText } from "../runtime.js";
+import { readText } from "../runtime/input.js";
+import { execute } from "../runtime/output.js";
 
 export default defineCommand({
   meta: { name: "plan", description: "Import tasks from a Markdown checklist" },

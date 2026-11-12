@@ -1,14 +1,9 @@
 import { CLI_NAME, markWaiting, resolveId, SatiError, shortHandle, type Task } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import {
-  closeRuntime,
-  execute,
-  openRuntime,
-  printError,
-  readStdin,
-  withExport,
-} from "../runtime.js";
+import { readStdin } from "../runtime/input.js";
+import { closeRuntime, openRuntime } from "../runtime/location.js";
+import { execute, printError, withExport } from "../runtime/output.js";
 
 /** The part of Claude Code's Notification and UserPromptSubmit hook input we read. */
 interface HookInput {

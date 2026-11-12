@@ -2,13 +2,9 @@ import { CLI_NAME, type ImportResult, readSettings, SatiError, updateSettings } 
 import { type ExportResult, exportSnapshot, importSnapshot, refusedError } from "@sati/sync";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import {
-  openRuntime,
-  output,
-  readProjectConfig,
-  snapshotDir,
-  writeConfigShare,
-} from "../runtime.js";
+import { readProjectConfig, snapshotDir, writeConfigShare } from "../runtime/config.js";
+import { openRuntime } from "../runtime/location.js";
+import { output } from "../runtime/output.js";
 import { warn } from "../term.js";
 
 /** Also the top-level `sati export`. */

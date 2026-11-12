@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { locateDb } from "@sati/store-sqlite";
 import { describe, expect, it } from "vitest";
-import { branchInHead, currentBranch, gitRepoIndex } from "../src/runtime.js";
+import { branchInHead, currentBranch, gitRepoIndex } from "../src/runtime/git.js";
 import { bin, run, sati, satiJson, tempRepo } from "./helpers.js";
 
 const git = (dir: string, ...args: string[]) =>

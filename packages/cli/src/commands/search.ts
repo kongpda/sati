@@ -2,7 +2,8 @@ import { SEARCHABLE, type SearchHit, search } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { hits } from "../render.js";
-import { execute, int, list } from "../runtime.js";
+import { int, list } from "../runtime/input.js";
+import { execute } from "../runtime/output.js";
 
 export default defineCommand({
   meta: {

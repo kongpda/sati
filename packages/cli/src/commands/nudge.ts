@@ -10,7 +10,9 @@ import {
   worktreeWarnings,
 } from "@sati/core";
 import { defineCommand } from "citty";
-import { closeRuntime, openRuntime, printError, readStdin } from "../runtime.js";
+import { readStdin } from "../runtime/input.js";
+import { closeRuntime, openRuntime } from "../runtime/location.js";
+import { printError } from "../runtime/output.js";
 
 /** The part of Claude Code's hook input we read. */
 interface HookInput {

@@ -26,7 +26,9 @@ import { defaultBase, samePath } from "../git.js";
 import { installedSelf } from "../hooks.js";
 import { runHint } from "../install.js";
 import { checks } from "../render.js";
-import { closeRuntime, execute, openRuntime, output, worktreePaths } from "../runtime.js";
+import { worktreePaths } from "../runtime/git.js";
+import { closeRuntime, openRuntime } from "../runtime/location.js";
+import { execute, output } from "../runtime/output.js";
 import { versionLine } from "../version.js";
 import { pendingUpgrade, syncedDbWarning } from "./init.js";
 

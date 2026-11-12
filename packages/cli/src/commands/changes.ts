@@ -2,7 +2,8 @@ import { CHANGE_FORMATS, type Changes, formatChanges, listChanges, parseInput } 
 import { defineCommand } from "citty";
 import { z } from "zod";
 import { json } from "../args.js";
-import { actorRef, execute } from "../runtime.js";
+import { actorRef } from "../runtime/input.js";
+import { execute } from "../runtime/output.js";
 import { markdown } from "../term.js";
 
 const Format = z.enum(CHANGE_FORMATS).default("plain");

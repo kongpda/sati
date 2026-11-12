@@ -12,7 +12,8 @@ import { defineCommand } from "citty";
 import { id, json, pagination } from "../args.js";
 import { askBody, askText, canAsk, missing, missingFlag, sameAs } from "../prompt.js";
 import { record, row, rows } from "../render.js";
-import { execute, int, ref, refs } from "../runtime.js";
+import { int, ref, refs } from "../runtime/input.js";
+import { execute } from "../runtime/output.js";
 
 const create = defineCommand({
   meta: { name: "record", description: "Record a decision and why it was made" },

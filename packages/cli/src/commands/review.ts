@@ -12,7 +12,7 @@ import micromatch from "micromatch";
 import { json } from "../args.js";
 import { defaultBase, rangeChanges, rangeStart } from "../git.js";
 import { handle } from "../render.js";
-import { execute } from "../runtime.js";
+import { execute } from "../runtime/output.js";
 import { bold, green, red, term, wrap, yellow } from "../term.js";
 import { projectVerdict } from "./guard.js";
 

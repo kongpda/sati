@@ -2,7 +2,8 @@ import { CLI_NAME, claimNext, type Task } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { row } from "../render.js";
-import { execute, int } from "../runtime.js";
+import { int } from "../runtime/input.js";
+import { execute } from "../runtime/output.js";
 import { when } from "../term.js";
 
 export default defineCommand({

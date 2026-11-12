@@ -4,7 +4,8 @@ import { connect, type Server } from "node:net";
 import { CLI_NAME, SatiError, type StorageAdapter } from "@sati/core";
 import { listenStore, socketPath as socketPathFor } from "@sati/store-sqlite";
 import { defineCommand } from "citty";
-import { closeRuntime, openRuntime, printError } from "../runtime.js";
+import { closeRuntime, openRuntime } from "../runtime/location.js";
+import { printError } from "../runtime/output.js";
 
 /** True when something accepts connections on the socket; a stale file refuses or is gone. */
 function isLive(socketPath: string): Promise<boolean> {

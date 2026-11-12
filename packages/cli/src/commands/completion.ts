@@ -2,7 +2,7 @@ import { basename } from "node:path";
 import { CLI_NAME, SatiError } from "@sati/core";
 import { type CommandDef, defineCommand } from "citty";
 import { type HelpLayout, hiddenIn } from "../help.js";
-import { output } from "../runtime.js";
+import { output } from "../runtime/output.js";
 
 type Resolvable<T> = T | Promise<T> | (() => T | Promise<T>);
 const resolveValue = async <T>(v: Resolvable<T>): Promise<T> =>

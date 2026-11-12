@@ -6,15 +6,10 @@ import { CLI_NAME, type ProjectKind, SatiError } from "@sati/core";
 import { defineCommand } from "citty";
 import { selfCommand } from "../hooks.js";
 import { launcherFile } from "../launcher.js";
-import {
-  closeRuntime,
-  exportWritten,
-  int,
-  openRuntime,
-  printError,
-  sharedDir,
-  writeConfigKind,
-} from "../runtime.js";
+import { sharedDir, writeConfigKind } from "../runtime/config.js";
+import { int } from "../runtime/input.js";
+import { closeRuntime, openRuntime } from "../runtime/location.js";
+import { exportWritten, printError } from "../runtime/output.js";
 import { markSeen, watchFolder } from "../shared-folder.js";
 import { readTemplateFiles } from "../templates.js";
 import { createUiApp, listenUi, sessionToken, type UiRuntime } from "../ui/server.js";

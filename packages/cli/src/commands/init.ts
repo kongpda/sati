@@ -54,7 +54,10 @@ import {
   warnIfNotOnPath,
   writePlanned,
 } from "../integrations.js";
-import { currentBranch, osUser, output, readProjectConfig, writeConfigKind } from "../runtime.js";
+import { readProjectConfig, writeConfigKind } from "../runtime/config.js";
+import { currentBranch } from "../runtime/git.js";
+import { osUser } from "../runtime/identity.js";
+import { output } from "../runtime/output.js";
 import { warn } from "../term.js";
 
 interface InitPlan {

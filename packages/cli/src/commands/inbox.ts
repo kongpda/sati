@@ -8,7 +8,7 @@ import {
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { handle, row } from "../render.js";
-import { execute } from "../runtime.js";
+import { execute } from "../runtime/output.js";
 import { bold, dim, term, truncate, when } from "../term.js";
 
 /** Stored text on one line: a comment or a question may hold line breaks. */

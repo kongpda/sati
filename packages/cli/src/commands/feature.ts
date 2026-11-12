@@ -12,7 +12,8 @@ import {
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
-import { execute, int, list, ref } from "../runtime.js";
+import { int, list, ref } from "../runtime/input.js";
+import { execute } from "../runtime/output.js";
 
 const fields = {
   description: { type: "string", description: "What the feature does, in Markdown" },

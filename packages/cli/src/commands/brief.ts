@@ -1,7 +1,7 @@
 import { BRIEF_TOOLS, type Brief, type BriefTools, buildBrief, SatiError } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { execute } from "../runtime.js";
+import { execute } from "../runtime/output.js";
 import { markdown } from "../term.js";
 
 export default defineCommand({

@@ -4,7 +4,7 @@ import { json } from "../args.js";
 import { selectTools } from "../detect.js";
 import { isLocalInstall } from "../install.js";
 import { type FileChange, planAgentFiles, warnIfNotOnPath, writePlanned } from "../integrations.js";
-import { execute } from "../runtime.js";
+import { execute } from "../runtime/output.js";
 
 const sync = defineCommand({
   meta: {

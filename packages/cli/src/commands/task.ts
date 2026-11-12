@@ -38,7 +38,6 @@ import {
 import { record, row, rows } from "../render.js";
 import {
   bodyText,
-  execute,
   heldTask,
   int,
   list,
@@ -46,7 +45,8 @@ import {
   ref,
   refs,
   someChange,
-} from "../runtime.js";
+} from "../runtime/input.js";
+import { execute } from "../runtime/output.js";
 import { term, when } from "../term.js";
 
 const token = {

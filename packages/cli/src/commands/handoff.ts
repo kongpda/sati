@@ -12,7 +12,8 @@ import {
 import { defineCommand } from "citty";
 import { json, taskId } from "../args.js";
 import { row } from "../render.js";
-import { execute, heldTask, list } from "../runtime.js";
+import { heldTask, list } from "../runtime/input.js";
+import { execute } from "../runtime/output.js";
 
 export default defineCommand({
   meta: {

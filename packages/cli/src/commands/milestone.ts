@@ -10,7 +10,8 @@ import {
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, orNone, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
-import { execute, int } from "../runtime.js";
+import { int } from "../runtime/input.js";
+import { execute } from "../runtime/output.js";
 
 const create = defineCommand({
   meta: { name: "create", description: "Create a milestone" },

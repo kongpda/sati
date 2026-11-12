@@ -1,7 +1,7 @@
 import { shortHandle, undoActivity } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { execute } from "../runtime.js";
+import { execute } from "../runtime/output.js";
 
 export default defineCommand({
   meta: {

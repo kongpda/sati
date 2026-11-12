@@ -3,7 +3,9 @@ import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { readProjects, rememberProject } from "../projects.js";
 import { pairs } from "../render.js";
-import { execute, int, writeConfigKind } from "../runtime.js";
+import { writeConfigKind } from "../runtime/config.js";
+import { int } from "../runtime/input.js";
+import { execute } from "../runtime/output.js";
 import { term } from "../term.js";
 
 export default defineCommand({

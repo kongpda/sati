@@ -16,16 +16,10 @@ import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { fileSha256 } from "../file-hash.js";
 import { type Change, rangeChanges, stagedChanges } from "../git.js";
-import {
-  closeRuntime,
-  list,
-  openRuntime,
-  parseJson,
-  printError,
-  type Runtime,
-  readProjectConfig,
-  readStdin,
-} from "../runtime.js";
+import { readProjectConfig } from "../runtime/config.js";
+import { list, parseJson, readStdin } from "../runtime/input.js";
+import { closeRuntime, openRuntime, type Runtime } from "../runtime/location.js";
+import { printError } from "../runtime/output.js";
 import { clean, polish } from "../term.js";
 
 /** `SATI_GUARD=off` lets one blocked run through; the override is logged. */

@@ -1,7 +1,8 @@
 import { type Recall, recall } from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
-import { execute, int } from "../runtime.js";
+import { int } from "../runtime/input.js";
+import { execute } from "../runtime/output.js";
 import { markdown } from "../term.js";
 
 export default defineCommand({

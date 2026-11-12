@@ -12,7 +12,9 @@ import { SqliteStore } from "@sati/store-sqlite";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { handle } from "../render.js";
-import { actorRef, closeRuntime, execute, int, openRuntime, printError, ref } from "../runtime.js";
+import { actorRef, int, ref } from "../runtime/input.js";
+import { closeRuntime, openRuntime } from "../runtime/location.js";
+import { execute, printError } from "../runtime/output.js";
 import { bold, cleanDeep, dim, symbols, table, term, truncate, when } from "../term.js";
 
 const brief = (v: unknown): string =>

@@ -11,7 +11,8 @@ import {
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { askText, canAsk, missing, pickTask, sameAs } from "../prompt.js";
-import { bodyText, execute } from "../runtime.js";
+import { bodyText } from "../runtime/input.js";
+import { execute } from "../runtime/output.js";
 import { bold, dim, LISTED, term, when, wrap, yellow } from "../term.js";
 
 /** One comment: UTC time, author's name, and the body indented under it. */

@@ -14,7 +14,7 @@ import { SqliteStore } from "@sati/store-sqlite";
 import { describe, expect, it } from "vitest";
 import pkg from "../package.json" with { type: "json" };
 import { pruneProjects, readProjects, rememberProject } from "../src/projects.js";
-import { readStdin } from "../src/runtime.js";
+import { readStdin } from "../src/runtime/input.js";
 import { createUiApp, sessionToken } from "../src/ui/server.js";
 import { bin, run, sati, satiJson, tempRepo } from "./helpers.js";
 

@@ -15,7 +15,8 @@ import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination } from "../args.js";
 import { askBody, askText, canAsk, missing, sameAs } from "../prompt.js";
 import { record, row, rows } from "../render.js";
-import { bodyText, execute, int, list, someChange } from "../runtime.js";
+import { bodyText, int, list, someChange } from "../runtime/input.js";
+import { execute } from "../runtime/output.js";
 
 /** A short handle in `--links` becomes the full id, as over MCP, so the link shows in threads. */
 const linksOf = async (ctx: ServiceContext, raw: string | undefined) => {

@@ -11,7 +11,8 @@ import {
 import { defineCommand } from "citty";
 import { id, json } from "../args.js";
 import { handle } from "../render.js";
-import { execute, int, list, ref } from "../runtime.js";
+import { int, list, ref } from "../runtime/input.js";
+import { execute } from "../runtime/output.js";
 import { dim, table, term, when, yellow } from "../term.js";
 import { projectPath } from "./guard.js";
 

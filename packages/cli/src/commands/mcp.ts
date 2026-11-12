@@ -6,14 +6,10 @@ import {
   type ServiceContext,
 } from "@sati/core";
 import { defineCommand } from "citty";
-import {
-  exportWritten,
-  openRuntime,
-  osUser,
-  printError,
-  processProbe,
-  sharedDir,
-} from "../runtime.js";
+import { sharedDir } from "../runtime/config.js";
+import { osUser, processProbe } from "../runtime/identity.js";
+import { openRuntime } from "../runtime/location.js";
+import { exportWritten, printError } from "../runtime/output.js";
 import { markSeen, watchFolder } from "../shared-folder.js";
 import { readTemplateFiles } from "../templates.js";
 import { warn } from "../term.js";

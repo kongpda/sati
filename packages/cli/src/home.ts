@@ -1,7 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { CLI_NAME, inbox, isSatiError, listTasks } from "@sati/core";
 import { askText, Cancelled, canAsk } from "./prompt.js";
-import { closeRuntime, currentBranch, openRuntime, printError } from "./runtime.js";
+import { currentBranch } from "./runtime/git.js";
+import { closeRuntime, openRuntime } from "./runtime/location.js";
+import { printError } from "./runtime/output.js";
 import { bold, clean, dim } from "./term.js";
 
 /** A list is read up to this many rows; a longer one is shown as "500+". */

@@ -355,6 +355,16 @@ describe("a command that would do the wrong thing says so", () => {
     expect(sati(dir, "task", "create", "Fix the bug", "--priority", "high").code).toBe(0);
   });
 
+  // The parser kept the last value of a repeated option: `--add a --add b` added only b.
+  it("refuses an option given twice instead of dropping the first value", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = satiJson<Task>(dir, "task", "create", "One").data;
+    const r = sati(dir, "task", "checklist", t.id, "--add", "a", "--add", "b");
+    expect(r.code).toBe(2);
+    expect(r.stderr).toContain("--add was given twice");
+    expect(sati(dir, "task", "show", t.id).stdout).not.toContain("[ ] b");
+  });
+
   // An update with no option wrote a new version and an audit row that changed nothing.
   it("refuses an update that changes nothing, and writes nothing", async () => {
     const dir = await tempRepo({ init: true });

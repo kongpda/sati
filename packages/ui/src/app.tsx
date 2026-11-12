@@ -89,7 +89,15 @@ export function App() {
   } | null>(null);
   const setToast = useCallback(
     (message: string | null, undo?: () => void) =>
-      setToastState(message === null ? null : { message, ...(undo ? { undo } : {}) }),
+      setToastState((shown) =>
+        message === null
+          ? null
+          : // A plain "Saved" must not take away an Undo that is still offered: the live refresh
+            // after a delete often lands a second message within the Undo's ten seconds.
+            shown?.undo && !undo
+            ? shown
+            : { message, ...(undo ? { undo } : {}) },
+      ),
     [],
   );
   const [palette, setPalette] = useState(false);

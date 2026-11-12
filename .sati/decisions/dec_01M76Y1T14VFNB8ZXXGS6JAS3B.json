@@ -1,0 +1,13 @@
+{
+  "createdAt": "2026-11-12T03:50:31.199Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "Not changed: lower-case names in the secret scanner (left out so code like token = getToken() in a note does not match); the doctor lean line reading ok while naming a cleanup (informational by design); apostrophes dropped from completion descriptions (they sit inside single quotes in three shells). Snapshot caching and windowed lists stay ideas: the performance budgets pass.",
+  "id": "dec_01M76Y1T14VFNB8ZXXGS6JAS3B",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T03:50:31.206Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "9o: review items left as they are",
+  "updatedAt": "2026-11-12T03:50:31.199Z",
+  "version": 1
+}

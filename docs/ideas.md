@@ -42,10 +42,6 @@ From the 2026-11-10 review (WP10), features rather than bugs:
 
 From the 2026-11-12 final pass (9n), not bugs:
 
-- **More than one toast**: the board has one toast slot, so a "Saved" that follows a delete replaces its Undo. A short queue, or keeping an Undo toast until it times out.
-- **A repeated flag**: `task checklist --add a --add b` keeps only `b`. Either take both or refuse the repeat.
 - **Snapshot caching for the board**: `/api/snapshot` reads every record on each change. Fine at the tested sizes; a per-entity version check would cut the work on large projects.
 - **Long comment threads and note lists** are drawn in full; a windowed list would help past a few hundred rows.
-- **Secret patterns**: the scanner knows upper-case `NAME=value` lines; lower-case and `export name=` forms pass.
-- **Pruning `backups/`**: database backups made before a migration are kept for ever.
-
+- **A queue of toasts**: since 9o a delete's Undo is kept, and a plain message that arrives in its 10 seconds is not shown. A short stack would show both.

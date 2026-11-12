@@ -2164,3 +2164,13 @@ Task `tsk_fevjbr`.
 - Not done, moved to `docs/ideas.md`: several toasts at once, a repeated `--add`, caching the board snapshot, a longer list of secret patterns.
 - Not run here: the Playwright board tests (`e2e/ui`); CI runs them.
 
+## 2026-11-12 — 9o: what 9n postponed
+
+- A repeated option is refused in the flag walker in `main.ts`, for options that take a value. No command takes a list by repeating; lists are comma-separated. A boolean flag given twice is still accepted.
+- The toast: a message without Undo leaves a shown Undo toast in place until it times out (10 s), is used or is dismissed. Errors still replace it. The cost: a "Saved" inside those 10 s is not shown.
+- The mention bug was found by running the Playwright suite locally: `typing @ in a comment` failed 2 runs in 15. After a pick the caret was set in the next animation frame, so a key typed before that frame was followed by the caret jumping back. It is now set in the same event with `flushSync`. 40 runs in 40 pass.
+- Backups: `migrate` keeps the 5 newest `backups/<db>.v<n>.<time>.bak` files of the database it upgrades and leaves other databases' files alone. Sorted by the time in the name, not by schema version.
+- Decided against, with the reason: lower-case names in the secret scanner (left out on purpose so `token = getToken()` in a note does not match); the `lean` line in `doctor` reading `ok` while it names something to clean (the check is informational by design); apostrophes in completion descriptions (removed on purpose: the text sits inside single quotes in three shells).
+- Still ideas, not measured as a problem: caching the board snapshot and windowed long lists. The performance budgets pass.
+- Found on the way: every `dist/` folder in the main checkout was gone, so the installed `sati` and its MCP server did not start. Cause not found. `pnpm build` restored it.
+

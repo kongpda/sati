@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { backup, type DatabaseSync } from "node:sqlite";
 import { MIGRATIONS } from "./migrations.gen.js";
@@ -16,6 +16,21 @@ export function userVersion(db: DatabaseSync): number {
  * so other processes wait instead of reading a half-migrated schema.
  * Returns the resulting version (higher than LATEST if a newer binary already upgraded it).
  */
+/** Backups kept per database. Each is a full copy, and one was written at every upgrade for ever. */
+export const BACKUPS_KEPT = 5;
+
+/** Removes all but the newest backups of `name`. The stamp in the file name sorts by time. */
+function prune(dir: string, name: string): void {
+  const old = readdirSync(dir)
+    .filter((f) => f.startsWith(`${name}.v`) && f.endsWith(".bak"))
+    .sort((a, b) => stamp(a).localeCompare(stamp(b)))
+    .slice(0, -BACKUPS_KEPT);
+  // A backup that cannot be removed is no reason to stop an upgrade.
+  for (const f of old) rmSync(join(dir, f), { force: true });
+}
+
+const stamp = (file: string): string => file.replace(/^.*\.v\d+\./u, "");
+
 export async function migrate(db: DatabaseSync, path: string): Promise<number> {
   const current = userVersion(db);
   if (current >= LATEST_SCHEMA_VERSION) return current;
@@ -26,6 +41,7 @@ export async function migrate(db: DatabaseSync, path: string): Promise<number> {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const target = join(dir, `${basename(path)}.v${current}.${stamp}.bak`);
     await backup(db, target);
+    prune(dir, basename(path));
   }
 
   db.exec("BEGIN EXCLUSIVE");

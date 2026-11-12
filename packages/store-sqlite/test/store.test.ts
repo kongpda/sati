@@ -1,9 +1,10 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { SatiError } from "@sati/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { LATEST_SCHEMA_VERSION, SqliteStore } from "../src/index.js";
+import { BACKUPS_KEPT } from "../src/migrate.js";
 import { MIGRATIONS } from "../src/migrations.gen.js";
 import { ACTOR, NOW, note, PROJECT_ID, pragma, project, task, tmpDb } from "./fixtures.js";
 
@@ -39,6 +40,29 @@ describe("open", () => {
     const backups = readdirSync(join(dirname(v1), "backups"));
     expect(backups).toHaveLength(1);
     expect(backups[0]).toMatch(/^sati\.db\.v1\..+\.bak$/);
+  });
+
+  // Each backup is a full copy of the database; one per upgrade for ever fills the disk.
+  it("keeps only the newest backups, and leaves other databases' backups alone", async () => {
+    const v1 = tmpDb();
+    const raw = new DatabaseSync(v1);
+    raw.exec(MIGRATIONS[0]?.sql ?? "");
+    raw.exec("PRAGMA user_version = 1");
+    raw.close();
+    const dir = join(dirname(v1), "backups");
+    mkdirSync(dir);
+    for (let day = 1; day <= 8; day++) {
+      writeFileSync(join(dir, `sati.db.v1.2020-01-0${day}T00-00-00-000Z.bak`), "old");
+    }
+    writeFileSync(join(dir, "other.db.v1.2020-01-01T00-00-00-000Z.bak"), "other");
+    await (await SqliteStore.open(v1)).close();
+    const left = readdirSync(dir).sort();
+    expect(left.filter((f) => f.startsWith("sati.db."))).toHaveLength(BACKUPS_KEPT);
+    // The oldest go; the one just written stays.
+    expect(left).not.toContain("sati.db.v1.2020-01-04T00-00-00-000Z.bak");
+    expect(left).toContain("sati.db.v1.2020-01-08T00-00-00-000Z.bak");
+    expect(left.some((f) => !f.includes("2020-"))).toBe(true);
+    expect(left).toContain("other.db.v1.2020-01-01T00-00-00-000Z.bak");
   });
 
   it("does not back up a brand-new DB", () => {

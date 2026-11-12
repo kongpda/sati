@@ -82,6 +82,7 @@ async function unknownFlag(root: CommandDef, argv: readonly string[]): Promise<s
       : `Unexpected argument "${extra}". Put quotes around a value that has spaces.`;
   };
   let valueNext = false;
+  const given = new Set<string>();
   for (const token of rest) {
     if (token === "--") return surplus();
     if (valueNext) {
@@ -96,6 +97,14 @@ async function unknownFlag(root: CommandDef, argv: readonly string[]): Promise<s
     const [flag = "", ...value] = body.split("=");
     const negated = token.startsWith("--no-") ? known.has(flag.slice(3)) : false;
     if (known.has(flag) || negated) {
+      // No option takes a list by repeating: the parser kept the last value and dropped the
+      // rest, so `--add a --add b` added only b.
+      if (known.get(flag) === true) {
+        if (given.has(flag)) {
+          return `--${flag} was given twice. Give it once; where it takes a list, separate the values with commas.`;
+        }
+        given.add(flag);
+      }
       valueNext = value.length === 0 && !negated && known.get(flag) === true;
       continue;
     }

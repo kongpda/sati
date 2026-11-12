@@ -976,6 +976,14 @@ Added 2026-11-11 at the owner's request. Three reviewers read `core`, `store-sql
 - [x] The `sati serve` socket is private from the moment it is bound (umask), not only after `chmod`
 - [x] Board: an error screen with Reload in place of a white page; quotes nest 6 deep at most; the "working now" strip leaves out ended leases; the Mentions link does not reload the board; the live stream sends a heartbeat
 
+**9o — What 9n postponed (owner asked 2026-11-12)**
+
+- [x] An option given twice is refused (`--add a --add b` kept only `b`)
+- [x] Board: a plain message does not replace a delete's Undo while it is still offered
+- [x] Board: text typed right after picking an `@name` is not scrambled
+- [x] Only the 5 newest database backups are kept per database
+- [x] The Playwright board tests were run locally before the merge
+
 **Not in Phase 9:** registry collisions (two folders with one slug, a copied folder sharing a database) are fixed under task `tsk_01M74P…VB2MP62GRN1XC90AKCE` by another agent.
 
 **Gate:** the Phase 8 gate folder, on a machine with no git, driven through MCP by a client that sets no agent variable: the caller is recorded as an agent, cards with anchors go stale when the file changes, and Khmer questions recall Khmer cards. `pnpm lint && pnpm typecheck && pnpm test` pass and the performance budgets are unchanged.

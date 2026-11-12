@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { ago, type Note, type Snapshot } from "./api.js";
 import { Markdown } from "./markdown.js";
 import { Avatar, personName } from "./people.js";
@@ -112,13 +113,16 @@ export function Thread({
     const field = box.current;
     if (!at || !field) return;
     const head = `${draft.slice(0, at.start)}@${name.handle} `;
-    setDraft(head + draft.slice(field.selectionStart));
-    setAt(null);
-    // After the new text is in the box, or the caret would land at its end.
-    requestAnimationFrame(() => {
-      field.focus();
-      field.setSelectionRange(head.length, head.length);
+    const tail = draft.slice(field.selectionStart);
+    // The new text must be in the box before the caret is set, or the caret lands at its end.
+    // Done now and not in the next frame: a key typed before that frame moved the caret back
+    // into the middle of the word being typed.
+    flushSync(() => {
+      setDraft(head + tail);
+      setAt(null);
     });
+    field.focus();
+    field.setSelectionRange(head.length, head.length);
   };
   // The fold's own state, so a snapshot refresh never closes it on a half-typed comment.
   const [open, setOpen] = useState(false);

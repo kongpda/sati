@@ -1,0 +1,33 @@
+{
+  "body": "CI macos-latest / node 26 on 5bfbe66: \"rolls back and drops a client that idles inside a transaction\" timed out at 5000 ms. The test sets txnIdleMs to 100; on a loaded runner the socket is destroyed before the reply to the insert arrives, and the test waits for that reply for ever. Test only.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "5bfbe6649bf8280489df9da704fe64a39ec164e7",
+    "completedAt": "2026-11-12T08:39:29.888Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/store-sqlite/test/remote.test.ts"
+    ],
+    "summary": "Test only. The idle-transaction test waited for the reply to its insert with no limit; with a 100 ms idle timer a loaded runner could destroy the socket first, and the test hung to its 5 s limit (CI macos-latest / node 26 on 5bfbe66). It now waits for the reply or the close, and the timer is 300 ms. Passed 3 runs alone and the full gate."
+  },
+  "createdAt": "2026-11-12T08:38:17.022Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "effort": "light",
+  "id": "tsk_01M77EGQ5ZYE8SFC44VFMYP6J2",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T08:38:17.023Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T08:38:18.504Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T08:39:29.891Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T08:39:29.891Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T08:39:29.891Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T08:38:18.504Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "review",
+  "title": "Flaky daemon test: idle-transaction timer can fire before the call is answered",
+  "updatedAt": "2026-11-12T08:39:29.891Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

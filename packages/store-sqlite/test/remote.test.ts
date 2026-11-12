@@ -171,7 +171,7 @@ describe("daemon hardening", () => {
   it("rolls back and drops a client that idles inside a transaction", async () => {
     const dir = mkdtempSync(join(tmpdir(), "sati-remote-"));
     const quick = socketPath(join(dir, "sati.db"));
-    const fast = listenStore(owner, quick, { txnIdleMs: 100 });
+    const fast = listenStore(owner, quick, { txnIdleMs: 300 });
     await new Promise((resolve) => fast.once("listening", resolve));
     const client = createConnection(quick);
     await new Promise((resolve) => client.once("connect", resolve));
@@ -179,7 +179,8 @@ describe("daemon hardening", () => {
     client.write(frame({ id: 1, op: "begin", mode: "write", txn: 1, protocol: PROTOCOL }));
     await nextFrame(client);
     client.write(frame({ id: 2, op: "call", txn: 1, method: "insert", args: ["task", task()] }));
-    await nextFrame(client);
+    // On a slow machine the timer can fire before this reply: the close is then the answer.
+    await Promise.race([nextFrame(client), gone]);
     await within(gone);
     await within(owner.write(async () => undefined));
     expect(await owner.read((r) => r.list("task", project().id))).toHaveLength(0);

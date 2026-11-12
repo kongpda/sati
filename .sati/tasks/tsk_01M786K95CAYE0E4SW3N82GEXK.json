@@ -1,0 +1,35 @@
+{
+  "body": "Owner asked for every review finding in one Markdown file, in detail, with a plan and a checklist. Docs only: docs/review-2026-11.md.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "7e1d00e898b24be3945e800a9c889bd7bf0da968",
+    "completedAt": "2026-11-12T15:41:56.860Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "docs/review-2026-11-12.md",
+      "PLAN.md",
+      "docs/progress.md"
+    ],
+    "summary": "docs/review-2026-11-12.md holds every finding of the whole-project review: what was fixed, keep/merge/separate/remove tables, 20 owner decisions with recommendations, and 14 work packages with checklists. PLAN Phase 11 (proposed) tracks the packages. Docs only; gate green."
+  },
+  "createdAt": "2026-11-12T15:39:06.795Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "effort": "light",
+  "id": "tsk_01M786K95CAYE0E4SW3N82GEXK",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T15:39:06.798Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T15:39:09.813Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T15:41:56.860Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T15:41:56.860Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T15:41:56.860Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T15:39:09.813Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "done",
+  "title": "Write the whole-project review and consolidation plan as a document",
+  "updatedAt": "2026-11-12T15:41:56.860Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

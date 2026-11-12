@@ -2257,3 +2257,8 @@ The owner asked for a review of every surface (board, CLI, core, MCP) and for th
 - A note could be given the `handoff` tag through `note create` or `note_upsert`; the next agent to claim the task would be shown it as a handoff. Refused now, with a test.
 - `readSnapshot` threw a TypeError for a record whose `id` is an object with a `toString` that is not a function. The fuzz test found it on a random seed during this gate; there is a fixed test for it now.
 - Small: `comment add` with one argument has a clearer error, `inbox` is in the Start group of the help, the docs name `sati sync export` and `sati sync import`, the README version example is current, and the terminal board idea is removed from `docs/ideas.md` (`sati task list --board` exists).
+
+
+## 2026-11-12 — Whole-project review: the findings written down
+
+The owner asked for every finding in one file, with a plan and a checklist. `docs/review-2026-11-12.md` holds them as 14 work packages, with 20 owner decisions and a recommendation for each; PLAN Phase 11 tracks the packages. Choice made: the phase is marked "proposed" and nothing in it starts before the owner answers the decision it depends on, because merging pages and hiding commands changes what users see. The findings come from read-only audits; only the items already fixed were confirmed by a failing test, and the file says so per item.

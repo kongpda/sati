@@ -1038,6 +1038,27 @@ Added 2026-11-12 at the owner's request. sati already needs no server: every com
 
 **Gate:** every CLI test from before Phase 10 passes unchanged (scripts and agents see no difference), no command prompts when stdin is not a terminal or an agent variable is set, the board's My work page and `sati inbox --json` list the same ids, and `pnpm lint && pnpm typecheck && pnpm test` and the Playwright board tests pass.
 
+### Phase 11 — Consolidate and simplify (proposed 2026-11-12)
+
+Added 2026-11-12 at the owner's request: the whole-project review found the model sound and the surfaces crowded (11 board pages, duplicate CLI commands, two names for one record). `docs/review-2026-11-12.md` has the findings, the keep / merge / separate / remove tables, the plan and the checklist for each work package. A package that needs an owner decision (table "Decisions needed" there) does not start before the answer is written in that table.
+
+- [ ] WP1 Board: approve in bulk, and columns that fit
+- [ ] WP2 Board: merge pages (11 to 6)
+- [ ] WP3 Board: correctness
+- [ ] WP4 Board: performance
+- [ ] WP5 Board: wording
+- [ ] WP6 CLI: one command per job
+- [ ] WP7 CLI: one flag per idea, one way to print
+- [ ] WP8 CLI: bugs and gaps
+- [ ] WP9 Core: correctness
+- [ ] WP10 Core: concepts
+- [ ] WP11 Core and store: performance
+- [ ] WP12 MCP surface
+- [ ] WP13 Docs
+- [ ] WP14 Housekeeping
+
+**Gate:** every box in `docs/review-2026-11-12.md` is ticked or closed with a reason in `docs/progress.md`; the board has at most 6 nav pages; `sati --help` lists no two commands that do the same job; `pnpm bench` passes every budget.
+
 ## Testing, CI and release
 
 The riskiest code is concurrency and merging, so those get the heaviest testing: real processes, real git worktrees and randomised scenarios, not mocks.

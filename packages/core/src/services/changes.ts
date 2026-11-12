@@ -271,25 +271,18 @@ export async function readChanges(
 }
 
 /** Turns `since` into a UTC time and says in words what it means. */
-async function resolveSince(
-  ctx: ServiceContext,
-  raw: string | undefined,
-): Promise<{ since: string; basis: string }> {
-  const now = ctx.clock.now().getTime();
-  const daysAgo = (days: number) => new Date(now - days * DAY_MS).toISOString();
-  const input = raw ?? `${DEFAULT_DAYS}d`;
+/**
+ * A start time that needs no records: `24h`, `7d`, `2w`, or a real day (`2026-11-01`) or UTC
+ * time (`2026-11-01T09:00:00Z`). Undefined for anything else, so callers can add their own forms.
+ */
+export function parseSince(input: string, now: Date): { since: string; basis: string } | undefined {
   const rel = /^(\d{1,4})([hdw])$/u.exec(input);
   if (rel) {
     const n = Number(rel[1]);
     const unit = rel[2] === "h" ? 1 / 24 : rel[2] === "w" ? 7 : 1;
     const word = rel[2] === "h" ? "hour" : rel[2] === "w" ? "week" : "day";
-    return { since: daysAgo(n * unit), basis: `the last ${n} ${word}${n === 1 ? "" : "s"}` };
-  }
-  if (input === "last-session") {
-    const { at } = await ctx.store.read((r) => lastSession(r, ctx));
-    return at
-      ? { since: at, basis: `your last session (${at.slice(0, 16).replace("T", " ")} UTC)` }
-      : { since: daysAgo(DEFAULT_DAYS), basis: "the last 7 days (no earlier session found)" };
+    const since = new Date(now.getTime() - n * unit * DAY_MS).toISOString();
+    return { since, basis: `the last ${n} ${word}${n === 1 ? "" : "s"}` };
   }
   if (/^\d{4}-\d{2}-\d{2}(T[\d:.]+Z)?$/u.test(input)) {
     const ms = Date.parse(input.length === 10 ? `${input}T00:00:00.000Z` : input);
@@ -298,6 +291,24 @@ async function resolveSince(
       const since = new Date(ms).toISOString();
       return { since, basis: input.length === 10 ? input : since };
     }
+  }
+  return undefined;
+}
+
+async function resolveSince(
+  ctx: ServiceContext,
+  raw: string | undefined,
+): Promise<{ since: string; basis: string }> {
+  const now = ctx.clock.now().getTime();
+  const daysAgo = (days: number) => new Date(now - days * DAY_MS).toISOString();
+  const input = raw ?? `${DEFAULT_DAYS}d`;
+  const plain = parseSince(input, ctx.clock.now());
+  if (plain) return plain;
+  if (input === "last-session") {
+    const { at } = await ctx.store.read((r) => lastSession(r, ctx));
+    return at
+      ? { since: at, basis: `your last session (${at.slice(0, 16).replace("T", " ")} UTC)` }
+      : { since: daysAgo(DEFAULT_DAYS), basis: "the last 7 days (no earlier session found)" };
   }
   if (!/^mil_/iu.test(input)) {
     throw new SatiError("VALIDATION", `"${input}" is not a time sati understands.`, {

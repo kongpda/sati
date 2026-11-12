@@ -35,7 +35,8 @@ export default defineCommand({
     return execute(
       args.json,
       async ({ ctx }) => {
-        format = parseInput(Format, args.format);
+        // Wrapped, so a bad value is reported against `--format`, not a nameless "input".
+        format = parseInput(z.object({ format: Format }), { format: args.format }).format;
         return listChanges(ctx, {
           since: args.since,
           milestoneId: args.milestone,

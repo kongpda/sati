@@ -40,7 +40,7 @@ const root: CommandDef = defineCommand({
   meta: { name: CLI_NAME, version: VERSION, description: pkg.description },
   subCommands: {
     init: lazy(() => import("./commands/init.js")),
-    upgrade: lazy(() => import("./commands/upgrade.js")),
+    upgrade: lazy(() => import("./commands/init.js").then((m) => ({ default: m.upgradeCommand }))),
     brief: lazy(() => import("./commands/brief.js")),
     inbox: lazy(() => import("./commands/inbox.js")),
     task: lazy(() => import("./commands/task.js")),

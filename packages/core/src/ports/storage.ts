@@ -106,6 +106,11 @@ export interface StorageReader {
   search(projectId: string, query: string, opts?: SearchOptions): Promise<SearchHit[]>;
   listActivity(projectId: string, query?: ActivityQuery): Promise<Activity[]>;
   getActivity(id: string): Promise<Activity | undefined>;
+  /**
+   * This project's activity rows whose id ends with `suffix` (case-insensitive), for short handles
+   * such as `act_8f3k2a`. At most 100 rows: more than one is already ambiguous.
+   */
+  findActivityBySuffix(projectId: string, suffix: string): Promise<Activity[]>;
 }
 
 export interface StorageWriter extends StorageReader {

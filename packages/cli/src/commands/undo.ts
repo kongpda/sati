@@ -9,7 +9,11 @@ export default defineCommand({
     description: "Revert one activity row if the record has not changed since",
   },
   args: {
-    id: { type: "positional", required: true, description: "Activity id" },
+    id: {
+      type: "positional",
+      required: true,
+      description: "Activity id or short handle, as `activity` prints it",
+    },
     ...json,
   },
   run: ({ args }) =>

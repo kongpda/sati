@@ -28,3 +28,12 @@ export const taskId = {
     description: "Task id or short handle (default: the one task you hold)",
   },
 } as const;
+
+/** `none` clears a planning field from the command line. */
+export const NONE = "none";
+
+/** `--due`, `--date` and `--effort`: a value, or `none` to clear the field. Core checks the value. */
+export function orNone(value: string | undefined): string | null | undefined {
+  if (value === undefined) return undefined;
+  return value === NONE ? null : value;
+}

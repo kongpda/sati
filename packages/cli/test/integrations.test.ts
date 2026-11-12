@@ -341,6 +341,7 @@ describe("rules for agents without MCP", () => {
     }
     // The hook's brief must not say "Tools: MCP" to an agent that has none.
     expect(files[".claude/settings.json"]?.content).toContain('"sati brief --format=agent"');
+    expect(files[".claude/settings.json"]?.content).toContain('"sati nudge --tools=cli"');
   });
 
   // `sati upgrade` and a plain `rules sync` run without the flag. They must not undo the choice.

@@ -14,10 +14,9 @@ import { defaultBase, rangeChanges, rangeStart } from "../git.js";
 import { handle } from "../render.js";
 import { execute } from "../runtime.js";
 import { bold, green, red, term, wrap, yellow } from "../term.js";
+import { projectVerdict } from "./guard.js";
 
 const verdict = (v: string) => (v === "ok" ? green(v) : v === "blocked" ? bold(red(v)) : yellow(v));
-
-import { projectVerdict } from "./guard.js";
 
 const SNAPSHOT = ".sati/";
 

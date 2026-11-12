@@ -280,6 +280,19 @@ describe("sati CLI", () => {
     expect(run(dir, ["nudge"], { SATI_ACTOR: "someone-else" }).stdout).toBe("");
   });
 
+  // Why: an agent set up with `init --cli-only` has no MCP tools; a reminder that says "call
+  // task_complete" sends it to a tool it cannot call.
+  it("a cli-only nudge names shell commands, because the agent has no MCP tools", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = satiJson<Rec>(dir, "task", "create", "Wire hooks").data;
+    sati(dir, "task", "claim", t.id);
+    const handle = `tsk_${t.id.slice(-6).toLowerCase()}`;
+    const cli = sati(dir, "nudge", "--tools", "cli").stdout;
+    expect(cli).toContain(`sati task complete ${handle} --summary`);
+    expect(cli).not.toMatch(/task_complete|task_update/u);
+    expect(sati(dir, "nudge").stdout).toContain("call task_complete");
+  });
+
   it("refuses to mark done through update, pointing at `complete` (exit 8)", async () => {
     const dir = await tempRepo({ init: true });
     const t = satiJson<Rec>(dir, "task", "create", "x").data;

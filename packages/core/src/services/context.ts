@@ -42,9 +42,11 @@ const field = (path: readonly PropertyKey[]): string =>
  * received undefined`. The summary already says the input is invalid, so the label goes, and a
  * list of options reads as a list.
  */
-const plainIssue = (message: string): string =>
+export const plainIssue = (message: string): string =>
   message
     .replace(/^Invalid (?:option|input): /u, "")
+    .replace(/^Too small: expected number to be >=(\S+)$/u, "must be $1 or more")
+    .replace(/^Too big: expected number to be <=(\S+)$/u, "must be $1 or less")
     .replace(/^Too small: expected string to have >=1 characters$/u, "must not be empty")
     .replace(/^expected one of (.+)$/u, (_, options: string) => {
       return `expected one of ${options.replaceAll('"', "").split("|").join(", ")}`;

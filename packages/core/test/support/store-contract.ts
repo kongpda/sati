@@ -278,6 +278,34 @@ export function storeContract(name: string, open: () => Promise<StorageAdapter>)
       await store.close();
     });
 
+    // `undo` takes the short handle that `activity` prints; another project's row must not match.
+    it("finds this project's activity by id suffix, in any case", async () => {
+      const store = await seeded();
+      const row = (rowId: string, projectId: string) => ({
+        id: rowId,
+        projectId,
+        actorId: ACTOR,
+        verb: "update" as const,
+        entity: "task" as const,
+        entityId: "tsk_01JD0000000000000000000000",
+        diff: {},
+        branch: null,
+        at: NOW,
+      });
+      await store.write(async (w) => {
+        await w.appendActivity(row("act_01JD000000000000000000ABCDEF", PROJECT));
+        await w.appendActivity(row("act_01JD000000000000000001ABCDEF", "prj_01JDOTHER"));
+        await w.appendActivity(row("act_01JD000000000000000000ZZZZZZ", PROJECT));
+      });
+      const ids = (suffix: string) =>
+        store
+          .read((r) => r.findActivityBySuffix(PROJECT, suffix))
+          .then((rs) => rs.map((a) => a.id));
+      expect(await ids("abcdef")).toEqual(["act_01JD000000000000000000ABCDEF"]);
+      expect(await ids("NOPE")).toEqual([]);
+      await store.close();
+    });
+
     it("lists activity newest first, and caps a page at 500", async () => {
       const store = await seeded();
       await store.write(async (w) => {

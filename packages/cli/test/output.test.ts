@@ -385,6 +385,19 @@ describe("a command that would do the wrong thing says so", () => {
     expect(sati(dir, "activity", "--since", "2020-01-01").code).toBe(0);
   });
 
+  // Why: `changes --since 7d` worked and `activity --since 7d` failed, so the same words meant
+  // a time on one command and a usage error on the next.
+  it("activity --since accepts 7d as changes does", async () => {
+    const dir = await tempRepo({ init: true });
+    satiJson<Task>(dir, "task", "create", "One");
+    const week = satiJson<unknown[]>(dir, "activity", "--since", "7d");
+    expect(week.data.length).toBeGreaterThan(0);
+    expect(satiJson<unknown[]>(dir, "activity", "--since", "2099-01-01").data).toEqual([]);
+    const session = sati(dir, "activity", "--since", "last-session");
+    expect(session.code).toBe(2);
+    expect(session.stderr).toContain("changes");
+  });
+
   // "Claim it" is wrong advice when someone else holds the task: the claim would be refused too.
   it("tells a second actor that the task is held, not to claim it", async () => {
     const dir = await tempRepo({ init: true });
@@ -411,6 +424,21 @@ describe("a command that would do the wrong thing says so", () => {
     expect(undone.stdout.trim().split("\n")).toHaveLength(1);
     expect(undone.stdout).toContain("One");
   });
+
+  // Activity printed no row id, so a person could not undo from what they saw. The first column
+  // is now the short handle, and undo takes it.
+  it("undo takes the short handle that activity prints", async () => {
+    const dir = await tempRepo({ init: true });
+    const t = satiJson<Task>(dir, "task", "create", "Two").data;
+    expect(sati(dir, "task", "delete", t.id).code).toBe(0);
+    const first = sati(dir, "activity", "--limit", "1").stdout.trim().split(" ")[0] ?? "";
+    expect(first).toMatch(/^act_[0-9a-z]{6}$/u);
+    const undone = sati(dir, "undo", first);
+    expect(undone.code).toBe(0);
+    expect(undone.stdout).toContain("Two");
+    expect(sati(dir, "undo", "act_zzzzzz").code).toBe(3);
+    expect(sati(dir, "undo", "tsk_zzzzzz").code).toBe(3);
+  });
 });
 
 describe("validation errors", () => {
@@ -420,11 +448,35 @@ describe("validation errors", () => {
     const r = sati(dir, "task", "create", "x", "--priority", "hi");
     expect(r.code).toBe(5);
     expect(r.stderr).toContain(
-      "Invalid input: priority: expected one of low, medium, high, urgent",
+      "Invalid input: --priority: expected one of low, medium, high, urgent",
     );
     expect(sati(dir, "task", "list", "--status", "nope").stderr).toContain(
-      "status: expected one of backlog, todo,",
+      "--status: expected one of backlog, todo,",
     );
     expect(sati(dir, "task", "create", "").stderr).toContain("title: must not be empty");
+  });
+
+  // Why: the message named the core field (`maxTokens`, `targetDate`), which is not what the
+  // person typed, so they could not tell which flag to fix.
+  it("a bad --max-tokens names the flag, not maxTokens", async () => {
+    const dir = await tempRepo({ init: true });
+    const r = sati(dir, "recall", "x", "--max-tokens", "1");
+    expect(r.code).toBe(5);
+    expect(r.stderr).toContain("--max-tokens: must be 200 or more");
+    expect(r.stderr).not.toContain("maxTokens");
+    expect(sati(dir, "changes", "--format", "xx").stderr).toContain("--format: expected one of");
+    // --json keeps the core's field names for scripts.
+    const json = satiJson<unknown>(dir, "recall", "x", "--max-tokens", "1");
+    expect(JSON.stringify(json)).toContain("maxTokens");
+  });
+
+  // Why: a day that is not real failed two checks, and the same field was reported twice.
+  it("a bad milestone date is reported once", async () => {
+    const dir = await tempRepo({ init: true });
+    const m = sati(dir, "milestone", "create", "M", "--date", "2026-13-45").stderr;
+    expect(m).toContain("--date: not a real day");
+    expect(m.match(/--date/gu)).toHaveLength(1);
+    const due = sati(dir, "task", "list", "--due-by", "2026-1-1").stderr;
+    expect(due.match(/--due-by/gu)).toHaveLength(1);
   });
 });

@@ -8,7 +8,7 @@ import {
   updateMilestone,
 } from "@sati/core";
 import { defineCommand } from "citty";
-import { expectedVersion, id, json, pagination } from "../args.js";
+import { expectedVersion, id, json, orNone, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
 import { execute, int } from "../runtime.js";
 
@@ -62,7 +62,7 @@ const update = defineCommand({
     ...id("Milestone"),
     title: { type: "string", description: "New title" },
     goal: { type: "string", description: "What done looks like" },
-    date: { type: "string", description: "Target date YYYY-MM-DD" },
+    date: { type: "string", description: "Target date YYYY-MM-DD, or none to clear" },
     status: {
       type: "string",
       description: "planned | active | done (planned and done change through active)",
@@ -77,7 +77,7 @@ const update = defineCommand({
         updateMilestone(ctx, await resolveId(ctx, "milestone", args.id), {
           title: args.title,
           goal: args.goal,
-          targetDate: args.date,
+          targetDate: orNone(args.date),
           status: args.status,
           expectedVersion: int(args["expected-version"], "expected-version"),
         }),

@@ -1,10 +1,43 @@
 {
   "branch": "cli-bugs",
-  "claim": {
-    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
-    "heartbeatAt": "2026-11-12T16:57:20.739Z",
-    "leaseUntil": "2026-11-12T17:57:20.739Z",
-    "token": 3
+  "completion": {
+    "branch": "cli-bugs",
+    "commit": "56ca1cb143aec33d40ac50c74ee14470cad9bca9",
+    "completedAt": "2026-11-12T16:58:44.095Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "docs/progress.md",
+      "docs/review-2026-11-12.md",
+      "packages/cli/src/args.ts",
+      "packages/cli/src/commands/activity.ts",
+      "packages/cli/src/commands/changes.ts",
+      "packages/cli/src/commands/context.ts",
+      "packages/cli/src/commands/milestone.ts",
+      "packages/cli/src/commands/nudge.ts",
+      "packages/cli/src/commands/review.ts",
+      "packages/cli/src/commands/task.ts",
+      "packages/cli/src/commands/undo.ts",
+      "packages/cli/src/commands/upgrade.ts",
+      "packages/cli/src/index.ts",
+      "packages/cli/src/integrations.ts",
+      "packages/cli/src/runtime.ts",
+      "packages/cli/test/cli-flags.test.ts",
+      "packages/cli/test/cli.test.ts",
+      "packages/cli/test/integrations.test.ts",
+      "packages/cli/test/output.test.ts",
+      "packages/core/src/ports/storage.ts",
+      "packages/core/src/services/changes.ts",
+      "packages/core/src/services/context.ts",
+      "packages/core/src/services/undo.ts",
+      "packages/core/test/changes.test.ts",
+      "packages/core/test/support/memory-store.ts",
+      "packages/core/test/support/store-contract.ts",
+      "packages/store-sqlite/src/remote.ts",
+      "packages/store-sqlite/src/store.ts",
+      ".changeset/cli-bugs.md",
+      "packages/cli/src/validation.ts"
+    ],
+    "summary": "Review 7.2, 7.3, 7.4, 8.1, 8.3, 8.9: activity --since takes 7d/2w/day via shared core parseSince; undo takes the short handle activity now prints first (new port findActivityBySuffix, daemon protocol 4); CLI validation errors name flags; nudge --tools cli for cli-only hooks; milestone update --date none; tidy. Full gate green."
   },
   "createdAt": "2026-11-12T16:47:56.562Z",
   "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
@@ -14,13 +47,14 @@
   "stamps": {
     "*": "2026-11-12T16:47:56.565Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "branch": "2026-11-12T16:48:00.497Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "claim": "2026-11-12T16:57:20.740Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "status": "2026-11-12T16:48:00.497Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T16:58:44.097Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T16:58:44.097Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T16:58:44.097Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "worktree": "2026-11-12T16:48:00.497Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
   },
-  "status": "in_progress",
+  "status": "done",
   "title": "CLI bugs: activity --since 7d, undo handle, validation field names, nudge CLI text, milestone date clear, tidy (review 7.2-7.4, 8.1, 8.3, 8.9)",
-  "updatedAt": "2026-11-12T16:57:20.743Z",
-  "version": 3,
+  "updatedAt": "2026-11-12T16:58:44.100Z",
+  "version": 5,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

@@ -17,7 +17,7 @@ import {
  * what a call's arguments mean (a daemon that ignores a paging cursor answers the same page
  * forever), so each `begin` carries it and the daemon echoes it; a mismatch on either side fails.
  */
-export const PROTOCOL = 3;
+export const PROTOCOL = 4;
 
 interface Message {
   id: number;
@@ -128,6 +128,7 @@ const METHODS: ReadonlySet<string> = new Set([
   "search",
   "listActivity",
   "getActivity",
+  "findActivityBySuffix",
   "insert",
   "update",
   "appendActivity",

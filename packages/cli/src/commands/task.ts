@@ -22,7 +22,7 @@ import {
   updateTask,
 } from "@sati/core";
 import { defineCommand } from "citty";
-import { expectedVersion, id, json, pagination, taskId } from "../args.js";
+import { expectedVersion, id, json, NONE, orNone, pagination, taskId } from "../args.js";
 import { BOARD_STATUSES, type BoardColumn, boardText } from "../board.js";
 import {
   askFiles,
@@ -68,15 +68,6 @@ async function claimToken(
   if (flag !== undefined) return int(flag, "token");
   const t = await getRecord(ctx, "task", taskId);
   return t.claim?.actorId === ctx.actorId ? t.claim.token : undefined;
-}
-
-/** `none` clears a planning field from the command line. */
-const NONE = "none";
-
-/** `--due` and `--effort`: a value, or `none` to clear the field. Core checks the value. */
-function orNone(value: string | undefined): string | null | undefined {
-  if (value === undefined) return undefined;
-  return value === NONE ? null : value;
 }
 
 /**

@@ -13,6 +13,7 @@ import {
   featureList,
   formatChanges,
   listChanges,
+  parseSince,
   recordDecision,
   type ServiceContext,
   shortHandle,
@@ -479,5 +480,21 @@ describe("featureList", () => {
         "",
       ].join("\n"),
     );
+  });
+});
+
+// The relative and day forms are shared with `activity --since`, which has no records to read.
+describe("parseSince", () => {
+  const now = new Date("2026-11-12T12:00:00.000Z");
+  it("reads 24h, 7d and 2w back from now, and a real day", () => {
+    expect(parseSince("24h", now)?.since).toBe("2026-11-11T12:00:00.000Z");
+    expect(parseSince("7d", now)?.since).toBe("2026-11-05T12:00:00.000Z");
+    expect(parseSince("2w", now)?.basis).toBe("the last 2 weeks");
+    expect(parseSince("2026-11-01", now)?.since).toBe("2026-11-01T00:00:00.000Z");
+  });
+  it("leaves forms that need records, and days that do not exist, to the caller", () => {
+    expect(parseSince("last-session", now)).toBeUndefined();
+    expect(parseSince("mil_abc", now)).toBeUndefined();
+    expect(parseSince("2026-02-31", now)).toBeUndefined();
   });
 });

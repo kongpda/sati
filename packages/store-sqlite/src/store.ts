@@ -506,6 +506,20 @@ export class SqliteStore implements StorageAdapter {
         .get();
       return row ? (JSON.parse(row.data) as Activity) : undefined;
     },
+    findActivityBySuffix: async (projectId: string, suffix: string) => {
+      const rows = await this.orm
+        .select({ data: s.activity.data })
+        .from(s.activity)
+        .where(
+          and(
+            eq(s.activity.projectId, projectId),
+            sql`upper(${s.activity.id}) LIKE ${`%${suffix.toUpperCase().replace(/[%_\\]/g, "\\$&")}`} ESCAPE '\\'`,
+          ),
+        )
+        .limit(100)
+        .all();
+      return rows.map((r) => JSON.parse(r.data) as Activity);
+    },
   };
 
   private readonly writer: StorageWriter = {

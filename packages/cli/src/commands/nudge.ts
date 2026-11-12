@@ -1,6 +1,9 @@
 import {
+  BRIEF_TOOLS,
+  type BriefTools,
   CLI_NAME,
   readSettings,
+  SatiError,
   shortHandle,
   type Task,
   warningLines,
@@ -45,13 +48,41 @@ async function heldTasks(): Promise<{ held: Task[]; idle: string | null; warning
   return { held, idle, warnings };
 }
 
+/** What to do with a held task, in the tools the agent has. */
+function finishHint(tools: BriefTools, held: Task[]): string {
+  if (tools === "mcp") {
+    return (
+      "If the work is finished, call task_complete with a summary and the files touched; " +
+      "otherwise call task_update to set its status."
+    );
+  }
+  const id = held.length === 1 && held[0] ? shortHandle(held[0].id) : "<id>";
+  return (
+    `If the work is finished, run \`${CLI_NAME} task complete ${id} --summary "..." --files a,b\`; ` +
+    `otherwise run \`${CLI_NAME} task update ${id} --status <status>\`.`
+  );
+}
+
 export default defineCommand({
   meta: {
     name: "nudge",
     description:
       "Stop hook: remind the agent to complete or update the tasks it holds, and an idle agent to run next",
   },
-  run: async () => {
+  args: {
+    tools: {
+      type: "string",
+      description: "How the reminder says to finish: mcp (default) names tools, cli names commands",
+    },
+  },
+  run: async ({ args }) => {
+    const tools = (args.tools ?? "mcp") as BriefTools;
+    if (!BRIEF_TOOLS.includes(tools)) {
+      printError(new SatiError("USAGE", "--tools must be mcp or cli."), false);
+      // Exit 1, not 2: Claude Code treats exit 2 from a Stop hook as "block".
+      process.exitCode = 1;
+      return;
+    }
     const input = readHookInput();
     let held: Task[];
     let idle: string | null = null;
@@ -80,8 +111,7 @@ export default defineCommand({
     }
     const list = held.map((t) => `${shortHandle(t.id)} (${t.title})`).join(", ");
     const reason =
-      `You still hold ${list}. If the work is finished, call task_complete with a summary ` +
-      "and the files touched; otherwise call task_update with its status and a note." +
+      `You still hold ${list}. ${finishHint(tools, held)}` +
       (warnings.length ? ` Before you commit: ${warnings.join(" ")}` : "");
     // Block the stop once; `stop_hook_active` means we already did, so let it end.
     if (input.hook_event_name === "Stop" && !input.stop_hook_active) {

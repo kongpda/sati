@@ -1,6 +1,8 @@
 import {
   type Activity,
+  CLI_NAME,
   listAll,
+  parseSince,
   SatiError,
   type ServiceContext,
   shortHandle,
@@ -45,17 +47,34 @@ interface Args {
   json?: boolean | undefined;
 }
 
+/** `--since` as `changes` reads it (7d, 2w, a day), plus any time `Date.parse` reads. */
+function sinceTime(ctx: ServiceContext, raw: string): string {
+  const plain = parseSince(raw.trim(), ctx.clock.now());
+  if (plain) return plain.since;
+  if (raw === "last-session" || /^mil_/iu.test(raw)) {
+    throw new SatiError(
+      "USAGE",
+      `--since ${raw} works on \`${CLI_NAME} changes\`, not on activity.`,
+      {
+        hint: "Use 7d, 2w, a day (2026-01-31) or a UTC time (2026-01-31T09:00:00Z).",
+      },
+    );
+  }
+  // The store compares text: a time it cannot read would match nothing, or everything.
+  const at = Date.parse(raw);
+  if (Number.isNaN(at)) {
+    throw new SatiError("USAGE", `--since must be a time, got "${raw}".`, {
+      hint: "Use 7d, 2w, a day (2026-01-31) or a UTC time (2026-01-31T09:00:00Z).",
+    });
+  }
+  return new Date(at).toISOString();
+}
+
 /** The typed filters as the store takes them. Usage errors are thrown here, before any read. */
 async function query(ctx: ServiceContext, args: Args) {
   const entityId = await ref(ctx, "task", args.task);
   const actorId = await actorRef(ctx, args.actor);
-  // The store compares text: a time it cannot read would match nothing, or everything.
-  const at = args.since === undefined ? undefined : Date.parse(args.since);
-  if (at !== undefined && Number.isNaN(at)) {
-    throw new SatiError("USAGE", `--since must be a time, got "${args.since}".`, {
-      hint: "Use a day or a UTC time: 2026-01-31 or 2026-01-31T09:00:00Z.",
-    });
-  }
+  const since = args.since === undefined ? undefined : sinceTime(ctx, args.since);
   const limit = int(args.limit, "limit");
   if (limit !== undefined && limit < 1) {
     throw new SatiError("USAGE", `--limit must be 1 or more, got ${limit}.`);
@@ -63,7 +82,7 @@ async function query(ctx: ServiceContext, args: Args) {
   return {
     actorId,
     entityId,
-    since: at === undefined ? undefined : new Date(at).toISOString(),
+    since,
     limit,
   };
 }
@@ -80,19 +99,20 @@ function lines(rows: readonly Activity[], names: ReadonlyMap<string, string>): s
     return rows
       .map((row) => {
         const diff = Object.keys(row.diff).length ? ` ${JSON.stringify(row.diff)}` : "";
-        return `${row.at} ${row.actorId} ${row.verb} ${row.entity} ${row.entityId}${diff}`;
+        return `${shortHandle(row.id)} ${row.at} ${row.actorId} ${row.verb} ${row.entity} ${row.entityId}${diff}`;
       })
       .join("\n");
   }
   return table(
     rows.map((row) => [
+      dim(shortHandle(row.id)),
       dim(when(row.at)),
       truncate(names.get(row.actorId) ?? shortHandle(row.actorId), 28),
       bold(row.verb),
       handle(row.entityId),
       changed(row.diff),
     ]),
-    { flex: 4, paint: dim },
+    { flex: 5, paint: dim },
   );
 }
 
@@ -180,7 +200,7 @@ export default defineCommand({
   args: {
     actor: { type: "string", description: "Actor id or name" },
     task: { type: "string", description: "Task id or handle" },
-    since: { type: "string", description: "UTC time (ISO 8601), inclusive" },
+    since: { type: "string", description: "7d, 2w, a day, or a UTC time (inclusive)" },
     after: {
       type: "string",
       description: "Only rows written after this activity id, oldest first (a cursor)",

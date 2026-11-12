@@ -234,6 +234,12 @@ export class MemoryStore implements StorageAdapter {
           .map(clone);
       },
       getActivity: async (id) => clone(s.activity.find((a) => a.id === id)),
+      findActivityBySuffix: async (projectId, suffix) =>
+        s.activity
+          .filter((a) => a.projectId === projectId)
+          .filter((a) => a.id.toLowerCase().endsWith(suffix.toLowerCase()))
+          .slice(0, 100)
+          .map(clone),
       insert: async (e, rec) => {
         if (table(e).has(rec.id)) throw new SatiError("CONFLICT", `duplicate ${rec.id}`);
         uniqueKey(e, rec as AnyRecord);

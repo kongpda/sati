@@ -453,3 +453,28 @@ describe("small", () => {
     expect(roots).toContain(dir);
   });
 });
+
+describe("milestone flags", () => {
+  // Why: `task update --due none` clears a date, but `milestone update` passed "none" on as a day
+  // and failed, so a milestone's target date could be set but never removed.
+  it("milestone update --date none clears the target date", async () => {
+    const dir = await tempRepo({ init: true });
+    const m = satiJson<{ id: string }>(
+      dir,
+      "milestone",
+      "create",
+      "M",
+      "--date",
+      "2026-12-01",
+    ).data;
+    const cleared = satiJson<{ targetDate: string | null }>(
+      dir,
+      "milestone",
+      "update",
+      m.id,
+      "--date",
+      "none",
+    ).data;
+    expect(cleared.targetDate).toBeNull();
+  });
+});

@@ -42,11 +42,11 @@ const state = (e: ContextView) =>
       ? "STALE"
       : "fresh";
 
-/** Facts as a JSON array of strings, or one fact per line: commas are common inside facts. */
 /** A web link is kept as typed: resolved like a file name it would land inside the project. */
 const cardPath = (rt: Runtime, path: string) =>
   /^https?:\/\//iu.test(path.trim()) ? path : projectPath(rt, path);
 
+/** Facts as a JSON array of strings, or one fact per line: commas are common inside facts. */
 function facts(value: string | undefined): unknown {
   if (value === undefined) return undefined;
   if (value.trim().startsWith("[")) return parseJson(value, "--facts", "USAGE");

@@ -234,7 +234,7 @@ function claudeHooks(local: boolean, cliOnly = false): Record<string, HookGroup[
       { matcher: "Edit|MultiEdit|Write|NotebookEdit", hooks: run("guard --hook") },
       { matcher: "Bash", hooks: run("guard --hook") },
     ],
-    Stop: [{ hooks: run("nudge") }],
+    Stop: [{ hooks: run(cliOnly ? "nudge --tools=cli" : "nudge") }],
     Notification: [{ hooks: run("wait --hook") }],
     UserPromptSubmit: [{ hooks: run("wait --hook") }],
   };

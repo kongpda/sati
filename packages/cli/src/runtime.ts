@@ -62,6 +62,7 @@ import { runHint } from "./install.js";
 import { Cancelled, printSameAs } from "./prompt.js";
 import { loadFolder, markSeen } from "./shared-folder.js";
 import { cleanDeep, errorText, pager, pipeTo, polish, warn } from "./term.js";
+import { cliValidationMessage } from "./validation.js";
 
 export interface Runtime {
   ctx: ServiceContext;
@@ -741,7 +742,7 @@ export function printError(err: unknown, json: boolean): number {
     const error = { code: e.code, message: e.message, hint: e.hint ?? null, details: e.details };
     process.stdout.write(`${JSON.stringify({ error }, null, 2)}\n`);
   } else {
-    process.stderr.write(errorText(e.message, e.hint));
+    process.stderr.write(errorText(cliValidationMessage(e) ?? e.message, e.hint));
     if (!isSatiError(err) && err instanceof Error && err.stack && process.env.SATI_DEBUG) {
       process.stderr.write(`${err.stack}\n`);
     }

@@ -1,4 +1,5 @@
 import { isSatiError, SatiError } from "../domain/errors.js";
+import { parseHandle, parseId, shortHandle } from "../domain/ids.js";
 import type { StoredEntity, Task } from "../domain/schemas.js";
 import { FEATURE_TRANSITIONS, MILESTONE_TRANSITIONS, TASK_TRANSITIONS } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
@@ -76,17 +77,42 @@ async function checkRevert(
 }
 
 /**
+ * One activity row of this project, by full id or by the short handle `activity` prints.
+ * Two rows ending in the same handle is AMBIGUOUS, as for other records.
+ */
+async function findActivity(r: StorageReader, projectId: string, input: string) {
+  const ref = input.trim();
+  const notFound = () =>
+    new SatiError("NOT_FOUND", `No activity ${ref}.`, {
+      hint: `Run \`${CLI_NAME} activity\` to see ids.`,
+    });
+  if (parseId(ref)) {
+    const act = await r.getActivity(ref);
+    if (!act || act.projectId !== projectId) throw notFound();
+    return act;
+  }
+  // Anything that is not an activity handle names no activity row: NOT_FOUND, as before handles.
+  const handle = parseHandle(ref);
+  if (handle?.prefix !== "act") throw notFound();
+  const [only, ...rest] = await r.findActivityBySuffix(projectId, handle.suffix);
+  if (!only) throw notFound();
+  if (rest.length > 0) {
+    const matches = [only, ...rest];
+    throw new SatiError("AMBIGUOUS", `${ref} matches ${matches.length} activity rows.`, {
+      hint: "Use more characters of the id, or the full id.",
+      details: { candidates: matches.map((m) => ({ id: m.id, handle: shortHandle(m.id) })) },
+    });
+  }
+  return only;
+}
+
+/**
  * Reverts one activity row when every field it changed still has the value that row wrote.
  * The revert is its own activity row. A later edit is CONFLICT.
  */
 export async function undoActivity(ctx: ServiceContext, activityId: string) {
   return ctx.store.write(async (w) => {
-    const act = await w.getActivity(activityId);
-    if (!act || act.projectId !== ctx.projectId) {
-      throw new SatiError("NOT_FOUND", `No activity ${activityId}.`, {
-        hint: `Run \`${CLI_NAME} activity\` to see ids.`,
-      });
-    }
+    const act = await findActivity(w, ctx.projectId, activityId);
     if (!isEntity(act.entity)) {
       throw new SatiError("VALIDATION", `Activity ${activityId} is not a record change.`);
     }

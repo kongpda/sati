@@ -1,0 +1,33 @@
+{
+  "body": "`pnpm bench` runs `sati init` in temp folders without SATI_REGISTRY, so `sati projects` on the developer's machine fills with sati-bench-* entries. Point the registry at a temp file as the tests do.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "370b86ebe067849f18cfc7119ae8991fbbe10d56",
+    "completedAt": "2026-11-12T15:01:57.334Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/cli/bench/bench.ts"
+    ],
+    "summary": "The benchmark now points SATI_REGISTRY at a temp file, as the tests do, so its temp projects no longer land in the developer's ~/.sati/projects.json. Checked: `sati projects` listed 20 entries before and after a full bench run; gate green."
+  },
+  "createdAt": "2026-11-12T14:58:26.442Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "effort": "light",
+  "id": "tsk_01M7848T0ATD7XJBZCDQHXQVX7",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T14:58:26.442Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T14:59:40.589Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T15:01:57.334Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T15:01:57.334Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T15:01:57.334Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T14:59:40.589Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "done",
+  "title": "Benchmark registers its temporary projects in the machine's project list",
+  "updatedAt": "2026-11-12T15:01:57.335Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -52,6 +52,13 @@ const HOME_TASKS = 5_000;
 const FACTOR = Number(process.env.BENCH_FACTOR ?? "1");
 if (!(FACTOR >= 1)) throw new Error("BENCH_FACTOR must be a number, 1 or more.");
 
+// Every `sati init` below registers its temp project. Keep them out of the developer's real
+// ~/.sati/projects.json, as the tests do (test/setup-registry.ts).
+process.env.SATI_REGISTRY = join(
+  mkdtempSync(join(tmpdir(), "sati-bench-registry-")),
+  "projects.json",
+);
+
 const WORDS = (
   "auth token session cache index query schema migration router handler parser render " +
   "layout button form input upload download export import sync merge conflict lock lease " +

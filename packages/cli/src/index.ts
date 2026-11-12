@@ -43,7 +43,7 @@ const root: CommandDef = defineCommand({
     upgrade: lazy(() => import("./commands/init.js").then((m) => ({ default: m.upgradeCommand }))),
     brief: lazy(() => import("./commands/brief.js")),
     inbox: lazy(() => import("./commands/inbox.js")),
-    task: lazy(() => import("./commands/task.js")),
+    task: lazy(() => import("./commands/task/index.js")),
     feature: lazy(() => import("./commands/feature.js")),
     note: lazy(() => import("./commands/note.js")),
     comment: lazy(() => import("./commands/comment.js")),

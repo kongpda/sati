@@ -7,6 +7,7 @@ import {
   createTask,
   deleteRecord,
   getRecord,
+  type ListTasksInput,
   listTasks,
   releaseTask,
   resolveId,
@@ -22,6 +23,7 @@ import {
 } from "@sati/core";
 import { defineCommand } from "citty";
 import { expectedVersion, id, json, pagination, taskId } from "../args.js";
+import { askText, canAsk, missing, pickTask, sameAs } from "../prompt.js";
 import { record, row, rows } from "../render.js";
 import {
   bodyText,
@@ -34,7 +36,7 @@ import {
   refs,
   someChange,
 } from "../runtime.js";
-import { clean, when } from "../term.js";
+import { when } from "../term.js";
 
 const token = {
   token: {
@@ -229,13 +231,62 @@ const ls = defineCommand({
     ),
 });
 
+/** A task id that a person at a terminal may leave out, to choose from a list. */
+const pickedId = {
+  id: {
+    type: "positional",
+    required: false,
+    description: "Task id or short handle (at a terminal: leave it out to choose)",
+  },
+} as const;
+
+/** The flags a person typed after the command word, for the "Same as" line. */
+function typedAfter(word: string): string[] {
+  const argv = process.argv.slice(2);
+  return argv.slice(argv.indexOf(word) + 1);
+}
+
+const noTasks = () =>
+  new SatiError("NOT_FOUND", "No tasks.", {
+    hint: `Create one with \`${CLI_NAME} task create "title"\`.`,
+  });
+
+/**
+ * A missing id where nobody can be asked is the usage error it always was. Checked before the
+ * project is opened, so the answer is the same outside one.
+ */
+function needsId(args: { id?: string | undefined; json?: boolean | undefined }, command: string) {
+  if (args.id === undefined && !canAsk(args.json)) throw missing("id", command);
+}
+
+/** The task a command is about: the id typed, or the one a person picks from `filter`. */
+async function taskOrPick(
+  ctx: ServiceContext,
+  args: { id?: string | undefined; json?: boolean | undefined },
+  ask: { filter: ListTasksInput; message: string; empty: SatiError },
+): Promise<{ id: string; picked: boolean }> {
+  if (args.id !== undefined) return { id: await resolveId(ctx, "task", args.id), picked: false };
+  return { id: await pickTask(ctx, ask.filter, ask.message, { empty: ask.empty }), picked: true };
+}
+
 const show = defineCommand({
   meta: { name: "show", description: "Show one task" },
   args: { ...taskId, ...json },
   run: ({ args }) =>
     execute(
       args.json,
-      async ({ ctx }) => getRecord(ctx, "task", await heldTask(ctx, args.id)),
+      async ({ ctx }) => {
+        // With no id: the one task the caller holds; a person who holds none or several chooses.
+        const held = await heldTask(ctx, args.id).catch((err: unknown) => {
+          if (!canAsk(args.json)) throw err;
+          return undefined;
+        });
+        const taskId =
+          held ??
+          (await pickTask(ctx, {}, "Show which task?", { empty: noTasks(), cancelled: "" }));
+        if (held === undefined) sameAs("task", "show", shortHandle(taskId));
+        return getRecord(ctx, "task", taskId);
+      },
       record,
     ),
 });
@@ -243,7 +294,7 @@ const show = defineCommand({
 const update = defineCommand({
   meta: { name: "update", description: "Change a task (use `complete` to finish it)" },
   args: {
-    ...id("Task"),
+    ...pickedId,
     title: { type: "string", description: "New title" },
     status: {
       type: "string",
@@ -268,11 +319,14 @@ const update = defineCommand({
     },
     ...json,
   },
-  run: ({ args }) =>
-    execute(
+  run: ({ args }) => {
+    needsId(args, "task update");
+    return execute(
       args.json,
       async ({ ctx }) => {
-        const taskId = await resolveId(ctx, "task", args.id);
+        // A typed id is checked first, as before; a person who typed none picks after the flags
+        // are known to be good, so no choice is thrown away by a bad flag.
+        const typed = args.id === undefined ? undefined : await resolveId(ctx, "task", args.id);
         const input = someChange(
           {
             needsInput: args["needs-input"],
@@ -297,13 +351,18 @@ const update = defineCommand({
           },
           "task update",
         );
+        const taskId =
+          typed ?? (await pickTask(ctx, {}, "Update which task?", { empty: noTasks() }));
+        if (typed === undefined)
+          sameAs("task", "update", shortHandle(taskId), ...typedAfter("update"));
         return updateTask(ctx, taskId, {
           ...input,
           token: await claimToken(ctx, taskId, args.token),
         });
       },
       (t: Task) => `Updated ${row(t)}`,
-    ),
+    );
+  },
 });
 
 /** The checklist as numbered lines, so `--done 2` refers to what the person sees. */
@@ -373,10 +432,10 @@ const checklist = defineCommand({
 
 /**
  * `task claim --pick`: a person chooses from the ready tasks, in the order `task claim` would
- * take them. Null when they cancel.
+ * take them.
  */
-async function pickReady(ctx: ServiceContext, conflict: boolean): Promise<string | null> {
-  if (conflict || !process.stdin.isTTY || !process.stdout.isTTY) {
+async function pickReady(ctx: ServiceContext, conflict: boolean): Promise<string> {
+  if (conflict || !canAsk()) {
     throw new SatiError(
       "USAGE",
       "--pick asks a question, so it needs a terminal and no id or --json.",
@@ -385,22 +444,12 @@ async function pickReady(ctx: ServiceContext, conflict: boolean): Promise<string
       },
     );
   }
-  const ready = await listTasks(ctx, { ready: true, limit: 50 });
-  if (ready.length === 0) {
-    throw new SatiError("NOT_FOUND", "No ready task.", {
+  return pickTask(ctx, { ready: true }, "Claim which task?", {
+    empty: new SatiError("NOT_FOUND", "No ready task.", {
       hint: `Create one with \`${CLI_NAME} task create\`, or see \`${CLI_NAME} task list\`.`,
-    });
-  }
-  const clack = await import("@clack/prompts");
-  const chosen = await clack.select<string>({
-    message: "Claim which task?",
-    options: ready.map((t) => ({
-      value: t.id,
-      label: clean(t.title),
-      hint: `${shortHandle(t.id)} ${t.priority}`,
-    })),
+    }),
+    cancelled: "Nothing claimed.",
   });
-  return clack.isCancel(chosen) ? null : chosen;
 }
 
 const claim = defineCommand({
@@ -425,7 +474,17 @@ const claim = defineCommand({
         const leaseMinutes = int(args.lease, "lease");
         if (args.pick) {
           const chosen = await pickReady(ctx, args.id !== undefined || args.json === true);
-          return chosen === null ? null : claimTask(ctx, chosen, { leaseMinutes });
+          return claimTask(ctx, chosen, { leaseMinutes });
+        }
+        // A person with several ready tasks chooses; the top one is first, so Enter takes what
+        // `task claim` always took. Scripts and agents get the top one without a question.
+        if (!args.id && canAsk(args.json)) {
+          const ready = await listTasks(ctx, { ready: true, limit: 2 });
+          if (ready.length > 1) {
+            const chosen = await pickReady(ctx, false);
+            sameAs("task", "claim", shortHandle(chosen));
+            return claimTask(ctx, chosen, { leaseMinutes });
+          }
         }
         if (!args.id) {
           const next = await claimNext(ctx, { leaseMinutes });
@@ -433,12 +492,10 @@ const claim = defineCommand({
         }
         return claimTask(ctx, await resolveId(ctx, "task", args.id), { leaseMinutes });
       },
-      (t: (Task & { acceptance?: string[] }) | null) =>
-        t === null
-          ? "Nothing claimed."
-          : `Claimed ${row(t)} until ${when(t.claim?.leaseUntil)}, token ${t.claim?.token}${
-              t.acceptance?.length ? `\n${t.acceptance.map((a) => `- ${a}`).join("\n")}` : ""
-            }`,
+      (t: Task & { acceptance?: string[] }) =>
+        `Claimed ${row(t)} until ${when(t.claim?.leaseUntil)}, token ${t.claim?.token}${
+          t.acceptance?.length ? `\n${t.acceptance.map((a) => `- ${a}`).join("\n")}` : ""
+        }`,
     ),
 });
 
@@ -555,6 +612,77 @@ const complete = defineCommand({
     ),
 });
 
+const noneInReview = () =>
+  new SatiError("NOT_FOUND", "No task waits for approval.", {
+    hint: `See what waits for you with \`${CLI_NAME} inbox\`.`,
+  });
+const inReview = (message: string) => ({
+  filter: { status: ["review"] },
+  message,
+  empty: noneInReview(),
+});
+
+const approve = defineCommand({
+  meta: {
+    name: "approve",
+    description:
+      "Approve a task in review: it moves to done (people only). The same as `task update <id> --status done`",
+  },
+  args: {
+    ...pickedId,
+    commit: {
+      type: "string",
+      description: "The commit you looked at; refused if the branch moved since",
+    },
+    ...json,
+  },
+  run: ({ args }) => {
+    needsId(args, "task approve");
+    return execute(
+      args.json,
+      async ({ ctx }) => {
+        const task = await taskOrPick(ctx, args, inReview("Approve which task?"));
+        if (task.picked) sameAs("task", "approve", shortHandle(task.id));
+        return updateTask(ctx, task.id, { status: "done", approvedCommit: args.commit });
+      },
+      (t: Task) => `Approved ${row(t)}`,
+    );
+  },
+});
+
+const sendBack = defineCommand({
+  meta: {
+    name: "send-back",
+    description:
+      "Send a task in review back to todo with what to change (the next claimer sees it). The same as `task update <id> --status todo --reason`",
+  },
+  args: {
+    ...pickedId,
+    reason: { type: "string", description: "What to change" },
+    ...json,
+  },
+  run: ({ args }) => {
+    if (args.reason === undefined && !canAsk(args.json)) {
+      throw new SatiError("USAGE", "Missing --reason.", {
+        hint: `Run \`${CLI_NAME} task send-back <id> --reason "what to change"\`.`,
+      });
+    }
+    needsId(args, "task send-back");
+    return execute(
+      args.json,
+      async ({ ctx }) => {
+        const task = await taskOrPick(ctx, args, inReview("Send back which task?"));
+        const reason = args.reason ?? (await askText("What should change?"));
+        if (task.picked || args.reason === undefined) {
+          sameAs("task", "send-back", shortHandle(task.id), "--reason", reason);
+        }
+        return updateTask(ctx, task.id, { status: "todo", reason });
+      },
+      (t: Task) => `Sent back ${row(t)}`,
+    );
+  },
+});
+
 export default defineCommand({
   meta: { name: "task", description: "Create, list and finish tasks" },
   subCommands: {
@@ -564,6 +692,8 @@ export default defineCommand({
     update,
     checklist,
     claim,
+    approve,
+    "send-back": sendBack,
     release,
     "take-over": takeOver,
     complete,

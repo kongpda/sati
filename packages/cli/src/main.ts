@@ -218,6 +218,8 @@ export async function main(root: CommandDef, layout: HelpLayout): Promise<void> 
     process.env.NO_COLOR = "1";
     setTerm();
   }
+  // Read by `canAsk`: no command asks a question, even of a person at a terminal.
+  if (takeFlag(argv, "--no-input")) process.env.SATI_NO_INPUT = "1";
   if (!takeProject(argv)) {
     process.stderr.write(errorText("--project needs a slug.", `Run \`${CLI_NAME} projects\`.`));
     process.exitCode = 2;

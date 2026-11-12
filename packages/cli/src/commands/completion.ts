@@ -18,6 +18,7 @@ export interface Node {
 const GLOBAL_FLAGS = [
   { name: "project", description: "Run against another project" },
   { name: "no-color", description: "Plain text without colour" },
+  { name: "no-input", description: "Never ask a question" },
   { name: "help", description: "Show help" },
 ];
 

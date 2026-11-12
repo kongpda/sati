@@ -59,6 +59,7 @@ import { writeFileAtomic } from "@sati/sync";
 import { watchedSha256 } from "./file-hash.js";
 import { defaultBase, samePath } from "./git.js";
 import { runHint } from "./install.js";
+import { Cancelled, printSameAs } from "./prompt.js";
 import { loadFolder, markSeen } from "./shared-folder.js";
 import { cleanDeep, errorText, pager, pipeTo, polish } from "./term.js";
 
@@ -856,8 +857,12 @@ export async function output<T>(
     const text = json ? JSON.stringify(value, withoutStamps, 2) : polish(render(cleanDeep(value)));
     // An empty rendering prints nothing at all (a quiet git hook), not a blank line.
     if (text !== "" && !(await paged(text))) process.stdout.write(`${text}\n`);
+    printSameAs();
   } catch (err) {
-    process.exitCode = printError(err, json ?? false);
+    // Leaving a question is a choice, not a failure: nothing was written.
+    if (err instanceof Cancelled) {
+      if (err.message !== "") process.stdout.write(`${err.message}\n`);
+    } else process.exitCode = printError(err, json ?? false);
   } finally {
     await closeRuntime();
   }

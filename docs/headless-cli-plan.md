@@ -1,6 +1,6 @@
 # Plan: sati in the terminal, with no server
 
-- Status: approved by the owner (2026-11-12), with the recommended answers to the four open decisions. Phase H1 is done; H2 is next. Progress is tracked in the checklist under "Implementation notes" below.
+- Status: approved by the owner (2026-11-12), with the recommended answers to the four open decisions. Phases H1 and H2 are done; H3 is next. Progress is tracked in the checklist under "Implementation notes" below.
 - Asked by the owner: use sati without its server, headless, with an interactive CLI; can an agent talk to it with or without a server; does MCP need a server.
 
 ## Short answers
@@ -143,12 +143,12 @@ Gate: the board's My work page shows the same items as before for the e2e fixtur
 
 ### Phase H2: review verbs and the picker (about 1 day)
 
-- [ ] `pickTask(ctx, filter)` replaces the code behind `task claim --pick`
-- [ ] `task approve`, `task send-back`
-- [ ] Picker for `task show`, `task update`, `task claim` when the id is missing and several tasks qualify
-- [ ] The dimmed "same as" line after each interactive action
-- [ ] `--no-input` and `SATI_NO_INPUT`
-- [ ] Pseudo-terminal tests with `packages/cli/test/support/pty-run.py`: pick and approve; cancel writes nothing; an agent variable set means no prompt and the old usage error
+- [x] `pickTask(ctx, filter)` replaces the code behind `task claim --pick`
+- [x] `task approve`, `task send-back`
+- [x] Picker for `task show`, `task update`, `task claim` when the id is missing and several tasks qualify
+- [x] The dimmed "same as" line after each interactive action
+- [x] `--no-input` and `SATI_NO_INPUT`
+- [x] Pseudo-terminal tests with `packages/cli/test/support/pty-run.py`: pick and approve; cancel writes nothing; an agent variable set means no prompt and the old usage error
 
 Gate: every existing CLI test passes unchanged. That proves scripts and agents see no difference.
 
@@ -242,13 +242,13 @@ Written 2026-11-12 after reading the code at `8a9a8eb`, so the work can be picke
 4. `task show`, `task update`, `task claim` with no id: the picker when `canAsk`, else the usage error printed today, word for word.
 5. `task claim --pick` keeps working and calls `pickTask`.
 
-- [ ] `prompt.ts` with `canAsk`, `pickTask`, `sameAs`
-- [ ] `--no-input`, `SATI_NO_INPUT`
-- [ ] `task approve`, `task send-back`
-- [ ] Picker for `task show`, `task update`, `task claim`
-- [ ] Pseudo-terminal tests: pick and approve; cancel writes nothing; `CLAUDECODE=1` gives the old usage error
-- [ ] A test that runs each changed command with stdin closed and a 5 s limit
-- [ ] Gate (every existing CLI test unchanged), Playwright, changeset, progress entry
+- [x] `prompt.ts` with `canAsk`, `pickTask`, `sameAs`
+- [x] `--no-input`, `SATI_NO_INPUT`
+- [x] `task approve`, `task send-back`
+- [x] Picker for `task show`, `task update`, `task claim`
+- [x] Pseudo-terminal tests: pick and approve; cancel writes nothing; `CLAUDECODE=1` gives the old usage error
+- [x] A test that runs each changed command with stdin closed and a 5 s limit
+- [x] Gate (every existing CLI test unchanged), Playwright, changeset, progress entry
 
 ### Phase H3 in detail
 

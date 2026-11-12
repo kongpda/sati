@@ -233,6 +233,10 @@ If you are an agent working in a repo that uses sati:
 - **Help anywhere.** `sati help task claim`, `sati task claim --help`, or a group alone (`sati task`).
 - **The task you hold needs no id.** `sati task show`, `sati task complete --summary … --files …`,
   `sati task release` and `sati handoff` act on it. With no task, or more than one, they ask which.
+- **A person at a terminal may leave the id out.** `sati task approve`, `task send-back`,
+  `task update`, `task show` and `task claim` then show a list to choose from, and print the
+  command that does the same. Scripts, pipes, agents and `--json` are never asked: they get the
+  usage error. `--no-input` or `SATI_NO_INPUT=1` turns the questions off for a person too.
 - **After you update sati**, run `sati upgrade` in each project.
 - **Never** edit `.sati/` by hand or commit with `--no-verify`.
 
@@ -251,6 +255,8 @@ sati decision record "Drop the v1 API" --decision "…"
 sati recall "webhooks"         # best cards, notes, decisions and open tasks on a topic
 sati changes --since 7d        # what changed, as a digest or changelog
 sati inbox                     # what waits for you: questions, mentions, approvals, assigned, due
+sati task approve              # approve a task in review (a person only); with no id, choose from a list
+sati task send-back <id> --reason "Add a test"   # return it with what to change
 sati undo <activity-id>        # revert one change if nothing changed since
 sati -v                        # sati 0.1.0 (48a630b 2026-11-11): version, commit, commit date
 sati doctor                    # node, system, install and store paths; then leases, locks, integrity, hooks, a stale build

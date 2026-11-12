@@ -16,8 +16,8 @@ scripts and agents do not break. This table maps one to the other; the board's w
 | Take over | `sati task take-over` | A person takes a task from whoever has it. Logged. |
 | Release | `sati task release` | The holder (or a person, with `--force`) gives the task back. |
 | Free up tasks whose time ran out | `POST /api/claims/release-expired` (board only) | Hands every expired claim back; agents and `task claim` also take expired tasks on their own. |
-| Approve | `sati task update <id> --status done` | A person accepts work waiting for approval. |
-| Send back | `--status todo --reason "…"` | Returns the task with a note the next person or agent sees. |
+| Approve | `sati task approve <id>` (or `task update <id> --status done`) | A person accepts work waiting for approval. |
+| Send back | `sati task send-back <id> --reason "…"` (or `task update <id> --status todo --reason "…"`) | Returns the task with a note the next person or agent sees. |
 | Reserved for editing | exclusive lock | Others wait until it is released. |
 | Sharing for editing | shared lock | Several can edit; it is still shown. |
 | Card | context entry (`sati card`, MCP `context_get` / `context_put`) | What someone learned about a file or folder: a summary, facts to quote, tags, and the version read. sati never reads what is in the file; it only takes the fingerprint (hash) of a file a person approved. |

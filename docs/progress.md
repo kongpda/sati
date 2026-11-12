@@ -2184,3 +2184,17 @@ Task `tsk_fevjbr`.
 - The service resolves an actor handle before it opens its read: a store does not nest reads.
 - The MCP tool returns short handles, as `task_list` does.
 
+## 2026-11-12 — 10b (H2): review verbs and the picker
+
+- `canAsk` in `packages/cli/src/prompt.ts` is the one test for "may a question be asked": stdin and stdout are terminals, no agent variable, not `TERM=dumb`, no `--json`, no `SATI_NO_INPUT`. It does not use `term().rich`, because `FORCE_COLOR` forces that layout into a pipe.
+- `--no-input` is taken out of the arguments in `main.ts`, as `--no-color` is, and sets `SATI_NO_INPUT`. It works before or after the command words.
+- Leaving a question (Ctrl-C, Esc) throws `Cancelled`; `output` prints its message and exits 0, as `task claim --pick` did. Every question is asked before the write, so nothing is stored.
+- The "Same as" line goes to stderr after the result, so stdout stays the result. It is printed only when the person answered a question.
+- A list of up to 10 tasks is a plain select; a longer one filters as the person types, by title, handle, status or priority. At most 200 rows.
+- `task claim` with no id asks a person only when two or more tasks are ready. The top one is first, so Enter does what it did. Scripts and agents get the top task with no question.
+- `task update` took a required `<id>`; it is optional now so the picker can run. Without a terminal the error is the one printed before, word for word. A typed id is still checked before the flags; a picked one after, so a bad flag does not waste a choice.
+- `task show` with no id still means the task the caller holds. The picker shows only when that fails (none or several held) and a person can be asked.
+- `task send-back` without `--reason` is a usage error where nobody can be asked, and a text question otherwise. That text prompt is the first piece of H3's `ask`.
+- `task claim --pick` now also refuses an agent that runs it in a pseudo-terminal. It used to open the list there.
+- `sati inbox` names the new verbs in its hint line. The core's refusal hint still names `task update --status done`, which works as before.
+

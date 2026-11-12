@@ -95,7 +95,9 @@ function sections(out: InboxOutput): string {
     ),
   ];
   const hints = [
-    out.approval.length ? `Approve: ${CLI_NAME} task update <id> --status done` : "",
+    out.approval.length
+      ? `Approve: ${CLI_NAME} task approve <id>   Send back: ${CLI_NAME} task send-back <id> --reason "…"`
+      : "",
     out.mentions.length ? `Reply: ${CLI_NAME} comment add <id> "…"` : "",
     out.needsAnswer.some((t) => t.asks) ? `Answered: ${CLI_NAME} wait --clear --task <id>` : "",
   ].filter(Boolean);

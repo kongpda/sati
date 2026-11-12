@@ -377,7 +377,7 @@ export function phoneColumn(tasks: readonly { status: string }[]): string {
 }
 
 /** Today's calendar day in the reader's time zone, as YYYY-MM-DD. */
-export function today(now = new Date()): string {
+function today(now = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }

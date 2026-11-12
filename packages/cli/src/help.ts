@@ -25,6 +25,7 @@ export interface HelpLayout {
 const GLOBAL: [string, string][] = [
   ["--project <slug>", "Run against another project (a slug from `projects`, or a folder path)"],
   ["--no-color", "Plain text without colour (also NO_COLOR=1)"],
+  ["--no-input", "Never ask a question; fail with a usage error (also SATI_NO_INPUT=1)"],
   ["-h, --help", "Show this help"],
 ];
 

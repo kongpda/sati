@@ -1005,11 +1005,11 @@ Added 2026-11-12 at the owner's request. sati already needs no server: every com
 
 **10b (H2) — Review verbs and the picker**
 
-- [ ] `pickTask` replaces the code behind `task claim --pick`
-- [ ] `sati task approve`, `sati task send-back`
-- [ ] A picker for `task show`, `task update`, `task claim` when the id is missing and a person is at a terminal
-- [ ] The equivalent command printed after each interactive action
-- [ ] `--no-input` and `SATI_NO_INPUT`
+- [x] `pickTask` replaces the code behind `task claim --pick`
+- [x] `sati task approve`, `sati task send-back`
+- [x] A picker for `task show`, `task update`, `task claim` when the id is missing and a person is at a terminal (`task claim` asks only when several tasks are ready; Enter takes the top one)
+- [x] The equivalent command printed after each interactive action
+- [x] `--no-input` and `SATI_NO_INPUT`
 
 **10c (H3) — Prompts for missing arguments**
 

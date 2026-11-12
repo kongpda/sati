@@ -1,0 +1,48 @@
+{
+  "body": "Phase H2 of docs/headless-cli-plan.md: packages/cli/src/prompt.ts (canAsk, pickTask, sameAs), --no-input and SATI_NO_INPUT, task approve, task send-back, a picker for task show/update/claim when the id is missing and a person is at a terminal.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "ac10737264e9b109de53c21c972bd9c4742b14c3",
+    "completedAt": "2026-11-12T05:22:06.207Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/cli/src/prompt.ts",
+      "packages/cli/src/commands/task.ts",
+      "packages/cli/src/commands/inbox.ts",
+      "packages/cli/src/commands/completion.ts",
+      "packages/cli/src/main.ts",
+      "packages/cli/src/help.ts",
+      "packages/cli/src/runtime.ts",
+      "packages/cli/src/term.ts",
+      "packages/cli/test/prompt.test.ts",
+      "packages/ui/src/api.ts",
+      "PLAN.md",
+      "README.md",
+      "docs/progress.md",
+      "docs/headless-cli-plan.md",
+      "docs/guide/glossary.md",
+      ".changeset/review-verbs-picker.md"
+    ],
+    "releaseNote": "`sati task approve` and `sati task send-back`; at a terminal, leave the task id out to choose from a list. `--no-input` turns questions off.",
+    "summary": "H2 of docs/headless-cli-plan.md. New packages/cli/src/prompt.ts: canAsk (person at a terminal, no agent variable, no --json, no SATI_NO_INPUT), pickTask (select up to 10 rows, type-to-filter above, 200 max), askText, Cancelled, sameAs. New `sati task approve [id] [--commit]` and `sati task send-back [id] --reason`, both calling updateTask. `task update`, `task show`, `task claim` offer a list when the id is missing and a person can be asked; scripts, pipes, agents and --json get the same usage errors as before, checked before the project is opened. Global `--no-input` / SATI_NO_INPUT. Gate: lint, typecheck, tests (CLI 255 pass, 3 skipped as before; 10 new in prompt.test.ts incl. stdin-closed 5 s limit and pty cases), 97 Playwright pass. Also unexported the board's unused `today` left by H1."
+  },
+  "createdAt": "2026-11-12T05:12:50.811Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M772RHVV6H3DNECM8QCPT4KR",
+  "priority": "high",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T05:12:50.811Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T05:12:55.532Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T05:22:06.208Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T05:22:06.208Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T05:22:06.208Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T05:12:55.532Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "review",
+  "title": "H2: review verbs, task picker, --no-input",
+  "updatedAt": "2026-11-12T05:22:06.208Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

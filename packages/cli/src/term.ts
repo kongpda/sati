@@ -300,7 +300,7 @@ export function markdown(text: string): string {
 const code = (all: string, inner: string): string => (term().color ? cyan(inner) : all);
 
 const DONE =
-  /^(Created|Updated|Deleted|Restored|Claimed|Released|Completed|Recorded|Saved|Locked|Commented on|Took over|Imported|Exported|Synced|Initialized|Upgraded|Approved|Undid|Handoff|Read|Cleared|Forgot|Wrote|Sharing is on)\b/u;
+  /^(Created|Updated|Deleted|Restored|Claimed|Released|Completed|Recorded|Saved|Locked|Commented on|Took over|Imported|Exported|Synced|Initialized|Upgraded|Approved|Undid|Handoff|Read|Cleared|Forgot|Wrote|Sent back|Sharing is on)\b/u;
 const LABEL = /^(\s*)(warning|blocked|hint|Note|Next):/u;
 /**
  * A rich list whose first line starts with stored text (an author's name) begins with this, so a

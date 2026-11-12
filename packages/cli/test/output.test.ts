@@ -275,6 +275,40 @@ describe("usage errors teach the command", () => {
     expect(json.data.error.code).toBe("USAGE");
   });
 
+  // WP16 / 16.5: the root help is how a person finds a command. A command that falls in no
+  // group lands under "Other", and two commands with one description read as one job twice.
+  it("every visible command is in exactly one help group, and no two visible commands share a description", async () => {
+    const dir = await tempRepo();
+    const lines = run(dir, ["--help"], { COLUMNS: "100" }).stdout.split("\n");
+    // Group heading -> its rows, in the order printed (a repeated name stays repeated).
+    const sections = new Map<string, { name: string; text: string }[]>();
+    let rows: { name: string; text: string }[] | undefined;
+    for (const line of lines) {
+      if (/^[A-Z][A-Z ]+$/u.test(line)) {
+        rows = ["USAGE", "GLOBAL OPTIONS"].includes(line) ? undefined : [];
+        if (rows) sections.set(line, rows);
+      } else if (rows && /^ {2}\S/u.test(line)) {
+        // A label, two or more spaces, then the first sentence; a long one wraps below it.
+        const [label = "", text = ""] = line.trim().split(/ {2,}/u, 2);
+        rows.push({ name: label.split(",")[0] ?? label, text });
+      } else if (rows && rows.length > 0 && /^ {4}\S/u.test(line)) {
+        const row = rows[rows.length - 1];
+        if (row) row.text = `${row.text} ${line.trim()}`;
+      }
+    }
+    const all = [...sections.values()].flat();
+    expect(all.length).toBeGreaterThan(20);
+    // The layout names the groups; a command it does not name is listed under OTHER.
+    const other = sections.get("OTHER")?.map((r) => r.name) ?? [];
+    expect(other, "commands in no help group").toEqual([]);
+    const names = new Map<string, number>();
+    for (const { name } of all) names.set(name, (names.get(name) ?? 0) + 1);
+    for (const [name, count] of names) expect(count, `${name} is listed once`).toBe(1);
+    const texts = new Map<string, string[]>();
+    for (const { name, text } of all) texts.set(text, [...(texts.get(text) ?? []), name]);
+    for (const [text, who] of texts) expect(who, `commands described as "${text}"`).toHaveLength(1);
+  });
+
   // The root list is scanned; exit codes and flag lists belong in the command's own help.
   it("lists commands by their first sentence and keeps the rest for the command's help", async () => {
     const dir = await tempRepo();

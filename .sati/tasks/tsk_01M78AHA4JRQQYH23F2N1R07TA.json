@@ -1,0 +1,26 @@
+{
+  "branch": "cli-bugs",
+  "claim": {
+    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "heartbeatAt": "2026-11-12T16:57:20.739Z",
+    "leaseUntil": "2026-11-12T17:57:20.739Z",
+    "token": 3
+  },
+  "createdAt": "2026-11-12T16:47:56.562Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M78AHA4JRQQYH23F2N1R07TA",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T16:47:56.565Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T16:48:00.497Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T16:57:20.740Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T16:48:00.497Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T16:48:00.497Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "in_progress",
+  "title": "CLI bugs: activity --since 7d, undo handle, validation field names, nudge CLI text, milestone date clear, tidy (review 7.2-7.4, 8.1, 8.3, 8.9)",
+  "updatedAt": "2026-11-12T16:57:20.743Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -1,0 +1,38 @@
+{
+  "body": "docs/review-2026-11-12.md item 1.1 (D1). app.tsx bulk bar, moveMany, moves.ts allInReview predicate.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "56ca1cb143aec33d40ac50c74ee14470cad9bca9",
+    "completedAt": "2026-11-12T16:57:53.687Z",
+    "completedBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "filesTouched": [
+      "packages/ui/src/app.tsx",
+      "packages/ui/src/moves.ts",
+      "packages/ui/test/moves.test.ts",
+      "e2e/ui/refusals.spec.ts",
+      "docs/review-2026-11-12.md",
+      ".changeset/board-bulk-approve.md"
+    ],
+    "releaseNote": "board: approve or send back many tasks at once",
+    "summary": "Board bulk bar shows Approve and Send back when every selected task is completed review work (allInReview in moves.ts). Approve confirms the count, is aria-disabled with the person-only message on an agent-run board; Send back opens the reason dialog once. moveMany already sent expectedVersion and continued after refusals."
+  },
+  "createdAt": "2026-11-12T16:45:56.047Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "id": "tsk_01M78ADMEFEHA3GFZZWN3VVZQR",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T16:45:56.047Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "branch": "2026-11-12T16:46:45.210Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "claim": "2026-11-12T16:57:53.688Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "completion": "2026-11-12T16:57:53.688Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "status": "2026-11-12T16:57:53.688Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "worktree": "2026-11-12T16:46:45.210Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "status": "done",
+  "title": "WP1 1.1: bulk Approve and Send back on the board",
+  "updatedAt": "2026-11-12T16:57:53.689Z",
+  "version": 5,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -60,6 +60,67 @@ test.describe("a board run by a person", () => {
     return id;
   }
 
+  test("bulk approve moves every selected review task to Done and reports the ones that were refused", async ({
+    page,
+  }) => {
+    const problems = await watch(page);
+    const titles = ["Bulk A", "Bulk B", "Bulk C"];
+    const ids: string[] = [];
+    for (const title of titles) ids.push(await inReview(title));
+    await page.goto(ui.signIn);
+    for (const title of titles) {
+      await page
+        .locator(".card", { has: cardOf(page, title) })
+        .getByRole("button", { name: "select" })
+        .click();
+    }
+    await expect(page.getByText("3 selected")).toBeVisible();
+    // The last task is refused by the server; the other two still move.
+    page.once("dialog", (d) => void d.accept());
+    await page.route(`**/api/tasks/${ids[2]}`, (route) =>
+      route.request().method() === "PATCH"
+        ? route.fulfill({
+            status: 409,
+            contentType: "application/json",
+            body: JSON.stringify({ error: { code: "CONFLICT", message: "The store is busy." } }),
+          })
+        : route.fallback(),
+    );
+    await page.getByRole("button", { name: "Approve", exact: true }).click();
+    await expect(page.getByRole("alert").locator(".toast")).toContainText(
+      "1 of 3 tasks did not move.",
+    );
+    const states = async () =>
+      (await ui.api<{ tasks: { id: string; status: string }[] }>("GET", "/api/snapshot")).tasks
+        .filter((t) => ids.includes(t.id))
+        .map((t) => t.status);
+    await expect.poll(states).toEqual(["done", "done", "review"]);
+    expect(await problems()).toEqual([]);
+  });
+
+  test("Send back on a selection asks for one reason and applies it to every task", async ({
+    page,
+  }) => {
+    const ids = [await inReview("Back A"), await inReview("Back B")];
+    await page.goto(ui.signIn);
+    for (const title of ["Back A", "Back B"]) {
+      await page
+        .locator(".card", { has: cardOf(page, title) })
+        .getByRole("button", { name: "select" })
+        .click();
+    }
+    await page.getByRole("button", { name: "Send back", exact: true }).click();
+    await page.getByRole("dialog").getByRole("textbox").fill("Add the press list.");
+    await page.getByRole("dialog").getByRole("button", { name: "Send back", exact: true }).click();
+    await expect
+      .poll(async () =>
+        (await ui.api<{ tasks: { id: string; status: string }[] }>("GET", "/api/snapshot")).tasks
+          .filter((t) => ids.includes(t.id))
+          .map((t) => t.status),
+      )
+      .toEqual(["todo", "todo"]);
+  });
+
   test("a card dropped where it cannot go stays, sends nothing and says why", async ({ page }) => {
     const problems = await watch(page);
     await create("Paint the sign");
@@ -230,6 +291,29 @@ test.describe("a board started from an agent's terminal", () => {
   });
   test.afterAll(async () => {
     await ui?.stop();
+  });
+
+  test("a board that does not act as a person cannot bulk approve", async ({ page }) => {
+    const ids: string[] = [];
+    for (const title of ["Agent bulk A", "Agent bulk B"]) {
+      const t = await ui.api<{ id: string }>("POST", "/api/tasks", { title });
+      ui.sati("task", "claim", t.id);
+      ui.sati("task", "complete", t.id, "--summary", "Done.", "--files", "notes/a.md");
+      ids.push(t.id);
+    }
+    await page.goto(ui.signIn);
+    const sent = patches(page);
+    for (const title of ["Agent bulk A", "Agent bulk B"]) {
+      await page
+        .locator(".card", { has: cardOf(page, title) })
+        .getByRole("button", { name: "select" })
+        .click();
+    }
+    const approve = page.getByRole("button", { name: "Approve", exact: true });
+    await expect(approve).toHaveAttribute("aria-disabled", "true");
+    await approve.click({ force: true });
+    await expect(page.getByRole("alert").locator(".toast")).toContainText(/This board runs as/u);
+    expect(sent).toEqual([]);
   });
 
   test("says it runs as an agent and does not offer what only a person may do", async ({

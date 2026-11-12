@@ -13,7 +13,14 @@ import { Board, boardOrder } from "./board.js";
 import { Changes } from "./changes.js";
 import { NewTask, SendBack } from "./forms.js";
 import { Memory } from "./memory.js";
-import { heldByOther, moveRefusal, moveTargets, needsReason, personOnly } from "./moves.js";
+import {
+  allInReview,
+  heldByOther,
+  moveRefusal,
+  moveTargets,
+  needsReason,
+  personOnly,
+} from "./moves.js";
 import { inboxCount, MyWork } from "./my-work.js";
 import { Activity, Agents, Decisions, Features, Notes, Roadmap, TaskSheet } from "./pages.js";
 import { holderName } from "./people.js";
@@ -537,6 +544,14 @@ export function App() {
     }
     return targets;
   }, [query.data, selected]);
+  // Approve and Send back for a selection of finished work; the person-only rule is core's, and
+  // the board says it before the click, as the single card does.
+  const reviewing = useMemo(
+    () => !!query.data && allInReview(query.data.tasks.filter((t) => selected.has(t.id))),
+    [query.data, selected],
+  );
+  const approveRefusal =
+    query.data && query.data.project?.review !== "none" ? personOnly(query.data) : null;
   // A general project shows no features or file reservations anywhere, even ones left over
   // from when it was a code project; they stay in the store and come back if it switches back.
   // Memoised: a new object each render would re-render the memoised board on every keystroke.
@@ -789,6 +804,30 @@ export function App() {
             {selected.size > 0 ? (
               <div className="bulk">
                 <span>{selected.size} selected</span>
+                {reviewing ? (
+                  <>
+                    <button
+                      type="button"
+                      className="primary"
+                      aria-disabled={approveRefusal !== null}
+                      title={approveRefusal ?? undefined}
+                      onClick={() => {
+                        if (approveRefusal) {
+                          setToastState({ message: approveRefusal, error: true });
+                          return;
+                        }
+                        if (window.confirm(`Approve ${selected.size} tasks?`)) {
+                          void moveMany([...selected], "done", true);
+                        }
+                      }}
+                    >
+                      Approve
+                    </button>
+                    <button type="button" onClick={() => requestMove([...selected], "todo", true)}>
+                      Send back
+                    </button>
+                  </>
+                ) : null}
                 <select
                   aria-label="Move selected"
                   defaultValue=""

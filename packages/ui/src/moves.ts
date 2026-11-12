@@ -65,6 +65,10 @@ export function moveRefusal(data: Snapshot, task: Task, to: string): string | nu
   return `A task in ${statusWord(from)} cannot go to ${statusWord(to)}. It can go to ${list(next.map(statusWord))}.`;
 }
 
+/** Every task is finished work waiting in review: the only selection Approve and Send back fit. */
+export const allInReview = (tasks: readonly Task[]): boolean =>
+  tasks.length > 0 && tasks.every((t) => t.status === "review" && t.completion !== null);
+
 /** The statuses the task can move to from here. */
 export const moveTargets = (data: Snapshot, task: Task): string[] =>
   (TASK_NEXT[task.status] ?? []).filter((to) => moveRefusal(data, task, to) === null);

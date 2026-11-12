@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Snapshot, Task } from "../src/api.js";
 import {
+  allInReview,
   answerRefusal,
   canTakeOver,
   claimRefusal,
@@ -111,5 +112,17 @@ describe("send back and take over", () => {
     expect(canTakeOver(task("todo"))).toBe(true);
     expect(canTakeOver(task("blocked"))).toBe(false);
     expect(canTakeOver(task("review"))).toBe(false);
+  });
+});
+
+// Review 1.1: Approve and Send back are offered for a selection only when every task in it is
+// finished work waiting in review. One task that is not would make the whole action refuse.
+describe("allInReview", () => {
+  it("only completed review tasks can be approved together", () => {
+    const done = task("review", { completion: finished });
+    expect(allInReview([done, { ...done, id: "t2" }])).toBe(true);
+    expect(allInReview([])).toBe(false);
+    expect(allInReview([done, task("todo")])).toBe(false);
+    expect(allInReview([done, task("review")])).toBe(false);
   });
 });

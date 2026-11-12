@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #e4eee8;
+  --ink: #14211b;
+  --muted: #4d6256;
+  --panel: #f6faf7;
+  --line: #c5d4cb;
+  /* Borders of controls (fields, buttons): at least 3:1 against the panel and the page. */
+  --line-strong: #738a7d;
+  --moss: #1b6a44;
+  --clay: #8a3b2c;
+  /* Clay for the toast, which is drawn in the inverse scheme (ink background). */
+  --clay-on-ink: #e7a598;
+  --live: #9a4a14;
+  --focus: #1b6a44;
+  /* Avatar backgrounds. White initials on each pass 4.5:1, so both schemes share them. */
+  --avatar-moss: #1b6a44;
+  --avatar-teal: #0f6466;
+  --avatar-sky: #1d5c8c;
+  --avatar-plum: #6a3d8a;
+  --avatar-rose: #9b2c58;
+  --avatar-clay: #8a3b2c;
+  --avatar-sun: #7d5200;
+  --avatar-slate: #48535f;
+  --avatar-ink: #fff;
+  accent-color: var(--moss);
+  color-scheme: light;
+  font-family:
+    "Avenir Next", "Segoe UI", "Noto Sans Khmer", "Khmer Sangam MN", "Leelawadee UI", sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #101714;
+    --ink: #e7f0ea;
+    --muted: #9eb0a4;
+    --panel: #18211c;
+    --line: #2a3a32;
+    --line-strong: #617a6c;
+    --moss: #8dcead;
+    --clay: #e7a598;
+    --clay-on-ink: #8a3b2c;
+    --live: #e39a62;
+    --focus: #8dcead;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+body {
+  background: var(--paper);
+}
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 2px 10px;
+  min-height: 28px;
+}
+@media (pointer: coarse) {
+  button {
+    min-height: 40px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none;
+    animation: none;
+  }
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 196px 1fr;
+  /* One bounded row, so each board column scrolls on its own and virtualisation can work. */
+  grid-template-rows: minmax(0, 1fr);
+  height: 100%;
+}
+.nav {
+  border-right: 1px solid var(--line);
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.brand {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin: 0 8px 12px;
+}

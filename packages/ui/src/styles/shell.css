@@ -1,0 +1,80 @@
+.nav a {
+  display: block;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: inherit;
+  text-decoration: none;
+}
+.nav a[aria-current="page"] {
+  background: var(--panel);
+}
+.nav .nav-count {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--moss);
+  color: var(--panel);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.main {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+.top {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+/* Search and New task sit at the right, with or without the board's filters before them. */
+.top > button:first-of-type {
+  margin-left: auto;
+}
+.top > button {
+  white-space: nowrap;
+}
+.top input,
+.field,
+select,
+textarea {
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+.top input {
+  flex: 1;
+  min-width: 0;
+}
+.top select {
+  min-width: 0;
+  max-width: 40%;
+}
+.live {
+  display: flex;
+  gap: 8px;
+  overflow: auto;
+  padding: 0 14px 8px;
+}
+.pill {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pill strong {
+  color: var(--live);
+  font-weight: 600;
+}

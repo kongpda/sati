@@ -1,0 +1,93 @@
+/* Comments: a short thread under a task, note or decision. */
+.thread {
+  margin-top: 12px;
+}
+.thread h3,
+.thread summary {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+.thread summary {
+  cursor: pointer;
+  width: fit-content;
+  color: var(--muted);
+}
+.thread[open] summary {
+  color: inherit;
+}
+.thread ol {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+  display: grid;
+  gap: 8px;
+}
+.thread ol > li {
+  border-left: 3px solid var(--line);
+  padding: 2px 0 2px 10px;
+  overflow-wrap: anywhere;
+}
+.thread-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.thread-head .avatar {
+  margin-right: 0;
+}
+.thread-head button {
+  margin-left: auto;
+}
+.thread-add,
+.sheet form.thread-add {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.thread-box {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+.thread-add .field {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+}
+/* The names offered after `@`, under the comment box. */
+.mention-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 5;
+  min-width: 180px;
+  max-width: 100%;
+  margin: 2px 0 0;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+}
+.mention-list [role="option"] {
+  display: flex;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.mention-list [aria-selected="true"] {
+  background: var(--moss);
+  color: var(--panel);
+}
+
+/* Changes: filters, then one block per day; the copy buttons sit in the page head. */
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

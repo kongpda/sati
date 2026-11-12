@@ -1,0 +1,78 @@
+.sheet ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.sheet > button:first-child {
+  float: right;
+}
+.sheet h2 {
+  margin: 4px 0 12px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.sheet h2:focus {
+  outline: none;
+}
+.sheet h3 {
+  margin: 16px 0 6px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+/* Title and body stack full width; the status select and Save share the last row. */
+/* A feature's acceptance criteria, then its path globs with Save under them. */
+.row .acceptance {
+  list-style: disc;
+  margin: 6px 0 0;
+  padding-left: 1.25rem;
+}
+.paths {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  margin-top: 8px;
+}
+.paths .field {
+  width: 100%;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+}
+
+.sheet form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.sheet form .field {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+/* The record an activity row touched, after its verb. */
+.subject {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* Who is working on a task, with release and take-over. */
+.claim {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+}
+.claim p {
+  margin: 0 0 8px;
+}
+.claim-actions {
+  display: flex;
+  gap: 8px;
+}
+.claim-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}

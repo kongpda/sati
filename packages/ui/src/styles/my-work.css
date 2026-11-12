@@ -1,0 +1,170 @@
+/* My work: three short lists, each task a link with its state under it. */
+.my-section {
+  margin-bottom: 20px;
+}
+.my-section h2 {
+  font-size: 15px;
+  font-weight: 650;
+  margin: 0 0 8px;
+}
+.my-section .count {
+  color: var(--muted);
+  font-weight: 400;
+}
+.row a.row-link {
+  color: inherit;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.row button.row-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-weight: 700;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.row button.row-link:hover {
+  text-decoration: underline;
+}
+.row .summary {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+.approval-actions,
+.send-back {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.my-section form.send-back .field {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+/* Project kind: two radio cards. */
+.kind-choices {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  max-width: 720px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+.kind-choices legend {
+  margin-bottom: 8px;
+}
+.kind-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  cursor: pointer;
+}
+.kind-option.chosen {
+  border-color: var(--moss);
+  box-shadow: 0 0 0 1px var(--moss);
+}
+.kind-radio {
+  margin-top: 3px;
+}
+.kind-choices strong,
+.kind-choices .meta {
+  display: block;
+}
+
+/* People: avatars in eight colours that keep white text readable in both themes. */
+.avatar,
+.swatch {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 999px;
+  color: var(--avatar-ink);
+  font-weight: 650;
+  line-height: 1;
+}
+.avatar {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  font-size: 12px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.swatch {
+  width: 16px;
+  height: 16px;
+}
+.c-moss {
+  background: var(--avatar-moss);
+}
+.c-teal {
+  background: var(--avatar-teal);
+}
+.c-sky {
+  background: var(--avatar-sky);
+}
+.c-plum {
+  background: var(--avatar-plum);
+}
+.c-rose {
+  background: var(--avatar-rose);
+}
+.c-clay {
+  background: var(--avatar-clay);
+}
+.c-sun {
+  background: var(--avatar-sun);
+}
+.c-slate {
+  background: var(--avatar-slate);
+}
+.meta .avatars {
+  margin-left: 6px;
+}
+.meta .avatars .avatar {
+  margin-right: 2px;
+}
+.row.person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.row.person > div {
+  flex: 1;
+  min-width: 0;
+}
+.row.person .avatar {
+  min-width: 32px;
+  height: 32px;
+  font-size: 13px;
+  margin: 0;
+}
+.who {
+  display: inline-flex;
+  align-items: center;
+}
+.person-preview {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+.palette form.dialog-form .swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px 10px;
+  max-height: none;
+}
+/* WCAG 2.2 target size: each radio is at least 20 px with room around it. */
+.palette form.dialog-form .swatches input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+}

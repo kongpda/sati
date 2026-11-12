@@ -1,0 +1,352 @@
+.page {
+  padding: 16px 18px 32px;
+  overflow: auto;
+}
+.timeline {
+  display: flex;
+  gap: 16px;
+  overflow: auto;
+  padding-bottom: 12px;
+}
+.tick {
+  min-width: 140px;
+  border-top: 2px solid var(--moss);
+  padding-top: 6px;
+}
+.tick time {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.page h1 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin: 0 0 12px;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 720px;
+}
+.row {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+/* A heading for outline and screen-reader navigation, styled like the bold title it replaced. */
+.row-title {
+  overflow-wrap: anywhere;
+  display: inline;
+  margin: 0;
+  font-size: inherit;
+  font-weight: 700;
+}
+/* On wide screens the board makes room for the panel, so the open card and the top bar stay
+   visible beside it instead of under it. */
+@media (min-width: 900px) {
+  .app:has(> .sheet) .main {
+    padding-right: min(440px, 100%);
+  }
+}
+.sheet {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(440px, 100%);
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  padding: 16px;
+  overflow: auto;
+  box-shadow: -12px 0 40px rgb(0 0 0 / 8%);
+}
+.toast {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 8px 12px;
+  border-radius: 8px;
+  width: max-content;
+  max-width: min(480px, calc(100% - 24px));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  z-index: 30;
+}
+/* A dialog keeps its actions on its bottom edge; the toast moves up so it never covers them. */
+body:has(.palette) .toast {
+  bottom: auto;
+  top: 16px;
+}
+/* With the task panel beside the board, the toast centres over the board, never on the panel. */
+@media (min-width: 900px) {
+  .app:has(.sheet) .toast {
+    left: calc((100% - 440px) / 2);
+    max-width: min(480px, calc(100% - 440px - 24px));
+  }
+}
+.toast-text {
+  flex: 1 1 200px;
+  overflow-wrap: anywhere;
+}
+.toast-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.toast button {
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.toast button.undo {
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+}
+.bulk {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 0 14px 8px;
+}
+.column-empty {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 4px 8px;
+}
+
+.empty {
+  color: var(--muted);
+  max-width: 46ch;
+  line-height: 1.45;
+}
+.prose {
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.prose h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+}
+.prose h4 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.5rem;
+}
+.prose ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.prose ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+.prose code {
+  background: var(--paper);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.9em;
+}
+.prose pre code {
+  background: none;
+  padding: 0;
+}
+.row-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+.prose pre {
+  overflow: auto;
+  background: var(--paper);
+  padding: 8px;
+  border-radius: 6px;
+}
+.prose a {
+  color: var(--moss);
+}
+.prose blockquote {
+  margin: 0.5rem 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--line-strong);
+  color: var(--muted);
+}
+.prose .table-wrap {
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+.prose table {
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+.prose th,
+.prose td {
+  border: 1px solid var(--line);
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.prose th {
+  background: var(--paper);
+  font-weight: 600;
+}
+.palette {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 35%);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 12vh;
+}
+.palette button.palette-dismiss {
+  min-height: 0;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.palette form {
+  position: relative;
+  z-index: 1;
+  width: min(520px, calc(100% - 24px));
+  background: var(--panel);
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  padding: 8px;
+  max-height: 70vh;
+  overflow: auto;
+}
+.palette input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 8px;
+}
+.palette form button {
+  overflow-wrap: anywhere;
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+.mobile-status {
+  display: none;
+}
+@media (max-width: 700px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .nav {
+    flex-direction: row;
+    overflow: auto;
+    /* The fade below is the end padding, so it reaches the screen edge. The current page
+       scrolls into view clear of it. */
+    padding-inline-end: 0;
+    scroll-padding-inline-end: 32px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  /* The bar scrolls sideways; a two-word label must not wrap and make it taller. */
+  .nav a {
+    white-space: nowrap;
+  }
+  /* A fade pinned to the right edge says more pages are off screen. It sits in its own space
+     after the last link, so once the bar is scrolled to the end nothing is faded. */
+  .nav::after {
+    content: "";
+    position: sticky;
+    right: 0;
+    flex: 0 0 32px;
+    margin-left: -4px;
+    background: linear-gradient(to right, transparent, var(--paper) 70%);
+    pointer-events: none;
+  }
+  .brand {
+    display: none;
+  }
+  /* The filter gets its own row instead of shrinking to nothing next to the buttons. */
+  .top {
+    flex-wrap: wrap;
+  }
+  .top input {
+    flex-basis: 100%;
+  }
+  /* "All columns" pages through the columns one screen at a time instead of stopping midway. */
+  .board {
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 14px;
+  }
+  .fold {
+    display: none;
+  }
+  .column {
+    display: none;
+    width: 100%;
+    max-width: none;
+    flex-basis: auto;
+    scroll-snap-align: start;
+  }
+  .column.show {
+    display: flex;
+  }
+  .mobile-status {
+    display: block;
+    margin: 8px 14px 0;
+  }
+  .sheet {
+    width: 100%;
+  }
+}
+
+/* Mermaid diagrams (pele). Its colors follow the UI tokens, so dark mode needs no re-render. */
+.mermaid {
+  --pele-bg: var(--panel);
+  --pele-fg: var(--ink);
+  --pele-muted: var(--muted);
+  --pele-line: var(--ink);
+  --pele-surface: var(--paper);
+  --pele-surface-alt: var(--line);
+  --pele-border: var(--line);
+  --pele-accent: var(--moss);
+  --pele-radius: 6px;
+  margin: 0.75rem 0;
+  overflow-x: auto;
+}
+.mermaid-error {
+  margin: 0.75rem 0;
+  border-left: 3px solid var(--clay);
+  padding-left: 0.75rem;
+}
+.mermaid-error figcaption {
+  color: var(--clay);
+  font-size: 0.875rem;
+}
+
+/* Read by screen readers, not shown. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

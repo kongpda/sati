@@ -1,0 +1,14 @@
+/* The last resort when the board cannot draw: centred, calm, one action. */
+.crash {
+  max-width: 32rem;
+  margin: 20vh auto 0;
+  padding: 0 1rem;
+}
+
+.crash h1 {
+  font-size: 1.25rem;
+}
+
+.crash .hint {
+  overflow-wrap: anywhere;
+}

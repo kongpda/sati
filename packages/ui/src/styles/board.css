@@ -1,0 +1,198 @@
+.board {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px 16px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+.column {
+  /* 200, not 220: with the sidebar, five open columns must fit a 1400 px window. */
+  flex: 1 1 200px;
+  min-width: 200px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  border-radius: 10px;
+}
+/* While a card is dragged, the columns it cannot go to step back. */
+.column.closed {
+  opacity: 0.45;
+}
+.column-head {
+  display: flex;
+  align-items: center;
+  padding-left: 10px;
+}
+.column.collapsed {
+  flex: 0 0 44px;
+  min-width: 44px;
+  max-width: 44px;
+}
+.column.over {
+  outline: 2px dashed var(--moss);
+  outline-offset: -2px;
+}
+.rail {
+  all: unset;
+  box-sizing: border-box;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.rail:focus-visible {
+  outline: 2px solid var(--moss);
+  outline-offset: -2px;
+  border-radius: 10px;
+}
+.rail-count {
+  color: var(--muted);
+  font-weight: 400;
+}
+.rail-name {
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+}
+.fold {
+  all: unset;
+  margin: 6px 6px 0 auto;
+  padding: 0 6px;
+  cursor: pointer;
+  color: var(--muted);
+}
+.fold:focus-visible {
+  outline: 2px solid var(--moss);
+  border-radius: 4px;
+}
+.column-head input {
+  margin: 6px 0 0;
+}
+.column h2 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  padding: 10px 10px 4px;
+}
+.column .count {
+  color: var(--muted);
+  font-weight: 400;
+}
+.cards {
+  overflow: auto;
+  padding: 6px;
+  flex: 1;
+  min-height: 80px;
+}
+.lane {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 6px 2px 2px;
+}
+.card {
+  overflow-wrap: anywhere;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 6px;
+  text-align: left;
+  width: 100%;
+}
+.card.fresh {
+  box-shadow: inset 3px 0 0 var(--live);
+  border-left: 3px solid var(--live);
+}
+.new-badge {
+  color: var(--live);
+  font-weight: 600;
+  margin-right: 6px;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+.card.ghost {
+  opacity: 0.4;
+}
+.card.dragging {
+  box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
+  cursor: grabbing;
+}
+.card-head {
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+}
+.card-head .title {
+  flex: 1;
+  min-width: 0;
+}
+.card .handle,
+.meta button.handle {
+  margin: 0;
+  flex: none;
+  cursor: grab;
+  padding: 0 6px;
+  touch-action: none;
+}
+.banner {
+  overflow-wrap: anywhere;
+  margin: 0;
+  padding: 8px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  color: var(--clay);
+}
+.card.selected {
+  border-color: var(--moss);
+}
+.card.open {
+  outline: 2px solid var(--live);
+  outline-offset: -1px;
+}
+.card .title {
+  display: block;
+  background: none;
+  border: 0;
+  padding: 0;
+  min-height: 0;
+  text-align: left;
+  width: 100%;
+  overflow-wrap: anywhere;
+}
+.meta {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.meta button {
+  margin-left: 8px;
+}
+/* A card's meta: the text wraps as prose (labels clear of the date), select stays at the end. */
+.card .meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.card .meta-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.7;
+}
+.card .meta-text .badge {
+  margin-left: 6px;
+}
+.card .meta > button[aria-pressed] {
+  margin-left: 0;
+  flex: none;
+}
+.card .meta .waits {
+  white-space: nowrap;
+}

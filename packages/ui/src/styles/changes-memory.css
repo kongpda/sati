@@ -1,0 +1,287 @@
+.changes-filters {
+  border: 0;
+  padding: 0;
+  margin: 0 0 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  max-width: 720px;
+}
+.changes-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.changes-filters select,
+.changes-filters input {
+  font-size: 14px;
+  color: var(--ink);
+  min-height: 34px;
+}
+.changes-basis {
+  margin: 0 0 12px;
+}
+.change-day {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.change-day + .change-day {
+  margin-top: 8px;
+}
+.change-day h2 {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--muted);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge.kind-decision,
+.badge.kind-note {
+  border-color: var(--muted);
+  color: var(--muted);
+}
+.badge.kind-late {
+  border-color: var(--clay);
+  color: var(--clay);
+}
+@media (max-width: 700px) {
+  .page-head:has(.page-actions) {
+    flex-wrap: wrap;
+  }
+  .changes-filters label {
+    flex: 1 1 140px;
+  }
+}
+
+/* New plan: one choice per template, then what the chosen one will create. */
+.dialog-choices.plan-templates {
+  max-height: none;
+}
+.dialog-form .dialog-choices label.plan-template {
+  align-items: flex-start;
+  padding: 4px 0;
+}
+.plan-template > span {
+  display: flex;
+  flex-direction: column;
+}
+.palette form.dialog-form .dialog-choices .plan-template input {
+  margin-top: 3px;
+}
+.plan-stages p,
+.plan-stages ol {
+  margin: 0 0 4px;
+}
+.plan-stages ol {
+  padding-left: 20px;
+}
+
+/* Memory: the Ask box, its answer, then cards by folder. */
+.ask {
+  max-width: 720px;
+  margin-bottom: 12px;
+}
+.ask label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.ask-row,
+.memory-filter {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ask-row .field {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+}
+.memory-filter {
+  max-width: 720px;
+  margin: 16px 0 12px;
+}
+.memory-filter .field {
+  flex: 1;
+  min-width: 0;
+}
+.answer {
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--moss);
+  border-radius: 8px;
+}
+.answer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.answer-head h2 {
+  font-size: 15px;
+  margin: 0;
+}
+.facts {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  overflow-wrap: anywhere;
+}
+.badge.private {
+  border-color: var(--live);
+  color: var(--live);
+  margin-left: 6px;
+}
+.row-title + .badge {
+  margin-left: 6px;
+}
+.badge.kind-card,
+.badge.kind-task,
+.badge.kind-done,
+.badge.kind-feature {
+  border-color: var(--moss);
+}
+.note-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.note-actions .dialog-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+/* Pinned notes on the board: one line of links above the columns. */
+.pinned {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 0 14px 8px;
+}
+.pinned .meta {
+  margin: 0;
+  font-weight: 600;
+}
+.pinned a {
+  overflow-wrap: anywhere;
+  color: var(--moss);
+  font-size: 13px;
+}
+
+/* Phase 5c: what agents wait on people for, review drift and handoffs. */
+.needs-badge {
+  color: var(--clay);
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 0 4px;
+  font-weight: 700;
+  margin-right: 6px;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+/* Someone else holds the task: quieter than "needs you", it is a fact and not a request. */
+.held-badge {
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-weight: 600;
+  margin-right: 6px;
+  font-size: 12px;
+}
+.blocked-reason {
+  color: var(--clay);
+}
+.asking,
+.drift,
+.handoff {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+.asking strong {
+  display: block;
+}
+.asking .quote {
+  display: block;
+  margin-top: 2px;
+  padding-left: 8px;
+  border-left: 3px solid var(--line);
+  white-space: pre-wrap;
+}
+.drift {
+  color: var(--clay);
+  font-weight: 600;
+}
+.row .hint {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.signals {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.claim-row > span {
+  min-width: 0;
+}
+/* A refused save stays until dismissed; the edge marks it as an error, not only the colour. */
+.toast.error {
+  border-left: 4px solid var(--clay-on-ink);
+}
+/* Holds the live region only; the toast is fixed, so this must not take a grid track. */
+.toast-region {
+  position: fixed;
+}
+button.link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+/* Markdown headings render one level down (# is h3, ## is h4) so they nest under the h2 of a
+   row or panel. These keep the look each had when they were h2 and h3. */
+.sheet .prose h3 {
+  margin: 4px 0 12px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.sheet .prose h4 {
+  margin: 16px 0 6px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.done-summary .prose h4 {
+  margin-top: 0;
+}
+.thread .prose h3 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.thread .prose h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}

@@ -1,0 +1,146 @@
+/* Create and edit dialogs: reuse the palette overlay, with a form laid out as fields. */
+.palette form.dialog-form {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  max-height: 84vh;
+}
+.dialog-form h2 {
+  font-size: 1.1rem;
+  font-weight: 650;
+  margin: 0;
+}
+.dialog-form label,
+.dialog-form legend {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+form.dialog-form .field,
+form.dialog-form select {
+  color: var(--ink);
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  padding: 6px 8px;
+}
+.dialog-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+.dialog-choices {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin: 0;
+  padding: 6px 10px 8px;
+}
+/* The list scrolls, not the fieldset, so rows never slide under the legend. */
+.dialog-choices .choices {
+  max-height: 160px;
+  overflow: auto;
+}
+.dialog-form .dialog-choices label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  padding: 2px 0;
+}
+.palette form.dialog-form .dialog-choices input {
+  width: auto;
+  padding: 0;
+}
+.dialog-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.section-note {
+  margin-bottom: 8px;
+}
+.palette form.dialog-form .dialog-actions button {
+  display: inline-block;
+  width: auto;
+  text-align: center;
+  border: 1px solid var(--line-strong);
+  padding: 4px 14px;
+}
+/* Long forms scroll inside the dialog; the actions stay pinned at its bottom edge. */
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  position: sticky;
+  bottom: -16px;
+  margin-bottom: -16px;
+  padding: 8px 0 16px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+.dialog-form label.dialog-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+}
+.palette form.dialog-form .dialog-check input {
+  width: auto;
+  padding: 0;
+}
+.form-error {
+  margin: 0;
+  color: var(--clay);
+}
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.page-head h1 {
+  margin: 0;
+}
+button.primary,
+.palette form.dialog-form .dialog-actions button.primary {
+  background: var(--moss);
+  border-color: var(--moss);
+  color: var(--panel);
+}
+button.primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Notes: tag filter chips and the pinned badge. */
+.tag-filter {
+  border: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.tag-filter button[aria-pressed="true"] {
+  background: var(--moss);
+  border-color: var(--moss);
+  color: var(--panel);
+}
+.badge {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--moss);
+  color: var(--moss);
+  font-size: 12px;
+  font-weight: 600;
+  vertical-align: 2px;
+}
+button.danger {
+  margin-top: 16px;
+  color: var(--clay);
+  border-color: var(--clay);
+}

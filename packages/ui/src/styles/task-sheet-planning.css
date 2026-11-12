@@ -1,0 +1,100 @@
+/* Task planning: due dates on cards, the panel's own labels, and the checklist. */
+.meta time.late {
+  color: var(--clay);
+  font-weight: 600;
+}
+.sheet .sheet-label {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+/* A value in a muted label is still a value, not a disabled control. */
+.sheet .sheet-label .field,
+.sheet .sheet-label select {
+  color: var(--ink);
+  font-size: 14px;
+}
+/* Status and Save share the last row. */
+.sheet form .sheet-label.sheet-status {
+  grid-column: auto;
+}
+.sheet form .sheet-lock > button[type="submit"] {
+  align-self: end;
+}
+/* Wraps the task form so one attribute locks it; lays out as the form's own grid. */
+.sheet form .sheet-lock {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.sheet-lock,
+fieldset.bare {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-inline-size: 0;
+}
+.claim-note {
+  color: var(--muted);
+  font-size: 14px;
+}
+.sheet-meta {
+  margin: -6px 0 8px;
+}
+.done-summary {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--moss);
+  background: var(--paper);
+  border-radius: 0 6px 6px 0;
+}
+.done-summary h3 {
+  margin-top: 0;
+}
+.sheet-delete {
+  margin-top: 20px;
+}
+.row.replaced {
+  opacity: 0.75;
+}
+.sheet form .sheet-label,
+.sheet form fieldset {
+  grid-column: 1 / -1;
+}
+.sheet form .dialog-choices label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+.sheet .checklist ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+}
+.sheet .checklist li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+.sheet .checklist li label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.sheet .checklist .done {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.sheet form.checklist-add {
+  display: flex;
+  gap: 8px;
+}
+.sheet form.checklist-add .field {
+  flex: 1;
+  min-width: 0;
+}

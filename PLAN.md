@@ -1038,26 +1038,30 @@ Added 2026-11-12 at the owner's request. sati already needs no server: every com
 
 **Gate:** every CLI test from before Phase 10 passes unchanged (scripts and agents see no difference), no command prompts when stdin is not a terminal or an agent variable is set, the board's My work page and `sati inbox --json` list the same ids, and `pnpm lint && pnpm typecheck && pnpm test` and the Playwright board tests pass.
 
-### Phase 11 — Consolidate and simplify (proposed 2026-11-12)
+### Phase 11 — Consolidate, simplify and redesign (decided 2026-11-12)
 
-Added 2026-11-12 at the owner's request: the whole-project review found the model sound and the surfaces crowded (11 board pages, duplicate CLI commands, two names for one record). `docs/review-2026-11-12.md` has the findings, the keep / merge / separate / remove tables, the plan and the checklist for each work package. A package that needs an owner decision (table "Decisions needed" there) does not start before the answer is written in that table.
+Added 2026-11-12 at the owner's request: the whole-project review found the model sound and the surfaces crowded (11 board pages, duplicate CLI commands, two names for one record). `docs/review-2026-11-12.md` is the spec for this phase: the findings checked against the code, the decisions (the owner asked the reviewing agent to choose them), the target shape of the board and the CLI, and for each item the files, steps, test and acceptance. Work the packages in the order given there under "Order of work". Items listed there as "Owner only" need the owner's word.
 
+- [ ] WP0 Foundations: the guard's escaped-quote bug, hidden flags, repeatable flags, board preferences, temp-folder cleanup
 - [ ] WP1 Board: approve in bulk, and columns that fit
-- [ ] WP2 Board: merge pages (11 to 6)
-- [ ] WP3 Board: correctness
-- [ ] WP4 Board: performance
-- [ ] WP5 Board: wording
-- [ ] WP6 CLI: one command per job
-- [ ] WP7 CLI: one flag per idea, one way to print
 - [ ] WP8 CLI: bugs and gaps
 - [ ] WP9 Core: correctness
-- [ ] WP10 Core: concepts
-- [ ] WP11 Core and store: performance
+- [ ] WP16 CLI code refactor (split `runtime.ts`, `commands/task.ts`, `commands/init.ts`)
+- [ ] WP6 CLI: one command per job
+- [ ] WP7 CLI: one flag per idea, one way to print
+- [ ] WP15 part A Board structure: split `app.tsx`, `pages.tsx`, `styles.css`; design tokens
+- [ ] WP2 Board: merge pages (11 to 6)
+- [ ] WP3 Board: correctness
+- [ ] WP5 Board: wording
+- [ ] WP15 part B Board redesign: navigation, layout, palette, keyboard help, empty states, appearance
 - [ ] WP12 MCP surface
+- [ ] WP10 Core: concepts
+- [ ] WP4 Board: performance
+- [ ] WP11 Core and store: performance
 - [ ] WP13 Docs
 - [ ] WP14 Housekeeping
 
-**Gate:** every box in `docs/review-2026-11-12.md` is ticked or closed with a reason in `docs/progress.md`; the board has at most 6 nav pages; `sati --help` lists no two commands that do the same job; `pnpm bench` passes every budget.
+**Gate:** every box in `docs/review-2026-11-12.md` is ticked or closed with a reason in `docs/progress.md`; the board has six primary nav links plus Settings, passes axe on each in both themes, and no page scrolls sideways from 700 to 1920 px; `sati --help` lists no two commands that do the same job; no file in `packages/cli/src` except `ui/server.ts` is over 600 lines; `pnpm bench` passes every budget.
 
 ## Testing, CI and release
 

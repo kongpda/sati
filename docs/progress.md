@@ -2262,3 +2262,16 @@ The owner asked for a review of every surface (board, CLI, core, MCP) and for th
 ## 2026-11-12 — Whole-project review: the findings written down
 
 The owner asked for every finding in one file, with a plan and a checklist. `docs/review-2026-11-12.md` holds them as 14 work packages, with 20 owner decisions and a recommendation for each; PLAN Phase 11 tracks the packages. Choice made: the phase is marked "proposed" and nothing in it starts before the owner answers the decision it depends on, because merging pages and hiding commands changes what users see. The findings come from read-only audits; only the items already fixed were confirmed by a failing test, and the file says so per item.
+
+
+## 2026-11-12 — Whole-project review: second pass, decisions made, redesign and CLI refactor added
+
+The owner asked for one more pass so that a Sonnet or Opus agent can implement the plan without guessing, for the open decisions to be chosen by the reviewing agent, and for a board redesign and a CLI refactor to be added. `docs/review-2026-11-12.md` is rewritten; PLAN Phase 11 is no longer "proposed" and lists 18 boxes. No product code changed in this pass.
+
+- **Every item was checked against the code** at `7e1d00e` by three read-only passes (board, CLI, core and MCP). Each item now has a status (verified, or verify first with the part that is not confirmed), the file and symbol, the steps, a test file with a test name that states the reason, and what "done" means.
+- **A new bug was found and is not fixed yet.** `segments()` in `packages/core/src/services/shell-changes.ts` ignores a backslash inside double quotes, so `echo "a \"b\"" && rm src/x.ts` is not seen by the guard as a delete. It is item 0.1 and is first in the order of work. It is left for the phase because the owner asked for a plan, not for code, in this pass.
+- **Closed without a change:** 3.8, 4.6, 8.10, 11.7, 11.9 (not bugs or already done), and several first-pass claims that were wrong (the Done column is not clipped, "Replace decision" exists, the bench budgets are 50, 50 and 300 ms, not 200, 200 and 1200). The file lists them so they are not opened again.
+- **Decisions D1 to D31 are made**, each with its reason. Choices that differ from the first recommendation: D2 (flexible columns, and only Backlog and Cancelled collapse, because Blocked needs attention); D14 (the CLI `--json` output stays a bare array so scripts do not break; MCP lists gain `truncated`); D15 (the actor stamp is batched only if a new bench line shows the cost matters, because the change touches every write path); D24 (the hook flags are hidden, not moved, because installed hooks call them).
+- **Added packages:** WP0 (foundations other packages need), WP15 (board redesign: file splits and design tokens first, then navigation, layout, palette, keyboard help, empty states, appearance; no new dependency), WP16 (CLI code refactor as pure moves: `runtime.ts`, `commands/task.ts`, `commands/init.ts`).
+- **Stays with the owner:** npm publish, renaming the project, pruning the registry, approving the waiting tasks, the screen-reader pass, the one-week trial, and removing about 1.1 GB of old `sati-*` temp folders (the machine had under 1 GB free during this pass).
+- **Not verified:** nothing was looked at in a browser; the file has a "What was not verified" list.

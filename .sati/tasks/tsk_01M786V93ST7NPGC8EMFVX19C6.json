@@ -1,0 +1,35 @@
+{
+  "body": "Owner asked for a second pass on docs/review-2026-11-12.md so a smaller model can implement each item: exact symbols, steps, tests, acceptance. Add improvements and a redesign of the board to the plan. Docs only.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "37a1c5e81050f31fb948ec69c8363660f24e7e63",
+    "completedAt": "2026-11-12T16:04:20.807Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "docs/review-2026-11-12.md",
+      "PLAN.md",
+      "docs/progress.md"
+    ],
+    "summary": "Rewrote docs/review-2026-11-12.md as an implementation-ready plan: every item checked against the code at 7e1d00e (status, file and symbol, steps, test name, done-when), decisions D1-D31 made at the owner's request with reasons, target shape of board, CLI and MCP, and three new packages (WP0 foundations, WP15 board redesign, WP16 CLI code refactor). Found and documented a guard bug (segments() in shell-changes.ts loses a command after an escaped quote) as item 0.1; not fixed in this pass. PLAN Phase 11 updated to 18 boxes with a new gate. Docs only; gate green."
+  },
+  "createdAt": "2026-11-12T15:43:28.889Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "effort": "standard",
+  "id": "tsk_01M786V93ST7NPGC8EMFVX19C6",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T15:43:28.889Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T15:53:41.567Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T16:04:20.807Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T16:04:20.807Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T16:04:20.807Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T15:53:41.567Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "done",
+  "title": "Polish the review plan: verify each item, add implementation detail and a board redesign package",
+  "updatedAt": "2026-11-12T16:04:20.807Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

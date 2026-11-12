@@ -156,6 +156,20 @@ export function pairs(fields: readonly (readonly [string, unknown])[], max: numb
   );
 }
 
+/**
+ * A list cut at its limit says so (review 12.3). `--json` keeps the bare array, so the line goes
+ * to stderr there; text output ends with it.
+ */
+export function cutNote(text: string, json: boolean | undefined): string {
+  if (json) process.stderr.write(`${text}\n`);
+  return text;
+}
+
+/** Appends the cut line, if any, under a rendered list. */
+export function withCut(body: string, cut: string | null): string {
+  return cut ? `${body}\n${term().color ? dim(cut) : cut}` : body;
+}
+
 export function hits(items: readonly SearchHit[]): string {
   if (!items.length) return "No matches.";
   if (!term().rich) {

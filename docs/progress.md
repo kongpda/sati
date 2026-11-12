@@ -2427,3 +2427,12 @@ Items 10.1 to 10.7 are done for core, the CLI and the server (task `tsk_01M78FAP
 - **7.6:** `activity` and `lock` text output name the actor; `--json` keeps ids.
 - **7.8:** `feature create` and `milestone create` ask for a missing title at a terminal. The rule is in README and `docs/guide/headless.md`.
 - **7.11:** `task claim` with nothing ready exits 3 (not found). It fits the rule, so nothing changed. The rule is one paragraph above the table in `docs/guide/quick-start.md`.
+
+## 2026-11-13 — Review 12.3: the CLI half
+
+The CLI footer for a cut list is done (task `tsk_01M78GA1PZA8DJ2EQ56TNT8FSD`), so WP12 is closed. WP8 is closed too: its last box, 8.5, closed with WP10.
+
+- `task list` reads one more row past a full page, as `task_list` does, and ends with "Showing the first N. Use --offset N for more." From an offset it says "Showing tasks 51 to 100." `task list --board` already shows "500+" on a full column and is unchanged.
+- `search` has no `--offset`, so its line says "Use --limit up to 200 for more", or at 200 "Use more words to narrow the search".
+- With `--json` the array is unchanged and the line goes to stderr.
+

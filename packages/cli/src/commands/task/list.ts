@@ -11,7 +11,7 @@ import {
 import { defineCommand } from "citty";
 import { json, pagination } from "../../args.js";
 import { BOARD_STATUSES, type BoardColumn, boardText } from "../../board.js";
-import { rows } from "../../render.js";
+import { cutNote, rows, withCut } from "../../render.js";
 import { int, list, ref } from "../../runtime/input.js";
 import { execute } from "../../runtime/output.js";
 import { term } from "../../term.js";
@@ -28,6 +28,9 @@ async function oneAssignee(ctx: ServiceContext, value: string | undefined) {
   }
   return ids[0];
 }
+
+/** Rows `task list` shows when no --limit is given; core uses the same default. */
+const DEFAULT_LIMIT = 50;
 
 /** Rows read for one column of `task list --board`; a fuller column shows its count as "500+". */
 const COLUMN_CAP = 500;
@@ -118,10 +121,11 @@ export const listCommand = defineCommand({
   },
   run: ({ args }) => {
     if (args.board) return board(args);
+    let cut: string | null = null;
     return execute(
       args.json,
       async ({ ctx }) => {
-        const tasks = await listTasks(ctx, {
+        const filter = {
           status: list(args.status),
           featureId: await ref(ctx, "feature", args.feature),
           milestoneId: await ref(ctx, "milestone", args.milestone),
@@ -130,14 +134,24 @@ export const listCommand = defineCommand({
           assigneeId: await oneAssignee(ctx, args.assignee),
           effort: args.effort,
           ready: args.ready,
-          limit: int(args.limit, "limit"),
-          offset: int(args.offset, "offset"),
-        });
+        };
+        const limit = int(args.limit, "limit") ?? DEFAULT_LIMIT;
+        const offset = int(args.offset, "offset") ?? 0;
+        const tasks = await listTasks(ctx, { ...filter, limit, offset });
+        // A full page costs one more read of a single row to learn whether the list was cut.
+        const next = offset + tasks.length;
+        if (
+          tasks.length >= limit &&
+          (await listTasks(ctx, { ...filter, limit: 1, offset: next })).length
+        ) {
+          const shown = offset ? `tasks ${offset + 1} to ${next}` : `the first ${next}`;
+          cut = cutNote(`Showing ${shown}. Use --offset ${next} for more.`, args.json);
+        }
         // Agents read this list often: short rows cost a fraction of the tokens.
         return args.full ? tasks : tasks.map(taskRow);
       },
       (tasks: (Task | TaskRow)[]) =>
-        rows(tasks, `No tasks. Create one with \`${CLI_NAME} task create "title"\`.`),
+        withCut(rows(tasks, `No tasks. Create one with \`${CLI_NAME} task create "title"\`.`), cut),
       { readOnly: true },
     );
   },

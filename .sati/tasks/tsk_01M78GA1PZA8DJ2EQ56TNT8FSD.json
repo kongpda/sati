@@ -1,11 +1,23 @@
 {
   "body": "Review 12.3, CLI half. `task list` and `search`: when more rows exist than the limit, text output ends with \"Showing the first N. Use --offset N for more.\"; `--json` keeps the bare array and prints the line on stderr. Closes WP12.",
   "branch": "wp12-footer",
-  "claim": {
-    "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
-    "heartbeatAt": "2026-11-12T18:29:13.808Z",
-    "leaseUntil": "2026-11-12T18:59:13.808Z",
-    "token": 2
+  "completion": {
+    "branch": "wp12-footer",
+    "commit": "486125883a129bd46101da1852d96793685434e4",
+    "completedAt": "2026-11-12T18:32:49.913Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "PLAN.md",
+      "docs/progress.md",
+      "docs/review-2026-11-12.md",
+      "packages/cli/src/commands/search.ts",
+      "packages/cli/src/commands/task/list.ts",
+      "packages/cli/src/render.ts",
+      "packages/cli/test/cli.test.ts",
+      ".changeset/cli-cut-lists.md"
+    ],
+    "releaseNote": "task list and search say when a list was cut.",
+    "summary": "Review 12.3 CLI half: task list and search end with a 'Showing the first N' line when the list was cut; --json keeps the array and writes the line to stderr. WP12 and WP8 closed in PLAN."
   },
   "createdAt": "2026-11-12T18:28:50.015Z",
   "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
@@ -19,13 +31,14 @@
   "stamps": {
     "*": "2026-11-12T18:28:50.016Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "branch": "2026-11-12T18:29:13.809Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "claim": "2026-11-12T18:29:13.809Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "status": "2026-11-12T18:29:13.809Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T18:32:49.915Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T18:32:49.915Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T18:32:49.915Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "worktree": "2026-11-12T18:29:13.809Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
   },
-  "status": "in_progress",
+  "status": "done",
   "title": "WP12.3 CLI: task list and search say when the list was cut",
-  "updatedAt": "2026-11-12T18:29:13.809Z",
-  "version": 2,
+  "updatedAt": "2026-11-12T18:32:49.915Z",
+  "version": 4,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

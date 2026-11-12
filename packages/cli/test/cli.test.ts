@@ -381,6 +381,30 @@ describe("sati CLI", () => {
     expect(sati(dir, "search", "nothing-here").stdout).toContain("No matches.");
   });
 
+  // Review 12.3: an agent or a person reading a cut list must know rows are missing, or it acts
+  // on half the work. --json keeps the bare array, so scripts that index it do not break.
+  it("task list and search say when the list was cut, and where to go on", async () => {
+    const dir = await tempRepo({ init: true });
+    for (const n of [1, 2, 3, 4]) sati(dir, "task", "create", `Webhook step ${n}`);
+    const cut = sati(dir, "task", "list", "--limit", "2");
+    expect(cut.stdout).toContain("Showing the first 2. Use --offset 2 for more.");
+    const json = sati(dir, "task", "list", "--limit", "2", "--json");
+    expect(JSON.parse(json.stdout)).toHaveLength(2);
+    expect(json.stderr).toContain("Showing the first 2. Use --offset 2 for more.");
+    // The last page, and a page that fits exactly, are not cut.
+    expect(sati(dir, "task", "list", "--limit", "2", "--offset", "2").stdout).not.toContain(
+      "Showing",
+    );
+    expect(sati(dir, "task", "list", "--limit", "4").stdout).not.toContain("Showing");
+    expect(sati(dir, "task", "list", "--limit", "2", "--offset", "1").stdout).toContain(
+      "Showing tasks 2 to 3. Use --offset 3 for more.",
+    );
+    const hits = sati(dir, "search", "webhook", "--limit", "2", "--json");
+    expect(JSON.parse(hits.stdout)).toHaveLength(2);
+    expect(hits.stderr).toContain("Showing the first 2. Use --limit up to 200 for more.");
+    expect(sati(dir, "search", "webhook", "--limit", "4").stdout).not.toContain("Showing");
+  });
+
   it("comments on a task by handle and lists the thread with the author's name", async () => {
     const dir = await tempRepo({ init: true });
     const t = satiJson<{ id: string }>(dir, "task", "create", "Book venue").data;

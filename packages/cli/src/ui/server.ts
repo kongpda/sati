@@ -474,7 +474,7 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
     }
     return c.json(await approveCard(rt.ctx, { path, hash }));
   });
-  // The New plan menu: the same templates and the same apply as `sati template`.
+  // The New plan menu: the same templates and the same apply as `sati plan`.
   const templateFiles = () => rt.templates?.() ?? [];
   app.get("/api/templates", (c) => c.json(availableTemplates(templateFiles()).map(summarize)));
   app.post("/api/templates/apply", async (c) =>

@@ -3,8 +3,8 @@
   "branch": "wp10-concepts",
   "claim": {
     "actorId": "actr_01M755A9HFH099C13BC1VKNHE9",
-    "heartbeatAt": "2026-11-12T18:13:10.777Z",
-    "leaseUntil": "2026-11-12T18:43:10.777Z",
+    "heartbeatAt": "2026-11-12T18:18:26.693Z",
+    "leaseUntil": "2026-11-12T18:48:26.693Z",
     "token": 2
   },
   "createdAt": "2026-11-12T18:11:42.486Z",
@@ -19,13 +19,13 @@
   "stamps": {
     "*": "2026-11-12T18:11:42.488Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "branch": "2026-11-12T18:11:46.356Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "claim": "2026-11-12T18:13:10.779Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T18:18:26.695Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "status": "2026-11-12T18:11:46.247Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "worktree": "2026-11-12T18:11:46.356Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
   },
   "status": "in_progress",
   "title": "WP10: core concepts (review 10.1-10.7), core, CLI and server parts",
-  "updatedAt": "2026-11-12T18:13:10.780Z",
-  "version": 4,
+  "updatedAt": "2026-11-12T18:18:26.696Z",
+  "version": 5,
   "worktree": "/private/tmp/claude-501/-Users-kongpda-workspace-khable-ts-sati/75d3e4d7-ea67-4817-ae83-5e87152a70cd/scratchpad/wt16"
 }

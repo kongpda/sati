@@ -14,6 +14,7 @@ import { expectedVersion, id, json, pagination } from "../args.js";
 import { record, row, rows } from "../render.js";
 import { int, list, ref } from "../runtime/input.js";
 import { execute } from "../runtime/output.js";
+import scan from "./scan.js";
 
 const fields = {
   description: { type: "string", description: "What the feature does, in Markdown" },
@@ -142,5 +143,5 @@ const update = defineCommand({
 
 export default defineCommand({
   meta: { name: "feature", description: "Track features and what they own" },
-  subCommands: { create, list: ls, show, update },
+  subCommands: { create, list: ls, show, update, scan },
 });

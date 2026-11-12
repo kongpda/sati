@@ -41,7 +41,7 @@ export interface Template {
   labels: string[];
   stages: TemplateStage[];
   source: string;
-  /** The Markdown it was read from, for `sati template show`. */
+  /** The Markdown it was read from, for `sati plan show`. */
   markdown: string;
 }
 
@@ -57,7 +57,7 @@ export interface TemplateSummary {
 
 /**
  * The starters. A file with the same name in `.sati/templates/` replaces one; `sati
- * template show <name>` prints one to copy and edit.
+ * plan show <name>` prints one to copy and edit.
  */
 const STARTERS: Record<string, string> = {
   event: `# Event

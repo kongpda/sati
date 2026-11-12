@@ -226,7 +226,7 @@ export interface ChangesFilter {
   actorId: string;
 }
 
-/** A plan template, as `sati template list --json` gives it. */
+/** A plan template, as `sati plan list --json` gives it. */
 export interface TemplateSummary {
   name: string;
   title: string;

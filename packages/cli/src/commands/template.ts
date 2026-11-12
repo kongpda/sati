@@ -15,7 +15,7 @@ import { readTemplateFiles } from "../templates.js";
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
-const list = defineCommand({
+export const listTemplate = defineCommand({
   meta: { name: "list", description: "List the templates: the starters and .sati/templates/" },
   args: { ...json },
   run: ({ args }) =>
@@ -32,7 +32,7 @@ const list = defineCommand({
     ),
 });
 
-const show = defineCommand({
+export const showTemplate = defineCommand({
   meta: { name: "show", description: "Print a template's Markdown, to copy and edit" },
   args: {
     name: { type: "positional", required: true, description: "Template name" },
@@ -49,13 +49,13 @@ const show = defineCommand({
     ),
 });
 
-const apply = defineCommand({
+export const applyTemplateCommand = defineCommand({
   meta: { name: "apply", description: "Create a plan (milestone and tasks) from a template" },
   args: {
     name: {
       type: "positional",
       required: true,
-      description: "A starter (see `template list`) or one of yours",
+      description: "A starter (see `plan list`) or one of yours",
     },
     title: { type: "string", description: "The plan's name (default: the template's)" },
     date: { type: "string", description: "Target day, YYYY-MM-DD; due dates count back from it" },
@@ -107,5 +107,5 @@ export default defineCommand({
     name: "template",
     description: "Start a plan from a template (event, campaign, proposal, monthly-report, ...)",
   },
-  subCommands: { list, show, apply },
+  subCommands: { list: listTemplate, show: showTemplate, apply: applyTemplateCommand },
 });

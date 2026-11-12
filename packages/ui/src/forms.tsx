@@ -681,7 +681,7 @@ function offsetWords(days: number | null): string {
 
 /**
  * New plan: a template (event, campaign, release, or the project's own) becomes a milestone and
- * its tasks in stages. The same apply as `sati template apply`, so both make the same plan.
+ * its tasks in stages. The same apply as `sati plan apply`, so both make the same plan.
  */
 export function PlanForm({
   onClose,

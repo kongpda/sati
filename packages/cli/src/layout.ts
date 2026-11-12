@@ -5,14 +5,14 @@ import type { HelpLayout } from "./help.js";
 export const layout: HelpLayout = {
   groups: {
     Start: ["init", "upgrade", "brief", "inbox", "next", "completion"],
-    Work: ["task", "feature", "milestone", "plan", "template", "handoff", "wait"],
+    Work: ["task", "feature", "milestone", "plan", "handoff", "wait"],
     Memory: ["note", "comment", "decision", "card", "recall", "search"],
-    "Work together": ["lock", "guard", "review", "scan"],
+    "Work together": ["lock", "guard", "review"],
     History: ["activity", "changes", "undo"],
     Project: ["settings", "projects", "ui", "sync", "doctor"],
     "Run by tools": ["mcp", "serve", "nudge", "merge-driver"],
   },
   aliases: {},
-  hidden: ["rules", "export", "import", "app", "context"],
+  hidden: ["rules", "export", "import", "app", "context", "scan", "template"],
   hiddenFlags: HIDDEN_FLAGS,
 };

@@ -354,6 +354,37 @@ describe("usage errors teach the command", () => {
     expect(sati(dir, "context", "get", "a.ts").stdout).toBe(shown.stdout);
   });
 
+  // Review 6.8, 6.9: `scan` proposes features, so it lives under `feature`; templates start a
+  // plan, so `plan` holds them. The old top-level names still run for old scripts.
+  it("feature scan and plan list, show, apply replace scan and template, which still run", async () => {
+    const dir = await tempRepo({ init: true });
+    const root = run(dir, ["--help"], { COLUMNS: "100" }).stdout;
+    for (const name of ["scan", "template"]) {
+      expect(root, `${name} in root help`).not.toMatch(new RegExp(`^ {2}${name}[ ,]`, "mu"));
+    }
+    const top = /^ {4}""\) words="([^"]*)"/mu.exec(sati(dir, "completion", "bash").stdout)?.[1];
+    expect(top?.split(" ")).not.toContain("scan");
+    expect(top?.split(" ")).not.toContain("template");
+    expect(sati(dir, "feature", "--help").stdout).toMatch(/^ {2}scan /mu);
+    const plan = sati(dir, "plan", "--help").stdout;
+    for (const name of ["import", "list", "show", "apply"]) {
+      expect(plan, `plan ${name}`).toMatch(new RegExp(`^ {2}${name} `, "mu"));
+    }
+    expect(sati(dir, "feature", "scan").stdout).toBe(sati(dir, "scan").stdout);
+    expect(sati(dir, "plan", "list").stdout).toBe(sati(dir, "template", "list").stdout);
+    expect(sati(dir, "plan", "show", "event").stdout).toBe(
+      sati(dir, "template", "show", "event").stdout,
+    );
+    const names = (...cmd: string[]) =>
+      satiJson<{ milestone: { title: string } | null; tasks: { title: string }[] }>(
+        dir,
+        ...cmd,
+        "event",
+        "--dry-run",
+      ).data;
+    expect(names("plan", "apply")).toEqual(names("template", "apply"));
+  });
+
   // The root list is scanned; exit codes and flag lists belong in the command's own help.
   it("lists commands by their first sentence and keeps the rest for the command's help", async () => {
     const dir = await tempRepo();

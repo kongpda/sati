@@ -1,0 +1,15 @@
+{
+  "consequences": "No code change now. The 1.0 checklist must include removing the shims.",
+  "context": "Review 10.7 asked whether to remove the legacy shims now (D16).",
+  "createdAt": "2026-11-12T18:19:38.795Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "decision": "Keep the legacy shims (D16) unchanged until 1.0. They will be removed in the 1.0 release.",
+  "id": "dec_01M78FS7DBS4YYD8DJYEQGGMCQ",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T18:19:38.796Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "title": "Legacy shims stay until 1.0 (review 10.7)",
+  "updatedAt": "2026-11-12T18:19:38.795Z",
+  "version": 1
+}

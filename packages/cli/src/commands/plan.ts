@@ -3,10 +3,17 @@ import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { readText } from "../runtime/input.js";
 import { execute } from "../runtime/output.js";
+import { applyTemplateCommand, listTemplate, showTemplate } from "./template.js";
 
 export default defineCommand({
-  meta: { name: "plan", description: "Import tasks from a Markdown checklist" },
+  meta: {
+    name: "plan",
+    description: "Start a plan from a template, or import tasks from a Markdown checklist",
+  },
   subCommands: {
+    list: listTemplate,
+    show: showTemplate,
+    apply: applyTemplateCommand,
     import: defineCommand({
       meta: {
         name: "import",

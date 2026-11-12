@@ -106,7 +106,7 @@ others). The rules they follow are in [Agent workflow](agent-workflow.md).
 Register a feature, and mark it shipped and protected once it works:
 
 ```bash
-sati scan       # propose features from top-level folders
+sati feature scan  # propose features from top-level folders
 sati feature create "Billing" --paths 'src/billing/**' --status shipped --protected
 ```
 

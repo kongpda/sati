@@ -1,0 +1,20 @@
+{
+  "body": "## Done so far\nReview 9.7 is already done and gated in the shared worktree, uncommitted: rule comment in errors.ts; actor.ts profile, task.ts take-over and undo.ts coordination refusals now INVALID_TRANSITION; test \"every 'only a person' refusal has the same error code\" in hardening.test.ts; updated actor, workspace and cli loop-commands tests; .changeset/error-code-rule.md; review boxes 9.7 and the WP1 changeset ticked. Full gate (build, lint, typecheck, knip, test) exit 0.\n\n## Next step\nCheck git diff, commit these files under this task, task_complete, push. Delete my cancelled task file .sati/tasks/tsk_01M78CQPMEDDP77NCGE7BWPW61.json if you do not want it. Do not redo the edits.\n\n## Open questions\nNone.\n\n## Files in flight\n- packages/core/src/domain/errors.ts\n- packages/core/src/services/actor.ts\n- packages/core/src/services/task.ts\n- packages/core/src/services/undo.ts\n- packages/core/test/hardening.test.ts\n- .changeset/error-code-rule.md",
+  "createdAt": "2026-11-12T17:26:37.531Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "handoffFromName": "claude-code@sati#a556e17e",
+  "id": "note_01M78CR4PVFZ61QRYYC2YZ25HQ",
+  "links": [
+    "tsk_01M78CP7BRYF6ZA8WQ9THNNBKX"
+  ],
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T17:26:37.531Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "tags": [
+    "handoff"
+  ],
+  "title": "Handoff WP9: one error-code rule, align outliers (review 9.7)",
+  "updatedAt": "2026-11-12T17:26:37.531Z",
+  "version": 1
+}

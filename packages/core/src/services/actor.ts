@@ -86,13 +86,16 @@ export async function updateProfile(
   return ctx.store.write(async (w) => {
     const caller = await mustGet(w, ctx, "actor", ctx.actorId);
     if (caller.kind !== "human") {
-      throw new SatiError("VALIDATION", "Only a person can change how people are shown.");
+      throw new SatiError("INVALID_TRANSITION", "Only a person can change how people are shown.");
     }
     // No version check: every record write bumps the actor's version (`issueStamp`), so an
     // expected version would almost always be stale. The last write wins.
     const before = await mustGet(w, ctx, "actor", actorId);
     if (before.kind !== "human") {
-      throw new SatiError("VALIDATION", "Agents have no profile; they are shown by their name.");
+      throw new SatiError(
+        "INVALID_TRANSITION",
+        "Agents have no profile; they are shown by their name.",
+      );
     }
     const keys = ["displayName", "initials", "color"] as const;
     const set = Object.fromEntries(keys.flatMap((k) => (data[k] ? [[k, data[k]]] : [])));

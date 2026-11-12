@@ -32,7 +32,7 @@ describe("undoActivity with long text", () => {
     const write = store.activity.find((r) => r.verb === "update" && r.entityId === note.id);
     expect(isCompacted((write?.diff.body as { from: unknown } | undefined)?.from)).toBe(true);
     await expect(undoActivity(ctx, write?.id ?? "")).rejects.toMatchObject({
-      code: "VALIDATION",
+      code: "INVALID_TRANSITION",
     });
     const kept = await ctx.store.read((r) => r.get("note", note.id));
     expect(kept?.body).toBe("b".repeat(600));

@@ -333,7 +333,7 @@ export async function updateTask(ctx: ServiceContext, id: string, input: unknown
     let claim = before.claim;
     if (needsInput && claim?.actorId !== ctx.actorId) {
       throw new SatiError(
-        "VALIDATION",
+        "INVALID_TRANSITION",
         "Only the agent working on a task can ask for input on it.",
         {
           hint: `Claim it first with \`${CLI_NAME} task claim ${id}\`.`,
@@ -563,7 +563,7 @@ async function applyRelease(
 ): Promise<Task> {
   const held = before.claim;
   if (!held) {
-    throw new SatiError("VALIDATION", `Task ${before.id} is not claimed.`, {
+    throw new SatiError("INVALID_TRANSITION", `Task ${before.id} is not claimed.`, {
       hint: `Claim it with \`${CLI_NAME} task claim ${before.id}\`.`,
     });
   }
@@ -579,10 +579,14 @@ async function applyRelease(
       });
     }
     if ((await w.get("actor", ctx.actorId))?.kind !== "human") {
-      throw new SatiError("CONFLICT", `Only a person can take task ${before.id} from ${name}.`, {
-        hint: `Pick another ready task with \`${CLI_NAME} task list --ready\`.`,
-        details,
-      });
+      throw new SatiError(
+        "INVALID_TRANSITION",
+        `Only a person can take task ${before.id} from ${name}.`,
+        {
+          hint: `Pick another ready task with \`${CLI_NAME} task list --ready\`.`,
+          details,
+        },
+      );
     }
   }
   await releaseTaskLocks(w, ctx, before.id, held.actorId);

@@ -52,9 +52,10 @@ describe("loop commands", () => {
     const created = satiJson<{ id: string }>(dir, "task", "create", "Design flyer");
     const id = created.data.id;
     expect(run(dir, ["task", "claim", id], agent("codex-a")).code).toBe(0);
-    // Exit 4 is CONFLICT: the claim is live and belongs to someone else.
-    expect(run(dir, ["task", "release", id, "--force"], agent("codex-b")).code).toBe(4);
-    expect(run(dir, ["task", "take-over", id], agent("codex-b")).code).toBe(4);
+    // Exit 8 (INVALID_TRANSITION): only a person may override a live claim (review 9.7).
+    expect(run(dir, ["task", "release", id, "--force"], agent("codex-b")).code).toBe(8);
+    expect(run(dir, ["task", "take-over", id], agent("codex-b")).code).toBe(8);
+    // Exit 4 is CONFLICT: the claim is live and belongs to someone else; force would override it.
     expect(run(dir, ["task", "release", id], { SATI_ACTOR: "dara" }).code).toBe(4);
     const taken = run(dir, ["task", "take-over", id, "--json"], { SATI_ACTOR: "dara" });
     expect(taken.code).toBe(0);

@@ -114,18 +114,22 @@ export async function undoActivity(ctx: ServiceContext, activityId: string) {
   return ctx.store.write(async (w) => {
     const act = await findActivity(w, ctx.projectId, activityId);
     if (!isEntity(act.entity)) {
-      throw new SatiError("VALIDATION", `Activity ${activityId} is not a record change.`);
+      throw new SatiError("INVALID_TRANSITION", `Activity ${activityId} is not a record change.`);
     }
     // Claims, releases, completions and locks are coordination state: replaying an old value
     // would steal a claim or bring back a lock without the overlap and fencing checks.
     if (act.entity === "lock" || COORDINATION.has(act.verb)) {
-      throw new SatiError("VALIDATION", `A ${act.verb} of a ${act.entity} cannot be undone.`, {
-        hint: `Use the ${act.entity} commands instead, such as \`${CLI_NAME} task update\`.`,
-      });
+      throw new SatiError(
+        "INVALID_TRANSITION",
+        `A ${act.verb} of a ${act.entity} cannot be undone.`,
+        {
+          hint: `Use the ${act.entity} commands instead, such as \`${CLI_NAME} task update\`.`,
+        },
+      );
     }
     if (Object.hasOwn(act.diff, "claim")) {
       throw new SatiError(
-        "VALIDATION",
+        "INVALID_TRANSITION",
         `A change to the claim of a ${act.entity} cannot be undone.`,
         {
           hint: `Use \`${CLI_NAME} task claim\` or \`${CLI_NAME} task release\` instead.`,
@@ -168,7 +172,7 @@ export async function undoActivity(ctx: ServiceContext, activityId: string) {
       // The log keeps only the length of long text, so there is nothing real to write back.
       if (isCompacted(change.from) || isCompacted(change.to)) {
         throw new SatiError(
-          "VALIDATION",
+          "INVALID_TRANSITION",
           `${act.entity} ${act.entityId}: field "${key}" was too long to keep in the log, so it cannot be undone.`,
           { hint: "Restore the text by hand, or from git history." },
         );
@@ -185,7 +189,10 @@ export async function undoActivity(ctx: ServiceContext, activityId: string) {
       else patch[key] = change.from;
     }
     if (Object.keys(patch).length === 0 && clear.length === 0) {
-      throw new SatiError("VALIDATION", `Activity ${activityId} has no field change to revert.`);
+      throw new SatiError(
+        "INVALID_TRANSITION",
+        `Activity ${activityId} has no field change to revert.`,
+      );
     }
     await checkRevert(w, ctx, act.entity, current, patch, activityId);
     return updateWithLog(w, ctx, act.entity, current, patch, { verb: "update", clear });

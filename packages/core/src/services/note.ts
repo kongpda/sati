@@ -84,7 +84,7 @@ function guardComment(
     });
   }
   if (patch.body !== undefined && before?.createdBy !== ctx.actorId) {
-    throw new SatiError("CONFLICT", "Only the author can edit a comment.");
+    throw new SatiError("INVALID_TRANSITION", "Only the author can edit a comment.");
   }
 }
 

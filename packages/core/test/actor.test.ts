@@ -92,10 +92,10 @@ describe("updateProfile", () => {
 
     // Agents neither have a profile nor change one.
     await expect(updateProfile(asKong, agent.id, { displayName: "Bot" })).rejects.toMatchObject({
-      code: "VALIDATION",
+      code: "INVALID_TRANSITION",
     });
     await expect(updateProfile(ctx, kong.id, { displayName: "Hacked" })).rejects.toMatchObject({
-      code: "VALIDATION",
+      code: "INVALID_TRANSITION",
     });
     await expect(updateProfile(asKong, kong.id, { color: "neon" })).rejects.toMatchObject({
       code: "VALIDATION",

@@ -158,10 +158,10 @@ with a fixed code:
 | 2 | Usage error |
 | 3 | Not found |
 | 4 | Conflict, for example a task another agent holds |
-| 5 | Validation error |
+| 5 | Validation error: the input has the wrong shape |
 | 6 | Not initialized |
 | 7 | Database schema is newer than this sati |
-| 8 | Invalid status transition |
+| 8 | Not allowed now: the status does not permit it, or only a person (or the holder, or the author) may do it |
 | 9 | Ambiguous short id |
 | 10 | `sati guard` found a blocked change |
 

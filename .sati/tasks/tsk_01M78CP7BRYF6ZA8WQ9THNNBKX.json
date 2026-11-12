@@ -1,0 +1,37 @@
+{
+  "branch": "wp9-codes",
+  "completion": {
+    "branch": "wp9-codes",
+    "commit": "aef49110dc3f692f34bbf03b4686cee6e5e58140",
+    "completedAt": "2026-11-12T17:30:29.278Z",
+    "completedBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+    "filesTouched": [
+      "packages/core/src/domain/errors.ts",
+      "packages/core/src/services/actor.ts",
+      "packages/core/src/services/task.ts",
+      "packages/core/src/services/note.ts",
+      "packages/core/src/services/undo.ts",
+      "docs/guide/quick-start.md",
+      ".changeset/error-codes.md"
+    ],
+    "summary": "One error-code rule written in errors.ts. Who-acts and state refusals now use INVALID_TRANSITION (actor, take-over/forced release, not claimed, ask-for-input, comment edit, undo). Claim/lock contention stays CONFLICT. Quick-start table, changeset, test."
+  },
+  "createdAt": "2026-11-12T17:25:34.711Z",
+  "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
+  "id": "tsk_01M78CP7BRYF6ZA8WQ9THNNBKX",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T17:25:34.717Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-12T17:25:39.702Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "claim": "2026-11-12T17:30:29.279Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "completion": "2026-11-12T17:30:29.279Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "status": "2026-11-12T17:30:29.279Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "worktree": "2026-11-12T17:25:39.702Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+  },
+  "status": "done",
+  "title": "WP9: one error-code rule, align outliers (review 9.7)",
+  "updatedAt": "2026-11-12T17:30:29.282Z",
+  "version": 3,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

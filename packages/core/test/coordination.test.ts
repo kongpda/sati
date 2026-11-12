@@ -87,7 +87,7 @@ describe("waiting on a person", () => {
     });
     const free = await createTask(ctx, { title: "unclaimed" });
     await expect(updateTask(ctx, free.id, { needsInput: "?" })).rejects.toMatchObject({
-      code: "VALIDATION",
+      code: "INVALID_TRANSITION",
     });
   });
 

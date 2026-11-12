@@ -94,8 +94,12 @@ describe("edge branches", () => {
         at: "2026-11-03T12:00:01.000Z",
       });
     });
-    expect(await code(() => undoActivity(ctx, "act_01EDGE000000000000000000"))).toBe("VALIDATION");
-    expect(await code(() => undoActivity(ctx, "act_01EDGE000000000000000001"))).toBe("VALIDATION");
+    expect(await code(() => undoActivity(ctx, "act_01EDGE000000000000000000"))).toBe(
+      "INVALID_TRANSITION",
+    );
+    expect(await code(() => undoActivity(ctx, "act_01EDGE000000000000000001"))).toBe(
+      "INVALID_TRANSITION",
+    );
   });
 
   // Review WP2.2: undo wrote old values back without the checks a normal edit runs, so it could

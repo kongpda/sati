@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   acquireLock,
+  approveCard,
   claimTask,
   completeTask,
   createFeature,
@@ -15,9 +16,13 @@ import {
   listTasks,
   pathsOverlap,
   releaseExpiredClaims,
+  releaseTask,
+  renameProject,
   restoreRecord,
   type ServiceContext,
+  takeOverTask,
   undoActivity,
+  updateProfile,
   updateTask,
   writeHandoff,
 } from "../src/index.js";
@@ -204,7 +209,9 @@ describe("undo of claim changes", () => {
       (r) => r.entityId === t.id && r.verb === "update" && "claim" in r.diff,
     );
     expect(row).toBeDefined();
-    await expect(undoActivity(ctx, row?.id ?? "")).rejects.toMatchObject({ code: "VALIDATION" });
+    await expect(undoActivity(ctx, row?.id ?? "")).rejects.toMatchObject({
+      code: "INVALID_TRANSITION",
+    });
   });
 });
 
@@ -250,5 +257,40 @@ describe("validation messages", () => {
     expect(await message(() => createTask(ctx, {}))).toBe(
       "Invalid input: title: expected string, received undefined",
     );
+  });
+});
+
+describe("error codes", () => {
+  // Why: scripts and agents branch on the exit code. The same refusal, "a person must do this",
+  // came back as VALIDATION, CONFLICT or INVALID_TRANSITION depending on the command (review 9.7).
+  it("every 'only a person' refusal has the same error code", async () => {
+    const { ctx } = await setup();
+    const agent = await as(ctx, "other@main", "agent");
+    const person = await as(ctx, "kim@main", "human");
+    const held = await createTask(ctx, { title: "held" });
+    await claimTask(ctx, held.id);
+    const review = await createTask(ctx, { title: "in review" });
+    const claimed = await claimTask(ctx, review.id);
+    await completeTask(ctx, review.id, {
+      summary: "s",
+      filesTouched: ["a.ts"],
+      token: claimed.claim?.token,
+    });
+    const refusals: [string, () => Promise<unknown>][] = [
+      ["approve a task", () => updateTask(agent, review.id, { status: "done" })],
+      ["approve a file", () => approveCard(agent, { path: "README.md", hash: null })],
+      ["rename the project", () => renameProject(agent, { name: "Other" })],
+      ["change a profile", () => updateProfile(agent, person.actorId, { displayName: "X" })],
+      ["release with force", () => releaseTask(agent, held.id, { force: true })],
+      ["take over", () => takeOverTask(agent, held.id)],
+    ];
+    for (const [what, refuse] of refusals) {
+      const err = await refuse().then(
+        () => undefined,
+        (e: unknown) => e,
+      );
+      expect(isSatiError(err) && err.code, what).toBe("INVALID_TRANSITION");
+      expect(isSatiError(err) && err.message, what).toMatch(/^Only a person/u);
+    }
   });
 });

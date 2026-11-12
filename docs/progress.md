@@ -2346,3 +2346,11 @@ Items 8.6 and 8.7 are done (task `tsk_x0xxje`).
 
 - **8.6:** `execute` takes `{ readOnly: true }`; in git mode `withExport` then runs the command without importing `@sati/sync`. A shared folder (standalone) still loads teammates' files first. Marked: `task list|show`, `note|decision|feature|milestone list|show`, `search`, `recall`, `activity`, `changes`, `lock list`, `comment list`, `inbox`; none of their core services call `store.write`. `brief` is not marked: it sweeps expired claims. The test "a read-only command never writes" runs each one and checks the activity count and `.sati/`. Bench, "CLI read command, p95" (50,000 records): 118.4 ms before, 117.8 ms after. The change is within noise there, because the query dominates at that size; the saved import matters more on small projects.
 - **8.7:** closed by measurement, no code (decision `dec_nsg5qp`). `task list` spawns twice on macOS: `git rev-parse` 7.9 ms and `mount` 6.2 ms. The branch already comes from reading `.git/HEAD`. Caching the filesystem kind would save about 6 ms, under the 10 ms bar the item set.
+
+## 2026-11-13 — Review WP9: one error-code rule
+
+Item 9.7 is done (task `tsk_hnnbkx`). The rule is written above `SatiErrorCode` in `packages/core/src/domain/errors.ts`: `VALIDATION` is the wrong input shape, `CONFLICT` is a lost version race or a live claim or lock held by someone else, and `INVALID_TRANSITION` is a refusal by state or by who acts ("only a person", "only the holder", "only the author", "cannot be undone").
+
+- Moved to `INVALID_TRANSITION`: `updateProfile` and the person checks in `actor.ts`, an agent's take-over or forced release, "is not claimed", ask-for-input by a non-holder, editing another's comment, and the five `undo` refusals.
+- **Kept as `CONFLICT`, on purpose:** a claim or lock held by someone else, deleting a claimed task, and "changed since". The caller can retry those later, and the guide documents them as exit 4.
+- The quick-start exit-code table says the same. The test "every 'only a person' refusal has the same error code" checks six refusals.

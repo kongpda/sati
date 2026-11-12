@@ -1,0 +1,30 @@
+{
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "heartbeatAt": "2026-11-12T17:26:55.459Z",
+    "holder": {
+      "host": "h:3fb635c67b4b8fcc",
+      "pid": 41642
+    },
+    "leaseUntil": "2026-11-12T17:56:55.459Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-12T17:26:54.071Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "id": "tsk_01M78CRMVQCCPECXPW417CEMH1",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T17:26:54.071Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "branch": "2026-11-12T17:26:55.459Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "claim": "2026-11-12T17:26:55.459Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "status": "2026-11-12T17:26:55.459Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "worktree": "2026-11-12T17:26:55.459Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "status": "in_progress",
+  "title": "WP15 part A: split app.tsx, pages.tsx, styles.css; design tokens (15.1-15.4)",
+  "updatedAt": "2026-11-12T17:26:55.460Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

@@ -306,7 +306,7 @@ describe("daily workspace", () => {
     const claimRow = store.activity.findLast((row) => row.verb === "claim");
     // Undoing the claim would hand the task back while its holder keeps working.
     await expect(undoActivity(ctx, claimRow?.id ?? "")).rejects.toMatchObject({
-      code: "VALIDATION",
+      code: "INVALID_TRANSITION",
     });
     // Another actor may not edit a claimed task through undo, which carries no fencing token.
     await expect(undoActivity(ctx, rename?.id ?? "")).rejects.toMatchObject({ code: "CONFLICT" });
@@ -330,9 +330,11 @@ describe("daily workspace", () => {
     // Another agent may neither release nor take over a live claim, even with force.
     await expect(releaseTask(agentB, task.id)).rejects.toMatchObject({ code: "CONFLICT" });
     await expect(releaseTask(agentB, task.id, { force: true })).rejects.toMatchObject({
-      code: "CONFLICT",
+      code: "INVALID_TRANSITION",
     });
-    await expect(takeOverTask(agentB, task.id)).rejects.toMatchObject({ code: "CONFLICT" });
+    await expect(takeOverTask(agentB, task.id)).rejects.toMatchObject({
+      code: "INVALID_TRANSITION",
+    });
     // A person needs force to release it; taking over is explicit, so it needs no flag.
     await expect(releaseTask(person, task.id)).rejects.toMatchObject({ code: "CONFLICT" });
     const taken = await takeOverTask(person, task.id);
@@ -351,7 +353,9 @@ describe("daily workspace", () => {
     ]);
     const freed = await releaseTask(person, task.id);
     expect(freed).toMatchObject({ status: "todo", claim: null });
-    await expect(releaseTask(person, task.id)).rejects.toMatchObject({ code: "VALIDATION" });
+    await expect(releaseTask(person, task.id)).rejects.toMatchObject({
+      code: "INVALID_TRANSITION",
+    });
   });
 
   it("clears needsReview and reports it from doctor", async () => {

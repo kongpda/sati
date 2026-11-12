@@ -1,0 +1,17 @@
+{
+  "blockedReason": null,
+  "createdAt": "2026-11-12T17:26:23.118Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "id": "tsk_01M78CQPMEDDP77NCGE7BWPW61",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-12T17:26:23.118Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "blockedReason": "2026-11-12T17:26:34.907Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "status": "2026-11-12T17:26:34.907Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "status": "cancelled",
+  "title": "Review 9.7: one error code for \"only a person\" refusals",
+  "updatedAt": "2026-11-12T17:26:34.907Z",
+  "version": 2
+}

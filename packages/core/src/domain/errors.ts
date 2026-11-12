@@ -1,4 +1,12 @@
 /**
+ * Which code a refusal uses (review 9.7):
+ * - VALIDATION: the input has the wrong shape (a missing field, a bad id, text too long).
+ * - CONFLICT: the record changed or is held by someone else since the caller looked: a lost
+ *   version race, or a live claim or lock. Trying again later may work.
+ * - INVALID_TRANSITION: the input is well formed, but the record's state or the caller may not
+ *   do it: the status machine, "only a person", "only the holder or author", "cannot be undone".
+ * - BLOCKED: the guard refused a change to a protected path.
+ *
  * Every failure the core can report. Each code maps to a stable CLI exit code,
  * so agents can branch on the result without parsing text.
  */

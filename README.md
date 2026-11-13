@@ -43,7 +43,7 @@ mode, commits a plain JSON snapshot so teammates and their agents see the same s
 | **Decisions** | Record why code was removed or an idea was rejected, so the next agent does not undo it. |
 | **File cards** | What an agent learned about a file, reused while the file is unchanged. Fewer tokens per session. |
 | **People in the loop** | Agents' finished work waits for a person to approve. Handoffs, questions and comments on every record. |
-| **A local board** | `sati ui`: board, roadmap, features, notes, decisions, activity. Light and dark, keyboard and screen-reader friendly. |
+| **A local board** | `sati ui`: six pages (Board, My work, Plan, Knowledge, Changes, Team). Light and dark, with a switch; keyboard shortcuts (press `?`) and screen-reader friendly. |
 | **One API, two doors** | The same operations over MCP and the CLI. Every command that returns data takes `--json`. |
 
 ## Quick start

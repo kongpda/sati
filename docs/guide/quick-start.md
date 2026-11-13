@@ -149,6 +149,29 @@ sati ui
 `sati ui` serves a board on `127.0.0.1` and opens a browser. Use `--no-open` to print the
 sign-in URL only. The URL holds a one-time token; do not share it.
 
+The board has six pages: Board, My work, Plan, Knowledge, Changes and Team, with Settings below
+them. On a narrow window the side list shrinks to icons. Settings has a Colours choice (System,
+Light or Dark); System follows the computer.
+
+### Keyboard
+
+Press `?` on the board to see this list.
+
+| Keys | Does |
+| --- | --- |
+| Ctrl K or Cmd K | Search, or ask a question |
+| `g` then `b` | Go to Board |
+| `g` then `w` | Go to My work |
+| `g` then `p` | Go to Plan |
+| `g` then `k` | Go to Knowledge |
+| `g` then `c` | Go to Changes |
+| `g` then `t` | Go to Team |
+| `j` and `k` | Next and previous card on the Board |
+| `c` | New task, on the Board and My work |
+| `x` | Select or unselect the open card |
+| `?` | Show this list |
+| Esc | Close what is open |
+
 The board talks to a local HTTP API. Once signed in, `/api/openapi.json` on the same address
 lists its routes. It serves the board, not other programs: it can change in any release.
 

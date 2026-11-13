@@ -1053,12 +1053,12 @@ Added 2026-11-12 at the owner's request: the whole-project review found the mode
 - [x] WP2 Board: merge pages (11 to 6)
 - [x] WP3 Board: correctness
 - [x] WP5 Board: wording
-- [ ] WP15 part B Board redesign: navigation, layout, palette, keyboard help, empty states, appearance
+- [x] WP15 part B Board redesign: navigation, layout, palette, keyboard help, empty states, appearance
 - [x] WP12 MCP surface
 - [x] WP10 Core: concepts
 - [ ] WP4 Board: performance
 - [x] WP11 Core and store: performance
-- [ ] WP13 Docs
+- [x] WP13 Docs
 - [ ] WP14 Housekeeping
 
 **Gate:** every box in `docs/review-2026-11-12.md` is ticked or closed with a reason in `docs/progress.md`; the board has six primary nav links plus Settings, passes axe on each in both themes, and no page scrolls sideways from 700 to 1920 px; `sati --help` lists no two commands that do the same job; no file in `packages/cli/src` except `ui/server.ts` is over 600 lines; `pnpm bench` passes every budget.

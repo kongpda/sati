@@ -2622,3 +2622,8 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 
 - `e2e/ui/a11y.spec.ts` now writes one 1400 × 900 picture of each of the 11 page views (board, My work, Plan and Features, Knowledge with Decisions and File cards, Changes and Log, Team, Settings) in light and dark, 22 files, to `e2e/screenshots/` (ignored by git). Run `cd e2e && pnpm exec playwright test ui/a11y.spec.ts -g shot` after `pnpm build`.
 - The owner looks at them before the changeset text is final. The screen-reader pass stays with the owner.
+
+### WP13 13.8: guide pass
+
+- Quick start: board section names the six pages, Settings and the Colours choice, and has a Keyboard table that copies the help sheet (`SHORTCUTS` in `packages/ui/src/hooks/use-keys.ts`). If a key changes, change both.
+- README feature row updated. The glossary already maps My work to `sati inbox`.

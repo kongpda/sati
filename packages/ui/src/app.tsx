@@ -234,6 +234,12 @@ export function App() {
             tasks,
             pinned,
             morePinned,
+            filter,
+            clearFilters: () => {
+              setFilter("");
+              setFeature("");
+            },
+            setCreating,
             setSelected,
             working,
             column,

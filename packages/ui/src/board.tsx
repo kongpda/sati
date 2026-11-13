@@ -322,7 +322,7 @@ function Column({
             </button>
           </div>
           <div className="cards" ref={parent}>
-            {count === 0 ? <p className="column-empty">No tasks</p> : null}
+            {count === 0 ? <p className="column-empty">Nothing here</p> : null}
             <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
               {virtual.getVirtualItems().map((row) => {
                 const item = rows[row.index];

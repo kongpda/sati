@@ -100,8 +100,9 @@ test("creates, edits, filters and bulk-moves tasks", async ({ page }) => {
   );
   // A filter that hides every task says so, instead of showing a blank board.
   await page.getByLabel("Filter tasks").fill("no task has this title");
-  await expect(page.getByText("No tasks match the filter.")).toBeVisible();
-  await page.getByLabel("Filter tasks").fill("");
+  await expect(page.getByText('No task matches "no task has this title".')).toBeVisible();
+  await page.getByRole("button", { name: "Clear filter" }).click();
+  await expect(page.getByLabel("Filter tasks")).toHaveValue("");
 
   const pick = async (title: string) => {
     const box = page.locator(".card", {
@@ -228,6 +229,33 @@ test("the task sheet is a dialog under 1100 px and sits beside the board from 11
   await open();
   await expect(page.locator("main.main")).not.toHaveAttribute("inert", "");
   await page.keyboard.press("Escape");
+});
+
+// Review 15.9: on a project with nothing in it, every page says what to do next.
+test("an empty project says what to do next on every page", async ({ page }) => {
+  const own = await startUi();
+  try {
+    await page.goto(own.signIn);
+    await expect(page.getByText("No tasks yet.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add the first task" })).toBeVisible();
+    const open = (name: string) => page.getByRole("link", { name, exact: true }).click();
+    await open("My work");
+    await expect(page.getByText("Nothing waits for you.")).toBeVisible();
+    await open("Plan");
+    await expect(page.getByText(/No milestones yet\./u)).toBeVisible();
+    await open("Knowledge");
+    await expect(page.getByText(/No notes yet\./u)).toBeVisible();
+    await page.getByRole("tab", { name: "Decisions", exact: true }).click();
+    await expect(page.getByText(/No decisions yet\./u)).toBeVisible();
+    await page.getByRole("tab", { name: "File cards", exact: true }).click();
+    await expect(page.getByText(/No cards yet\./u)).toBeVisible();
+    await open("Team");
+    await expect(page.getByText(/No agents yet\./u)).toBeVisible();
+    await open("Changes");
+    await expect(page.getByText(/Nothing changed|No activity yet/u).first()).toBeVisible();
+  } finally {
+    await own.stop();
+  }
 });
 
 // Review 15.5: a 56 px rail between 700 and 1099 px, with every link still named.

@@ -62,6 +62,9 @@ export function MyWork({
   return (
     <div className="page">
       <h1>My work</h1>
+      {needs.length + mentions.length + approval.length + assigned.length + due.length === 0 ? (
+        <p className="empty">Nothing waits for you.</p>
+      ) : null}
       {needs.length ? (
         <Section title="Needs you" count={needs.length} empty="">
           {needs.map((t) => (

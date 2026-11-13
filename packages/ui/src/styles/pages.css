@@ -386,3 +386,26 @@ body:has(.palette) .toast {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* First load: blocks the size of the page's lists, so nothing jumps when the data arrives. */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.skeleton-block {
+  height: 72px;
+  border-radius: var(--radius-md);
+  background: var(--line);
+  opacity: 0.6;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+.skeleton-block.wide {
+  height: 28px;
+  width: 40%;
+}
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}

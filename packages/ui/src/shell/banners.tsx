@@ -40,9 +40,12 @@ export function Banners({
         </p>
       ) : null}
       {query.isLoading ? (
-        <p className="empty page" role="status">
-          Loading…
-        </p>
+        <div className="page skeleton" role="status" aria-label="Loading">
+          <span className="sr-only">Loading…</span>
+          <div className="skeleton-block wide" aria-hidden="true" />
+          <div className="skeleton-block" aria-hidden="true" />
+          <div className="skeleton-block" aria-hidden="true" />
+        </div>
       ) : null}
       {query.isError && !data ? (
         <div className="empty page" role="alert">
@@ -50,7 +53,7 @@ export function Banners({
             Could not load. {query.error instanceof ApiError ? query.error.message : "Try again."}
           </p>
           <button type="button" onClick={() => void query.refetch()}>
-            Retry
+            Try again
           </button>
         </div>
       ) : null}
@@ -58,7 +61,7 @@ export function Banners({
         <p className="banner" role="alert">
           The latest refresh failed, so this may be out of date.{" "}
           <button type="button" onClick={() => void query.refetch()}>
-            Retry
+            Try again
           </button>
         </p>
       ) : null}

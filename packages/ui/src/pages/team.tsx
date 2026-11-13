@@ -74,7 +74,7 @@ export function Agents({
             </article>
           );
         })}
-        {data.actors.length === 0 ? (
+        {!data.actors.some((a) => a.kind === "agent") ? (
           <p className="empty">No agents yet. They appear when one claims a task.</p>
         ) : null}
       </div>

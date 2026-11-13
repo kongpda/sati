@@ -2594,3 +2594,12 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 - Already true, left as is: the column header stays on top while cards scroll (cards scroll in `.cards`, under the header); the bar sits at the foot of the board area.
 - NOT done: the toolbar "Columns" control that shows which columns are collapsed. Each column already has a collapse button and a rail (1.3); a second control for the same thing was not worth a new feature. Say so if you want it.
 - Tests: flows "the selection bar is a region that Clear and Escape empty", "a long card title is cut at two lines and kept in full in its tooltip", "the task sheet is a dialog under 1100 px and sits beside the board from 1100 px".
+
+### WP15 15.9: empty, loading and error states
+
+- Most lists already had an empty sentence. Added or changed: an empty board offers "Add the first task" (not "New task": two buttons of one name made the existing test and a screen reader's list ambiguous); a filter with no match says `No task matches "<text>"` with a Clear filter button; a column says "Nothing here"; My work says "Nothing waits for you." when every section is empty; the Team page says "No agents yet" when there is no agent, not only when there is no actor at all.
+- First load shows three grey blocks (a heading and two rows) with a visually hidden "Loading…", not a bare line of text. `prefers-reduced-motion` already switches every animation off.
+- "Retry" is now "Try again" in both load-failure banners.
+- Already true: error toasts stay until dismissed and are in the assertive region; others time out and are polite.
+- Not changed: Changes keeps its wording "Nothing changed in this time. Try a longer range." (the review word "range" is only a wording difference).
+- Test: flows "an empty project says what to do next on every page" on its own throwaway project; the first test now also clears the filter with the new button.

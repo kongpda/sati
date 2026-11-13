@@ -11,6 +11,9 @@ export function BoardPage({
   tasks,
   pinned,
   morePinned,
+  filter,
+  clearFilters,
+  setCreating,
   working,
   column,
   setColumn,
@@ -40,6 +43,10 @@ export function BoardPage({
   pinned: { id: string; title: string }[];
   /** How many pinned notes are not listed. */
   morePinned: number;
+  /** The text in the filter box, and a way to empty it and the feature choice. */
+  filter: string;
+  clearFilters: () => void;
+  setCreating: (open: boolean) => void;
   working: Task[];
   column: string;
   setColumn: (column: string) => void;
@@ -177,11 +184,19 @@ export function BoardPage({
         </section>
       ) : null}
       {!data ? null : data.tasks.length === 0 ? (
-        <p className="empty page">
-          No tasks yet. Use New task (or press c), or ask your agent to plan the work.
-        </p>
+        <div className="empty page">
+          <p>No tasks yet. Use New task (or press c), or ask your agent to plan the work.</p>
+          <button type="button" className="primary" onClick={() => setCreating(true)}>
+            Add the first task
+          </button>
+        </div>
       ) : tasks.length === 0 ? (
-        <p className="empty page">No tasks match the filter.</p>
+        <div className="empty page">
+          <p>{filter ? `No task matches "${filter}".` : "No tasks match the filter."}</p>
+          <button type="button" onClick={clearFilters}>
+            Clear filter
+          </button>
+        </div>
       ) : (
         <Board
           tasks={tasks}

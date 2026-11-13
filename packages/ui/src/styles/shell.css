@@ -75,3 +75,33 @@ textarea {
   font-weight: 600;
   white-space: nowrap;
 }
+.nav button.nav-help {
+  margin-top: auto;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 6px var(--space-2);
+  border-radius: 6px;
+  color: inherit;
+}
+.keyboard-help table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-2) 0;
+}
+.keyboard-help th,
+.keyboard-help td {
+  padding: var(--space-1) var(--space-2);
+  text-align: left;
+  font-weight: 400;
+  vertical-align: top;
+}
+.keyboard-help kbd {
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.keyboard-help h2 {
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+}

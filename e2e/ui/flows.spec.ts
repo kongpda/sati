@@ -1146,6 +1146,55 @@ test("Enter with a task open adds no history entry, and c opens New task only wh
   expect(await problems()).toEqual([]);
 });
 
+// Review 15.8: the Keyboard sheet is the list of shortcuts, and each one does what it says.
+test("every shortcut in the help sheet does what the sheet says, and g b typed in a field is text", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  await page.goto(ui.signIn);
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press("?");
+  const sheet = page.getByRole("dialog", { name: "Keyboard" });
+  await expect(sheet).toBeVisible();
+  const rows = await sheet.getByRole("row").allInnerTexts();
+  const goes = rows
+    .map((r) => /^g then (\w)\s+Go to (.+)$/u.exec(r.replace(/\s+/gu, " ").trim()))
+    .filter((m): m is RegExpExecArray => m !== null);
+  expect(goes.map((m) => m[2])).toEqual([
+    "Board",
+    "My work",
+    "Plan",
+    "Knowledge",
+    "Changes",
+    "Team",
+  ]);
+  await page.keyboard.press("Escape");
+  await expect(sheet).toHaveCount(0);
+  // From the last page to each in turn, so every press is a real move.
+  for (const [, key, name] of [...goes].reverse()) {
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press("g");
+    await page.keyboard.press(key ?? "");
+    await expect(page.getByRole("heading", { level: 1, name: name ?? "" })).toBeVisible();
+  }
+  // The nav button opens the same sheet.
+  await page.getByRole("button", { name: "Keyboard help" }).click();
+  await expect(sheet).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // In a text field the letters are text.
+  await page.keyboard.press("g");
+  await page.keyboard.press("k");
+  await expect(page.getByRole("heading", { level: 1, name: "Knowledge" })).toBeVisible();
+  const title = page.getByRole("textbox", { name: "Note title" });
+  await title.click();
+  await page.keyboard.type("gp?");
+  await expect(title).toHaveValue("gp?");
+  await expect(page.getByRole("heading", { level: 1, name: "Knowledge" })).toBeVisible();
+  await expect(sheet).toHaveCount(0);
+  expect(await problems()).toEqual([]);
+});
+
 // Review 3.2: a card form opened before an agent's newer save must not overwrite it.
 test("a stale card edit is refused through the board, and the newer card stays", async ({
   page,

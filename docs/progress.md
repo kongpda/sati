@@ -2556,3 +2556,12 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 - `windows-only.test.ts` and the hardening SIGTERM test already had one.
 
 - 14.4 follow-up: `prompt.test.ts` "gives a usage error or does what it did before, within the limit" takes 3.5 s alone and timed out at 15 s under load (it starts the CLI about twenty times). It now states a 90 s timeout with the reason. Each command inside still has its own 5 s limit.
+
+### WP15 15.8: keyboard help
+
+- `?` or the "Keyboard help" button at the foot of the nav opens a Keyboard dialog. Its rows come from `SHORTCUTS` in `hooks/use-keys.ts`; the go-to rows are built from `GO_KEYS`, which the handler reads too.
+- `g` then `b`, `w`, `p`, `k`, `c` or `t` goes to Board, My work, Plan, Knowledge, Changes or Team. A `g` waits 1.5 s for the second key.
+- No shortcut fires in a field or while a dialog is open. The page keys and `?` also work with focus on a button or link.
+- The review lists a `/` filter shortcut among the existing keys. There is none in the code, so none was added and the sheet does not list it.
+- The phone nav hides the help button (no keyboard).
+- Tests: flows "every shortcut in the help sheet does what the sheet says, and g b typed in a field is text" presses each go-to row the sheet lists; the a11y spec checks the dialog with axe on the wider layouts.

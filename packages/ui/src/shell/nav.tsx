@@ -6,6 +6,7 @@ export function Nav({
   inbox,
   modal,
   go,
+  onHelp,
 }: {
   pages: readonly (readonly [string, string])[];
   path: string;
@@ -13,6 +14,7 @@ export function Nav({
   inbox: number;
   modal: boolean;
   go: (href: string) => boolean;
+  onHelp: () => void;
 }) {
   return (
     <nav className="nav" inert={modal} data-modal={modal ? "" : undefined}>
@@ -37,6 +39,9 @@ export function Nav({
           ) : null}
         </a>
       ))}
+      <button type="button" className="nav-help" onClick={onHelp}>
+        Keyboard help
+      </button>
       {inbox ? (
         <span id="inbox-count" hidden>
           {inbox === 1 ? "1 thing waits for you" : `${inbox} things wait for you`}

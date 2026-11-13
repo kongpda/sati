@@ -14,6 +14,7 @@ import { needsReason } from "./moves.js";
 import { TaskSheetPanel } from "./pages/connected.js";
 import { Routes } from "./pages/routes.js";
 import { Banners } from "./shell/banners.js";
+import { KeyboardHelp } from "./shell/keyboard-help.js";
 import { Nav } from "./shell/nav.js";
 import { Palette } from "./shell/palette.js";
 import { toastBox } from "./shell/toast.js";
@@ -41,6 +42,7 @@ export function App() {
   const { toast, setToast, setToastState, fail, copyFailed } = useToast();
   const [palette, setPalette] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [help, setHelp] = useState(false);
   /** Tasks on their way back from review, held until the person says what still needs doing. */
   const [sendingBack, setSendingBack] = useState<{
     ids: string[];
@@ -153,6 +155,7 @@ export function App() {
     closePalette,
     setPalette,
     setCreating,
+    setHelp,
     setSelected,
     go,
     path,
@@ -176,7 +179,7 @@ export function App() {
   // "Working now" is a live lease. A claim whose lease ended is an agent that stopped; the card
   // says so, and this strip must not show it as at work.
   const sheetOpen = task !== null && !!data?.tasks.some((t) => t.id === task);
-  const dialog = creating || palette || sendingBack !== null;
+  const dialog = creating || palette || help || sendingBack !== null;
   const modal = dialog || (sheetOpen && !wide);
 
   return (
@@ -188,6 +191,7 @@ export function App() {
         inbox={inbox}
         modal={modal}
         go={go}
+        onHelp={() => setHelp(true)}
       />
       <main className="main" inert={modal} data-modal={modal ? "" : undefined}>
         <TopBar
@@ -278,6 +282,7 @@ export function App() {
           }}
         />
       ) : null}
+      {help ? <KeyboardHelp onClose={() => setHelp(false)} /> : null}
       {palette ? (
         <Palette
           data={data}

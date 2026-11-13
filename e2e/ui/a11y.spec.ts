@@ -160,6 +160,14 @@ for (const [device, viewport, colorScheme] of [
       const card = await new AxeBuilder({ page }).withTags(TAGS).analyze();
       expect(summary(card.violations)).toEqual([]);
       await page.keyboard.press("Escape");
+      // A phone has no keyboard, so its nav does not offer the sheet.
+      if (await page.getByRole("button", { name: "Keyboard help" }).isVisible()) {
+        await page.getByRole("button", { name: "Keyboard help" }).click();
+        await expect(page.getByRole("dialog", { name: "Keyboard" })).toBeVisible();
+        const keys = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+        expect(summary(keys.violations)).toEqual([]);
+        await page.keyboard.press("Escape");
+      }
       await page.getByRole("link", { name: "Team", exact: true }).click();
       await page
         .getByRole("button", { name: /^Edit / })

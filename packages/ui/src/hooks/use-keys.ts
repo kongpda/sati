@@ -1,12 +1,43 @@
 import { type Dispatch, type MutableRefObject, type SetStateAction, useEffect } from "react";
 import type { Task } from "../api.js";
 
-/** The board's keys: Ctrl+K search, Escape, j/k between cards, Enter, c to create, x to select. */
+/** `g` then one of these keys goes to a page. */
+export const GO_KEYS: Record<string, readonly [href: string, name: string]> = {
+  b: ["/", "Board"],
+  w: ["/my-work", "My work"],
+  p: ["/plan", "Plan"],
+  k: ["/knowledge", "Knowledge"],
+  c: ["/changes", "Changes"],
+  t: ["/team", "Team"],
+};
+
+/**
+ * Every shortcut, as the Keyboard help lists them. The handler below acts on the same keys, and
+ * a test presses each go-to row, so the sheet cannot say something the board does not do.
+ */
+export const SHORTCUTS: readonly { keys: string; does: string }[] = [
+  { keys: "Ctrl K or Cmd K", does: "Search, or ask a question" },
+  ...Object.entries(GO_KEYS).map(([key, [, name]]) => ({
+    keys: `g then ${key}`,
+    does: `Go to ${name}`,
+  })),
+  { keys: "j and k", does: "Next and previous card on the Board" },
+  { keys: "c", does: "New task, on the Board and My work" },
+  { keys: "x", does: "Select or unselect the open card" },
+  { keys: "?", does: "Show this list" },
+  { keys: "Esc", does: "Close what is open" },
+];
+
+/** How long a `g` waits for the key after it. */
+const GO_WAIT_MS = 1500;
+
+/** The board's keys: Ctrl+K search, ? help, g then a page key, Escape, j/k between cards, c to create, x to select. */
 export function useKeys({
   palette,
   closePalette,
   setPalette,
   setCreating,
+  setHelp,
   setSelected,
   go,
   path,
@@ -18,6 +49,7 @@ export function useKeys({
   closePalette: () => void;
   setPalette: (open: boolean) => void;
   setCreating: (open: boolean) => void;
+  setHelp: (open: boolean) => void;
   setSelected: Dispatch<SetStateAction<Set<string>>>;
   go: (next: string, taskId?: string | null) => boolean;
   path: string;
@@ -28,6 +60,7 @@ export function useKeys({
   cursor: MutableRefObject<string | null>;
 }) {
   useEffect(() => {
+    let goAt = 0;
     function onKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
       const typing =
@@ -55,6 +88,25 @@ export function useKeys({
       // Any open dialog (search, or a create or edit form on any page) owns the keyboard.
       const dialog = document.querySelector(".palette") !== null;
       if (dialog || typing || event.metaKey || event.ctrlKey || event.altKey) return;
+      // Page keys work from anywhere that is not typing, a button or a link included.
+      if (event.key === "?") {
+        event.preventDefault();
+        setHelp(true);
+        return;
+      }
+      if (goAt && Date.now() - goAt < GO_WAIT_MS) {
+        goAt = 0;
+        const page = GO_KEYS[event.key];
+        if (page) {
+          event.preventDefault();
+          go(page[0]);
+          return;
+        }
+      }
+      if (event.key === "g") {
+        goAt = Date.now();
+        return;
+      }
       const step = event.key === "j" || event.key === "k";
       // Buttons and links use these keys themselves, and the sheet is a dialog of its own; only
       // j/k pass from the sheet's heading (where it puts focus) and from a card (where closing
@@ -101,6 +153,7 @@ export function useKeys({
     palette,
     path,
     setCreating,
+    setHelp,
     setPalette,
     setSelected,
     task,

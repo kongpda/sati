@@ -275,6 +275,10 @@ body:has(.palette) .toast {
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
+  /* A phone has no keyboard to ask about. */
+  .nav button.nav-help {
+    display: none;
+  }
   /* The bar scrolls sideways; a two-word label must not wrap and make it taller. */
   .nav a {
     white-space: nowrap;

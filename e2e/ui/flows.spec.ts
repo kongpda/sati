@@ -258,6 +258,43 @@ test("an empty project says what to do next on every page", async ({ page }) => 
   }
 });
 
+// Review 15.11: a refused save names the field, and the field points at the message.
+test("a refused save marks the field it is about and keeps what was typed", async ({ page }) => {
+  await page.goto(ui.signIn);
+  await page.getByRole("button", { name: "New task" }).click();
+  const form = page.getByRole("dialog", { name: "New task" });
+  const title = form.getByLabel("Title");
+  // The field's own limit stops typing, so the server's refusal is staged.
+  await page.route("**/api/tasks", (route) =>
+    route.request().method() === "POST"
+      ? route.fulfill({
+          status: 400,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: {
+              code: "VALIDATION",
+              message: "Invalid input: title: Too big: expected string to have <=300 characters",
+              hint: null,
+            },
+          }),
+        })
+      : route.continue(),
+  );
+  const long = "A title the server refuses";
+  await title.fill(long);
+  await form.getByRole("button", { name: "Create task" }).click();
+  await expect(form.getByRole("alert")).toContainText(/Too big/u);
+  await expect(title).toHaveAttribute("aria-invalid", "true");
+  await expect(title).toBeFocused();
+  const described = await title.getAttribute("aria-describedby");
+  expect(await form.getByRole("alert").getAttribute("id")).toBe(described);
+  await expect(title).toHaveValue(long);
+  // Typed text is not thrown away without asking; accept the question.
+  page.once("dialog", (d) => void d.accept());
+  await page.keyboard.press("Escape");
+  await expect(form).toHaveCount(0);
+});
+
 // Review 15.5: a 56 px rail between 700 and 1099 px, with every link still named.
 test("at 900 px the nav is a rail and every link still has an accessible name", async ({
   page,

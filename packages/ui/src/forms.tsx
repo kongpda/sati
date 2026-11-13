@@ -76,6 +76,13 @@ function filled(form: HTMLFormElement): boolean {
   );
 }
 
+/** The field a refused save names ("Invalid input: title: Too big…"), if the form has it. */
+function fieldOf(form: HTMLFormElement | null, message: string): HTMLElement | null {
+  const name = /Invalid input: (\w+):/u.exec(message)?.[1];
+  const field = name ? form?.elements.namedItem(name) : null;
+  return field instanceof HTMLElement ? field : null;
+}
+
 /**
  * The shell every create and edit dialog shares: it focuses the first field, closes on Esc or
  * Cancel, keeps the submit button off until the required fields are filled, and shows a refused
@@ -97,6 +104,7 @@ export function FormDialog({
   children: ReactNode;
 }) {
   const heading = useId();
+  const errorId = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -118,6 +126,20 @@ export function FormDialog({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // A refusal that names a field is tied to it: read with the field, and the field is marked.
+  useEffect(() => {
+    if (!error) return;
+    const field = fieldOf(formRef.current, error);
+    if (!field) return;
+    field.setAttribute("aria-invalid", "true");
+    field.setAttribute("aria-describedby", errorId);
+    field.focus();
+    return () => {
+      field.removeAttribute("aria-invalid");
+      field.removeAttribute("aria-describedby");
+    };
+  }, [error, errorId]);
 
   useEffect(() => {
     const previous = document.activeElement;
@@ -168,7 +190,7 @@ export function FormDialog({
         <h2 id={heading}>{title}</h2>
         {children}
         {error ? (
-          <p className="form-error" role="alert">
+          <p className="form-error" role="alert" id={errorId}>
             {error}
           </p>
         ) : null}
@@ -176,7 +198,12 @@ export function FormDialog({
           <button type="button" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="primary" disabled={!ready || saving}>
+          <button
+            type="submit"
+            className="primary"
+            disabled={!ready || saving}
+            title={!ready && !saving ? "Fill in the required fields first." : undefined}
+          >
             {saving ? busy : submit}
           </button>
         </div>

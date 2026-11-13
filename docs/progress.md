@@ -2603,3 +2603,9 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 - Already true: error toasts stay until dismissed and are in the assertive region; others time out and are polite.
 - Not changed: Changes keeps its wording "Nothing changed in this time. Try a longer range." (the review word "range" is only a wording difference).
 - Test: flows "an empty project says what to do next on every page" on its own throwaway project; the first test now also clears the filter with the new button.
+
+### WP15 15.11: forms and dialogs
+
+- `FormDialog` already did most of this (read first, as the review said): focus on the first field, the page behind made inert (the trap), Esc and Cancel close, focus returns to the opener, `aria-labelledby` on the title, Cancel then the primary action last, the primary disabled and relabelled while a save runs, a refused save shown inside the dialog with the text kept.
+- Added: when the server's refusal names a field ("Invalid input: title: …") that field gets `aria-invalid`, `aria-describedby` pointing at the message, and focus. The message stays in one place at the foot of the form, tied to the field, instead of moving beside each field. A disabled Create has a `title` saying to fill in the required fields.
+- Test: flows "a refused save marks the field it is about and keeps what was typed" (the refusal is staged with a route, because the field's own `maxLength` stops typing past the limit).

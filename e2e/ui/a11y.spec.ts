@@ -148,7 +148,7 @@ for (const [device, viewport, colorScheme] of [
       await page.keyboard.press("Escape");
       await page.keyboard.press("Control+k");
       const palette = page.getByRole("dialog", { name: "Search" });
-      await palette.getByRole("textbox", { name: "Search" }).fill("search ranks");
+      await palette.getByRole("combobox", { name: "Search" }).fill("search ranks");
       await palette.getByRole("button", { name: "Ask: search ranks" }).click();
       await expect(palette.getByRole("region", { name: "Answer" })).toContainText("Uses FTS5");
       const answer = await new AxeBuilder({ page }).withTags(TAGS).analyze();

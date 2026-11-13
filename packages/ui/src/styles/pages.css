@@ -257,6 +257,20 @@ body:has(.palette) .toast {
   padding: 6px var(--space-2);
   border-radius: 6px;
 }
+.palette .palette-row {
+  overflow-wrap: anywhere;
+  padding: 6px var(--space-2);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.palette .palette-row.active,
+.palette .palette-row:hover {
+  background: var(--paper);
+}
+.palette .group-heading {
+  margin: var(--space-2) var(--space-2) 0;
+  font-weight: 600;
+}
 .mobile-status {
   display: none;
 }

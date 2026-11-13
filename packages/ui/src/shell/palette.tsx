@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, parentKind, type RecallItem, type Snapshot } from "../api.js";
+import { GO_KEYS } from "../hooks/use-keys.js";
 import { threadOf } from "../thread.js";
 import { kindLabel } from "../words.js";
 
@@ -10,6 +11,15 @@ const HIT_PAGES: Record<string, string> = {
   feature: "/plan?tab=features",
   context: "/knowledge?kind=cards",
 };
+
+/** The order of the result groups, and what each is called. */
+const GROUPS: [entity: string, heading: string][] = [
+  ["task", "Tasks"],
+  ["note", "Notes"],
+  ["decision", "Decisions"],
+  ["feature", "Features"],
+  ["context", "File cards"],
+];
 
 /** The board's search returns at most this many hits (the `/api/search` limit). */
 const SEARCH_LIMIT = 20;
@@ -41,6 +51,8 @@ export function Palette({
   /** The answer to "Ask: <text>", ranked like what `recall` gives an agent. */
   const [answer, setAnswer] = useState<{ items: RecallItem[]; omitted: number } | null>(null);
   const [asking, setAsking] = useState(false);
+  /** The row the arrow keys are on, or -1 when none. */
+  const [active, setActive] = useState(-1);
   const searchRef = useRef<HTMLInputElement>(null);
   const searchRun = useRef(0);
   // Asking replaces searching for this text: a pause-timer that fires after the click must not
@@ -85,6 +97,61 @@ export function Palette({
     }, 200);
     return () => window.clearTimeout(id);
   }, [queryText]);
+  const open = (hit: { entity: string; id: string }) => {
+    const note = data?.notes.find((n) => n.id === hit.id);
+    const on = note ? threadOf(note) : undefined;
+    const about = on ? titleOf(on) : undefined;
+    onClose();
+    // A comment opens what it is on; one whose record was deleted says so.
+    if (on && about === undefined) onToast("That comment is on something deleted.");
+    else if (hit.entity === "task") onGo("/", hit.id);
+    else if (on && data && parentKind(data, on) === "task") onGo("/", on);
+    else onShow(HIT_PAGES[on && data ? parentKind(data, on) : hit.entity] ?? "/", on ?? hit.id);
+  };
+  const titleOf = (id: string) =>
+    (data
+      ? { task: data.tasks, decision: data.decisions, note: data.notes }[parentKind(data, id)]
+      : undefined
+    )?.find((r) => r.id === id)?.title;
+  const needle = queryText.trim().toLowerCase();
+  const pageRows = Object.values(GO_KEYS)
+    .filter(([, name]) => !needle || name.toLowerCase().includes(needle))
+    .map(([href, name]) => ({
+      key: `go-${href}`,
+      group: "Go to",
+      label: (
+        <>
+          <span className="badge">Go to</span> {name}
+        </>
+      ),
+      text: `Go to ${name}`,
+      run: () => {
+        onClose();
+        onGo(href);
+      },
+    }));
+  const hitRows = GROUPS.flatMap(([entity, heading]) =>
+    hits
+      .filter((h) => h.entity === entity)
+      .map((hit) => {
+        const note = data?.notes.find((n) => n.id === hit.id);
+        const on = note ? threadOf(note) : undefined;
+        const about = on ? titleOf(on) : undefined;
+        return {
+          key: `${hit.entity}-${hit.id}`,
+          group: heading,
+          label: (
+            <>
+              <span className="badge">{on ? "Comment" : kindLabel(hit.entity)}</span>{" "}
+              {about ? `on ${about}` : hit.title}
+            </>
+          ),
+          text: about ? `on ${about}` : hit.title,
+          run: () => open(hit),
+        };
+      }),
+  );
+  const rows = [...pageRows, ...hitRows];
   return (
     <div className="palette" role="dialog" aria-modal="true" aria-label="Search">
       <button
@@ -112,7 +179,25 @@ export function Palette({
             setSearching(false);
             setAnswer(null);
             setAsking(false);
+            setActive(-1);
             asked.current = false;
+          }}
+          role="combobox"
+          aria-expanded="true"
+          aria-controls="palette-results"
+          aria-autocomplete="list"
+          aria-activedescendant={active >= 0 ? `palette-row-${active}` : undefined}
+          onKeyDown={(e) => {
+            const count = rows.length;
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+              if (!count) return;
+              e.preventDefault();
+              const step = e.key === "ArrowDown" ? 1 : -1;
+              setActive((i) => (i < 0 ? (step > 0 ? 0 : count - 1) : (i + step + count) % count));
+            } else if (e.key === "Enter" && active >= 0 && rows[active]) {
+              e.preventDefault();
+              rows[active]?.run();
+            }
           }}
           placeholder="Search tasks, notes, decisions, features and file cards"
           aria-label="Search"
@@ -198,39 +283,33 @@ export function Palette({
             ) : null}
           </section>
         ) : null}
-        {hits.map((hit) => {
-          const titleOf = (id: string) =>
-            (data
-              ? { task: data.tasks, decision: data.decisions, note: data.notes }[
-                  parentKind(data, id)
-                ]
-              : undefined
-            )?.find((r) => r.id === id)?.title;
-          const note = data?.notes.find((n) => n.id === hit.id);
-          const on = note ? threadOf(note) : undefined;
-          const about = on ? titleOf(on) : undefined;
-          return (
-            <button
-              type="button"
-              key={`${hit.entity}-${hit.id}`}
-              onClick={() => {
-                onClose();
-                // A comment opens what it is on; one whose record was deleted says so.
-                if (on && about === undefined) onToast("That comment is on something deleted.");
-                else if (hit.entity === "task") onGo("/", hit.id);
-                else if (on && data && parentKind(data, on) === "task") onGo("/", on);
-                else
-                  onShow(
-                    HIT_PAGES[on && data ? parentKind(data, on) : hit.entity] ?? "/",
-                    on ?? hit.id,
-                  );
-              }}
-            >
-              <span className="badge">{on ? "Comment" : kindLabel(hit.entity)}</span>{" "}
-              {about ? `on ${about}` : hit.title}
-            </button>
-          );
-        })}
+        <div role="listbox" id="palette-results" aria-label="Results">
+          {[...new Set(rows.map((r) => r.group))].map((group) => (
+            // biome-ignore lint/a11y/useSemanticElements: a fieldset inside a listbox is not valid
+            <div role="group" aria-label={group} key={group}>
+              <p className="meta group-heading" aria-hidden="true">
+                {group}
+              </p>
+              {rows.map((row, i) =>
+                row.group === group ? (
+                  // biome-ignore lint/a11y/useKeyWithClickEvents: the input owns the keys (aria-activedescendant)
+                  <div
+                    role="option"
+                    tabIndex={-1}
+                    id={`palette-row-${i}`}
+                    key={row.key}
+                    aria-selected={i === active}
+                    className={`palette-row${i === active ? " active" : ""}`}
+                    onClick={row.run}
+                    onMouseMove={() => setActive(i)}
+                  >
+                    {row.label}
+                  </div>
+                ) : null,
+              )}
+            </div>
+          ))}
+        </div>
       </form>
     </div>
   );

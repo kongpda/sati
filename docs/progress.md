@@ -2565,3 +2565,9 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 - The review lists a `/` filter shortcut among the existing keys. There is none in the code, so none was added and the sheet does not list it.
 - The phone nav hides the help button (no keyboard).
 - Tests: flows "every shortcut in the help sheet does what the sheet says, and g b typed in a field is text" presses each go-to row the sheet lists; the a11y spec checks the dialog with axe on the wider layouts.
+
+### WP15 15.7: palette
+
+- The search box is now a combobox over one listbox. Rows are "Go to <page>" (the six pages, filtered by what is typed; all six when empty) then search hits grouped Tasks, Notes, Decisions, Features, File cards. Up and Down move (wrapping), Enter opens the marked row, a mouse move marks one. With no row marked, Enter still searches, as before.
+- "Ask" stays a button above the rows. Hits became `option` elements, so the e2e specs that clicked them as buttons now look for options; the input is a `combobox`.
+- Tests: flows "the palette goes to a page by name with the arrow keys and Enter"; the older palette tests and the axe check with the dialog open run against the new roles.

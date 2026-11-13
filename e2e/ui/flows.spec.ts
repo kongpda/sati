@@ -167,13 +167,31 @@ test("searches from the Ctrl+K palette and opens the hit", async ({ page }) => {
   await page.goto(ui.signIn);
   await page.keyboard.press("Control+k");
   const palette = page.getByRole("dialog", { name: "Search" });
-  const input = palette.getByRole("textbox", { name: "Search" });
+  const input = palette.getByRole("combobox", { name: "Search" });
   await expect(input).toBeFocused();
   await input.fill("signing");
   await input.press("Enter");
-  await palette.getByRole("button", { name: /Rotate the signing key/u }).click();
+  await palette.getByRole("option", { name: /Rotate the signing key/u }).click();
   await expect(page.getByRole("dialog", { name: "Rotate the signing key" })).toBeVisible();
   expect(new URL(page.url()).searchParams.get("task")).toMatch(/^tsk_/u);
+});
+
+// Review 15.7: one input for search, Ask and going to a page; arrows move, Enter opens.
+test("the palette goes to a page by name with the arrow keys and Enter", async ({ page }) => {
+  await page.goto(ui.signIn);
+  await page.keyboard.press("Control+k");
+  const palette = page.getByRole("dialog", { name: "Search" });
+  const input = palette.getByRole("combobox", { name: "Search" });
+  await expect(palette.getByRole("option")).toHaveCount(6);
+  await input.fill("plan");
+  const rows = palette.getByRole("option", { name: /Go to Plan/u });
+  await expect(rows).toHaveCount(1);
+  await input.press("ArrowDown");
+  await expect(rows).toHaveAttribute("aria-selected", "true");
+  await expect(input).toHaveAttribute("aria-activedescendant", /^palette-row-/u);
+  await input.press("Enter");
+  await expect(palette).toHaveCount(0);
+  await expect(page).toHaveURL(/\/plan/u);
 });
 
 // PLAN Phase 4: Mermaid blocks render as diagrams under the strict CSP, and a bad one says why.
@@ -713,8 +731,8 @@ test("a general project hides features and the agents section, and switches back
   // Search does not offer the feature: its page is hidden here, so the hit opened a dead end.
   await page.keyboard.press("Control+k");
   const palette = page.getByRole("dialog", { name: "Search" });
-  await palette.getByRole("textbox", { name: "Search" }).fill("Ticketing");
-  await palette.getByRole("textbox", { name: "Search" }).press("Enter");
+  await palette.getByRole("combobox", { name: "Search" }).fill("Ticketing");
+  await palette.getByRole("combobox", { name: "Search" }).press("Enter");
   await expect(palette.getByRole("status")).toHaveText("No results");
   await page.keyboard.press("Escape");
 
@@ -1310,14 +1328,14 @@ test("Memory answers from cards, edits them, and keeps private ones off .sati/",
   // The palette answers questions from file cards, by what they say and not only by path.
   await page.keyboard.press("Control+k");
   const palette = page.getByRole("dialog", { name: "Search" });
-  await palette.getByRole("textbox", { name: "Search" }).fill("venue price");
+  await palette.getByRole("combobox", { name: "Search" }).fill("venue price");
   await palette.getByRole("button", { name: "Ask: venue price" }).click();
   const answer = palette.getByRole("region", { name: "Answer" });
   await expect(answer).toContainText("Venue price: $2,400 for the day");
   await expect(answer).toContainText("venue/hall-b-quote.pdf");
 
   // A question nothing matches says so instead of showing an empty box.
-  await palette.getByRole("textbox", { name: "Search" }).fill("zebra parade");
+  await palette.getByRole("combobox", { name: "Search" }).fill("zebra parade");
   await palette.getByRole("button", { name: "Ask: zebra parade" }).click();
   await expect(answer).toContainText("Nothing in memory matches yet");
   await page.keyboard.press("Escape");
@@ -1642,12 +1660,12 @@ test("the palette clears hits when the text changes and says when results stop a
   await page.goto(ui.signIn);
   await page.keyboard.press("Control+k");
   const palette = page.getByRole("dialog", { name: "Search" });
-  const input = palette.getByRole("textbox", { name: "Search" });
+  const input = palette.getByRole("combobox", { name: "Search" });
   await input.fill("lantern");
   await input.press("Enter");
   await expect(palette.getByRole("status")).toHaveText("First 20 results");
   await input.fill("lanterns and candles");
-  await expect(palette.getByRole("button", { name: /Lantern/u })).toHaveCount(0);
+  await expect(palette.getByRole("option", { name: /Lantern/u })).toHaveCount(0);
   // Not the old count: the new text is being searched, or has nothing.
   await expect(palette.getByRole("status")).not.toHaveText("First 20 results");
 });
@@ -1658,10 +1676,10 @@ test("typing in the palette searches without pressing Enter", async ({ page }) =
   await page.goto(ui.signIn);
   await page.keyboard.press("Control+k");
   const palette = page.getByRole("dialog", { name: "Search" });
-  await palette.getByRole("textbox", { name: "Search" }).pressSequentially("marquee");
-  await expect(palette.getByRole("button", { name: /Marquee rigging check/u })).toBeVisible();
+  await palette.getByRole("combobox", { name: "Search" }).pressSequentially("marquee");
+  await expect(palette.getByRole("option", { name: /Marquee rigging check/u })).toBeVisible();
   // One character is not enough to start a search.
-  await palette.getByRole("textbox", { name: "Search" }).fill("m");
+  await palette.getByRole("combobox", { name: "Search" }).fill("m");
   await expect(palette.getByRole("status")).toHaveText("Type to search.");
 });
 

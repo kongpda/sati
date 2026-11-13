@@ -69,12 +69,9 @@ textarea {
   overflow: auto;
   padding: 0 14px var(--space-2);
 }
-.pill {
+.live a {
   font-size: var(--text-sm);
-  color: var(--muted);
-  white-space: nowrap;
-}
-.pill strong {
   color: var(--live);
   font-weight: 600;
+  white-space: nowrap;
 }

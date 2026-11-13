@@ -138,7 +138,7 @@ export interface Snapshot {
     slug: string;
     kind: ProjectKind;
     /** Whose finished work waits for a person: agents', everyone's, or no one's. */
-    review?: "agents" | "all" | "none";
+    review?: ReviewMode;
   } | null;
   you: string;
   version: number;
@@ -178,6 +178,9 @@ export interface Card {
   updatedAt: string;
   version: number;
 }
+
+/** Whose finished work waits for a person: agents', everyone's, or no one's. */
+export type ReviewMode = "agents" | "all" | "none";
 
 export interface RecallItem {
   kind: "card" | "note" | "decision" | "task";
@@ -320,6 +323,11 @@ export const api = {
     request<{ kind: ProjectKind }>("/api/settings", {
       method: "PATCH",
       body: JSON.stringify({ kind }),
+    }),
+  setReview: (review: ReviewMode) =>
+    request<{ review: ReviewMode }>("/api/settings", {
+      method: "PATCH",
+      body: JSON.stringify({ review }),
     }),
   changes: (filter: ChangesFilter) =>
     request<{ changes: Changes; changelog: string; digest: string }>(

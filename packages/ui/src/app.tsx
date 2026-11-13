@@ -221,6 +221,7 @@ export function App() {
             fresh,
             task,
             go,
+            show,
             moveMany,
             requestMove,
             setToastState,

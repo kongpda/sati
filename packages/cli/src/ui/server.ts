@@ -200,7 +200,12 @@ function openApi() {
       "/api/milestones": { post: { summary: "Create a milestone" } },
       "/api/milestones/{id}": { patch: { summary: "Update a milestone" } },
       "/api/actors/{id}": { patch: { summary: "Set a person's display name, initials, colour" } },
-      "/api/settings": { patch: { summary: "Set the project kind: code or general" } },
+      "/api/settings": {
+        patch: {
+          summary:
+            "Set the project kind (code or general) or the review mode (agents, all or none)",
+        },
+      },
       "/events": {
         get: {
           summary: "Server-sent events when the database changes; resumes with Last-Event-ID",
@@ -357,7 +362,10 @@ async function tailCursor(rt: UiRuntime, from?: string): Promise<string | undefi
 const ActivityCursor = z.string().regex(/^act_[0-9A-HJKMNP-TV-Z]{26}$/);
 
 const SearchQuery = z.string().max(500);
-const SettingsPatch = z.strictObject({ kind: ProjectKind });
+const SettingsPatch = z.union([
+  z.strictObject({ kind: ProjectKind }),
+  z.strictObject({ review: z.enum(["agents", "all", "none"]) }),
+]);
 
 export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   const app = new Hono();
@@ -525,13 +533,25 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
     c.json(await updateMilestone(rt.ctx, c.req.param("id"), await body(c))),
   );
 
-  // Only the kind: the review gate and lease stay CLI settings.
+  // The kind and the review mode. The lease stays a CLI setting.
   app.patch("/api/settings", async (c) => {
     const patch = SettingsPatch.safeParse(await body(c));
-    if (!patch.success) throw new SatiError("VALIDATION", "Send { kind: code | general }.");
-    const { kind } = readSettings((await updateSettings(rt.ctx, patch.data)).settings);
-    rt.onKind?.(kind);
-    return c.json({ kind });
+    if (!patch.success) {
+      throw new SatiError(
+        "VALIDATION",
+        "Send { kind: code | general } or { review: agents | all | none }.",
+      );
+    }
+    // The review mode decides who may approve, so only a person may change it.
+    if ("review" in patch.data) {
+      const me = await rt.ctx.store.read((r) => r.get("actor", rt.ctx.actorId));
+      if (me?.kind !== "human") {
+        throw new SatiError("INVALID_TRANSITION", "Only a person can change the review mode.");
+      }
+    }
+    const { kind, review } = readSettings((await updateSettings(rt.ctx, patch.data)).settings);
+    if ("kind" in patch.data) rt.onKind?.(kind);
+    return c.json({ kind, review });
   });
 
   app.patch("/api/actors/:id", async (c) =>

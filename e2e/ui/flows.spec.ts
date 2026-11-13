@@ -1059,6 +1059,54 @@ test("New plan creates a milestone and its staged tasks from a template", async 
   expect(await problems()).toEqual([]);
 });
 
+// Review 2.8: the board shows the review mode and changes it the way `sati settings --review` does.
+test("changing review mode on the board is the same change `sati settings --review` makes", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  await page.goto(ui.signIn);
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await expect(page.getByRole("radio", { name: /Agents' work waits/u })).toBeChecked();
+  await page.getByRole("radio", { name: /Nothing waits/u }).check();
+  await expect(page.getByRole("status")).toContainText("Review mode is now: Nothing waits.");
+  expect(ui.sati<{ review: string }>("settings").review).toBe("none");
+  const snap = await ui.api<{ project: { review: string } }>("GET", "/api/snapshot");
+  expect(snap.project.review).toBe("none");
+  // Put it back, from the CLI side, and the board shows the same value.
+  ui.sati("settings", "--review", "agents");
+  await page.reload();
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await expect(page.getByRole("radio", { name: /Agents' work waits/u })).toBeChecked();
+  expect(await problems()).toEqual([]);
+});
+
+// Review 2.6, 2.7: the board's live strip is one link, and a pinned note opens that note.
+test("a live claim is still one click away from the board, and a pinned note opens that note", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  const t = await ui.api<{ id: string }>("POST", "/api/tasks", { title: "Hang the banner" });
+  ui.sati("task", "claim", t.id);
+  ui.sati("note", "create", "Aaa filler note", "--body", "Filler.");
+  ui.sati("note", "create", "Zed pinned guide", "--body", "Read me first.", "--pinned");
+  await page.goto(ui.signIn);
+  // One line, one link: no pill per agent.
+  const live = page.getByRole("link", { name: /working now$/u });
+  await expect(live).toHaveCount(1);
+  await expect(page.locator(".pill")).toHaveCount(0);
+  await live.click();
+  await expect(page).toHaveURL(/\/team$/u);
+
+  await page.goto(ui.signIn);
+  await page
+    .getByRole("navigation", { name: "Pinned notes" })
+    .getByRole("link", { name: "Zed pinned guide" })
+    .click();
+  await expect(page).toHaveURL(/\/knowledge/u);
+  await expect(page.locator("article").filter({ hasText: "Zed pinned guide" })).toBeFocused();
+  expect(await problems()).toEqual([]);
+});
+
 // PLAN Phase 8: the Memory page answers from cards, edits them, and private items stay local.
 test("Memory answers from cards, edits them, and keeps private ones off .sati/", async ({
   page,

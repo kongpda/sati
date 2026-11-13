@@ -361,6 +361,17 @@ test.describe("a board started from an agent's terminal", () => {
     await page.getByRole("link", { name: "Team", exact: true }).click();
     await expect(page.getByRole("button", { name: "Edit sokha" })).toBeDisabled();
 
+    // The review mode decides who may approve, so an agent's board shows it and cannot change it.
+    await page.getByRole("link", { name: "Settings", exact: true }).click();
+    await expect(page.getByRole("radio", { name: /Agents' work waits/u })).toBeChecked();
+    await expect(page.getByRole("radio", { name: /Nothing waits/u })).toBeDisabled();
+    await expect(page.getByText(/This board runs as .*, an agent\./u).first()).toBeVisible();
+
+    // The server refuses it too, so a hand-made request changes nothing.
+    await expect(ui.api("PATCH", "/api/settings", { review: "none" })).rejects.toThrow(
+      /Only a person can change the review mode/u,
+    );
+
     // Signing a file off is a person's too: the card can be edited, not approved.
     ui.sati("card", "put", "notes/a.md", "--summary", "Folding notes.");
     await page.reload();

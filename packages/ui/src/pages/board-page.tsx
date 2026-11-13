@@ -2,7 +2,6 @@ import type { Dispatch, SetStateAction } from "react";
 import { COLUMNS, type Snapshot, type Task } from "../api.js";
 import { Board } from "../board.js";
 import type { Toast } from "../hooks/use-moves.js";
-import { holderName } from "../people.js";
 
 type BoardProps = Parameters<typeof Board>[0];
 
@@ -21,6 +20,7 @@ export function BoardPage({
   fresh,
   task,
   go,
+  show,
   moveMany,
   requestMove,
   setToastState,
@@ -46,6 +46,8 @@ export function BoardPage({
   fresh: Set<string>;
   task: string | null;
   go: (next: string, taskId?: string | null) => boolean;
+  /** Opens a list page at one record. */
+  show: (next: string, id: string) => void;
   moveMany: (ids: string[], status: string, bulk: boolean, reason?: string) => Promise<void>;
   requestMove: (ids: string[], status: string, bulk?: boolean) => void;
   setToastState: Dispatch<SetStateAction<Toast | null>>;
@@ -57,6 +59,8 @@ export function BoardPage({
   refusal: BoardProps["refusal"];
   heldBy: BoardProps["heldBy"];
 }) {
+  // One line: how many hold a live claim, not a pill for each.
+  const workers = new Set(working.map((t) => t.claim?.actorId)).size;
   return (
     <>
       <h1 className="sr-only">Board</h1>
@@ -69,7 +73,7 @@ export function BoardPage({
               href="/knowledge"
               onClick={(e) => {
                 e.preventDefault();
-                go("/knowledge");
+                show("/knowledge", n.id);
               }}
             >
               {n.title}
@@ -79,11 +83,15 @@ export function BoardPage({
       ) : null}
       {working.length > 0 ? (
         <div className="live">
-          {working.map((t) => (
-            <span className="pill" key={t.id}>
-              <strong>{data ? holderName(data, t.claim?.actorId) : ""}</strong> · {t.title}
-            </span>
-          ))}
+          <a
+            href="/team"
+            onClick={(e) => {
+              e.preventDefault();
+              go("/team");
+            }}
+          >
+            {workers} {workers === 1 ? "agent" : "agents"} working now
+          </a>
         </div>
       ) : null}
       <select

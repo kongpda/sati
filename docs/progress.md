@@ -2471,3 +2471,9 @@ Notes, Decisions and Memory are `/knowledge`, with tabs for Notes (the default),
 ### WP2 2.5: the palette answers questions
 
 The Ask box left the File cards tab. Search shows an "Ask: <text>" row at three characters or more; clicking it calls `recall` and shows the ranked items (title, summary, facts) in the palette. "Copy as Markdown" went with the box. The placeholder names file cards. The flows and a11y specs ask through the palette.
+
+### WP2 2.6 to 2.8
+
+- 2.6: the live strip is one link, "N agents working now" (N counts people holding a live claim), to Team. The `.pill` style is gone.
+- 2.7: a pinned note opens through `show`, the same scroll-and-focus every list link uses, so no `?note=` query was needed.
+- 2.8: `PATCH /api/settings` takes `{ review }` as well as `{ kind }`. It refuses a board that does not act as a person. Core stays as it was, so the CLI is not changed.

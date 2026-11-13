@@ -8,3 +8,4 @@ coverage/
 .pnpm-store/
 test-results/
 playwright-report/
+e2e/screenshots/

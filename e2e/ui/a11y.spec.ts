@@ -61,6 +61,35 @@ const PAGES = [
 ];
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
+// Review 15.13: one picture of each page in each theme, for the owner to look at before the
+// changeset is written. They go to e2e/screenshots (ignored by git).
+for (const colorScheme of ["light", "dark"] as const) {
+  test.describe(`screenshots ${colorScheme}`, () => {
+    test.use({ viewport: { width: 1400, height: 900 }, colorScheme });
+    for (const path of PAGES) {
+      test(`shot: ${path}`, async ({ page }) => {
+        await page.goto(ui.signIn);
+        const [base = path, query] = path.split("?");
+        if (base !== "/") {
+          await page.getByRole("link", { name: navName(base), exact: true }).click();
+        }
+        if (query === "tab=log") await page.getByRole("tab", { name: "Log", exact: true }).click();
+        if (query === "kind=decisions")
+          await page.getByRole("tab", { name: "Decisions", exact: true }).click();
+        if (query === "kind=cards")
+          await page.getByRole("tab", { name: "File cards", exact: true }).click();
+        if (query === "tab=features")
+          await page.getByRole("tab", { name: "Features", exact: true }).click();
+        await page.waitForLoadState("networkidle");
+        if (path === "/knowledge")
+          await expect(page.locator(".mermaid[data-ready=true]")).toBeVisible();
+        const name = `${path === "/" ? "board" : path.slice(1).replace(/[?=&]/gu, "-")}-${colorScheme}`;
+        await page.screenshot({ path: `screenshots/${name}.png` });
+      });
+    }
+  });
+}
+
 // Each size runs in both themes: contrast is checked against the dark tokens too.
 for (const [device, viewport, colorScheme] of [
   ["desktop", { width: 1280, height: 800 }, "light"],

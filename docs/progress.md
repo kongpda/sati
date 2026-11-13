@@ -2617,3 +2617,8 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 - Kept at the 2,000 cards the PLAN gate names, not the review's 5,000: the PLAN number is the gate and seeding 5,000 would triple the suite time. Say if you want 5,000.
 - No drag frame-rate test: the suite does not measure frames during a drag today, and the review says to skip it then.
 - Under a busy machine (load average near 20 here) the scroll test failed once and passed on the next run; it is a timing test.
+
+### WP15 15.13: screenshots
+
+- `e2e/ui/a11y.spec.ts` now writes one 1400 × 900 picture of each of the 11 page views (board, My work, Plan and Features, Knowledge with Decisions and File cards, Changes and Log, Team, Settings) in light and dark, 22 files, to `e2e/screenshots/` (ignored by git). Run `cd e2e && pnpm exec playwright test ui/a11y.spec.ts -g shot` after `pnpm build`.
+- The owner looks at them before the changeset text is final. The screen-reader pass stays with the owner.

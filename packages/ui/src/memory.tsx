@@ -5,6 +5,18 @@ import { personOnly } from "./moves.js";
 import { nameOf } from "./people.js";
 import { Ago } from "./time.js";
 
+/** Cards grouped by folder, folders and the cards inside each ordered by path. */
+export function groupByFolder<T extends { path: string }>(cards: T[]): Map<string, T[]> {
+  const folders = new Map<string, T[]>();
+  for (const c of [...cards].sort((a, b) => a.path.localeCompare(b.path))) {
+    const f = folderOf(c.path);
+    const list = folders.get(f);
+    if (list) list.push(c);
+    else folders.set(f, [c]);
+  }
+  return folders;
+}
+
 /** The folder a card is filed under: everything before its last `/`, or the top level. */
 function folderOf(path: string): string {
   const cut = path.lastIndexOf("/");
@@ -177,11 +189,7 @@ export function Memory({
         t.toLowerCase().includes(needle),
       ),
   );
-  const folders = new Map<string, Card[]>();
-  for (const c of [...cards].sort((a, b) => a.path.localeCompare(b.path))) {
-    const f = folderOf(c.path);
-    folders.set(f, [...(folders.get(f) ?? []), c]);
-  }
+  const folders = groupByFolder(cards);
   return (
     <section className="page" aria-labelledby="memory-title">
       <div className="page-head">

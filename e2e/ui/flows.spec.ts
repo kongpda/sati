@@ -1006,6 +1006,51 @@ test("Changes shows done work by day, filters it and copies the changelog", asyn
   expect(await problems()).toEqual([]);
 });
 
+// Review 4.1: the changelog is fetched by the page that shows it, once per write.
+test("a write while another page is open does not request /api/changes, and Changes asks at most once per write", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  let asked = 0;
+  page.on("request", (req) => {
+    if (new URL(req.url()).pathname === "/api/changes") asked++;
+  });
+  ui.sati("settings", "--review", "none");
+  await page.goto(ui.signIn);
+  await expect(page.getByRole("heading", { level: 1, name: "Board" })).toBeVisible();
+  const finish = (title: string) => {
+    const t = ui.sati<{ id: string }>("task", "create", title);
+    ui.sati("task", "claim", t.id);
+    ui.sati(
+      "task",
+      "complete",
+      t.id,
+      "--summary",
+      `Did ${title}`,
+      "--release-note",
+      `${title} is done`,
+      "--files",
+      "fair/plan.md",
+    );
+  };
+  finish("Sort the lanterns");
+  await expect(page.getByText("Sort the lanterns", { exact: true }).first()).toBeVisible();
+  expect(asked).toBe(0);
+
+  await page.getByRole("link", { name: "Changes", exact: true }).click();
+  const today = page.getByRole("region", { name: "Today" });
+  await expect(today.getByText("Sort the lanterns is done")).toBeVisible();
+  const open = asked;
+  finish("Hang the lanterns");
+  await expect(today.getByText("Hang the lanterns is done")).toBeVisible();
+  // `finish` writes three times; the page asks at most once for each.
+  expect(asked - open).toBeGreaterThan(0);
+  expect(asked - open).toBeLessThanOrEqual(3);
+  // The project is shared by every test here: put the review mode back.
+  ui.sati("settings", "--review", "agents");
+  expect(await problems()).toEqual([]);
+});
+
 // PLAN Phase 7c: a person starts an event plan from a template on the board, and an agent's
 // `sati template apply` makes the same plan.
 test("New plan creates a milestone and its staged tasks from a template", async ({ page }) => {

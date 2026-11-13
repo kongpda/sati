@@ -30,6 +30,8 @@ export function useLive(
       // A move in flight invalidates the snapshot itself when it settles.
       if (moving.current > 0) return;
       const previous = client.getQueryData<Snapshot>(["snapshot"]);
+      // Only a mounted Changes page refetches; no other page pays for the changelog.
+      void client.invalidateQueries({ queryKey: ["changes"] });
       void client.invalidateQueries({ queryKey: ["snapshot"] }).then(() => {
         const next = client.getQueryData<Snapshot>(["snapshot"]);
         if (!previous || !next) return;

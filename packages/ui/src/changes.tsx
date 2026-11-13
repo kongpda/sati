@@ -62,9 +62,10 @@ export function Changes({
     actorId: "",
   });
   const general = data.project?.kind === "general";
-  // Keyed by the snapshot version, so the page follows every write as the board does.
+  // Not keyed by the snapshot version: a write invalidates ["changes"] from the live handler, and
+  // only a mounted page refetches. Every version would otherwise be a cache entry of its own.
   const query = useQuery({
-    queryKey: ["changes", filter, data.version],
+    queryKey: ["changes", filter],
     queryFn: () => api.changes(filter),
     placeholderData: (previous) => previous,
   });

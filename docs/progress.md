@@ -2496,3 +2496,12 @@ The Ask box left the File cards tab. Search shows an "Ask: <text>" row at three 
 - 5.5: the decision form's button says "Replace decision" when replacing. Pin / Unpin / Pinned stay.
 - 5.3: one glossary row. No code change.
 - The words test was written together with the change, not shown failing first.
+
+### WP4: performance (part)
+
+- 4.1: the Changes query key no longer holds the snapshot version. The live handler invalidates `["changes"]`, so only a mounted Changes page refetches. Test: flows "a write while another page is open does not request /api/changes…". Its first half (no request while the Board is open) held before the change too, because an unmounted query never fetched; the gain is no cache entry per version.
+- 4.4: only the inbox pair was real. `myWork` now caches per snapshot object (the tab title and My work asked for the same lists). The single `tasks.find` calls are in event handlers, not per render, and the Maps in Knowledge and Log are small; left alone as the review allows.
+- 4.5: `groupByFolder` in `memory.tsx` pushes onto the folder's array; unit test in `folders.test.ts`.
+- 4.7: first-load size, gzip, measured 2026-11-13: JS 134,010 bytes (`index-*.js`), CSS 7,403 bytes. Mermaid is already in its own chunks (58 files in `dist/assets`), not the entry. `bundle.test.ts` fails when either grows over 10%. The test was shown failing with a lowered budget.
+- 4.2 **not done, on purpose.** The snapshot holds file drift and card staleness read from disk, and those can change while `version` stays the same. An ETag from the version would answer 304 for a payload that changed. The saving was only the refetch on tab focus. Left for the owner to decide.
+- 4.3 (virtualised Log and Knowledge lists) is deferred: `show()` scrolls to and focuses rows by DOM id, which a virtualised list would not have mounted.

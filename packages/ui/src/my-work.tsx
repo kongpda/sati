@@ -6,7 +6,7 @@ import { holderName, knownName, nameOf, personName } from "./people.js";
 import { capital, statusWord, waitingForYou } from "./words.js";
 
 /** How many things wait for you: the number next to "My work". Assigned and due tasks are plans, not calls. */
-export function inboxCount(data: Snapshot, now = new Date()): number {
+export function inboxCount(data: Snapshot, now?: Date): number {
   return count(myWork(data, now));
 }
 
@@ -15,7 +15,20 @@ export function inboxCount(data: Snapshot, now = new Date()): number {
  * you and due by Sunday. The rule is `inboxOf` in the core, which `sati inbox` and the MCP
  * `inbox` tool call too, so the terminal and this page show the same items.
  */
-export function myWork(data: Snapshot, now = new Date()) {
+export function myWork(data: Snapshot, now?: Date) {
+  // The tab title and the page ask for the same lists of one snapshot: work them out once.
+  // A given `now` is a test or a what-if, and is never cached.
+  if (now) return workOut(data, now);
+  const known = worked.get(data);
+  if (known) return known;
+  const lists = workOut(data, new Date());
+  worked.set(data, lists);
+  return lists;
+}
+
+const worked = new WeakMap<Snapshot, ReturnType<typeof workOut>>();
+
+function workOut(data: Snapshot, now: Date) {
   // A person's shown name is the user part of `user@worktree`: the name they are called by.
   const actors = (data.actors ?? []).map((a) => ({ ...a, displayName: personName(a) }));
   return inboxOf({ you: data.you, tasks: data.tasks, notes: data.notes, actors }, now);

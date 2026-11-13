@@ -34,6 +34,13 @@ const wed = new Date(2026, 10, 4, 15, 0);
 // The rule itself is tested in the core (`packages/core/test/inbox.test.ts`), where it lives.
 // These cases pin what the board adds: the snapshot's shape and the name a person is called by.
 describe("myWork", () => {
+  it("works the lists out once per snapshot, and never caches a given time", () => {
+    const snapshot = snap([]);
+    expect(myWork(snapshot)).toBe(myWork(snapshot));
+    expect(myWork(snapshot, wed)).not.toBe(myWork(snapshot, wed));
+    expect(myWork(snap([]))).not.toBe(myWork(snapshot));
+  });
+
   it("builds the lists from a snapshot with the core's rule", () => {
     const tasks = [
       task({ title: "review, nobody's", status: "review" }),

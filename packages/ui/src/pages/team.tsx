@@ -3,6 +3,7 @@ import { claimRefusal } from "../moves.js";
 import { Avatar, personName } from "../people.js";
 import { untilTime } from "../words.js";
 
+/** The agents section of the Team page: who works now, and the claims they hold. */
 export function Agents({
   data,
   onRelease,
@@ -19,8 +20,8 @@ export function Agents({
   ]);
   const actors = [...data.actors].sort((a, b) => Number(busy.has(b.id)) - Number(busy.has(a.id)));
   return (
-    <div className="page">
-      <h1>Agents</h1>
+    <section className="my-section" aria-labelledby="agents-title">
+      <h2 id="agents-title">Agents</h2>
       <button type="button" onClick={onRelease}>
         Free up tasks whose time ran out
       </button>
@@ -75,6 +76,6 @@ export function Agents({
           <p className="empty">No agents yet. They appear when one claims a task.</p>
         ) : null}
       </div>
-    </div>
+    </section>
   );
 }

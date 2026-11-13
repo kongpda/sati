@@ -357,7 +357,7 @@ test.describe("a board started from an agent's terminal", () => {
     await expect(claim.getByRole("button")).toHaveCount(0);
     await sheet.getByRole("button", { name: "Close" }).click();
 
-    await page.getByRole("link", { name: "Settings", exact: true }).click();
+    await page.getByRole("link", { name: "Team", exact: true }).click();
     await expect(page.getByRole("button", { name: "Edit sokha" })).toBeDisabled();
 
     // Signing a file off is a person's too: the card can be edited, not approved.

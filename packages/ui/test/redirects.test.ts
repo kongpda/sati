@@ -15,3 +15,9 @@ describe("old addresses", () => {
     expect(resolveUrl("/changes", "?tab=log").moved).toBe(false);
   });
 });
+
+describe("the Agents page", () => {
+  it("is now the Team page", () => {
+    expect(resolveUrl("/agents", "").path).toBe("/team");
+  });
+});

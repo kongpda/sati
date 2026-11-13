@@ -6,7 +6,7 @@ import { Memory } from "../memory.js";
 import { Settings } from "../settings.js";
 import { Tabs } from "../shell/tabs.js";
 import { BoardPage } from "./board-page.js";
-import { AgentsPage, FeaturesPage, MyWorkPage, NotesPage, type PageContext } from "./connected.js";
+import { FeaturesPage, MyWorkPage, NotesPage, type PageContext, TeamPage } from "./connected.js";
 import { Decisions } from "./knowledge.js";
 import { Activity } from "./log.js";
 import { Roadmap } from "./plan.js";
@@ -49,7 +49,7 @@ export function Routes({
           Settings to see this page.
         </p>
       ) : null}
-      {data && !general && path === "/agents" ? <AgentsPage data={data} {...ctx} /> : null}
+      {data && path === "/team" ? <TeamPage data={data} general={general} {...ctx} /> : null}
       {data && !general && path === "/features" ? <FeaturesPage data={data} {...ctx} /> : null}
       {data && path === "/roadmap" ? <Roadmap data={data} onSaved={saved} /> : null}
       {data && path === "/notes" ? <NotesPage data={data} {...ctx} /> : null}

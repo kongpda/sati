@@ -7,21 +7,21 @@ import { COMMENT_TAG, threadOf } from "../thread.js";
 const PAGES = [
   ["/", "Board"],
   ["/my-work", "My work"],
-  ["/agents", "Agents"],
   ["/roadmap", "Roadmap"],
   ["/features", "Features"],
   ["/notes", "Notes"],
   ["/memory", "Memory"],
   ["/decisions", "Decisions"],
   ["/changes", "Changes"],
+  ["/team", "Team"],
   ["/settings", "Settings"],
 ] as const;
 
 /** One empty list, so a general project's data keeps the same identity between renders. */
 const NONE: never[] = [];
 
-/** Pages a general project does without: it has no features, file reservations or guard. */
-export const CODE_ONLY = new Set<string>(["/agents", "/features"]);
+/** Pages a general project does without: it has no features. (Its Team page hides the agents.) */
+export const CODE_ONLY = new Set<string>(["/features"]);
 
 /**
  * What the pages show: the snapshot as this project kind sees it, the pages offered, the tasks

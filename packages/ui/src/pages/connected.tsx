@@ -3,6 +3,7 @@ import { api, type Deletable, type Snapshot } from "../api.js";
 import { approvedCommit } from "../hooks/use-moves.js";
 import { MyWork } from "../my-work.js";
 import { holderName } from "../people.js";
+import { People } from "../people-section.js";
 import { statusWord } from "../words.js";
 import { Notes } from "./knowledge.js";
 import { Features } from "./plan.js";
@@ -63,7 +64,29 @@ export function MyWorkPage({ data, go, path, saved, fail }: PageContext & { data
   );
 }
 
-export function AgentsPage({ data, saved, fail, client }: PageContext & { data: Snapshot }) {
+/** People always; agents only in a code project, where agents claim tasks and reserve files. */
+export function TeamPage({
+  data,
+  saved,
+  fail,
+  client,
+  general,
+}: PageContext & { data: Snapshot; general: boolean }) {
+  return (
+    <div className="page">
+      <h1>Team</h1>
+      <People data={data} onSaved={saved} />
+      {general ? null : <AgentsSection data={data} saved={saved} fail={fail} client={client} />}
+    </div>
+  );
+}
+
+function AgentsSection({
+  data,
+  saved,
+  fail,
+  client,
+}: Pick<PageContext, "saved" | "fail" | "client"> & { data: Snapshot }) {
   return (
     <Agents
       data={data}

@@ -5,6 +5,7 @@
  */
 const REDIRECTS: Readonly<Record<string, string>> = {
   "/activity": "/changes?tab=log",
+  "/agents": "/team",
 };
 
 /** The page and query an address stands for, after old addresses are sent on. Other query parts (a task) are kept. */

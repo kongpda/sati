@@ -48,7 +48,6 @@ test.afterAll(async () => {
 const PAGES = [
   "/",
   "/my-work",
-  "/agents",
   "/roadmap",
   "/features",
   "/notes",
@@ -56,6 +55,7 @@ const PAGES = [
   "/decisions",
   "/changes",
   "/changes?tab=log",
+  "/team",
   "/settings",
 ];
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
@@ -150,7 +150,7 @@ for (const [device, viewport, colorScheme] of [
       const card = await new AxeBuilder({ page }).withTags(TAGS).analyze();
       expect(summary(card.violations)).toEqual([]);
       await page.keyboard.press("Escape");
-      await page.getByRole("link", { name: "Settings", exact: true }).click();
+      await page.getByRole("link", { name: "Team", exact: true }).click();
       await page
         .getByRole("button", { name: /^Edit / })
         .first()

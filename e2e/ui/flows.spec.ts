@@ -204,13 +204,13 @@ test("every page loads and marks itself current", async ({ page }) => {
   await page.goto(ui.signIn);
   for (const name of [
     "My work",
-    "Agents",
     "Roadmap",
     "Features",
     "Notes",
     "Memory",
     "Decisions",
     "Changes",
+    "Team",
     "Settings",
     "Board",
   ]) {
@@ -536,7 +536,7 @@ test("sets a person's display name, initials and colour, shown on the board", as
   const { you } = await ui.api<{ you: string }>("GET", "/api/snapshot");
   await ui.api("POST", "/api/tasks", { title: "Brief the photographer", assigneeIds: [you] });
   await page.goto(ui.signIn);
-  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.getByRole("link", { name: "Team", exact: true }).click();
   await page.getByRole("button", { name: "Edit playwright" }).click();
   const form = page.getByRole("dialog", { name: "Edit person" });
   await form.getByLabel("Display name").fill("Sokha Chan");
@@ -559,7 +559,7 @@ test("sets a person's display name, initials and colour, shown on the board", as
   await expect(page.locator("article strong").first()).toHaveText("Sokha Chan");
 
   // A blank field goes back to the default.
-  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.getByRole("link", { name: "Team", exact: true }).click();
   await page.getByRole("button", { name: "Edit Sokha Chan" }).click();
   await form.getByLabel("Initials").fill("");
   await form.getByRole("button", { name: "Save", exact: true }).click();
@@ -602,7 +602,7 @@ test("uses plain words for statuses, activity and times", async ({ page }) => {
 });
 
 // PLAN Phase 7a: a general project (an event, a campaign) has no features or file reservations.
-test("a general project hides features and the Agents page, and switches back", async ({
+test("a general project hides features and the agents section, and switches back", async ({
   page,
 }) => {
   const problems = await watch(page);
@@ -620,6 +620,11 @@ test("a general project hides features and the Agents page, and switches back", 
   await expect(nav.getByRole("link", { name: "Features", exact: true })).toHaveCount(0);
   await expect(nav.getByRole("link", { name: "Agents", exact: true })).toHaveCount(0);
   expect(ui.sati<{ kind: string }>("settings").kind).toBe("general");
+  // The Team page stays: a general project reaches its people there, and sees no agents.
+  await nav.getByRole("link", { name: "Team", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "People" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Agents" })).toHaveCount(0);
+  await nav.getByRole("link", { name: "Settings", exact: true }).click();
 
   // The board drops the feature filter and the feature on the card; the task is still there.
   await nav.getByRole("link", { name: "Board", exact: true }).click();
@@ -1305,7 +1310,7 @@ test("the board says what happened after each action, and a removed step has Und
   await expect(steps).toHaveCount(1);
   await expect.poll(saved).toEqual([expect.objectContaining({ text: "Count the chairs" })]);
 
-  await page.getByRole("link", { name: "Agents", exact: true }).click();
+  await page.getByRole("link", { name: "Team", exact: true }).click();
   await page.getByRole("button", { name: "Free up tasks whose time ran out" }).click();
   await expect(toast).toContainText("No tasks had run out of time.");
 
@@ -1536,4 +1541,15 @@ test("an old /activity link lands on the Log tab of Changes", async ({ page }) =
   await page.keyboard.press("ArrowLeft");
   await expect(page.getByRole("tab", { name: "Changes", exact: true })).toBeFocused();
   await expect(page).toHaveURL(/\/changes$/u);
+});
+
+test("a link to the old Agents page opens Team, and a code project sees both sections", async ({
+  page,
+}) => {
+  await page.goto(ui.signIn);
+  await page.goto(`${ui.origin}/agents`);
+  await expect(page).toHaveURL(/\/team$/u);
+  await expect(page.getByRole("heading", { level: 1, name: "Team" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "People" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Agents" })).toBeVisible();
 });

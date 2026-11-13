@@ -176,6 +176,33 @@ test("searches from the Ctrl+K palette and opens the hit", async ({ page }) => {
   expect(new URL(page.url()).searchParams.get("task")).toMatch(/^tsk_/u);
 });
 
+// Review 15.5: a 56 px rail between 700 and 1099 px, with every link still named.
+test("at 900 px the nav is a rail and every link still has an accessible name", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 900, height: 800 });
+  await page.goto(ui.signIn);
+  const nav = page.locator("nav.nav");
+  await expect(nav).toBeVisible();
+  expect((await nav.boundingBox())?.width).toBeLessThanOrEqual(60);
+  for (const name of ["Board", "My work", "Plan", "Knowledge", "Changes", "Team", "Settings"]) {
+    await expect(nav.getByRole("link", { name, exact: true })).toBeVisible();
+  }
+  await expect(nav.getByRole("button", { name: "Keyboard help" })).toBeVisible();
+  // The page itself must not scroll sideways; the board scrolls inside its own area.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  expect((await nav.boundingBox())?.width).toBeGreaterThan(150);
+});
+
+test("after navigation focus is on the page heading", async ({ page }) => {
+  await page.goto(ui.signIn);
+  await page.getByRole("link", { name: "Plan", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Plan" })).toBeFocused();
+  await page.getByRole("link", { name: "Team", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Team" })).toBeFocused();
+});
+
 // Review 15.10: the Appearance choice repaints at once, survives a reload and is set before first paint.
 test("Settings: Appearance Dark darkens the board and is remembered", async ({ page }) => {
   await page.goto(`${ui.signIn}`);

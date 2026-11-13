@@ -36,6 +36,17 @@ export function App() {
   const query = useQuery({ queryKey: ["snapshot"], queryFn: api.snapshot });
   const client = useQueryClient();
   const { path, params, task, cursor, go, setSheetDirty, setDraft } = useRoute();
+  // After a page change, focus goes to the page's heading, so a screen reader hears the page
+  // and the next Tab starts at its top. Not on the first load, which has nothing to announce.
+  const shownPath = useRef(path);
+  useEffect(() => {
+    if (shownPath.current === path) return;
+    shownPath.current = path;
+    const heading = document.querySelector<HTMLElement>("main h1, .page h1");
+    if (!heading) return;
+    heading.tabIndex = -1;
+    heading.focus({ preventScroll: true });
+  }, [path]);
   const [filter, setFilter] = useState("");
   const [feature, setFeature] = useState("");
   // On a phone, null until the person picks a column: the board picks one that has tasks.

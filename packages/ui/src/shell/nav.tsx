@@ -1,3 +1,5 @@
+import { Icon } from "./icons.js";
+
 /** The side navigation: the product or project name, one link per page, the inbox count. */
 export function Nav({
   pages,
@@ -23,6 +25,7 @@ export function Nav({
         <a
           key={href}
           href={href}
+          title={label}
           aria-current={path === href ? "page" : undefined}
           // The link keeps its name; the count is its description, read after it.
           aria-describedby={href === "/my-work" && inbox ? "inbox-count" : undefined}
@@ -31,7 +34,8 @@ export function Nav({
             go(href);
           }}
         >
-          {label}
+          <Icon name={href} />
+          <span className="nav-text">{label}</span>
           {href === "/my-work" && inbox ? (
             <span className="nav-count" aria-hidden="true">
               {inbox > 99 ? "99+" : inbox}
@@ -39,8 +43,9 @@ export function Nav({
           ) : null}
         </a>
       ))}
-      <button type="button" className="nav-help" onClick={onHelp}>
-        Keyboard help
+      <button type="button" className="nav-help" title="Keyboard help" onClick={onHelp}>
+        <Icon name="help" />
+        <span className="nav-text">Keyboard help</span>
       </button>
       {inbox ? (
         <span id="inbox-count" hidden>

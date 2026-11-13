@@ -139,7 +139,7 @@ button {
 
 .app {
   display: grid;
-  grid-template-columns: var(--nav-width) 1fr;
+  grid-template-columns: var(--nav-width) minmax(0, 1fr);
   /* One bounded row, so each board column scrolls on its own and virtualisation can work. */
   grid-template-rows: minmax(0, 1fr);
   height: 100%;

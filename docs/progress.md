@@ -2579,3 +2579,11 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 - Before first paint: `public/theme.js`, loaded from `index.html`. The review asked for an inline script, but the board's policy is `script-src 'self'`, so the script is a file, not inline.
 - Contrast: no token changed. The axe runs already cover both themes at desktop and phone width and pass; no pair failed, so none was moved.
 - Tests: flows "Settings: Appearance Dark darkens the board and is remembered" (attribute, computed background, reload, light, back to system).
+
+### WP15 15.5: navigation
+
+- Each nav link has a 16 px icon from `shell/icons.tsx` (decorative) and its text; the badge stays on My work. Settings and Keyboard help stay at the foot.
+- From 700.02 to 1099 px the nav is a 56 px rail: the text stays in the page, visually hidden, as each link's name, and the link has a `title` tooltip. At 700 px and under the phone bar is unchanged; from 1100 px the 196 px nav.
+- After a page change focus moves to the page's h1 (tabindex -1, no focus ring). Not on first load.
+- Found on the way: at 900 px the whole page scrolled sideways (scrollWidth 1183) because a hidden helper `span.sr-only` inside a card was positioned against the page, outside the board's scroll area. `.board` is now `position: relative`, and the app grid uses `minmax(0, 1fr)`. This is part of the "no page scrolls sideways" gate.
+- Tests: flows "at 900 px the nav is a rail and every link still has an accessible name" (also checks the page does not scroll sideways) and "after navigation focus is on the page heading".

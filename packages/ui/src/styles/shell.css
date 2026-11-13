@@ -1,5 +1,7 @@
 .nav a {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   text-align: left;
   background: none;
   border: 0;
@@ -76,6 +78,9 @@ textarea {
   white-space: nowrap;
 }
 .nav button.nav-help {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin-top: auto;
   text-align: left;
   background: none;
@@ -104,4 +109,48 @@ textarea {
 .keyboard-help h2 {
   margin: 0;
   padding: var(--space-1) var(--space-2);
+}
+.nav .nav-icon {
+  flex: none;
+}
+/* 700 to 1099 px: a rail of icons. The text stays in the page as each link's name. */
+@media (min-width: 700.02px) and (max-width: 1099px) {
+  .app {
+    grid-template-columns: var(--rail-width) minmax(0, 1fr);
+  }
+  .nav {
+    padding-inline: var(--space-2);
+    align-items: center;
+  }
+  .nav .brand {
+    display: none;
+  }
+  .nav .nav-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .nav a,
+  .nav button.nav-help {
+    justify-content: center;
+    position: relative;
+    min-width: 36px;
+    min-height: 36px;
+  }
+  .nav .nav-count {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    margin: 0;
+    min-width: 16px;
+    line-height: 16px;
+    padding: 0 4px;
+  }
+}
+/* The heading takes focus after a page change; a ring on a heading is noise. */
+h1[tabindex="-1"]:focus-visible {
+  outline: none;
 }

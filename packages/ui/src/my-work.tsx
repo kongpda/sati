@@ -3,7 +3,7 @@ import { inboxCount as count, inboxOf } from "../../core/src/domain/inbox.js";
 import { dueLabel, type Note, parentKind, type Snapshot, type Task, waitingOn } from "./api.js";
 import { answerRefusal, moveRefusal } from "./moves.js";
 import { holderName, knownName, nameOf, personName } from "./people.js";
-import { capital, statusWord } from "./words.js";
+import { capital, statusWord, waitingForYou } from "./words.js";
 
 /** How many things wait for you: the number next to "My work". Assigned and due tasks are plans, not calls. */
 export function inboxCount(data: Snapshot, now = new Date()): number {
@@ -63,11 +63,7 @@ export function MyWork({
           ))}
         </Section>
       ) : null}
-      <Section
-        title="Waiting for your approval"
-        count={approval.length}
-        empty="Nothing to approve."
-      >
+      <Section title={waitingForYou()} count={approval.length} empty="Nothing to approve.">
         {approval.map((t) => (
           <Approval
             key={t.id}

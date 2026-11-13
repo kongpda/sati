@@ -13,6 +13,7 @@ scripts and agents do not break. This table maps one to the other; the board's w
 | "Kong is working on this until 2:32 PM" | claim, `leaseUntil` | Who has the task, and until when (your local time). |
 | "another machine" as the holder | a claim by an actor this clone does not know | The holder is a teammate's agent or person whose clone created them; their claim reached you through `.sati/`. |
 | "time on this ran out" | expired lease | The claim's time passed; anyone may take the task now. |
+| My work | `sati inbox`, MCP `inbox` | What waits for you: questions, mentions, tasks to approve, tasks assigned to you and due by Sunday. The board calls the page My work; the code calls it the inbox. |
 | Take over | `sati task take-over` | A person takes a task from whoever has it. Logged. |
 | Release | `sati task release` | The holder (or a person, with `--force`) gives the task back. |
 | Free up tasks whose time ran out | `POST /api/claims/release-expired` (board only) | Hands every expired claim back; agents and `task claim` also take expired tasks on their own. |

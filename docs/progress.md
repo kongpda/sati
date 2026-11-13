@@ -2488,3 +2488,11 @@ The Ask box left the File cards tab. Search shows an "Ask: <text>" row at three 
 - 3.7: the changes range reads "Since my last change".
 - 3.9: **deviation from the review.** The review says to use `NoteForm` for create and delete the inline form. About 15 e2e sites use the inline form, so it gained a tags field instead. Same result for the user: a note can be tagged when created.
 - 3.10: `weekEnd` and `mentionsOf` are no longer exported from `my-work.tsx`; the test uses the core `weekEnd` and `myWork(...).mentions`. The `nameOr` docblock and the "Backlog" word were already fixed by 15.2.
+
+### WP5: wording
+
+- 5.1: "Waiting for approval from you" on My work and "moved it to Waiting for approval" in the activity feed are built from `statusWord("review")`. The unit test in `words.test.ts` checks both.
+- 5.4: `milestoneWord`, `featureWord` and `featureChangeWord` live in `words.ts`. The Plan page, the milestone form and the Changes page use them. Features have two sets on purpose: a state ("Building") and what happened ("Started building"). Both are in one module.
+- 5.5: the decision form's button says "Replace decision" when replacing. Pin / Unpin / Pinned stay.
+- 5.3: one glossary row. No code change.
+- The words test was written together with the change, not shown failing first.

@@ -287,7 +287,7 @@ test("creates and edits a milestone, records and replaces a decision", async ({ 
   const replace = page.getByRole("dialog", { name: "Replace decision" });
   await replace.getByLabel("Title").fill("Hold the launch on the rooftop");
   await replace.getByLabel("Decision", { exact: true }).fill("The hall flooded; use the rooftop.");
-  await replace.getByRole("button", { name: "Record decision", exact: true }).click();
+  await replace.getByRole("button", { name: "Replace decision", exact: true }).click();
   await expect(replace).toHaveCount(0);
   await expect(page.getByText("Superseded by Hold the launch on the rooftop")).toBeVisible();
   const decisions = ui.sati<{ id: string; title: string; supersedes: string | null }[]>(
@@ -495,7 +495,7 @@ test("My work lists approvals, my tasks and this week's, and approves or sends b
 
   await page.goto(ui.signIn);
   await page.getByRole("link", { name: "My work", exact: true }).click();
-  const approval = page.getByRole("region", { name: "Waiting for your approval" });
+  const approval = page.getByRole("region", { name: "Waiting for approval from you" });
   const assigned = page.getByRole("region", { name: "Assigned to you" });
   const due = page.getByRole("region", { name: /^Due by / });
   await expect(approval).toContainText("Did Proof the flyer");

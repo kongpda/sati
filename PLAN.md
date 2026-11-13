@@ -1052,7 +1052,7 @@ Added 2026-11-12 at the owner's request: the whole-project review found the mode
 - [x] WP15 part A Board structure: split `app.tsx`, `pages.tsx`, `styles.css`; design tokens
 - [x] WP2 Board: merge pages (11 to 6)
 - [x] WP3 Board: correctness
-- [ ] WP5 Board: wording
+- [x] WP5 Board: wording
 - [ ] WP15 part B Board redesign: navigation, layout, palette, keyboard help, empty states, appearance
 - [x] WP12 MCP surface
 - [x] WP10 Core: concepts

@@ -2,7 +2,7 @@ import { type ReactNode, useRef, useState } from "react";
 import type { Milestone, Snapshot } from "../api.js";
 import { MilestoneForm, PlanForm } from "../forms.js";
 import { Markdown } from "../markdown.js";
-import { capital, dayWords } from "../words.js";
+import { dayWords, featureWord, milestoneWord } from "../words.js";
 
 export function Features({
   data,
@@ -37,7 +37,7 @@ export function Features({
           <article key={f.id} id={f.id} tabIndex={-1} className="row">
             <h2 className="row-title">{f.title}</h2>
             <div className="meta">
-              {capital(f.status)}
+              {featureWord(f.status)}
               {f.protected ? " · protected" : ""}
               {f.matchCount === null ? "" : ` · matches ${f.matchCount} files`}
               {f.needsReview ? (
@@ -179,7 +179,7 @@ export function Roadmap({
               </time>
               <strong>{m.title}</strong>
               <span className="meta">
-                {capital(m.status)}
+                {milestoneWord(m.status)}
                 {tasks.length ? ` · ${done}/${tasks.length} tasks done` : ""}{" "}
                 <button type="button" aria-label={`Edit ${m.title}`} onClick={() => setEditing(m)}>
                   Edit

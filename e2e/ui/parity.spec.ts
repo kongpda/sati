@@ -303,7 +303,7 @@ test("decision: record one with context, then replace it", async ({ page }) => {
   const replace = page.getByRole("dialog", { name: "Replace decision" });
   await replace.getByLabel("Title").fill(second("ui"));
   await replace.getByLabel("Decision", { exact: true }).fill("The hall flooded; use the rooftop.");
-  await replace.getByRole("button", { name: "Record decision", exact: true }).click();
+  await replace.getByRole("button", { name: "Replace decision", exact: true }).click();
   await expect(replace).toHaveCount(0);
   await expect(page.getByText(`Superseded by ${second("ui")}`)).toBeVisible();
   expect(await problems()).toEqual([]);

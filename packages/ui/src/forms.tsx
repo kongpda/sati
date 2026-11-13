@@ -12,7 +12,7 @@ import {
 } from "./api.js";
 import { Avatar, personName } from "./people.js";
 import { COMMENT_TAG } from "./thread.js";
-import { capital, plainError, statusWord } from "./words.js";
+import { capital, milestoneWord, plainError, statusWord } from "./words.js";
 
 /** Kept in step with PRIORITIES in core (test/constants.test.ts checks it). */
 export const PRIORITIES = ["low", "medium", "high", "urgent"] as const;
@@ -50,12 +50,6 @@ export const MILESTONE_NEXT: Record<string, string[]> = {
   active: ["planned", "done", "cancelled"],
   done: ["active"],
   cancelled: ["planned"],
-};
-const MILESTONE_LABELS: Record<string, string> = {
-  planned: "Planned",
-  active: "Active",
-  done: "Done",
-  cancelled: "Cancelled",
 };
 
 /** Comma-separated labels as typed, trimmed and without blanks or repeats. */
@@ -438,7 +432,7 @@ export function MilestoneForm({
           <select name="status" defaultValue={statuses[0]}>
             {statuses.map((s) => (
               <option key={s} value={s}>
-                {MILESTONE_LABELS[s] ?? s}
+                {milestoneWord(s)}
               </option>
             ))}
           </select>
@@ -466,7 +460,7 @@ export function DecisionForm({
   return (
     <FormDialog
       title={replaces ? "Replace decision" : "Record decision"}
-      submit="Record decision"
+      submit={replaces ? "Replace decision" : "Record decision"}
       busy="Recording…"
       onClose={onClose}
       onSubmit={(form) => {

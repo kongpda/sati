@@ -10,6 +10,42 @@ const STATUS_WORDS: Record<string, string> = Object.fromEntries(COLUMNS);
 
 export const statusWord = (status: string): string => STATUS_WORDS[status] ?? status;
 
+/** The section on My work that holds tasks waiting for this person to approve. */
+export const waitingForYou = (): string => `${statusWord("review")} from you`;
+
+/** Milestone states as people say them. */
+const MILESTONE_WORDS: Record<string, string> = {
+  planned: "Planned",
+  active: "Active",
+  done: "Done",
+  cancelled: "Cancelled",
+};
+
+export const milestoneWord = (status: string): string => MILESTONE_WORDS[status] ?? capital(status);
+
+/** Feature states as people say them. */
+const FEATURE_WORDS: Record<string, string> = {
+  planned: "Planned",
+  building: "Building",
+  shipped: "Shipped",
+  deprecated: "Deprecated",
+  removed: "Removed",
+};
+
+export const featureWord = (status: string): string => FEATURE_WORDS[status] ?? capital(status);
+
+/** What happened to a feature, for the Changes page ("Started building"). */
+const FEATURE_CHANGE_WORDS: Record<string, string> = {
+  shipped: "Shipped",
+  building: "Started building",
+  deprecated: "Deprecated",
+  removed: "Removed",
+  planned: "Moved back to planned",
+};
+
+export const featureChangeWord = (status: string): string =>
+  FEATURE_CHANGE_WORDS[status] ?? capital(status);
+
 /** A one-word value as a label: "high" → "High", "building" → "Building". */
 export const capital = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
 
@@ -62,7 +98,7 @@ export function activityWords(verb: string, entity: string, diff: Record<string,
       return `deleted the ${kind}`;
     case "complete":
       return status === "review"
-        ? `finished the ${kind} and sent it for approval`
+        ? `finished the ${kind} and moved it to ${statusWord("review")}`
         : `finished the ${kind}`;
     case "claim":
       return `started working on the ${kind}`;

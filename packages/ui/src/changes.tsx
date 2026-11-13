@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api, type ChangeItem, type ChangesFilter, type Snapshot } from "./api.js";
 import { knownName, nameOf } from "./people.js";
-import { capital, dayWords, fullTime, plainError } from "./words.js";
+import { capital, dayWords, featureChangeWord, fullTime, plainError } from "./words.js";
 
 const RANGES = [
   ["24h", "Last 24 hours"],
@@ -12,17 +12,9 @@ const RANGES = [
   ["last-session", "Since my last change"],
 ] as const;
 
-const FEATURE_WORDS: Record<string, string> = {
-  shipped: "Shipped",
-  building: "Started building",
-  deprecated: "Deprecated",
-  removed: "Removed",
-  planned: "Moved back to planned",
-};
-
 function what(item: ChangeItem): string {
   if (item.kind === "done") return "Done";
-  if (item.kind === "feature") return FEATURE_WORDS[item.status] ?? capital(item.status);
+  if (item.kind === "feature") return featureChangeWord(item.status);
   if (item.kind === "decision") return "Decided";
   return item.edited ? "Edited note" : "New note";
 }

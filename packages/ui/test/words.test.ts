@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../src/api.js";
-import { activityWords, plainError, statusWord, untilTime } from "../src/words.js";
+import {
+  activityWords,
+  featureChangeWord,
+  featureWord,
+  milestoneWord,
+  plainError,
+  statusWord,
+  untilTime,
+  waitingForYou,
+} from "../src/words.js";
 
 describe("plain words", () => {
   it("names statuses as people say them and leaves unknown ones alone", () => {
@@ -9,13 +18,32 @@ describe("plain words", () => {
     expect(statusWord("archived")).toBe("archived");
   });
 
+  it("the review state has one name on every page", () => {
+    // Everything people read about the state is built from statusWord("review"), so a rename
+    // changes the board, My work and the activity feed together.
+    const review = statusWord("review");
+    expect(
+      activityWords("complete", "task", { status: { from: "in_progress", to: "review" } }),
+    ).toContain(review);
+    expect(waitingForYou()).toBe(`${review} from you`);
+  });
+
+  it("milestones and features have one set of state words", () => {
+    expect(milestoneWord("cancelled")).toBe("Cancelled");
+    expect(milestoneWord("planned")).toBe("Planned");
+    expect(featureWord("building")).toBe("Building");
+    expect(featureWord("shipped")).toBe("Shipped");
+    expect(featureChangeWord("building")).toBe("Started building");
+    expect(featureChangeWord("odd")).toBe("Odd");
+  });
+
   it("turns activity rows into sentences", () => {
     const moved = { status: { from: "in_progress", to: "review" } };
     expect(activityWords("status", "task", moved)).toBe("moved the task to Waiting for approval");
     expect(activityWords("claim", "task", {})).toBe("started working on the task");
     expect(
       activityWords("complete", "task", { status: { from: "in_progress", to: "review" } }),
-    ).toBe("finished the task and sent it for approval");
+    ).toBe("finished the task and moved it to Waiting for approval");
     expect(activityWords("complete", "task", { status: { from: "in_progress", to: "done" } })).toBe(
       "finished the task",
     );

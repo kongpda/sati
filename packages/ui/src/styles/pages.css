@@ -13,6 +13,9 @@
   border-top: 2px solid var(--moss);
   padding-top: 6px;
 }
+.tick strong {
+  display: block;
+}
 .tick time {
   display: block;
   color: var(--muted);

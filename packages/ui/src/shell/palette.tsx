@@ -7,7 +7,7 @@ import { kindLabel } from "../words.js";
 const HIT_PAGES: Record<string, string> = {
   note: "/notes",
   decision: "/decisions",
-  feature: "/features",
+  feature: "/plan?tab=features",
   context: "/memory",
 };
 

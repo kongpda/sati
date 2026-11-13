@@ -48,8 +48,8 @@ test.afterAll(async () => {
 const PAGES = [
   "/",
   "/my-work",
-  "/roadmap",
-  "/features",
+  "/plan",
+  "/plan?tab=features",
   "/notes",
   "/memory",
   "/decisions",
@@ -80,6 +80,8 @@ for (const [device, viewport, colorScheme] of [
           await page.getByRole("link", { name: navName(base), exact: true }).click();
           if (query === "tab=log")
             await page.getByRole("tab", { name: "Log", exact: true }).click();
+          if (query === "tab=features")
+            await page.getByRole("tab", { name: "Features", exact: true }).click();
         }
         await page.waitForLoadState("networkidle");
         if (path === "/notes")
@@ -116,7 +118,7 @@ for (const [device, viewport, colorScheme] of [
 
     test("axe: milestone, decision, note, card and person forms", async ({ page }) => {
       await page.goto(ui.signIn);
-      await page.getByRole("link", { name: "Roadmap", exact: true }).click();
+      await page.getByRole("link", { name: "Plan", exact: true }).click();
       await page.getByRole("button", { name: "Edit 1.0" }).click();
       await expect(page.getByRole("dialog", { name: "Edit milestone" })).toBeVisible();
       const milestone = await new AxeBuilder({ page }).withTags(TAGS).analyze();

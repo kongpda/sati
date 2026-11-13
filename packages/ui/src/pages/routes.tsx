@@ -1,7 +1,6 @@
 import type { ComponentProps } from "react";
 import type { Snapshot } from "../api.js";
 import { Changes } from "../changes.js";
-import { CODE_ONLY } from "../hooks/use-view.js";
 import { Memory } from "../memory.js";
 import { Settings } from "../settings.js";
 import { Tabs } from "../shell/tabs.js";
@@ -39,19 +38,29 @@ export function Routes({
       onSelect={(id) => go(id === "log" ? `${path}?tab=log` : path)}
     />
   );
+  const onFeatures = params.get("tab") === "features";
+  const planTabs = (
+    <Tabs
+      label="Plan"
+      tabs={[
+        ["milestones", "Milestones"],
+        ["features", "Features"],
+      ]}
+      current={onFeatures ? "features" : "milestones"}
+      onSelect={(id) => go(id === "features" ? `${path}?tab=features` : path)}
+    />
+  );
   return (
     <>
       {path === "/" ? <BoardPage {...board} /> : null}
       {data && path === "/my-work" ? <MyWorkPage data={data} {...ctx} /> : null}
-      {data && general && CODE_ONLY.has(path) ? (
-        <p className="empty page">
-          A general project has no features or file reservations. Switch the project kind in
-          Settings to see this page.
-        </p>
-      ) : null}
       {data && path === "/team" ? <TeamPage data={data} general={general} {...ctx} /> : null}
-      {data && !general && path === "/features" ? <FeaturesPage data={data} {...ctx} /> : null}
-      {data && path === "/roadmap" ? <Roadmap data={data} onSaved={saved} /> : null}
+      {data && path === "/plan" && !onFeatures ? (
+        <Roadmap data={data} tabs={planTabs} onSaved={saved} />
+      ) : null}
+      {data && path === "/plan" && onFeatures ? (
+        <FeaturesPage data={data} tabs={planTabs} general={general} {...ctx} />
+      ) : null}
       {data && path === "/notes" ? <NotesPage data={data} {...ctx} /> : null}
       {data && path === "/memory" ? (
         <Memory

@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { api, type Deletable, type Snapshot } from "../api.js";
 import { approvedCommit } from "../hooks/use-moves.js";
 import { MyWork } from "../my-work.js";
@@ -120,10 +121,19 @@ function AgentsSection({
   );
 }
 
-export function FeaturesPage({ data, client, setToast, fail }: PageContext & { data: Snapshot }) {
+export function FeaturesPage({
+  data,
+  tabs,
+  general,
+  client,
+  setToast,
+  fail,
+}: PageContext & { data: Snapshot; tabs: ReactNode; general: boolean }) {
   return (
     <Features
       data={data}
+      tabs={tabs}
+      general={general}
       onSavePaths={(id, paths, version) =>
         api
           .patchFeature(id, {

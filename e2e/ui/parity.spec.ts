@@ -209,7 +209,7 @@ test("checklist: add two steps and tick one", async ({ page }) => {
 
 test("milestone: create with a goal and target date, then change its status", async ({ page }) => {
   const problems = await board(page);
-  await page.getByRole("link", { name: "Roadmap", exact: true }).click();
+  await page.getByRole("link", { name: "Plan", exact: true }).click();
   await page.getByRole("button", { name: "New milestone" }).click();
   const create = page.getByRole("dialog", { name: "New milestone" });
   await create.getByLabel("Name").fill(named("ui", "Launch event"));

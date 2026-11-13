@@ -1,0 +1,14 @@
+{
+  "context": "Review WP2 2.3. Two pages for one planning job; the milestone list repeated the timeline.",
+  "createdAt": "2026-11-13T03:23:49.159Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "decision": "/plan has tabs Milestones and Features. /roadmap and /features redirect. The repeated milestone list is dropped; the timeline carries status, task count, goal and an Edit button. A general project keeps the Features tab, which says it has no features.",
+  "id": "dec_01M79EXMH9WYK26Y6PDVSFV8X1",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-13T03:23:49.167Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "title": "Roadmap and Features pages merged into one Plan page",
+  "updatedAt": "2026-11-13T03:23:49.159Z",
+  "version": 1
+}

@@ -2446,3 +2446,12 @@ Items 13.1 to 13.6 are done (task `tsk_01M78GKS873Y4E80TDTY5XHMKH`); 13.7 closed
 - **13.5:** the three files are in `docs/history/`. The "kept as history" line sits under each title as a quote, as in `AGENT_KICKOFF.md`, not above it. PLAN's links point to the new paths. Mentions in `progress.md`, `review-followups.md` and `.sati/` records are history and keep the old paths.
 - **13.6:** closed without a cut; decision `dec_01M78GQP7EMS1910Y1KARZTVAF`. The file is the npm page, written for it, not a stale copy of the root README.
 
+
+## 2026-11-13 — Review WP2 2.3 and 5.2: the Plan page
+
+Roadmap and Features are one page, `/plan`, with tabs Milestones and Features (`?tab=features`). `/roadmap` and `/features` redirect, and the palette and Changes page link to the new address. Decision `dec_01M79EXMH9WYK26Y6PDVSFV8X1`.
+
+- **List dropped:** the article list under the timeline is gone. To keep what it showed, each timeline entry carries the status, the task count, the goal and its own Edit button. The button is separate from the entry because a label that does not contain the visible text fails axe (`label-content-name-mismatch`).
+- **General project:** the Features tab stays and says there are no features, instead of hiding a page. `CODE_ONLY` is gone.
+- **5.2:** "New plan" reads "New plan from template".
+- **Tests:** a new e2e "the Plan page shows milestones and features, and the old links redirect" and unit tests for both redirects. The e2e files share one project, so the new test uses its own names.

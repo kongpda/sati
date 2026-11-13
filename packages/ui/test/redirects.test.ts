@@ -21,3 +21,16 @@ describe("the Agents page", () => {
     expect(resolveUrl("/agents", "").path).toBe("/team");
   });
 });
+
+describe("the Roadmap and Features pages", () => {
+  it("sends /roadmap to the Milestones tab of Plan", () => {
+    const r = resolveUrl("/roadmap", "");
+    expect(r.path).toBe("/plan");
+    expect(r.params.get("tab")).toBeNull();
+  });
+  it("sends /features to the Features tab of Plan", () => {
+    const r = resolveUrl("/features", "");
+    expect(r.path).toBe("/plan");
+    expect(r.params.get("tab")).toBe("features");
+  });
+});

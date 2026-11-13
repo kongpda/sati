@@ -7,8 +7,7 @@ import { COMMENT_TAG, threadOf } from "../thread.js";
 const PAGES = [
   ["/", "Board"],
   ["/my-work", "My work"],
-  ["/roadmap", "Roadmap"],
-  ["/features", "Features"],
+  ["/plan", "Plan"],
   ["/notes", "Notes"],
   ["/memory", "Memory"],
   ["/decisions", "Decisions"],
@@ -19,9 +18,6 @@ const PAGES = [
 
 /** One empty list, so a general project's data keeps the same identity between renders. */
 const NONE: never[] = [];
-
-/** Pages a general project does without: it has no features. (Its Team page hides the agents.) */
-export const CODE_ONLY = new Set<string>(["/features"]);
 
 /**
  * What the pages show: the snapshot as this project kind sees it, the pages offered, the tasks
@@ -44,7 +40,7 @@ export function useView(
     () => (snapshot && general ? { ...snapshot, features: NONE, locks: NONE } : snapshot),
     [snapshot, general],
   );
-  const pages = PAGES.filter(([href]) => !(general && CODE_ONLY.has(href)));
+  const pages = PAGES;
   // The feature filter is hidden in a general project, so it must not keep narrowing the board.
   useEffect(() => {
     if (general) setFeature("");

@@ -209,7 +209,7 @@ export function Changes({
                     onClick={() =>
                       onGo(
                         item.kind === "feature"
-                          ? "/features"
+                          ? "/plan?tab=features"
                           : item.kind === "decision"
                             ? "/decisions"
                             : "/notes",

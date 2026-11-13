@@ -204,8 +204,7 @@ test("every page loads and marks itself current", async ({ page }) => {
   await page.goto(ui.signIn);
   for (const name of [
     "My work",
-    "Roadmap",
-    "Features",
+    "Plan",
     "Notes",
     "Memory",
     "Decisions",
@@ -239,7 +238,7 @@ test("every page loads and marks itself current", async ({ page }) => {
 test("creates and edits a milestone, records and replaces a decision", async ({ page }) => {
   const problems = await watch(page);
   await page.goto(ui.signIn);
-  await page.getByRole("link", { name: "Roadmap", exact: true }).click();
+  await page.getByRole("link", { name: "Plan", exact: true }).click();
   await page.getByRole("button", { name: "New milestone" }).click();
   const create = page.getByRole("dialog", { name: "New milestone" });
   await expect(create.getByLabel("Name")).toBeFocused();
@@ -249,7 +248,7 @@ test("creates and edits a milestone, records and replaces a decision", async ({ 
   await create.getByLabel("Target date").fill("2026-12-04");
   await create.getByRole("button", { name: "Create milestone" }).click();
   await expect(create).toHaveCount(0);
-  await expect(page.getByRole("heading", { level: 2, name: "Launch event" })).toBeVisible();
+  await expect(page.locator(".tick").filter({ hasText: "Launch event" })).toBeVisible();
 
   // An edit made elsewhere after the dialog opened is refused, and the draft stays.
   await page.getByRole("button", { name: "Edit Launch event" }).click();
@@ -602,6 +601,37 @@ test("uses plain words for statuses, activity and times", async ({ page }) => {
 });
 
 // PLAN Phase 7a: a general project (an event, a campaign) has no features or file reservations.
+test("the Plan page shows milestones and features, and the old links redirect", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  ui.sati("feature", "create", "Box office", "--paths", "src/box/**");
+  await ui.api("POST", "/api/milestones", { title: "Autumn fair" });
+  await page.goto(ui.signIn);
+  await page.goto(`${ui.origin}/roadmap`);
+  await expect(page).toHaveURL(`${ui.origin}/plan`);
+  await expect(page.getByRole("heading", { level: 1, name: "Plan" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Milestones" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  // The timeline is the list: a milestone shows once, with its own Edit button.
+  await expect(page.getByRole("button", { name: "Edit Autumn fair" })).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 2, name: "Autumn fair" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "New plan from template" })).toBeVisible();
+
+  await page.goto(`${ui.origin}/features`);
+  await expect(page).toHaveURL(`${ui.origin}/plan?tab=features`);
+  await expect(page.getByRole("tab", { name: "Features" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByRole("heading", { level: 2, name: "Box office" })).toBeVisible();
+  await page.getByRole("tab", { name: "Milestones" }).click();
+  await expect(page).toHaveURL(`${ui.origin}/plan`);
+  expect(await problems()).toEqual([]);
+});
+
 test("a general project hides features and the agents section, and switches back", async ({
   page,
 }) => {
@@ -610,14 +640,15 @@ test("a general project hides features and the agents section, and switches back
   await ui.api("POST", "/api/tasks", { title: "Book the venue", featureId: f.id });
   await page.goto(ui.signIn);
   const nav = page.getByRole("navigation");
-  await expect(nav.getByRole("link", { name: "Features", exact: true })).toBeVisible();
+  await nav.getByRole("link", { name: "Plan", exact: true }).click();
+  await page.getByRole("tab", { name: "Features" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Ticketing" })).toBeVisible();
 
   await nav.getByRole("link", { name: "Settings", exact: true }).click();
   await page.getByRole("radio", { name: /General project/u }).check();
   await expect(page.getByRole("status")).toContainText("This is now a general project.");
   // The choices stay usable while saving, so the chosen radio keeps focus (review 6.3).
   await expect(page.getByRole("radio", { name: /General project/u })).toBeFocused();
-  await expect(nav.getByRole("link", { name: "Features", exact: true })).toHaveCount(0);
   await expect(nav.getByRole("link", { name: "Agents", exact: true })).toHaveCount(0);
   expect(ui.sati<{ kind: string }>("settings").kind).toBe("general");
   // The Team page stays: a general project reaches its people there, and sees no agents.
@@ -643,8 +674,8 @@ test("a general project hides features and the agents section, and switches back
   await form.getByLabel("Plan").selectOption({ label: "Spring launch" });
   await form.getByRole("button", { name: "Create task" }).click();
   await expect(form).toHaveCount(0);
-  await page.getByRole("link", { name: "Roadmap", exact: true }).click();
-  await expect(page.locator("article").filter({ hasText: "Spring launch" })).toContainText(
+  await page.getByRole("link", { name: "Plan", exact: true }).click();
+  await expect(page.locator(".tick").filter({ hasText: "Spring launch" })).toContainText(
     "0/1 tasks done",
   );
 
@@ -658,7 +689,9 @@ test("a general project hides features and the agents section, and switches back
 
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await page.getByRole("radio", { name: /Software project/u }).check();
-  await expect(nav.getByRole("link", { name: "Features", exact: true })).toBeVisible();
+  await nav.getByRole("link", { name: "Plan", exact: true }).click();
+  await page.getByRole("tab", { name: "Features" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Ticketing" })).toBeVisible();
   expect(ui.sati<{ kind: string }>("settings").kind).toBe("code");
   expect(await problems()).toEqual([]);
 });
@@ -841,7 +874,8 @@ test("the Features paths field keeps typed text across a refresh and shows chang
     "src/light/**",
   );
   await page.goto(ui.signIn);
-  await page.getByRole("link", { name: "Features", exact: true }).click();
+  await page.getByRole("link", { name: "Plan", exact: true }).click();
+  await page.getByRole("tab", { name: "Features" }).click();
   const typed = page.getByLabel("Paths for Harbour, one per line");
   const other = page.getByLabel("Paths for Lighthouse, one per line");
   await typed.fill("src/harbour/**\nsrc/docks/**");
@@ -946,7 +980,7 @@ test("Changes shows done work by day, filters it and copies the changelog", asyn
 test("New plan creates a milestone and its staged tasks from a template", async ({ page }) => {
   const problems = await watch(page);
   await page.goto(ui.signIn);
-  await page.getByRole("link", { name: "Roadmap", exact: true }).click();
+  await page.getByRole("link", { name: "Plan", exact: true }).click();
   await page.getByRole("button", { name: "New plan" }).click();
   const dialog = page.getByRole("dialog", { name: "New plan" });
   await dialog.getByRole("radio", { name: /Event/ }).check();
@@ -956,7 +990,7 @@ test("New plan creates a milestone and its staged tasks from a template", async 
   await dialog.getByRole("button", { name: "Create plan" }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("status")).toContainText("Created Summer fair with 18 tasks.");
-  await expect(page.getByRole("heading", { name: "Summer fair" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit Summer fair" })).toBeVisible();
   await expect(page.getByText("0/18 tasks done")).toBeVisible();
 
   const plan = ui

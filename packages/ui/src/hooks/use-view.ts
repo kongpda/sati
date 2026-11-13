@@ -72,13 +72,15 @@ export function useView(
     [data, tasks, column],
   );
   // The brand kit or event brief one click from the board; the brief gives agents the same 3.
-  const pinned = (data?.notes ?? [])
-    .filter((n) => n.pinned && !threadOf(n) && !n.tags.includes(COMMENT_TAG))
-    .slice(0, 3);
+  const allPinned = (data?.notes ?? []).filter(
+    (n) => n.pinned && !threadOf(n) && !n.tags.includes(COMMENT_TAG),
+  );
+  const pinned = allPinned.slice(0, 3);
+  const morePinned = allPinned.length - pinned.length;
   // A lease runs out with no write to say so: look again each minute.
   useMinute();
   const now = new Date().toISOString();
   const working = (data?.tasks ?? []).filter((t) => t.claim && t.claim.leaseUntil > now);
 
-  return { general, data, pages, inbox, tasks, pinned, working };
+  return { general, data, pages, inbox, tasks, pinned, morePinned, working };
 }

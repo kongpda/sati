@@ -415,6 +415,7 @@ const Card = memo(function Card({
           type="button"
           className="title"
           data-task={task.id}
+          title={task.title}
           aria-current={open ? "true" : undefined}
           onClick={() => onOpen(task.id)}
         >

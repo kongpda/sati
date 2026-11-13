@@ -24,7 +24,7 @@ import { TopBar } from "./shell/top-bar.js";
 /** The phone layout in styles.css: one column at a time. */
 const PHONE = "(max-width: 700px)";
 /** Matches the stylesheet, which shows the board beside the task panel from this width. */
-const WIDE = "(min-width: 900px)";
+const WIDE = "(min-width: 1100px)";
 
 export function App() {
   // The chosen colours. `public/theme.js` sets the same attribute before first paint.
@@ -92,7 +92,7 @@ export function App() {
     return () => phone.removeEventListener("change", onChange);
   }, []);
 
-  const { general, data, pages, inbox, tasks, pinned, working } = useView(
+  const { general, data, pages, inbox, tasks, pinned, morePinned, working } = useView(
     query.data,
     path,
     filter,
@@ -233,6 +233,8 @@ export function App() {
             data,
             tasks,
             pinned,
+            morePinned,
+            setSelected,
             working,
             column,
             setColumn,

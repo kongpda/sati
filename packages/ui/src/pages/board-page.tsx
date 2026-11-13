@@ -10,10 +10,12 @@ export function BoardPage({
   data,
   tasks,
   pinned,
+  morePinned,
   working,
   column,
   setColumn,
   selected,
+  setSelected,
   reviewing,
   approveRefusal,
   bulkTargets,
@@ -36,10 +38,13 @@ export function BoardPage({
   /** The tasks that pass the filters. */
   tasks: Task[];
   pinned: { id: string; title: string }[];
+  /** How many pinned notes are not listed. */
+  morePinned: number;
   working: Task[];
   column: string;
   setColumn: (column: string) => void;
   selected: Set<string>;
+  setSelected: (selected: Set<string>) => void;
   reviewing: boolean;
   approveRefusal: string | null;
   bulkTargets: Set<string>;
@@ -79,6 +84,17 @@ export function BoardPage({
               {n.title}
             </a>
           ))}
+          {morePinned > 0 ? (
+            <a
+              href="/knowledge"
+              onClick={(e) => {
+                e.preventDefault();
+                go("/knowledge");
+              }}
+            >
+              +{morePinned} more
+            </a>
+          ) : null}
         </nav>
       ) : null}
       {working.length > 0 ? (
@@ -108,8 +124,8 @@ export function BoardPage({
         ))}
       </select>
       {selected.size > 0 ? (
-        <div className="bulk">
-          <span>{selected.size} selected</span>
+        <section className="bulk" aria-label="Selected tasks">
+          <span aria-live="polite">{selected.size} selected</span>
           {reviewing ? (
             <>
               <button
@@ -155,7 +171,10 @@ export function BoardPage({
           {bulkTargets.size === 0 ? (
             <span className="hint">None of these can be moved from here.</span>
           ) : null}
-        </div>
+          <button type="button" onClick={() => setSelected(new Set())}>
+            Clear
+          </button>
+        </section>
       ) : null}
       {!data ? null : data.tasks.length === 0 ? (
         <p className="empty page">

@@ -166,7 +166,9 @@
 /* Pinned notes on the board: one line of links above the columns. */
 .pinned {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  white-space: nowrap;
   align-items: center;
   gap: var(--space-1) var(--space-3);
   padding: 0 14px var(--space-2);
@@ -176,7 +178,7 @@
   font-weight: 600;
 }
 .pinned a {
-  overflow-wrap: anywhere;
+  flex: none;
   color: var(--moss);
   font-size: var(--text-sm);
 }

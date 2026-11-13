@@ -82,6 +82,7 @@ export function useKeys({
         else if (typing)
           target?.blur(); // The sheet stays open, so typed edits are kept.
         else if (task) go(path);
+        else setSelected((prev) => (prev.size ? new Set() : prev));
         return;
       }
       // Ctrl+C, Cmd+X and other chords belong to the browser, not to the board's letters.

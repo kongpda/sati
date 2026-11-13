@@ -2587,3 +2587,10 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 - After a page change focus moves to the page's h1 (tabindex -1, no focus ring). Not on first load.
 - Found on the way: at 900 px the whole page scrolled sideways (scrollWidth 1183) because a hidden helper `span.sr-only` inside a card was positioned against the page, outside the board's scroll area. `.board` is now `position: relative`, and the app grid uses `minmax(0, 1fr)`. This is part of the "no page scrolls sideways" gate.
 - Tests: flows "at 900 px the nav is a rail and every link still has an accessible name" (also checks the page does not scroll sideways) and "after navigation focus is on the page heading".
+
+### WP15 15.6: board page layout
+
+- Done: pinned strip is one line that scrolls sideways, three notes at most, then "+N more" to Knowledge (`morePinned` from `useView`). Card titles stop at two lines with the full title in `title`. A selected card has a 2 px outline. The selection bar is a `section` (a named region, "Selected tasks") with a polite live count, a Clear button, and Esc clears the selection (when no task or dialog is open). The task sheet is beside the board from 1100 px (was 900) and a modal dialog under it.
+- Already true, left as is: the column header stays on top while cards scroll (cards scroll in `.cards`, under the header); the bar sits at the foot of the board area.
+- NOT done: the toolbar "Columns" control that shows which columns are collapsed. Each column already has a collapse button and a rail (1.3); a second control for the same thing was not worth a new feature. Say so if you want it.
+- Tests: flows "the selection bar is a region that Clear and Escape empty", "a long card title is cut at two lines and kept in full in its tooltip", "the task sheet is a dialog under 1100 px and sits beside the board from 1100 px".

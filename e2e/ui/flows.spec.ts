@@ -176,6 +176,60 @@ test("searches from the Ctrl+K palette and opens the hit", async ({ page }) => {
   expect(new URL(page.url()).searchParams.get("task")).toMatch(/^tsk_/u);
 });
 
+// Review 15.6: the bulk bar is a named region with a live count, a Clear button and Esc.
+test("the selection bar is a region that Clear and Escape empty", async ({ page }) => {
+  await ui.api("POST", "/api/tasks", { title: "Selection bar probe" });
+  await page.goto(ui.signIn);
+  await page.locator(".card").first().getByRole("button", { name: "select" }).click();
+  const bar = page.getByRole("region", { name: "Selected tasks" });
+  await expect(bar.getByText("1 selected")).toBeVisible();
+  await expect(bar.locator("[aria-live=polite]")).toHaveText("1 selected");
+  await bar.getByRole("button", { name: "Clear" }).click();
+  await expect(bar).toHaveCount(0);
+  await page.locator(".card").first().getByRole("button", { name: "select" }).click();
+  await expect(bar).toBeVisible();
+  await page.locator("body").press("Escape");
+  await expect(bar).toHaveCount(0);
+});
+
+// A card's title stops at two lines; the whole title stays one hover away.
+test("a long card title is cut at two lines and kept in full in its tooltip", async ({ page }) => {
+  const long = `Long title ${"word ".repeat(40)}end`.trim();
+  await ui.api("POST", "/api/tasks", { title: long, priority: "urgent" });
+  await page.goto(ui.signIn);
+  const title = page.locator(`.card .title[title="${long}"]`).first();
+  await expect(title).toBeVisible();
+  const { height, line } = await title.evaluate((el) => ({
+    height: el.getBoundingClientRect().height,
+    line: Number.parseFloat(getComputedStyle(el).lineHeight),
+  }));
+  expect(height).toBeLessThanOrEqual(line * 2 + 2);
+});
+
+// Review 15.6: under 1100 px the task sheet covers the board as a dialog; from 1100 px it sits beside it.
+test("the task sheet is a dialog under 1100 px and sits beside the board from 1100 px", async ({
+  page,
+}) => {
+  const made = await ui.api<{ id: string }>("POST", "/api/tasks", { title: "Sheet width probe" });
+  const open = async () => {
+    await page.evaluate((id) => {
+      history.pushState({}, "", `/?task=${id}`);
+      dispatchEvent(new PopStateEvent("popstate"));
+    }, made.id);
+    await expect(page.getByRole("dialog", { name: "Sheet width probe" })).toBeVisible();
+  };
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await page.goto(ui.signIn);
+  await open();
+  await expect(page.locator("main.main")).toHaveAttribute("inert", "");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Sheet width probe" })).toHaveCount(0);
+  await page.setViewportSize({ width: 1300, height: 800 });
+  await open();
+  await expect(page.locator("main.main")).not.toHaveAttribute("inert", "");
+  await page.keyboard.press("Escape");
+});
+
 // Review 15.5: a 56 px rail between 700 and 1099 px, with every link still named.
 test("at 900 px the nav is a rail and every link still has an accessible name", async ({
   page,

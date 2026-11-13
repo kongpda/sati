@@ -13,6 +13,7 @@ import { useView } from "./hooks/use-view.js";
 import { needsReason } from "./moves.js";
 import { TaskSheetPanel } from "./pages/connected.js";
 import { Routes } from "./pages/routes.js";
+import { usePrefs } from "./prefs.js";
 import { Banners } from "./shell/banners.js";
 import { KeyboardHelp } from "./shell/keyboard-help.js";
 import { Nav } from "./shell/nav.js";
@@ -26,6 +27,12 @@ const PHONE = "(max-width: 700px)";
 const WIDE = "(min-width: 900px)";
 
 export function App() {
+  // The chosen colours. `public/theme.js` sets the same attribute before first paint.
+  const { theme } = usePrefs();
+  useEffect(() => {
+    if (theme === "system") delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = theme;
+  }, [theme]);
   const query = useQuery({ queryKey: ["snapshot"], queryFn: api.snapshot });
   const client = useQueryClient();
   const { path, params, task, cursor, go, setSheetDirty, setDraft } = useRoute();

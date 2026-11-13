@@ -176,6 +176,24 @@ test("searches from the Ctrl+K palette and opens the hit", async ({ page }) => {
   expect(new URL(page.url()).searchParams.get("task")).toMatch(/^tsk_/u);
 });
 
+// Review 15.10: the Appearance choice repaints at once, survives a reload and is set before first paint.
+test("Settings: Appearance Dark darkens the board and is remembered", async ({ page }) => {
+  await page.goto(`${ui.signIn}`);
+  await page.goto(new URL("/settings", page.url()).href);
+  const colours = page.getByLabel("Colours");
+  await colours.selectOption("dark");
+  const html = page.locator("html");
+  await expect(html).toHaveAttribute("data-theme", "dark");
+  const paper = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  expect(await paper()).toBe("rgb(16, 23, 20)");
+  await page.reload();
+  await expect(html).toHaveAttribute("data-theme", "dark");
+  await page.getByLabel("Colours").selectOption("light");
+  expect(await paper()).toBe("rgb(228, 238, 232)");
+  await page.getByLabel("Colours").selectOption("system");
+  await expect(html).not.toHaveAttribute("data-theme", /.+/u);
+});
+
 // Review 15.7: one input for search, Ask and going to a page; arrows move, Enter opens.
 test("the palette goes to a page by name with the arrow keys and Enter", async ({ page }) => {
   await page.goto(ui.signIn);

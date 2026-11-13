@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, type ProjectKind, type ReviewMode, type Snapshot } from "./api.js";
 import { personOnly } from "./moves.js";
+import { type Prefs, usePrefs, writePrefs } from "./prefs.js";
 
 const KINDS: [ProjectKind, string, string][] = [
   [
@@ -38,9 +39,25 @@ export function Settings({
   const [savingReview, setSavingReview] = useState<ReviewMode | null>(null);
   // Only a person changes who may approve; an agent's board shows it and says why not.
   const reviewRefusal = personOnly(data);
+  const { theme } = usePrefs();
   return (
     <div className="page">
       <h1>Settings</h1>
+      <section className="my-section" aria-labelledby="appearance-title">
+        <h2 id="appearance-title">Appearance</h2>
+        <label>
+          Colours{" "}
+          <select
+            value={theme}
+            onChange={(e) => writePrefs({ theme: e.target.value as Prefs["theme"] })}
+          >
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+        <p className="meta">Kept in this browser only. System follows your device.</p>
+      </section>
       <section className="my-section" aria-labelledby="kind-title">
         <h2 id="kind-title">Project kind</h2>
         {/* Busy, not disabled: disabling it took focus off the radio just chosen. */}

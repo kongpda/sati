@@ -58,8 +58,24 @@
   color: var(--ink);
 }
 
+/* Dark values twice: for a person who chose Dark, and for System on a dark device. */
+:root[data-theme="dark"] {
+  --paper: #101714;
+  --ink: #e7f0ea;
+  --muted: #9eb0a4;
+  --panel: #18211c;
+  --line: #2a3a32;
+  --line-strong: #617a6c;
+  --moss: #8dcead;
+  --clay: #e7a598;
+  --clay-on-ink: #8a3b2c;
+  --live: #e39a62;
+  --focus: #8dcead;
+  color-scheme: dark;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --paper: #101714;
     --ink: #e7f0ea;
     --muted: #9eb0a4;

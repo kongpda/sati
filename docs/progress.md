@@ -2571,3 +2571,11 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 - The search box is now a combobox over one listbox. Rows are "Go to <page>" (the six pages, filtered by what is typed; all six when empty) then search hits grouped Tasks, Notes, Decisions, Features, File cards. Up and Down move (wrapping), Enter opens the marked row, a mouse move marks one. With no row marked, Enter still searches, as before.
 - "Ask" stays a button above the rows. Hits became `option` elements, so the e2e specs that clicked them as buttons now look for options; the input is a `combobox`.
 - Tests: flows "the palette goes to a page by name with the arrow keys and Enter"; the older palette tests and the axe check with the dialog open run against the new roles.
+
+### WP15 15.10: appearance
+
+- Settings has an Appearance section with a System, Light or Dark select, kept in the `theme` pref (0.4). App sets `data-theme` from it; System removes the attribute.
+- The dark tokens are written twice: under `:root[data-theme="dark"]` and under the `prefers-color-scheme` block for `:root:not([data-theme="light"])`. CSS has no way to share one block between the two.
+- Before first paint: `public/theme.js`, loaded from `index.html`. The review asked for an inline script, but the board's policy is `script-src 'self'`, so the script is a file, not inline.
+- Contrast: no token changed. The axe runs already cover both themes at desktop and phone width and pass; no pair failed, so none was moved.
+- Tests: flows "Settings: Appearance Dark darkens the board and is remembered" (attribute, computed background, reload, light, back to system).

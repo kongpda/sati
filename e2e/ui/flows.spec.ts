@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
+import { openKnowledge } from "./nav.js";
 import { startUi, type Ui } from "./server.js";
 import { watch } from "./watch.js";
 
@@ -179,8 +180,8 @@ test("searches from the Ctrl+K palette and opens the hit", async ({ page }) => {
 test("renders Mermaid in notes without CSP violations", async ({ page }) => {
   const problems = await watch(page);
   await page.goto(ui.signIn);
-  await page.getByRole("link", { name: "Notes" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Notes" })).toBeVisible();
+  await openKnowledge(page, "Notes");
+  await expect(page.getByRole("heading", { level: 1, name: "Knowledge" })).toBeVisible();
   await page.getByLabel("Note title").fill("Sync flow");
   await page
     .getByLabel("Note body")
@@ -202,17 +203,7 @@ test("renders Mermaid in notes without CSP violations", async ({ page }) => {
 test("every page loads and marks itself current", async ({ page }) => {
   const problems = await watch(page);
   await page.goto(ui.signIn);
-  for (const name of [
-    "My work",
-    "Plan",
-    "Notes",
-    "Memory",
-    "Decisions",
-    "Changes",
-    "Team",
-    "Settings",
-    "Board",
-  ]) {
+  for (const name of ["My work", "Plan", "Knowledge", "Changes", "Team", "Settings", "Board"]) {
     await page.getByRole("link", { name, exact: true }).click();
     await expect(page.getByRole("link", { name, exact: true })).toHaveAttribute(
       "aria-current",
@@ -279,7 +270,7 @@ test("creates and edits a milestone, records and replaces a decision", async ({ 
     targetDate: "2026-12-04",
   });
 
-  await page.getByRole("link", { name: "Decisions", exact: true }).click();
+  await openKnowledge(page, "Decisions");
   await page.getByRole("button", { name: "Record decision", exact: true }).click();
   const record = page.getByRole("dialog", { name: "Record decision" });
   await record.getByLabel("Title").fill("Hold the launch at the riverside venue");
@@ -314,7 +305,7 @@ test("creates and edits a milestone, records and replaces a decision", async ({ 
 test("edits, pins, tags and deletes notes, and undoes deletes", async ({ page }) => {
   const problems = await watch(page);
   await page.goto(ui.signIn);
-  await page.getByRole("link", { name: "Notes", exact: true }).click();
+  await openKnowledge(page, "Notes");
   for (const title of ["Venue options", "Catering"]) {
     await page.getByLabel("Note title").fill(title);
     await page.getByRole("button", { name: "Save note" }).click();
@@ -400,7 +391,7 @@ test("comments on a task, a note and a decision; a comment is deleted with Undo,
 
   // On list pages the thread is folded; comments are not listed as notes of their own.
   await ui.api("POST", "/api/notes", { title: "Supplier list" });
-  await page.getByRole("link", { name: "Notes", exact: true }).click();
+  await openKnowledge(page, "Notes");
   await expect(page.getByRole("heading", { level: 2, name: /^Comment on/u })).toHaveCount(0);
   const note = page.locator("article").filter({ hasText: "Supplier list" });
   await expect(note.getByLabel("Add a comment")).toBeHidden();
@@ -414,7 +405,7 @@ test("comments on a task, a note and a decision; a comment is deleted with Undo,
     title: "Print locally",
     decision: "Use the shop nearby.",
   });
-  await page.getByRole("link", { name: "Decisions", exact: true }).click();
+  await openKnowledge(page, "Decisions");
   const dec = page.locator("article").filter({ hasText: "Print locally" });
   await dec.getByText("Comments", { exact: true }).click();
   await dec.getByLabel("Add a comment").fill("Agreed");
@@ -640,6 +631,35 @@ test("the Plan page shows milestones and features, and the old links redirect", 
   await expect(page.getByRole("heading", { level: 2, name: "Box office" })).toBeVisible();
   await page.getByRole("tab", { name: "Milestones" }).click();
   await expect(page).toHaveURL(`${ui.origin}/plan`);
+  expect(await problems()).toEqual([]);
+});
+
+test("the Knowledge page shows one kind at a time, and the old links redirect", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  await ui.api("POST", "/api/notes", { title: "Hall rules" });
+  await ui.api("POST", "/api/decisions", { title: "Seat by table", decision: "Tables of eight." });
+  ui.sati("card", "put", "rooms.md", "--summary", "Room sizes.");
+  await page.goto(ui.signIn);
+  await page.goto(`${ui.origin}/notes`);
+  await expect(page).toHaveURL(`${ui.origin}/knowledge`);
+  await expect(page.getByRole("heading", { level: 1, name: "Knowledge" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Notes" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("heading", { level: 2, name: "Hall rules" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Seat by table" })).toHaveCount(0);
+
+  await page.goto(`${ui.origin}/decisions`);
+  await expect(page).toHaveURL(`${ui.origin}/knowledge?kind=decisions`);
+  await expect(page.getByRole("heading", { level: 2, name: "Seat by table" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Hall rules" })).toHaveCount(0);
+
+  await page.goto(`${ui.origin}/memory`);
+  await expect(page).toHaveURL(`${ui.origin}/knowledge?kind=cards`);
+  await expect(page.getByRole("button", { name: "Edit rooms.md" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Seat by table" })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Notes" }).click();
+  await expect(page).toHaveURL(`${ui.origin}/knowledge`);
   expect(await problems()).toEqual([]);
 });
 
@@ -1065,7 +1085,7 @@ test("Memory answers from cards, edits them, and keeps private ones off .sati/",
   const pinned = page.getByRole("navigation", { name: "Pinned notes" });
   await expect(pinned.getByRole("link", { name: "Brand voice" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Memory", exact: true }).click();
+  await openKnowledge(page, "File cards");
   await page.getByRole("textbox", { name: "Ask what the team knows" }).fill("venue price");
   await page.getByRole("button", { name: "Ask", exact: true }).click();
   const answer = page.getByRole("region", { name: "Answer" });
@@ -1181,8 +1201,8 @@ test("an open task deleted elsewhere says so and leaves without asking", async (
   });
   await gone.getByRole("button", { name: "Close" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page.getByRole("link", { name: "Notes", exact: true }).click();
-  await expect(page).toHaveURL(`${ui.origin}/notes`);
+  await openKnowledge(page, "Notes");
+  await expect(page).toHaveURL(`${ui.origin}/knowledge`);
   expect(asked).toEqual([]);
   expect(await problems()).toEqual([]);
 });
@@ -1195,7 +1215,7 @@ test("Memory approves a file as it is now and takes the approval away", async ({
   ui.sati("card", "put", "brief.md", "--summary", "The signed brief.");
   ui.sati("card", "put", "https://example.test/quote.pdf", "--summary", "The quote online.");
   await page.goto(ui.signIn);
-  await page.getByRole("link", { name: "Memory", exact: true }).click();
+  await openKnowledge(page, "File cards");
   // A web link has no one version to sign off.
   await expect(
     page.getByRole("button", { name: "Edit https://example.test/quote.pdf" }),
@@ -1224,7 +1244,7 @@ test("Memory approves a file as it is now and takes the approval away", async ({
   expect(shown()?.approval).toBe("changed");
   // And the board tells, the next time it loads: nobody has to run a command to find out.
   await page.reload();
-  await page.getByRole("link", { name: "Memory", exact: true }).click();
+  await openKnowledge(page, "File cards");
   await expect(row.getByText("Changed since approval", { exact: true })).toBeVisible();
   await expect(row.getByText("Approved", { exact: true })).toHaveCount(0);
 
@@ -1275,7 +1295,7 @@ test("a typed comment on a list page asks before leaving, and a declined Back ad
   const problems = await watch(page);
   await ui.api("POST", "/api/notes", { title: "Stall layout" });
   await page.goto(ui.signIn);
-  await page.getByRole("link", { name: "Notes", exact: true }).click();
+  await openKnowledge(page, "Notes");
   const note = page.locator("article").filter({ hasText: "Stall layout" });
   await note.getByText("Comments", { exact: true }).click();
   await note.getByLabel("Add a comment").fill("Tables along the wall");
@@ -1286,7 +1306,7 @@ test("a typed comment on a list page asks before leaving, and a declined Back ad
   });
   await page.getByRole("link", { name: "Board", exact: true }).click();
   await expect.poll(() => asked).toEqual(["Discard the comment you typed?"]);
-  await expect(page).toHaveURL(`${ui.origin}/notes`);
+  await expect(page).toHaveURL(`${ui.origin}/knowledge`);
   await expect(note.getByLabel("Add a comment")).toHaveValue("Tables along the wall");
 
   // Back asks too; declining twice keeps the page and the history as they were.
@@ -1294,7 +1314,7 @@ test("a typed comment on a list page asks before leaving, and a declined Back ad
   for (const n of [2, 3]) {
     await page.goBack();
     await expect.poll(() => asked.length).toBe(n);
-    await expect(page).toHaveURL(`${ui.origin}/notes`);
+    await expect(page).toHaveURL(`${ui.origin}/knowledge`);
   }
   expect(await page.evaluate(() => history.length)).toBe(length);
   await expect(note.getByLabel("Add a comment")).toHaveValue("Tables along the wall");
@@ -1359,7 +1379,7 @@ test("the board says what happened after each action, and a removed step has Und
   await page.getByRole("button", { name: "Free up tasks whose time ran out" }).click();
   await expect(toast).toContainText("No tasks had run out of time.");
 
-  await page.getByRole("link", { name: "Notes", exact: true }).click();
+  await openKnowledge(page, "Notes");
   await page.getByLabel("Note title").fill("Table plan");
   await page.getByRole("button", { name: "Save note" }).click();
   await expect(toast).toContainText("Saved the note Table plan.");
@@ -1377,7 +1397,7 @@ test("the board says what happened after each action, and a removed step has Und
     .getByRole("button", { name: "Table plan", exact: true })
     .first()
     .click();
-  await expect(page).toHaveURL(`${ui.origin}/notes`);
+  await expect(page).toHaveURL(`${ui.origin}/knowledge`);
   await expect(page.locator("article:focus")).toContainText("Table plan");
 
   // The effort choice explains what light means.
@@ -1462,9 +1482,9 @@ test("Esc closes a form dialog when focus is outside its form", async ({ page })
 test("x on a page other than the board selects nothing", async ({ page }) => {
   const task = await ui.api<{ id: string }>("POST", "/api/tasks", { title: "Plover unseen" });
   await page.goto(ui.signIn);
-  await page.goto(`${ui.origin}/notes?task=${task.id}`);
+  await page.goto(`${ui.origin}/knowledge?task=${task.id}`);
   // A click on plain text takes focus out of the task panel, as reading the page does.
-  await page.getByRole("heading", { name: "Notes", level: 1 }).click();
+  await page.getByRole("heading", { name: "Knowledge", level: 1 }).click();
   await page.keyboard.press("x");
   await page.getByRole("link", { name: "Board", exact: true }).click();
   await expect(page.getByLabel("Filter tasks")).toBeVisible();
@@ -1476,7 +1496,7 @@ test("relative times tick each minute without a write", async ({ page }) => {
   await page.clock.install();
   ui.sati("note", "create", "Hang the banner");
   await page.goto(ui.signIn);
-  await page.getByRole("link", { name: "Notes", exact: true }).click();
+  await openKnowledge(page, "Notes");
   const card = page.locator("article").filter({ hasText: "Hang the banner" });
   await expect(card).toContainText("just now");
   await page.clock.fastForward("01:05");
@@ -1565,8 +1585,11 @@ test.describe("columns that fit", () => {
     await expect(rail.getByRole("button", { name: "Show Backlog, 3 tasks" })).toBeVisible();
 
     // The choice to open a column is remembered by this browser.
-    await rail.getByRole("button", { name: /^Show Backlog/u }).click();
-    await expect(column(page, "Backlog")).not.toHaveClass(/collapsed/u);
+    // The drag library swallows a click that lands right after a drop, so click until it takes.
+    await expect(async () => {
+      await rail.getByRole("button", { name: /^Show Backlog/u }).click({ timeout: 1000 });
+      await expect(column(page, "Backlog")).not.toHaveClass(/collapsed/u, { timeout: 1000 });
+    }).toPass();
     await page.reload();
     await expect(column(page, "Backlog")).not.toHaveClass(/collapsed/u);
   });

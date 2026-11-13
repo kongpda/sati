@@ -211,8 +211,8 @@ export function Changes({
                         item.kind === "feature"
                           ? "/plan?tab=features"
                           : item.kind === "decision"
-                            ? "/decisions"
-                            : "/notes",
+                            ? "/knowledge?kind=decisions"
+                            : "/knowledge",
                         item.id,
                       )
                     }

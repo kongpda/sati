@@ -66,10 +66,10 @@ export function BoardPage({
           {pinned.map((n) => (
             <a
               key={n.id}
-              href="/notes"
+              href="/knowledge"
               onClick={(e) => {
                 e.preventDefault();
-                go("/notes");
+                go("/knowledge");
               }}
             >
               {n.title}

@@ -286,7 +286,7 @@ sati -v                        # sati 0.2.0 (b5ba08a 2026-11-12): version, commi
 sati doctor                    # node, system, install and store paths; then leases, locks, integrity, hooks, a stale build
 sati doctor --fix              # release expired locks, remove cards whose file is gone
 sati card approve deck.pptx    # sign off a file (a person only); the guard blocks a change to it
-                               # (or Approve on the board's Memory page)
+                               # (or Approve on the board's File cards tab)
 sati ui                        # the web board
 sati ui --shortcut ~/Desktop  # a file that opens the board on a double click
 ```

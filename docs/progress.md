@@ -2459,3 +2459,11 @@ Roadmap and Features are one page, `/plan`, with tabs Milestones and Features (`
 ## 2026-11-13 — Review WP10 board parts (10.1, 10.2)
 
 The board now matches the server: a decision has no Delete button (`Deletable` is task and note), and a decision that a newer one replaces says "Superseded by <title>". A cancelled milestone is struck through on the Plan timeline and reads "Cancelled". Milestone status words were already in `forms.tsx`; the shared label set is still WP5 5.4.
+
+## 2026-11-13 — Review WP2 2.4: the Knowledge page
+
+Notes, Decisions and Memory are `/knowledge`, with tabs for Notes (the default), Decisions (`?kind=decisions`) and File cards (`?kind=cards`). The old paths redirect; the palette, Changes, My work, the pinned-note links and the CLI's README line use the new addresses. Each kind keeps its own component and actions. 10.1 landed first, so the Decisions tab has no Delete.
+
+- **Not done here, on purpose:** the review says to virtualise each list in this commit (4.3). A list page opens a record by looking up its id in the DOM (`show` in `app.tsx`: scroll, then focus). A virtualised row may not be in the DOM, so that needs its own design. 4.3 stays open for WP4; the Log tab and the Knowledge lists both wait on it.
+- **Test helper:** `e2e/ui/nav.ts` `openKnowledge(page, kind)` replaces the three nav clicks in all four specs.
+- **A flaky test, fixed:** "a collapsed column still shows its count and takes a drop" failed in about half the runs. The click on the rail came right after a drop, and the drag library swallowed it. The test now clicks until it takes (`toPass`). It passed 10 of 10 runs after that.

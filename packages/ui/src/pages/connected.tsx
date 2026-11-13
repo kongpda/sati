@@ -165,15 +165,17 @@ export function FeaturesPage({
 
 export function NotesPage({
   data,
+  tabs,
   client,
   saved,
   fail,
   remove,
   thread,
-}: PageContext & { data: Snapshot }) {
+}: PageContext & { data: Snapshot; tabs: ReactNode }) {
   return (
     <Notes
       data={data}
+      tabs={tabs}
       onCreate={(title, body, hidden) =>
         api
           .createNote({ title, body, ...(hidden ? { private: true } : {}) })

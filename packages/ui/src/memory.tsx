@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api, type Card, type RecallItem, type Snapshot } from "./api.js";
 import { FormDialog } from "./forms.js";
 import { personOnly } from "./moves.js";
@@ -140,6 +140,7 @@ function CardForm({
  */
 export function Memory({
   data,
+  tabs,
   onSaved,
   onCopied,
   onCopyFailed,
@@ -148,6 +149,8 @@ export function Memory({
   onGo,
 }: {
   data: Snapshot;
+  /** The Notes, Decisions and File cards tabs, shown under the heading. */
+  tabs: ReactNode;
   onSaved: (message: string) => void;
   /** Copying changes no record, so it says so without refetching. */
   onCopied: (message: string) => void;
@@ -207,17 +210,18 @@ export function Memory({
     else if (item.kind === "card") {
       const card = data.cards.find((c) => c.id === item.id);
       if (card) setEditing(card);
-    } else onGo(item.kind === "note" ? "/notes" : "/decisions", item.id);
+    } else onGo(item.kind === "note" ? "/knowledge" : "/knowledge?kind=decisions", item.id);
   };
 
   return (
     <section className="page" aria-labelledby="memory-title">
       <div className="page-head">
-        <h1 id="memory-title">Memory</h1>
+        <h1 id="memory-title">Knowledge</h1>
         <button type="button" className="primary" onClick={() => setEditing("new")}>
           New card
         </button>
       </div>
+      {tabs}
       <form
         className="ask"
         onSubmit={(e) => {

@@ -38,6 +38,20 @@ export function Routes({
       onSelect={(id) => go(id === "log" ? `${path}?tab=log` : path)}
     />
   );
+  const kind = params.get("kind");
+  const knowledgeKind = kind === "decisions" || kind === "cards" ? kind : "notes";
+  const knowledgeTabs = (
+    <Tabs
+      label="Knowledge"
+      tabs={[
+        ["notes", "Notes"],
+        ["decisions", "Decisions"],
+        ["cards", "File cards"],
+      ]}
+      current={knowledgeKind}
+      onSelect={(id) => go(id === "notes" ? path : `${path}?kind=${id}`)}
+    />
+  );
   const onFeatures = params.get("tab") === "features";
   const planTabs = (
     <Tabs
@@ -61,10 +75,13 @@ export function Routes({
       {data && path === "/plan" && onFeatures ? (
         <FeaturesPage data={data} tabs={planTabs} general={general} {...ctx} />
       ) : null}
-      {data && path === "/notes" ? <NotesPage data={data} {...ctx} /> : null}
-      {data && path === "/memory" ? (
+      {data && path === "/knowledge" && knowledgeKind === "notes" ? (
+        <NotesPage data={data} tabs={knowledgeTabs} {...ctx} />
+      ) : null}
+      {data && path === "/knowledge" && knowledgeKind === "cards" ? (
         <Memory
           data={data}
+          tabs={knowledgeTabs}
           onSaved={saved}
           onCopied={(message) => setToast(message)}
           onCopyFailed={copyFailed}
@@ -73,8 +90,8 @@ export function Routes({
           onGo={show}
         />
       ) : null}
-      {data && path === "/decisions" ? (
-        <Decisions data={data} onSaved={saved} thread={thread} />
+      {data && path === "/knowledge" && knowledgeKind === "decisions" ? (
+        <Decisions data={data} tabs={knowledgeTabs} onSaved={saved} thread={thread} />
       ) : null}
       {data && path === "/changes" && params.get("tab") !== "log" ? (
         <Changes

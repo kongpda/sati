@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { openKnowledge } from "./nav.js";
 import { startUi, type Ui } from "./server.js";
 
 let ui: Ui;
@@ -50,9 +51,9 @@ const PAGES = [
   "/my-work",
   "/plan",
   "/plan?tab=features",
-  "/notes",
-  "/memory",
-  "/decisions",
+  "/knowledge",
+  "/knowledge?kind=decisions",
+  "/knowledge?kind=cards",
   "/changes",
   "/changes?tab=log",
   "/team",
@@ -80,11 +81,15 @@ for (const [device, viewport, colorScheme] of [
           await page.getByRole("link", { name: navName(base), exact: true }).click();
           if (query === "tab=log")
             await page.getByRole("tab", { name: "Log", exact: true }).click();
+          if (query === "kind=decisions")
+            await page.getByRole("tab", { name: "Decisions", exact: true }).click();
+          if (query === "kind=cards")
+            await page.getByRole("tab", { name: "File cards", exact: true }).click();
           if (query === "tab=features")
             await page.getByRole("tab", { name: "Features", exact: true }).click();
         }
         await page.waitForLoadState("networkidle");
-        if (path === "/notes")
+        if (path === "/knowledge")
           await expect(page.locator(".mermaid[data-ready=true]")).toBeVisible();
         // PLAN: UX works at 375 px. Every control in the top bar stays on screen.
         const search = await page
@@ -129,19 +134,19 @@ for (const [device, viewport, colorScheme] of [
       const plan = await new AxeBuilder({ page }).withTags(TAGS).analyze();
       expect(summary(plan.violations)).toEqual([]);
       await page.keyboard.press("Escape");
-      await page.getByRole("link", { name: "Decisions", exact: true }).click();
+      await openKnowledge(page, "Decisions");
       await page.getByRole("button", { name: "Record decision", exact: true }).click();
       await expect(page.getByRole("dialog", { name: "Record decision" })).toBeVisible();
       const decision = await new AxeBuilder({ page }).withTags(TAGS).analyze();
       expect(summary(decision.violations)).toEqual([]);
       await page.keyboard.press("Escape");
-      await page.getByRole("link", { name: "Notes", exact: true }).click();
+      await openKnowledge(page, "Notes");
       await page.getByRole("button", { name: "Edit Search design" }).click();
       await expect(page.getByRole("dialog", { name: "Edit note" })).toBeVisible();
       const note = await new AxeBuilder({ page }).withTags(TAGS).analyze();
       expect(summary(note.violations)).toEqual([]);
       await page.keyboard.press("Escape");
-      await page.getByRole("link", { name: "Memory", exact: true }).click();
+      await openKnowledge(page, "File cards");
       await page.getByRole("textbox", { name: "Ask what the team knows" }).fill("search ranks");
       await page.getByRole("button", { name: "Ask", exact: true }).click();
       await expect(page.getByRole("region", { name: "Answer" })).toContainText("Uses FTS5");

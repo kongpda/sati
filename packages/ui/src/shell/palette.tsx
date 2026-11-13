@@ -5,10 +5,10 @@ import { kindLabel } from "../words.js";
 
 /** Where a search hit of each kind opens, and the tag it shows. */
 const HIT_PAGES: Record<string, string> = {
-  note: "/notes",
-  decision: "/decisions",
+  note: "/knowledge",
+  decision: "/knowledge?kind=decisions",
   feature: "/plan?tab=features",
-  context: "/memory",
+  context: "/knowledge?kind=cards",
 };
 
 /** The board's search returns at most this many hits (the `/api/search` limit). */

@@ -34,3 +34,18 @@ describe("the Roadmap and Features pages", () => {
     expect(r.params.get("tab")).toBe("features");
   });
 });
+
+describe("Notes, Decisions and Memory", () => {
+  it("are now kinds on the Knowledge page", () => {
+    expect(resolveUrl("/notes", "").path).toBe("/knowledge");
+    expect(resolveUrl("/notes", "").params.get("kind")).toBeNull();
+    const decisions = resolveUrl("/decisions", "");
+    expect([decisions.path, decisions.params.get("kind")]).toEqual(["/knowledge", "decisions"]);
+    const memory = resolveUrl("/memory", "?task=tsk_1");
+    expect([memory.path, memory.params.get("kind"), memory.params.get("task")]).toEqual([
+      "/knowledge",
+      "cards",
+      "tsk_1",
+    ]);
+  });
+});

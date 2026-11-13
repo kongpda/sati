@@ -1,15 +1,21 @@
 {
   "body": "Board follow-up to WP10 (core, CLI and server are done by claude-code@sati#75d3e4d7; see decision dec_01M78FHB5W7F66J0F0EKH55SKZ).\n\n1. Decisions cannot be deleted (10.1). The server no longer has DELETE/restore routes for /api/decisions, so the board's Delete button on a decision now gets a 404.\n   - Remove the decision Delete and Restore buttons and the undo toast for decisions. `Deletable` in packages/ui/src/api.ts should drop \"decision\".\n   - On the Decisions list, show \"Superseded by <title>\" on a decision that a newer decision supersedes. Find it from the list: the decision whose `supersedes` is this id.\n   - Update the e2e tests that delete a decision in e2e/ui/flows.spec.ts.\n2. Milestones can be cancelled (10.2). MILESTONE_STATUSES now has `cancelled`. Transitions: planned to cancelled, active to cancelled, cancelled to planned.\n   - On the roadmap timeline, show a cancelled milestone as cancelled, not as open.\n   - Add a status option and a label in words.ts (5.4).\n   - Anything on the board that treats \"not done\" as open must skip cancelled.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
-    "heartbeatAt": "2026-11-13T03:24:05.735Z",
-    "holder": {
-      "host": "h:3fb635c67b4b8fcc",
-      "pid": 97885
-    },
-    "leaseUntil": "2026-11-13T03:54:05.735Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "03420d1fe92440c7ff2d3d6d790f2da7916056b0",
+    "completedAt": "2026-11-13T03:30:30.626Z",
+    "completedBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "filesTouched": [
+      "packages/ui/src/pages/knowledge.tsx",
+      "packages/ui/src/pages/routes.tsx",
+      "packages/ui/src/api.ts",
+      "packages/ui/src/pages/plan.tsx",
+      "packages/ui/src/styles/pages.css",
+      "e2e/ui/flows.spec.ts",
+      "e2e/ui/parity.spec.ts"
+    ],
+    "summary": "Board parts of 10.1/10.2: decision Delete button removed, Deletable drops decision, \"Superseded by\" on replaced decisions, cancelled milestone struck through on the Plan timeline. e2e covers all three."
   },
   "createdAt": "2026-11-12T18:19:44.121Z",
   "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
@@ -23,13 +29,14 @@
   "stamps": {
     "*": "2026-11-12T18:19:44.122Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "branch": "2026-11-13T03:24:05.736Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
-    "claim": "2026-11-13T03:24:05.736Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
-    "status": "2026-11-13T03:24:05.736Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "claim": "2026-11-13T03:30:30.626Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "completion": "2026-11-13T03:30:30.626Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "status": "2026-11-13T03:30:30.626Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
     "worktree": "2026-11-13T03:24:05.736Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
   },
-  "status": "in_progress",
+  "status": "done",
   "title": "WP10 board parts: decisions without delete, Superseded by, cancelled milestones (review 10.1, 10.2)",
-  "updatedAt": "2026-11-13T03:24:05.736Z",
-  "version": 2,
+  "updatedAt": "2026-11-13T03:30:30.626Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

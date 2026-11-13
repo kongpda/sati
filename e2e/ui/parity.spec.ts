@@ -1,6 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { expect, type Page, test } from "@playwright/test";
+import { openKnowledge } from "./nav.js";
 import { bin, startUi, type Ui } from "./server.js";
 import { watch } from "./watch.js";
 
@@ -241,7 +242,7 @@ test("milestone: create with a goal and target date, then change its status", as
 test("note: create with a body and tags, pin it, edit it", async ({ page }) => {
   const title = (side: Side) => named(side, "Venue options");
   const problems = await board(page);
-  await page.getByRole("link", { name: "Notes", exact: true }).click();
+  await openKnowledge(page, "Notes");
   // The UI's quick form takes a title and body; tags are added in the edit dialog.
   await page.getByLabel("Note title").fill(title("ui"));
   await page.getByLabel("Note body").fill("Riverside hall.");
@@ -290,7 +291,7 @@ test("decision: record one with context, then replace it", async ({ page }) => {
   const first = (side: Side) => named(side, "Hold the launch at the riverside venue");
   const second = (side: Side) => named(side, "Hold the launch on the rooftop");
   const problems = await board(page);
-  await page.getByRole("link", { name: "Decisions", exact: true }).click();
+  await openKnowledge(page, "Decisions");
   await page.getByRole("button", { name: "Record decision", exact: true }).click();
   const record = page.getByRole("dialog", { name: "Record decision" });
   await record.getByLabel("Title").fill(first("ui"));

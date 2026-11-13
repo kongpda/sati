@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { openKnowledge } from "./nav.js";
 import { startUi, type Ui } from "./server.js";
 import { watch } from "./watch.js";
 
@@ -271,7 +272,7 @@ test.describe("a board run by a person", () => {
 
   test("a note cannot be given the tag kept for comments", async ({ page }) => {
     await page.goto(ui.signIn);
-    await page.getByRole("link", { name: "Notes", exact: true }).click();
+    await openKnowledge(page, "Notes");
     await page.getByLabel("Note title").fill("Seating plan");
     await page.getByRole("button", { name: "Save note" }).click();
     await page.getByRole("button", { name: "Edit Seating plan" }).click();
@@ -363,7 +364,7 @@ test.describe("a board started from an agent's terminal", () => {
     // Signing a file off is a person's too: the card can be edited, not approved.
     ui.sati("card", "put", "notes/a.md", "--summary", "Folding notes.");
     await page.reload();
-    await page.getByRole("link", { name: "Memory", exact: true }).click();
+    await openKnowledge(page, "File cards");
     await expect(page.getByRole("button", { name: "Edit notes/a.md" })).toBeVisible();
     await expect(page.getByRole("button", { name: /^Approve /u })).toHaveCount(0);
     expect(await problems()).toEqual([]);

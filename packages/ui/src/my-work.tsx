@@ -193,7 +193,7 @@ function Mention({
   const task = data.tasks.find((t) => t.id === on);
   const other =
     data.notes.find((n) => n.id === on)?.title ?? data.decisions.find((d) => d.id === on)?.title;
-  const page = on.startsWith("dec_") ? "/decisions" : "/notes";
+  const page = on.startsWith("dec_") ? "/knowledge?kind=decisions" : "/knowledge";
   return (
     <article className="row">
       {task ? (

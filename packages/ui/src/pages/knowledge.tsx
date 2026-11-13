@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import type { Decision, Note, Snapshot } from "../api.js";
 import { DecisionForm, NoteForm } from "../forms.js";
 import { Markdown } from "../markdown.js";
@@ -9,6 +9,7 @@ import { fullTime } from "../words.js";
 
 export function Notes({
   data,
+  tabs,
   onCreate,
   onPatch,
   onSaved,
@@ -16,6 +17,8 @@ export function Notes({
   thread,
 }: {
   data: Snapshot;
+  /** The Notes, Decisions and File cards tabs, shown under the heading. */
+  tabs: ReactNode;
   onCreate: (title: string, body: string, hidden: boolean) => Promise<void>;
   onPatch: (id: string, patch: Record<string, unknown>) => void;
   onSaved: (message: string) => void;
@@ -43,7 +46,8 @@ export function Notes({
     .sort((a, b) => Number(b.pinned) - Number(a.pinned));
   return (
     <div className="page">
-      <h1>Notes</h1>
+      <h1>Knowledge</h1>
+      {tabs}
       <form
         className="list"
         onSubmit={(e) => {
@@ -171,10 +175,13 @@ function Backlinks({ titles }: { titles: string[] | undefined }) {
 
 export function Decisions({
   data,
+  tabs,
   onSaved,
   thread,
 }: {
   data: Snapshot;
+  /** The Notes, Decisions and File cards tabs, shown under the heading. */
+  tabs: ReactNode;
   onSaved: (message: string) => void;
   thread: ThreadActions;
 }) {
@@ -188,11 +195,12 @@ export function Decisions({
   return (
     <div className="page">
       <div className="page-head">
-        <h1>Decisions</h1>
+        <h1>Knowledge</h1>
         <button type="button" className="primary" onClick={() => setRecording("new")}>
           Record decision
         </button>
       </div>
+      {tabs}
       <div className="list">
         {data.decisions.map((d) => (
           <article

@@ -6,6 +6,9 @@
 const REDIRECTS: Readonly<Record<string, string>> = {
   "/activity": "/changes?tab=log",
   "/agents": "/team",
+  "/notes": "/knowledge",
+  "/decisions": "/knowledge?kind=decisions",
+  "/memory": "/knowledge?kind=cards",
   "/roadmap": "/plan",
   "/features": "/plan?tab=features",
 };

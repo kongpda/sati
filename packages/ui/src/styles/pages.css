@@ -16,6 +16,13 @@
 .tick strong {
   display: block;
 }
+.tick.cancelled {
+  border-top-color: var(--line);
+  color: var(--muted);
+}
+.tick.cancelled strong {
+  text-decoration: line-through;
+}
 .tick time {
   display: block;
   color: var(--muted);

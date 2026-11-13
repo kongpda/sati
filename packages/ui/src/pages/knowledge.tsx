@@ -172,12 +172,10 @@ function Backlinks({ titles }: { titles: string[] | undefined }) {
 export function Decisions({
   data,
   onSaved,
-  onDelete,
   thread,
 }: {
   data: Snapshot;
   onSaved: (message: string) => void;
-  onDelete: (id: string, title: string) => void;
   thread: ThreadActions;
 }) {
   // "new" opens an empty form; a decision opens it to record one that replaces it.
@@ -209,7 +207,7 @@ export function Decisions({
                 <Ago iso={d.createdAt} />
               </time>
               {d.supersedes ? ` · replaces ${titles.get(d.supersedes) ?? d.supersedes}` : ""}
-              {replacedBy.has(d.id) ? ` · replaced by ${replacedBy.get(d.id)}` : ""}
+              {replacedBy.has(d.id) ? ` · Superseded by ${replacedBy.get(d.id)}` : ""}
               {d.featureIds.length
                 ? ` · ${d.featureIds.flatMap((id) => features.get(id) ?? []).join(", ")}`
                 : ""}
@@ -223,13 +221,6 @@ export function Decisions({
                   Replace
                 </button>
               )}
-              <button
-                type="button"
-                aria-label={`Delete ${d.title}`}
-                onClick={() => onDelete(d.id, d.title)}
-              >
-                Delete
-              </button>
             </div>
             <Markdown source={d.decision} />
             {d.context ? (

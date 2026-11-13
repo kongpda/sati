@@ -304,7 +304,7 @@ test("decision: record one with context, then replace it", async ({ page }) => {
   await replace.getByLabel("Decision", { exact: true }).fill("The hall flooded; use the rooftop.");
   await replace.getByRole("button", { name: "Record decision", exact: true }).click();
   await expect(replace).toHaveCount(0);
-  await expect(page.getByText(`replaced by ${second("ui")}`)).toBeVisible();
+  await expect(page.getByText(`Superseded by ${second("ui")}`)).toBeVisible();
   expect(await problems()).toEqual([]);
 
   const old = await call("decision_record", {

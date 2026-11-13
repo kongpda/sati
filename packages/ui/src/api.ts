@@ -249,7 +249,7 @@ export function waitingOn(task: Task, now = Date.now()): Claim["waiting"] | unde
 }
 
 /** Records a person can delete from the board and bring back with Undo. */
-export type Deletable = "task" | "note" | "decision";
+export type Deletable = "task" | "note";
 
 export class ApiError extends Error {
   hint: string | null;

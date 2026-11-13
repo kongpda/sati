@@ -74,12 +74,7 @@ export function Routes({
         />
       ) : null}
       {data && path === "/decisions" ? (
-        <Decisions
-          data={data}
-          onSaved={saved}
-          onDelete={(id, title) => remove("decision", id, title)}
-          thread={thread}
-        />
+        <Decisions data={data} onSaved={saved} thread={thread} />
       ) : null}
       {data && path === "/changes" && params.get("tab") !== "log" ? (
         <Changes

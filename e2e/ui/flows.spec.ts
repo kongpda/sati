@@ -298,7 +298,7 @@ test("creates and edits a milestone, records and replaces a decision", async ({ 
   await replace.getByLabel("Decision", { exact: true }).fill("The hall flooded; use the rooftop.");
   await replace.getByRole("button", { name: "Record decision", exact: true }).click();
   await expect(replace).toHaveCount(0);
-  await expect(page.getByText("replaced by Hold the launch on the rooftop")).toBeVisible();
+  await expect(page.getByText("Superseded by Hold the launch on the rooftop")).toBeVisible();
   const decisions = ui.sati<{ id: string; title: string; supersedes: string | null }[]>(
     "decision",
     "list",
@@ -366,7 +366,9 @@ test("edits, pins, tags and deletes notes, and undoes deletes", async ({ page })
 });
 
 // PLAN Phase 7a: people and agents talk on a task, note or decision; agents read it in the brief.
-test("comments on a task, a note and a decision, and deletes one with Undo", async ({ page }) => {
+test("comments on a task, a note and a decision; a comment is deleted with Undo, a decision cannot be", async ({
+  page,
+}) => {
   const problems = await watch(page);
   const t = await ui.api<{ id: string }>("POST", "/api/tasks", { title: "Print the flyers" });
   ui.sati("comment", "add", t.id, "The printer opens at **9**.");
@@ -418,6 +420,8 @@ test("comments on a task, a note and a decision, and deletes one with Undo", asy
   await dec.getByLabel("Add a comment").fill("Agreed");
   await dec.getByRole("button", { name: "Comment", exact: true }).click();
   await expect(dec.getByText("Comments · 1")).toBeVisible();
+  // A decision keeps protecting its feature, so the board offers no way to delete it.
+  await expect(dec.getByRole("button", { name: "Delete Print locally" })).toHaveCount(0);
 
   await openLog(page);
   await expect(
@@ -619,6 +623,13 @@ test("the Plan page shows milestones and features, and the old links redirect", 
   await expect(page.getByRole("button", { name: "Edit Autumn fair" })).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 2, name: "Autumn fair" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "New plan from template" })).toBeVisible();
+
+  // A cancelled milestone reads as cancelled on the timeline, not as one still open.
+  const fair = ui
+    .sati<{ id: string; title: string }[]>("milestone", "list", "--json")
+    .find((m) => m.title === "Autumn fair");
+  ui.sati("milestone", "update", fair?.id ?? "", "--status", "cancelled");
+  await expect(page.locator(".tick").filter({ hasText: "Autumn fair" })).toContainText("Cancelled");
 
   await page.goto(`${ui.origin}/features`);
   await expect(page).toHaveURL(`${ui.origin}/plan?tab=features`);

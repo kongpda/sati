@@ -2455,3 +2455,7 @@ Roadmap and Features are one page, `/plan`, with tabs Milestones and Features (`
 - **General project:** the Features tab stays and says there are no features, instead of hiding a page. `CODE_ONLY` is gone.
 - **5.2:** "New plan" reads "New plan from template".
 - **Tests:** a new e2e "the Plan page shows milestones and features, and the old links redirect" and unit tests for both redirects. The e2e files share one project, so the new test uses its own names.
+
+## 2026-11-13 — Review WP10 board parts (10.1, 10.2)
+
+The board now matches the server: a decision has no Delete button (`Deletable` is task and note), and a decision that a newer one replaces says "Superseded by <title>". A cancelled milestone is struck through on the Plan timeline and reads "Cancelled". Milestone status words were already in `forms.tsx`; the shared label set is still WP5 5.4.

@@ -173,7 +173,7 @@ export function Roadmap({
           );
           const done = tasks.filter((t) => t.status === "done").length;
           return (
-            <div key={m.id} className="tick">
+            <div key={m.id} className={m.status === "cancelled" ? "tick cancelled" : "tick"}>
               <time dateTime={m.targetDate ?? undefined}>
                 {m.targetDate ? dayWords(m.targetDate) : "No date"}
               </time>

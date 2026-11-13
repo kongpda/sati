@@ -2609,3 +2609,11 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 - `FormDialog` already did most of this (read first, as the review said): focus on the first field, the page behind made inert (the trap), Esc and Cancel close, focus returns to the opener, `aria-labelledby` on the title, Cancel then the primary action last, the primary disabled and relabelled while a save runs, a refused save shown inside the dialog with the text kept.
 - Added: when the server's refusal names a field ("Invalid input: title: …") that field gets `aria-invalid`, `aria-describedby` pointing at the message, and focus. The message stays in one place at the foot of the form, tied to the field, instead of moving beside each field. A disabled Create has a `title` saying to fill in the required fields.
 - Test: flows "a refused save marks the field it is about and keeps what was typed" (the refusal is staged with a route, because the field's own `maxLength` stops typing past the limit).
+
+### WP15 15.12: budgets
+
+- `e2e/ui/perf.spec.ts` already held the first-render budget (median reload under 1 s) and a scroll test (55 fps or more, at most two frames over 50 ms). Added: typing in the filter narrows the board within 100 ms (median of three, measured in the page from the input event to the frame that shows the result). Measured about 17 ms.
+- The bundle limit is the one set in 4.7 (`packages/ui/test/bundle.test.ts`); unchanged.
+- Kept at the 2,000 cards the PLAN gate names, not the review's 5,000: the PLAN number is the gate and seeding 5,000 would triple the suite time. Say if you want 5,000.
+- No drag frame-rate test: the suite does not measure frames during a drag today, and the review says to skip it then.
+- Under a busy machine (load average near 20 here) the scroll test failed once and passed on the next run; it is a timing test.

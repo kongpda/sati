@@ -81,3 +81,41 @@ test("scrolls a 2,000-card column at 60 fps", async ({ page }) => {
   expect(fps).toBeGreaterThanOrEqual(55);
   expect(long).toBeLessThanOrEqual(2);
 });
+
+// Review 15.12: typing in the filter narrows a 2,000-card board within 100 ms (median of three,
+// measured in the page from the input event to the frame that shows the result).
+test("the filter narrows a 2,000-card board within 100 ms", async ({ page }) => {
+  await page.goto(ui.signIn);
+  await expect(page.getByRole("heading", { name: `To do ${CARDS}` })).toBeVisible();
+  const times = await page.getByLabel("Filter tasks").evaluate(async (input: HTMLInputElement) => {
+    const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    const type = (text: string) => {
+      set?.call(input, text);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    const out: number[] = [];
+    for (const text of ["Card 0042", "Card 1337", "Card 0777"]) {
+      const start = performance.now();
+      type(text);
+      // Done when the board shows few cards: the matching one and nothing else of the 2,000.
+      await new Promise<void>((resolve) => {
+        const look = () =>
+          document.querySelectorAll(".card").length <= 3 ? resolve() : requestAnimationFrame(look);
+        look();
+      });
+      out.push(performance.now() - start);
+      type("");
+      await new Promise<void>((resolve) => {
+        const look = () =>
+          document.querySelectorAll(".card").length > 3 ? resolve() : requestAnimationFrame(look);
+        look();
+      });
+    }
+    return out;
+  });
+  const median = [...times].sort((a, b) => a - b)[1] ?? Number.POSITIVE_INFINITY;
+  console.log(
+    `filter ms: ${times.map((t) => t.toFixed(0)).join(", ")} (median ${median.toFixed(0)})`,
+  );
+  expect(median).toBeLessThan(100);
+});

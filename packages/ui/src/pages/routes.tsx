@@ -79,16 +79,7 @@ export function Routes({
         <NotesPage data={data} tabs={knowledgeTabs} {...ctx} />
       ) : null}
       {data && path === "/knowledge" && knowledgeKind === "cards" ? (
-        <Memory
-          data={data}
-          tabs={knowledgeTabs}
-          onSaved={saved}
-          onCopied={(message) => setToast(message)}
-          onCopyFailed={copyFailed}
-          onFailed={fail}
-          onOpenTask={(id) => go("/", id)}
-          onGo={show}
-        />
+        <Memory data={data} tabs={knowledgeTabs} onSaved={saved} onFailed={fail} />
       ) : null}
       {data && path === "/knowledge" && knowledgeKind === "decisions" ? (
         <Decisions data={data} tabs={knowledgeTabs} onSaved={saved} thread={thread} />

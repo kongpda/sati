@@ -2467,3 +2467,7 @@ Notes, Decisions and Memory are `/knowledge`, with tabs for Notes (the default),
 - **Not done here, on purpose:** the review says to virtualise each list in this commit (4.3). A list page opens a record by looking up its id in the DOM (`show` in `app.tsx`: scroll, then focus). A virtualised row may not be in the DOM, so that needs its own design. 4.3 stays open for WP4; the Log tab and the Knowledge lists both wait on it.
 - **Test helper:** `e2e/ui/nav.ts` `openKnowledge(page, kind)` replaces the three nav clicks in all four specs.
 - **A flaky test, fixed:** "a collapsed column still shows its count and takes a drop" failed in about half the runs. The click on the rail came right after a drop, and the drag library swallowed it. The test now clicks until it takes (`toPass`). It passed 10 of 10 runs after that.
+
+### WP2 2.5: the palette answers questions
+
+The Ask box left the File cards tab. Search shows an "Ask: <text>" row at three characters or more; clicking it calls `recall` and shows the ranked items (title, summary, facts) in the palette. "Copy as Markdown" went with the box. The placeholder names file cards. The flows and a11y specs ask through the palette.

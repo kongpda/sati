@@ -1085,21 +1085,21 @@ test("Memory answers from cards, edits them, and keeps private ones off .sati/",
   const pinned = page.getByRole("navigation", { name: "Pinned notes" });
   await expect(pinned.getByRole("link", { name: "Brand voice" })).toBeVisible();
 
-  await openKnowledge(page, "File cards");
-  await page.getByRole("textbox", { name: "Ask what the team knows" }).fill("venue price");
-  await page.getByRole("button", { name: "Ask", exact: true }).click();
-  const answer = page.getByRole("region", { name: "Answer" });
+  // The palette answers questions from file cards, by what they say and not only by path.
+  await page.keyboard.press("Control+k");
+  const palette = page.getByRole("dialog", { name: "Search" });
+  await palette.getByRole("textbox", { name: "Search" }).fill("venue price");
+  await palette.getByRole("button", { name: "Ask: venue price" }).click();
+  const answer = palette.getByRole("region", { name: "Answer" });
   await expect(answer).toContainText("Venue price: $2,400 for the day");
-  await answer.getByRole("button", { name: "Copy as Markdown" }).click();
-  await expect(page.getByRole("status")).toContainText("Copied the answer as Markdown.");
-  const copied = await page.evaluate(() => navigator.clipboard.readText());
-  expect(copied).toContain("venue/hall-b-quote.pdf");
-  expect(copied).toContain("Venue price: $2,400 for the day");
+  await expect(answer).toContainText("venue/hall-b-quote.pdf");
 
   // A question nothing matches says so instead of showing an empty box.
-  await page.getByRole("textbox", { name: "Ask what the team knows" }).fill("zebra parade");
-  await page.getByRole("button", { name: "Ask", exact: true }).click();
+  await palette.getByRole("textbox", { name: "Search" }).fill("zebra parade");
+  await palette.getByRole("button", { name: "Ask: zebra parade" }).click();
   await expect(answer).toContainText("Nothing in memory matches yet");
+  await page.keyboard.press("Escape");
+  await openKnowledge(page, "File cards");
 
   // Edit a shared card: the private choice is not offered for it.
   await page.getByRole("button", { name: "Edit venue/hall-b-quote.pdf" }).click();

@@ -1,6 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
-import { api, type Card, type RecallItem, type Snapshot } from "./api.js";
+import { api, type Card, type Snapshot } from "./api.js";
 import { FormDialog } from "./forms.js";
 import { personOnly } from "./moves.js";
 import { nameOf } from "./people.js";
@@ -134,35 +133,22 @@ function CardForm({
 }
 
 /**
- * Memory: what people and agents learned about the project's files, and an Ask box that gives
- * the same answer `recall` gives an agent. sati never opens the files; cards are what someone
+ * Memory: what people and agents learned about the project's files. sati never opens the files; cards are what someone
  * wrote after reading them.
  */
 export function Memory({
   data,
   tabs,
   onSaved,
-  onCopied,
-  onCopyFailed,
   onFailed,
-  onOpenTask,
-  onGo,
 }: {
   data: Snapshot;
   /** The Notes, Decisions and File cards tabs, shown under the heading. */
   tabs: ReactNode;
   onSaved: (message: string) => void;
-  /** Copying changes no record, so it says so without refetching. */
-  onCopied: (message: string) => void;
-  onCopyFailed: () => void;
   /** Shows why an approval was refused. */
   onFailed: (err: unknown) => void;
-  onOpenTask: (id: string) => void;
-  /** Opens a list page at one record. */
-  onGo: (path: string, id: string) => void;
 }) {
-  const [draft, setDraft] = useState("");
-  const [question, setQuestion] = useState("");
   const [editing, setEditing] = useState<Card | "new" | null>(null);
   const [filter, setFilter] = useState("");
   // The path being approved: its button waits, so a second click cannot send it twice.
@@ -182,16 +168,6 @@ export function Memory({
       .catch(onFailed)
       .finally(() => setApproving(null));
   };
-  const answer = useQuery({
-    queryKey: ["recall", question, data.version],
-    queryFn: () => api.recall(question),
-    enabled: question !== "",
-    // A write elsewhere bumps the version: keep showing this question's answer while it
-    // refreshes. Another question's answer is never shown for this one.
-    placeholderData: (previous, previousQuery) =>
-      previousQuery?.queryKey[1] === question ? previous : undefined,
-  });
-
   const needle = filter.trim().toLowerCase();
   const cards = data.cards.filter(
     (c) =>
@@ -205,14 +181,6 @@ export function Memory({
     const f = folderOf(c.path);
     folders.set(f, [...(folders.get(f) ?? []), c]);
   }
-  const open = (item: RecallItem) => {
-    if (item.kind === "task") onOpenTask(item.id);
-    else if (item.kind === "card") {
-      const card = data.cards.find((c) => c.id === item.id);
-      if (card) setEditing(card);
-    } else onGo(item.kind === "note" ? "/knowledge" : "/knowledge?kind=decisions", item.id);
-  };
-
   return (
     <section className="page" aria-labelledby="memory-title">
       <div className="page-head">
@@ -222,97 +190,6 @@ export function Memory({
         </button>
       </div>
       {tabs}
-      <form
-        className="ask"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setQuestion(draft.trim());
-        }}
-      >
-        <label htmlFor="ask-input">Ask what the team knows</label>
-        <div className="ask-row">
-          <input
-            id="ask-input"
-            className="field"
-            value={draft}
-            maxLength={500}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="What did the venue quote say?"
-          />
-          <button type="submit" className="primary" disabled={draft.trim() === ""}>
-            Ask
-          </button>
-        </div>
-      </form>
-      {question && answer.error ? (
-        <p className="form-error" role="alert">
-          {plainError(answer.error)}
-        </p>
-      ) : null}
-      {question && answer.isPending && !answer.error ? (
-        <p className="meta" role="status">
-          Looking for “{question}”…
-        </p>
-      ) : null}
-      {question && answer.data ? (
-        <section className="answer" aria-label="Answer" aria-live="polite">
-          <div className="answer-head">
-            <h2>
-              {answer.data.items.length === 0
-                ? "Nothing in memory matches yet"
-                : `What is known about “${question}”`}
-            </h2>
-            {answer.data.items.length > 0 ? (
-              <button
-                type="button"
-                onClick={() =>
-                  void navigator.clipboard
-                    .writeText(answer.data?.markdown ?? "")
-                    .then(() => onCopied("Copied the answer as Markdown."))
-                    .catch(onCopyFailed)
-                }
-              >
-                Copy as Markdown
-              </button>
-            ) : null}
-          </div>
-          {answer.data.items.length === 0 ? (
-            <p className="meta">
-              Ask an agent to read the files and save cards, or add one with New card.
-            </p>
-          ) : null}
-          {answer.data.items.map((item) => (
-            <article key={item.id} className="row">
-              <span className={`badge kind-${item.kind}`}>{kindLabel(item.kind)}</span>
-              <button type="button" className="row-link" onClick={() => open(item)}>
-                {item.title}
-              </button>
-              {item.private ? <span className="badge private">Private</span> : null}
-              <p className="summary">
-                {item.text.length > 300 ? `${item.text.slice(0, 299)}…` : item.text}
-              </p>
-              {item.facts.length ? (
-                <ul className="facts">
-                  {item.facts.slice(0, 5).map((f, i) => (
-                    // Two lines may read the same; the position tells them apart.
-                    // biome-ignore lint/suspicious/noArrayIndexKey: plain text lines have no ids
-                    <li key={`${i}:${f}`}>{f}</li>
-                  ))}
-                </ul>
-              ) : null}
-              {item.stale ? (
-                <p className="meta late">The file changed since; read it again.</p>
-              ) : null}
-            </article>
-          ))}
-          {answer.data.omitted > 0 ? (
-            <p className="meta">
-              {answer.data.omitted} more matched. Ask a narrower question to see them.
-            </p>
-          ) : null}
-        </section>
-      ) : null}
-
       <div className="memory-filter">
         <input
           className="field"

@@ -219,6 +219,7 @@ describe("exportSnapshot / importSnapshot", () => {
     expect(result.problems[0]).toContain(`tasks/${t.id} (1).json`);
   });
 
+  // Skips as root, who can read a file with no read permission; CI runs as a normal user.
   // WHY: a file the scan lists but cannot open (permissions, removed mid-scan) must fail as a
   // snapshot error that `skipBad` can skip, and must not be blamed on its JSON.
   it.skipIf(process.getuid?.() === 0)("reports a record file it cannot read as unreadable", () => {

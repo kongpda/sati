@@ -66,12 +66,14 @@ describe("filesystem type on macOS", () => {
     expect(classifyFilesystem(mountedType(mounts, "/Volumes/team/repo") ?? "")).toBe("network");
   });
 
+  // Runs only on macOS, where the temp folder is known to be on a local disk; the macOS CI cell runs it.
   it.runIf(process.platform === "darwin")("sees the local disk as local", () => {
     expect(filesystemKind(tmpdir())).toBe("local");
   });
 });
 
 describe("socket path", () => {
+  // Skips on Windows, where the socket is a named pipe and has no path length limit.
   // Reproduced: a database 110 characters deep failed `serve` with a bare "listen EINVAL".
   it.runIf(process.platform !== "win32")("names the limit when the path is too long", async () => {
     const dir = mkdtempSync(join(tmpdir(), "sati-sock-"));

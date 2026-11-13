@@ -189,6 +189,7 @@ const typed = (dir: string, prompt: string, keys: string, args: string[], env = 
 
 const UP_ENTER = "\\x1b[A\\r";
 
+// Skips without python3's pty module (always on Windows); the Linux and macOS CI cells have it.
 describe.skipIf(!python)("a bare sati", () => {
   // A person who types `sati` wants to know what waits and what to do next. The menu runs the
   // same commands they could type, so what it shows is what those commands show.

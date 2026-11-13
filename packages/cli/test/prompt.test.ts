@@ -53,6 +53,8 @@ const status = (dir: string, id: string) => satiJson<Task>(dir, "task", "show", 
 describe("without a terminal, a command never waits for an answer", () => {
   // The whole of Phase 10 rests on this: a prompt added for people must not reach a script. Each
   // command runs with stdin closed and five seconds to finish.
+  // About 3.5 s alone: it starts the CLI about twenty times. On a loaded machine that passed
+  // 15 s and took over 80 s, so it states 90 s. Each command still has its own 5 s limit below.
   it("gives a usage error or does what it did before, within the limit", async () => {
     const { dir, first } = await reviewRepo();
     satiJson<Task>(dir, "task", "create", "Ready one");
@@ -97,7 +99,9 @@ describe("without a terminal, a command never waits for an answer", () => {
     expect(claimed.status).toBe(0);
     expect(claimed.stdout).toContain("Ready one");
     expect(status(dir, first.id)).toBe("review");
-  });
+    // About 3.5 s alone: it starts the CLI about twenty times. On a loaded machine that passed
+    // 15 s and took over 80 s, so it states 90 s. Each command still has its own 5 s limit above.
+  }, 90_000);
 });
 
 describe("review verbs", () => {
@@ -149,6 +153,7 @@ const typed = (dir: string, prompt: string, keys: string, args: string[], env = 
 const DOWN_ENTER = "\\x1b[B\\r";
 const CTRL_C = "\\x03";
 
+// Skips without python3's pty module (always on Windows); the Linux and macOS CI cells have it.
 describe.skipIf(!python)("a person at a terminal", () => {
   // The choice has to reach the write. Approving the top task when the person moved to the
   // second would approve work nobody looked at.
@@ -252,6 +257,7 @@ function tempFolder(dir: string): string {
   return tmp;
 }
 
+// Skips without python3's pty module (always on Windows); the Linux and macOS CI cells have it.
 describe.skipIf(!python)("a person who left an argument out", () => {
   // What is typed at the questions must be what a flag would have stored, and the line printed
   // after must be a command that stores the same.
@@ -379,6 +385,7 @@ describe.skipIf(!python)("a person who left an argument out", () => {
   });
 });
 
+// Skips without python3's pty module (always on Windows); the Linux and macOS CI cells have it.
 // Review 7.8 (D26): one rule. A command that needs a title asks for it at a terminal and gives a
 // usage error to a script, as `note create` and `decision record` do.
 describe.skipIf(!python)("a title left out of feature create and milestone create", () => {

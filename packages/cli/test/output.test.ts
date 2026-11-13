@@ -152,6 +152,7 @@ describe("completion", () => {
     expect(bad.stderr).toContain("bash");
   });
 
+  // Skips on Windows, which has no bash to run the script; the Linux and macOS CI cells run it.
   it.skipIf(process.platform === "win32")("completes commands and flags in bash", async () => {
     const dir = await tempRepo();
     const script = sati(dir, "completion", "bash").stdout;
@@ -173,6 +174,7 @@ describe("completion", () => {
     expect(complete("recall", "question", "--js")).toBe("--json");
   });
 
+  // Skips where fish is not installed; CI installs it on the ubuntu / node 24 cell.
   const fish = spawnSync("fish", ["--version"]).status === 0;
   it.skipIf(!fish)("completes commands and flags in fish, without offering files", async () => {
     const dir = await tempRepo();
@@ -229,6 +231,7 @@ describe("task claim --pick in a terminal", () => {
       },
     );
 
+  // Skips without python3's pty module (always on Windows); the Linux and macOS CI cells have it.
   // The picker exists so a person can take a task that is not the top one. If the choice did not
   // reach the claim, `--pick` would be `task claim` with extra steps.
   it.skipIf(!python)("claims the task the person moved to, not the top one", async () => {
@@ -243,6 +246,7 @@ describe("task claim --pick in a terminal", () => {
     expect(satiJson<Task>(dir, "task", "show", first.id).data.status).toBe("todo");
   });
 
+  // Skips without python3's pty module (always on Windows); the Linux and macOS CI cells have it.
   it.skipIf(!python)("claims nothing when the person cancels", async () => {
     const dir = await tempRepo({ init: true });
     const only = satiJson<Task>(dir, "task", "create", "Only").data;

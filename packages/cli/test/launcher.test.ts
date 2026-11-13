@@ -13,6 +13,7 @@ afterEach(() => {
 // PLAN 7d: a person with no terminal opens the board by a double click. The file must start the
 // board of its own project wherever it is moved, and office folders have spaces and quotes.
 describe("launcher file", () => {
+  // Skips on Windows, which cannot run the macOS shell launcher it writes; Linux and macOS run it.
   it.runIf(process.platform !== "win32")(
     "starts `ui` in the project folder, whatever the names hold",
     () => {

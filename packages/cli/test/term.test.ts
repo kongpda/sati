@@ -176,6 +176,7 @@ describe("layout", () => {
     expect(pager(100, {}, screen, "darwin")).toBeNull();
   });
 
+  // Skips on Windows: the pager commands below are POSIX shell (`cat >`, `2>/dev/null`).
   // The pager is the user's own command. One that is not installed must not swallow the answer.
   it.skipIf(process.platform === "win32")(
     "hands the text to the pager, and says so when the pager cannot start",

@@ -314,6 +314,7 @@ describe("daemon framing", () => {
     await remote.close();
   }, 30_000);
 
+  // Skips on Windows, where the socket is a named pipe with no file mode to check.
   // Anyone who can open the socket can read and write every record.
   it.skipIf(process.platform === "win32")("creates the socket readable only by its owner", () => {
     expect(statSync(sock).mode & 0o777).toBe(0o600);

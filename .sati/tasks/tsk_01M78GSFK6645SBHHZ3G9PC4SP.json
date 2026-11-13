@@ -1,7 +1,26 @@
 {
   "blockedReason": null,
   "body": "Review 2026-11-12 items 14.4 and 14.5. List tests over 2 s in progress.md; give each a stated timeout with a reason, or make it faster. A one-line comment at each skip.",
-  "branch": "wp14-tests",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "e14585ee6a0f2ad3de5c1855941c37ddc7ca6a33",
+    "completedAt": "2026-11-13T04:47:34.790Z",
+    "completedBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "filesTouched": [
+      "docs/progress.md",
+      "docs/review-2026-11-12.md",
+      "packages/cli/test/home.test.ts",
+      "packages/cli/test/launcher.test.ts",
+      "packages/cli/test/output.test.ts",
+      "packages/cli/test/prompt.test.ts",
+      "packages/cli/test/term.test.ts",
+      "packages/store-sqlite/test/fs-kind.test.ts",
+      "packages/store-sqlite/test/remote.test.ts",
+      "packages/sync/test/sync.test.ts"
+    ],
+    "summary": "Review 14.4 and 14.5. Every skipIf/runIf in the tests has a one-line comment saying why it skips and where it runs instead. Slow tests were listed in progress.md; the lock-service test already states 30 s, and prompt.test.ts now states 90 s with a reason. 14.4 and 14.5 ticked in the review."
+  },
   "createdAt": "2026-11-12T18:37:15.750Z",
   "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
   "effort": "standard",
@@ -14,14 +33,15 @@
   "stamps": {
     "*": "2026-11-12T18:37:15.750Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
     "blockedReason": "2026-11-12T18:44:08.305Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "branch": "2026-11-12T18:37:32.121Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "claim": "2026-11-12T18:44:08.305Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
-    "status": "2026-11-12T18:44:08.305Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "branch": "2026-11-13T04:42:49.104Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "claim": "2026-11-13T04:47:34.792Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "completion": "2026-11-13T04:47:34.792Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "status": "2026-11-13T04:47:34.792Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
     "worktree": "2026-11-12T18:37:32.121Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
   },
-  "status": "todo",
+  "status": "done",
   "title": "WP14: slow tests get stated timeouts, and every skip says why (review 14.4, 14.5)",
-  "updatedAt": "2026-11-12T18:44:08.305Z",
-  "version": 4,
+  "updatedAt": "2026-11-13T04:47:34.792Z",
+  "version": 6,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

@@ -2505,3 +2505,54 @@ The Ask box left the File cards tab. Search shows an "Ask: <text>" row at three 
 - 4.7: first-load size, gzip, measured 2026-11-13: JS 134,010 bytes (`index-*.js`), CSS 7,403 bytes. Mermaid is already in its own chunks (58 files in `dist/assets`), not the entry. `bundle.test.ts` fails when either grows over 10%. The test was shown failing with a lowered budget.
 - 4.2 **not done, on purpose.** The snapshot holds file drift and card staleness read from disk, and those can change while `version` stays the same. An ETag from the version would answer 304 for a payload that changed. The saving was only the refetch on tab focus. Left for the owner to decide.
 - 4.3 (virtualised Log and Knowledge lists) is deferred: `show()` scrolls to and focuses rows by DOM id, which a virtualised list would not have mounted.
+
+## 2026-11-13 — Review WP14: slow tests and skips (14.4, 14.5)
+
+**14.4.** I ran each package with the JSON reporter on a loaded machine (load average 50 to 100; several agents were running suites). Every `vitest.config` was checked first:
+
+- core and mcp use the default 5 s;
+- store-sqlite and sync use 5 s, or 30 s on Windows;
+- cli uses 15 s, or 30 s on CI and Windows, with the reason in the config.
+
+Tests over 2 s:
+
+- **core:** `lock-service.test.ts` "finds a conflict behind more than one page of locks" took 2.2 s. It already has a 30 s timeout with a comment: it runs 501 acquires. Nothing changed.
+- **store-sqlite, sync, mcp:** none. The slowest was store-sqlite `remote.test.ts` "refuses an over-limit message…" at 1.7 s.
+- **cli:** many tests take 2 to 10 s. Each spawns the built binary, git or a pseudo-terminal several times. The slowest:
+  - hardening "read-only commands never write": 10.3 s
+  - sync git hooks: 8.2 s
+  - merge driver: 8.3 s
+  - prompt "asks nothing of an agent": 6.9 s
+  - `doctor --fix`: 6.7 s
+  - output "refuses to guess": 5.9 s
+  - coordination warnings: 5.7 s
+  - search: 5.3 s
+  - `init --upgrade`: 5.3 s
+  - concurrency: 4.3 s
+
+  The package's 15 s timeout covers them, and its config says why. I did not add a timeout to each one.
+
+Under that load, seven CLI tests timed out (about 80 s each). They were:
+
+- cli-flags `--commit`
+- usage errors
+- the four-agent e2e
+- `init` after a failed import
+- `--since` refusal
+- the summary prompt
+- record-only commit
+
+Run alone, all seven passed. They were load timeouts, not hangs. A run with the machine this busy is not a fair timing; CI runs one suite per runner.
+
+**14.5.** Every `skipIf` and `runIf` in the tests now has a one-line comment that says why it skips and where it runs instead. Covered:
+
+- the Python pty tests in prompt, home and output
+- bash and fish completion
+- the pager test
+- the launcher
+- the socket file mode
+- the two fs-kind tests
+- the unreadable-file test, which skips as root
+- `windows-only.test.ts` and the hardening SIGTERM test already had one.
+
+- 14.4 follow-up: `prompt.test.ts` "gives a usage error or does what it did before, within the limit" takes 3.5 s alone and timed out at 15 s under load (it starts the CLI about twenty times). It now states a 90 s timeout with the reason. Each command inside still has its own 5 s limit.

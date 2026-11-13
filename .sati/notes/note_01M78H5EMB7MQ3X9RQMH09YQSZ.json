@@ -1,4 +1,8 @@
 {
+  "acknowledged": {
+    "at": "2026-11-13T04:42:49.112Z",
+    "by": "actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
   "body": "## Done so far\nThe edits are done but not committed. They are in worktree /private/tmp/claude-501/-Users-kongpda-workspace-khable-ts-sati/75d3e4d7-ea67-4817-ae83-5e87152a70cd/scratchpad/wt19, branch wp14-tests, based on 6b887b4.\n- 14.5: every skipIf/runIf in the tests has a one-line comment saying why it skips and where it runs instead.\n- 14.4: no code change is needed. The core lock-service test already has a 30 s timeout with a reason, and the CLI config's 15 s covers its slow tests.\n- The slow-test list is in docs/progress.md.\n- 14.4 and 14.5 are ticked in docs/review-2026-11-12.md.\n- Seven CLI tests timed out at about 80 s under load average 100. All seven pass when run alone.\n\n## Next step\nFree disk space, rerun the gate in wt19, then task complete, commit and push to main.\n\n## Open questions\nThe gate cannot run: /System/Volumes/Data is 100% full (431 GB used, about 200 MB free). Tests fail with ENOSPC. Nothing in /private/tmp or the caches is large, so the owner must free space.\n\n## Files in flight\n- docs/progress.md\n- docs/review-2026-11-12.md\n- packages/cli/test/home.test.ts\n- packages/cli/test/launcher.test.ts\n- packages/cli/test/output.test.ts\n- packages/cli/test/prompt.test.ts\n- packages/cli/test/term.test.ts\n- packages/store-sqlite/test/fs-kind.test.ts\n- packages/store-sqlite/test/remote.test.ts\n- packages/sync/test/sync.test.ts",
   "createdAt": "2026-11-12T18:43:47.979Z",
   "createdBy": "actr_01M755A9HFH099C13BC1VKNHE9",
@@ -9,12 +13,13 @@
   ],
   "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
   "stamps": {
-    "*": "2026-11-12T18:43:47.980Z#000000#actr_01M755A9HFH099C13BC1VKNHE9"
+    "*": "2026-11-12T18:43:47.980Z#000000#actr_01M755A9HFH099C13BC1VKNHE9",
+    "acknowledged": "2026-11-13T04:42:49.113Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
   },
   "tags": [
     "handoff"
   ],
   "title": "Handoff WP14: slow tests get stated timeouts, and every skip says why (review 14.4, 14.5)",
-  "updatedAt": "2026-11-12T18:43:47.979Z",
-  "version": 1
+  "updatedAt": "2026-11-13T04:42:49.113Z",
+  "version": 2
 }

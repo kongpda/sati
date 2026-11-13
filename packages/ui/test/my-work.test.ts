@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { weekEnd } from "../../core/src/domain/inbox.js";
 import { dueLabel, phoneColumn, type Snapshot, type Task } from "../src/api.js";
 import { oneFile } from "../src/memory.js";
-import { inboxCount, mentionsOf, myWork, weekEnd } from "../src/my-work.js";
+import { inboxCount, myWork } from "../src/my-work.js";
+
+const mentionsOf = (data: Snapshot, now: Date) => myWork(data, now).mentions;
+
 import { mentionAt, mentionNames } from "../src/thread.js";
 
 const you = "actr_you";

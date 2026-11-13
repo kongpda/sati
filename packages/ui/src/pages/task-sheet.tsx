@@ -6,7 +6,7 @@ import { canTakeOver, claimRefusal, heldByOther, moveTargets, needsReason } from
 import { holderName, nameOf } from "../people.js";
 import type { ThreadActions } from "../thread.js";
 import { Thread } from "../thread.js";
-import { Ago } from "../time.js";
+import { Ago, useMinute } from "../time.js";
 import { capital, fullTime, statusWord, untilTime } from "../words.js";
 
 /** The effort select's value: standard is the default, stored as unset. */
@@ -77,6 +77,8 @@ export function TaskSheet({
   onToast: (message: string, undo?: () => void) => void;
   thread: ThreadActions;
 }) {
+  // Whether a claim is still live depends on the clock, so look again each minute.
+  useMinute();
   const heading = useRef<HTMLHeadingElement>(null);
   const task = data.tasks.find((t) => t.id === id);
   const found = task !== undefined;
@@ -595,6 +597,7 @@ function ClaimBox({
   onRelease: (force: boolean) => void;
   onTakeOver: () => void;
 }) {
+  useMinute();
   const mine = claim.actorId === data.you;
   const name = holderName(data, claim.actorId);
   const live = Date.parse(claim.leaseUntil) > Date.now();

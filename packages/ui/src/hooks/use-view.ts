@@ -3,6 +3,7 @@ import type { Snapshot, Task } from "../api.js";
 import { boardOrder } from "../board.js";
 import { inboxCount } from "../my-work.js";
 import { COMMENT_TAG, threadOf } from "../thread.js";
+import { useMinute } from "../time.js";
 
 const PAGES = [
   ["/", "Board"],
@@ -74,6 +75,8 @@ export function useView(
   const pinned = (data?.notes ?? [])
     .filter((n) => n.pinned && !threadOf(n) && !n.tags.includes(COMMENT_TAG))
     .slice(0, 3);
+  // A lease runs out with no write to say so: look again each minute.
+  useMinute();
   const now = new Date().toISOString();
   const working = (data?.tasks ?? []).filter((t) => t.claim && t.claim.leaseUntil > now);
 

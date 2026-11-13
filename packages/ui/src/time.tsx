@@ -22,8 +22,16 @@ function subscribe(listener: () => void): () => void {
 
 const minute = () => Math.floor(Date.now() / 60_000);
 
+/**
+ * Re-renders its caller each minute. For what depends on the clock and not on a write, such as
+ * whether a claim's lease has run out. It does not refetch.
+ */
+export function useMinute(): number {
+  return useSyncExternalStore(subscribe, minute);
+}
+
 /** "3 min ago" for `iso`, kept current while it is on screen. */
 export function Ago({ iso }: { iso: string }) {
-  useSyncExternalStore(subscribe, minute);
+  useMinute();
   return <>{ago(iso)}</>;
 }

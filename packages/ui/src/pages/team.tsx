@@ -1,6 +1,7 @@
 import type { Snapshot } from "../api.js";
 import { claimRefusal } from "../moves.js";
 import { Avatar, personName } from "../people.js";
+import { useMinute } from "../time.js";
 import { untilTime } from "../words.js";
 
 /** The agents section of the Team page: who works now, and the claims they hold. */
@@ -13,6 +14,7 @@ export function Agents({
   onRelease: () => void;
   onReleaseTask: (id: string) => void;
 }) {
+  useMinute();
   // Who is working comes first; the idle stay in their usual order below.
   const busy = new Set([
     ...data.tasks.flatMap((t) => (t.claim ? [t.claim.actorId] : [])),

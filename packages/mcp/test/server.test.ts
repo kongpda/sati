@@ -549,6 +549,20 @@ describe("MCP server", () => {
     expect(bad).toMatchObject({ isError: true, body: { error: { code: "VALIDATION" } } });
   });
 
+  // Review 3.2: the version is optional, so an agent's plain save still upserts.
+  it("context_put without a version still upserts, and with a stale one is a conflict", async () => {
+    const client = await connect(ctx, "general");
+    const first = await call(client, "context_put", { path: "notes/x.md", summary: "One." });
+    const again = await call(client, "context_put", { path: "notes/x.md", summary: "Two." });
+    expect(again.body).toMatchObject({ version: 2 });
+    const stale = await call(client, "context_put", {
+      path: "notes/x.md",
+      summary: "Three.",
+      expectedVersion: first.body.version,
+    });
+    expect(stale).toMatchObject({ isError: true, body: { error: { code: "CONFLICT" } } });
+  });
+
   // PLAN Phase 8: an agent saves a card after reading a file, and the next one recalls it.
   it("saves a card with facts and recalls it as fenced Markdown", async () => {
     const client = await connect(ctx, "general");

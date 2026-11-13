@@ -4,7 +4,6 @@ import { FormDialog } from "./forms.js";
 import { personOnly } from "./moves.js";
 import { nameOf } from "./people.js";
 import { Ago } from "./time.js";
-import { kindLabel, plainError } from "./words.js";
 
 /** The folder a card is filed under: everything before its last `/`, or the top level. */
 function folderOf(path: string): string {
@@ -58,6 +57,8 @@ function CardForm({
             ...(opened?.keyFiles.length ? { keyFiles: opened.keyFiles } : {}),
             ...(opened?.sourceTokens !== undefined ? { sourceTokens: opened.sourceTokens } : {}),
             private: form.get("private") === "on",
+            // An agent's newer save is refused, not overwritten.
+            ...(opened ? { expectedVersion: opened.version } : {}),
           })
           .then(onSaved);
       }}

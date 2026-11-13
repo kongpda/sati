@@ -26,7 +26,7 @@ export function Routes({
   show: (next: string, id: string) => void;
   copyFailed: () => void;
 }) {
-  const { path, params, go, saved, fail, setToast, remove, thread } = ctx;
+  const { path, params, go, saved, fail, setToast, thread } = ctx;
   const changeTabs = (
     <Tabs
       label="Changes"

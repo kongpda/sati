@@ -615,7 +615,7 @@ function registerTools(
     "context_put",
     {
       description:
-        "Save a card after reading a file, folder or module: path, short summary, up to 50 facts, tags, sourceSeen (the modified time or hash you read) and sourceTokens. Replaces the card for that path. private: true keeps it on this machine. Never paste file contents or secrets.",
+        "Save a card after reading a file, folder or module: path, short summary, up to 50 facts, tags, sourceSeen (the modified time or hash you read) and sourceTokens. Replaces the card for that path (expectedVersion refuses it if the card changed since you read it). private: true keeps it on this machine. Never paste file contents or secrets.",
       inputSchema: PutContextInput,
       annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },

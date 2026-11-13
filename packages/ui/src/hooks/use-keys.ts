@@ -76,14 +76,13 @@ export function useKeys({
         const item = list[index];
         if (item) go("/", item.id);
       }
-      // Enter and x act on the board's cards; on other pages they would jump to the board or
-      // select a card that is not shown.
-      if (event.key === "Enter" && task && path === "/") go("/", task);
-      if (event.key === "c") {
+      // New task opens where tasks are on screen.
+      if (event.key === "c" && (path === "/" || path === "/my-work")) {
         // Keep the "c" from being typed into the title field the dialog focuses.
         event.preventDefault();
         setCreating(true);
       }
+      // x acts on the board's cards; on other pages it would select a card that is not shown.
       if (event.key === "x" && task && path === "/") {
         setSelected((cur) => {
           const next = new Set(cur);

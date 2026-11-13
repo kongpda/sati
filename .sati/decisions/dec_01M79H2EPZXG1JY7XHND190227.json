@@ -1,0 +1,14 @@
+{
+  "context": "Review 2.4 and 2.5. Three list pages shared one idea, and the Ask box sat on the least visited of them.",
+  "createdAt": "2026-11-13T04:01:24.190Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "decision": "One /knowledge page with Notes, Decisions and File cards tabs. Old /notes, /decisions and /memory redirect. The Ask box is removed from File cards; search shows an \"Ask: <text>\" row that calls recall. Copy as Markdown went with it. Virtualising the lists (4.3) was not done: show() finds a record by DOM id.",
+  "id": "dec_01M79H2EPZXG1JY7XHND190227",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-13T04:01:24.192Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "title": "Notes, Decisions and Memory are one Knowledge page; the Ask box moved into search",
+  "updatedAt": "2026-11-13T04:01:24.190Z",
+  "version": 1
+}

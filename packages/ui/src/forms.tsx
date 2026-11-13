@@ -59,7 +59,7 @@ const MILESTONE_LABELS: Record<string, string> = {
 };
 
 /** Comma-separated labels as typed, trimmed and without blanks or repeats. */
-function parseLabels(text: string): string[] {
+export function parseLabels(text: string): string[] {
   return [
     ...new Set(
       text

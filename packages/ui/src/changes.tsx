@@ -9,7 +9,7 @@ const RANGES = [
   ["7d", "Last 7 days"],
   ["2w", "Last 2 weeks"],
   ["30d", "Last 30 days"],
-  ["last-session", "Since my last visit"],
+  ["last-session", "Since my last change"],
 ] as const;
 
 const FEATURE_WORDS: Record<string, string> = {

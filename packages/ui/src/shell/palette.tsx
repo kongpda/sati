@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api, type RecallItem, type Snapshot } from "../api.js";
+import { api, parentKind, type RecallItem, type Snapshot } from "../api.js";
 import { threadOf } from "../thread.js";
 import { kindLabel } from "../words.js";
 
@@ -43,6 +43,9 @@ export function Palette({
   const [asking, setAsking] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const searchRun = useRef(0);
+  // Asking replaces searching for this text: a pause-timer that fires after the click must not
+  // start a search that drops the answer.
+  const asked = useRef(false);
   useEffect(() => {
     const previous = document.activeElement;
     searchRef.current?.focus();
@@ -50,6 +53,38 @@ export function Palette({
       if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
     };
   }, []);
+  /** Searches for `raw`. Only the latest search may show: an earlier, slower answer is dropped. */
+  const search = (raw: string) => {
+    const text = raw.trim();
+    if (!text) return;
+    setSearching(true);
+    setSearched(false);
+    const run = ++searchRun.current;
+    void api
+      .search(text)
+      .then((res) => {
+        if (run !== searchRun.current) return;
+        // A general project has no Features page to open a feature on.
+        const general = data?.project?.kind === "general";
+        setHits(res.hits.filter((h) => !(general && h.entity === "feature")));
+        setSearched(true);
+      })
+      .catch((err: unknown) => {
+        if (run === searchRun.current) onError(err);
+      })
+      .finally(() => {
+        if (run === searchRun.current) setSearching(false);
+      });
+  };
+  // Typing searches too, after a short pause and from two characters. Enter searches at once.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only the text starts a search
+  useEffect(() => {
+    if (queryText.trim().length < 2) return;
+    const id = window.setTimeout(() => {
+      if (!asked.current) search(queryText);
+    }, 200);
+    return () => window.clearTimeout(id);
+  }, [queryText]);
   return (
     <div className="palette" role="dialog" aria-modal="true" aria-label="Search">
       <button
@@ -62,27 +97,7 @@ export function Palette({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          const text = queryText.trim();
-          if (!text) return;
-          setSearching(true);
-          setSearched(false);
-          // Only the latest search may show: an earlier, slower answer is dropped.
-          const run = ++searchRun.current;
-          void api
-            .search(text)
-            .then((res) => {
-              if (run !== searchRun.current) return;
-              // A general project has no Features page to open a feature on.
-              const general = data?.project?.kind === "general";
-              setHits(res.hits.filter((h) => !(general && h.entity === "feature")));
-              setSearched(true);
-            })
-            .catch((err: unknown) => {
-              if (run === searchRun.current) onError(err);
-            })
-            .finally(() => {
-              if (run === searchRun.current) setSearching(false);
-            });
+          search(queryText);
         }}
       >
         <input
@@ -97,6 +112,7 @@ export function Palette({
             setSearching(false);
             setAnswer(null);
             setAsking(false);
+            asked.current = false;
           }}
           placeholder="Search tasks, notes, decisions, features and file cards"
           aria-label="Search"
@@ -105,7 +121,7 @@ export function Palette({
           {searching
             ? "Searching…"
             : !searched
-              ? "Press Enter to search."
+              ? "Type to search."
               : hits.length === 0
                 ? "No results"
                 : hits.length >= SEARCH_LIMIT
@@ -119,6 +135,7 @@ export function Palette({
             onClick={() => {
               const question = queryText.trim();
               const run = ++searchRun.current;
+              asked.current = true;
               setAsking(true);
               setAnswer(null);
               void api
@@ -183,11 +200,11 @@ export function Palette({
         ) : null}
         {hits.map((hit) => {
           const titleOf = (id: string) =>
-            (id.startsWith("tsk_")
-              ? data?.tasks
-              : id.startsWith("dec_")
-                ? data?.decisions
-                : data?.notes
+            (data
+              ? { task: data.tasks, decision: data.decisions, note: data.notes }[
+                  parentKind(data, id)
+                ]
+              : undefined
             )?.find((r) => r.id === id)?.title;
           const note = data?.notes.find((n) => n.id === hit.id);
           const on = note ? threadOf(note) : undefined;
@@ -201,11 +218,10 @@ export function Palette({
                 // A comment opens what it is on; one whose record was deleted says so.
                 if (on && about === undefined) onToast("That comment is on something deleted.");
                 else if (hit.entity === "task") onGo("/", hit.id);
-                else if (on?.startsWith("tsk_")) onGo("/", on);
+                else if (on && data && parentKind(data, on) === "task") onGo("/", on);
                 else
                   onShow(
-                    HIT_PAGES[on ? (on.startsWith("dec_") ? "decision" : "note") : hit.entity] ??
-                      "/",
+                    HIT_PAGES[on && data ? parentKind(data, on) : hit.entity] ?? "/",
                     on ?? hit.id,
                   );
               }}

@@ -176,9 +176,14 @@ export function NotesPage({
     <Notes
       data={data}
       tabs={tabs}
-      onCreate={(title, body, hidden) =>
+      onCreate={(title, body, hidden, tags) =>
         api
-          .createNote({ title, body, ...(hidden ? { private: true } : {}) })
+          .createNote({
+            title,
+            body,
+            ...(tags.length > 0 ? { tags } : {}),
+            ...(hidden ? { private: true } : {}),
+          })
           .then(() => saved(`Saved the note ${title}.`))
           .catch((err: unknown) => {
             fail(err);

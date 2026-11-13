@@ -2477,3 +2477,14 @@ The Ask box left the File cards tab. Search shows an "Ask: <text>" row at three 
 - 2.6: the live strip is one link, "N agents working now" (N counts people holding a live claim), to Team. The `.pill` style is gone.
 - 2.7: a pinned note opens through `show`, the same scroll-and-focus every list link uses, so no `?note=` query was needed.
 - 2.8: `PATCH /api/settings` takes `{ review }` as well as `{ kind }`. It refuses a board that does not act as a person. Core stays as it was, so the CLI is not changed.
+
+### WP3: board correctness
+
+- 3.1: a shared one-minute tick (`useMinute`) re-renders the live strip, Team and the task sheet, so a claim that runs out stops showing as live without a reload.
+- 3.2: `context_put` takes `expectedVersion`. A stale one is a CONFLICT (core and MCP). The board's card form sends the version it opened, so a save over an agent's newer card is refused and the newer card stays. Without a version the call still upserts.
+- 3.3, 3.4: the Enter shortcut no longer pushes a history entry. `c` opens New task only on Board and My work.
+- 3.5: the palette searches 200 ms after typing stops (two characters or more). Enter still searches at once.
+- 3.6: `parentKind` looks a comment's parent up in the loaded records before falling back to the id prefix.
+- 3.7: the changes range reads "Since my last change".
+- 3.9: **deviation from the review.** The review says to use `NoteForm` for create and delete the inline form. About 15 e2e sites use the inline form, so it gained a tags field instead. Same result for the user: a note can be tagged when created.
+- 3.10: `weekEnd` and `mentionsOf` are no longer exported from `my-work.tsx`; the test uses the core `weekEnd` and `myWork(...).mentions`. The `nameOr` docblock and the "Backlog" word were already fixed by 15.2.

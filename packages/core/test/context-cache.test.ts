@@ -79,6 +79,26 @@ describe("context cache", () => {
     ]);
   });
 
+  // Review 3.2: a save from an old form must not wipe what an agent wrote since. The card is an
+  // upsert by path, so only a version check tells the two apart.
+  it("refuses a stale card edit instead of overwriting an agent's newer card", async () => {
+    const { ctx } = await withRepo([{ path: "docs/a.md", blob: "a1" }]);
+    const first = await putContext(ctx, { path: "docs/a.md", summary: "First read." });
+    await putContext(ctx, { path: "docs/a.md", summary: "An agent's newer read." });
+    await expect(
+      putContext(ctx, {
+        path: "docs/a.md",
+        summary: "From a stale form.",
+        expectedVersion: first.version,
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    const [now] = await getContext(ctx, { path: "docs/a.md" });
+    expect(now?.summary).toBe("An agent's newer read.");
+    // With no version, it still upserts, as an agent's save always did.
+    await putContext(ctx, { path: "docs/a.md", summary: "Upsert." });
+    expect((await getContext(ctx, { path: "docs/a.md" }))[0]?.summary).toBe("Upsert.");
+  });
+
   it("logs every put as activity", async () => {
     const { ctx, store } = await withRepo([]);
     const before = store.activity.length;

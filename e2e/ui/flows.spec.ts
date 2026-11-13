@@ -1059,6 +1059,86 @@ test("New plan creates a milestone and its staged tasks from a template", async 
   expect(await problems()).toEqual([]);
 });
 
+// Review 3.3, 3.4: Enter adds no history entry, and `c` opens New task only where tasks show.
+test("Enter with a task open adds no history entry, and c opens New task only where tasks are on screen", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  const t = await ui.api<{ id: string }>("POST", "/api/tasks", { title: "Sweep the stage" });
+  await page.goto(ui.signIn);
+  await page.goto(`${ui.origin}/`);
+  const before = await page.evaluate(() => history.length);
+  // The shared board holds many tasks by now and long columns render a window, so the new
+  // card may be off the page: open it from its link.
+  await page.evaluate((id) => {
+    history.pushState(null, "", `/?task=${id}`);
+    dispatchEvent(new PopStateEvent("popstate"));
+  }, t.id);
+  await expect(page.getByRole("dialog", { name: "Sweep the stage" })).toBeVisible();
+  const open = await page.evaluate(() => history.length);
+  expect(open).toBe(before + 1);
+  await page.locator("#sheet-title").focus();
+  await page.keyboard.press("Enter");
+  expect(await page.evaluate(() => history.length)).toBe(open);
+  await page.goBack();
+  await expect(page.getByRole("dialog", { name: "Sweep the stage" })).toHaveCount(0);
+  expect(t.id).toMatch(/^tsk_/u);
+
+  await page.getByRole("link", { name: "Knowledge", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Knowledge" })).toBeVisible();
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press("c");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("link", { name: "Board", exact: true }).click();
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press("c");
+  await expect(page.getByRole("dialog", { name: "New task" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // The range is the viewer's last write, not a visit (review 3.7).
+  await page.getByRole("link", { name: "Changes", exact: true }).click();
+  await expect(page.getByRole("option", { name: "Since my last change" })).toHaveCount(1);
+  expect(await problems()).toEqual([]);
+});
+
+// Review 3.2: a card form opened before an agent's newer save must not overwrite it.
+test("a stale card edit is refused through the board, and the newer card stays", async ({
+  page,
+}) => {
+  const problems = await watch(page);
+  ui.sati("card", "put", "docs/stage-plan.md", "--summary", "First read of the stage plan.");
+  await page.goto(ui.signIn);
+  await openKnowledge(page, "File cards");
+  await page.getByRole("button", { name: "Edit docs/stage-plan.md" }).click();
+  const dialog = page.getByRole("dialog", { name: "Edit card" });
+  // An agent saves a newer card while the form is open.
+  ui.sati("card", "put", "docs/stage-plan.md", "--summary", "The agent's newer read.");
+  await dialog.getByLabel("Summary").fill("From the form opened earlier.");
+  await dialog.getByRole("button", { name: "Save card" }).click();
+  await expect(dialog.getByRole("alert")).toContainText(/version/u);
+  const card = ui
+    .sati<{ path: string; summary: string }[]>("card", "get", "docs/stage-plan.md")
+    .find((c) => c.path === "docs/stage-plan.md");
+  expect(card?.summary).toBe("The agent's newer read.");
+  expect(await problems()).toEqual([]);
+});
+
+// Review 3.9: the create form on the Notes tab takes tags, so a tagged note is one save.
+test("a note created on the page keeps its tags", async ({ page }) => {
+  const problems = await watch(page);
+  await page.goto(ui.signIn);
+  await openKnowledge(page, "Notes");
+  await page.getByLabel("Note title").fill("Load-in schedule");
+  await page.getByLabel("Note tags").fill("stage, crew, stage");
+  await page.getByRole("button", { name: "Save note" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Load-in schedule" })).toBeVisible();
+  const note = ui
+    .sati<{ title: string; tags: string[] }[]>("note", "list")
+    .find((n) => n.title === "Load-in schedule");
+  expect(note?.tags).toEqual(["stage", "crew"]);
+  expect(await problems()).toEqual([]);
+});
+
 // Review 2.8: the board shows the review mode and changes it the way `sati settings --review` does.
 test("changing review mode on the board is the same change `sati settings --review` makes", async ({
   page,
@@ -1474,7 +1554,21 @@ test("the palette clears hits when the text changes and says when results stop a
   await expect(palette.getByRole("status")).toHaveText("First 20 results");
   await input.fill("lanterns and candles");
   await expect(palette.getByRole("button", { name: /Lantern/u })).toHaveCount(0);
-  await expect(palette.getByRole("status")).toHaveText("Press Enter to search.");
+  // Not the old count: the new text is being searched, or has nothing.
+  await expect(palette.getByRole("status")).not.toHaveText("First 20 results");
+});
+
+// Review 3.5: typing searches after a pause, with no Enter.
+test("typing in the palette searches without pressing Enter", async ({ page }) => {
+  await ui.api("POST", "/api/tasks", { title: "Marquee rigging check" });
+  await page.goto(ui.signIn);
+  await page.keyboard.press("Control+k");
+  const palette = page.getByRole("dialog", { name: "Search" });
+  await palette.getByRole("textbox", { name: "Search" }).pressSequentially("marquee");
+  await expect(palette.getByRole("button", { name: /Marquee rigging check/u })).toBeVisible();
+  // One character is not enough to start a search.
+  await palette.getByRole("textbox", { name: "Search" }).fill("m");
+  await expect(palette.getByRole("status")).toHaveText("Type to search.");
 });
 
 // Audit 2026-11-11: the second move of a card went out with the version from before the first,
@@ -1549,6 +1643,24 @@ test("relative times tick each minute without a write", async ({ page }) => {
   await expect(card).toContainText("just now");
   await page.clock.fastForward("01:05");
   await expect(card).toContainText("1 min ago");
+});
+
+// Review 3.1: a claim whose lease has run out stopped showing as live only after a reload.
+test("a claim that runs out stops showing as live without a reload", async ({ page }) => {
+  const own = await startUi();
+  try {
+    const t = await own.api<{ id: string }>("POST", "/api/tasks", { title: "Tune the lights" });
+    own.sati("task", "claim", t.id);
+    await page.clock.install();
+    await page.goto(own.signIn);
+    const live = page.getByRole("link", { name: /working now$/u });
+    await expect(live).toHaveCount(1);
+    // Far past any lease: nothing was written, and nothing was refetched.
+    await page.clock.fastForward("48:00:00");
+    await expect(live).toHaveCount(0);
+  } finally {
+    await own.stop();
+  }
 });
 
 // Review 1.2: a checkbox in each column header selects every task the filter leaves in that

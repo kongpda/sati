@@ -16,6 +16,7 @@ import { CLI_NAME } from "../name.js";
 import type { RepoFile } from "../ports/repo.js";
 import {
   baseFields,
+  ExpectedVersion,
   insertWithLog,
   listAll,
   nowIso,
@@ -37,6 +38,8 @@ export const PutContextInput = z.strictObject({
   sourceTokens: card.sourceTokens,
   /** Keep this card on this machine; see `private` on notes. Left out: unchanged. */
   private: z.boolean().optional(),
+  /** The card's version when it was read; a save of a newer card is then refused. */
+  ...ExpectedVersion,
 });
 export type PutContextInput = z.input<typeof PutContextInput>;
 
@@ -102,7 +105,7 @@ export function moduleHash(path: string, files: readonly RepoFile[]): string {
  * says otherwise, because its path names a folder on this machine.
  */
 export async function putContext(ctx: ServiceContext, input: unknown): Promise<ContextEntry> {
-  const { private: hidden, ...data } = parseInput(PutContextInput, input);
+  const { private: hidden, expectedVersion, ...data } = parseInput(PutContextInput, input);
   refuseSecrets("context", data);
   // git runs before the transaction, so the write lock is held only for the DB work.
   const outside = isExternalKey(data.path);
@@ -138,7 +141,10 @@ export async function putContext(ctx: ServiceContext, input: unknown): Promise<C
         "context",
         existing,
         { ...fields, ...(keepPrivate ? { private: true } : {}) },
-        { clear: [...clear, ...(existing.private && !keepPrivate ? ["private"] : [])] },
+        {
+          expectedVersion,
+          clear: [...clear, ...(existing.private && !keepPrivate ? ["private"] : [])],
+        },
       );
     }
     return insertWithLog(w, ctx, "context", {

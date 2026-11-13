@@ -157,6 +157,17 @@ export interface Snapshot {
   truncated?: string[];
 }
 
+/**
+ * What a comment is on. The loaded records know; the id's prefix is a guess for one that is not
+ * loaded (a comment's parent may be past the page limit).
+ */
+export function parentKind(data: Snapshot, id: string): "task" | "decision" | "note" {
+  if (data.tasks.some((t) => t.id === id)) return "task";
+  if (data.decisions.some((d) => d.id === id)) return "decision";
+  if (data.notes.some((n) => n.id === id)) return "note";
+  return id.startsWith("tsk_") ? "task" : id.startsWith("dec_") ? "decision" : "note";
+}
+
 /** What an agent or person learned about a file or folder; sati never opens the file. */
 export interface Card {
   id: string;

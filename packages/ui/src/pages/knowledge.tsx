@@ -1,6 +1,6 @@
 import { type ReactNode, useMemo, useState } from "react";
 import type { Decision, Note, Snapshot } from "../api.js";
-import { DecisionForm, NoteForm } from "../forms.js";
+import { DecisionForm, NoteForm, parseLabels } from "../forms.js";
 import { Markdown } from "../markdown.js";
 import type { ThreadActions } from "../thread.js";
 import { isThreadNote, Thread, threadOf } from "../thread.js";
@@ -19,7 +19,7 @@ export function Notes({
   data: Snapshot;
   /** The Notes, Decisions and File cards tabs, shown under the heading. */
   tabs: ReactNode;
-  onCreate: (title: string, body: string, hidden: boolean) => Promise<void>;
+  onCreate: (title: string, body: string, hidden: boolean, tags: string[]) => Promise<void>;
   onPatch: (id: string, patch: Record<string, unknown>) => void;
   onSaved: (message: string) => void;
   onDelete: (id: string, title: string) => void;
@@ -59,6 +59,7 @@ export function Notes({
             String(form.get("title") ?? ""),
             String(form.get("body") ?? ""),
             form.get("private") === "on",
+            parseLabels(String(form.get("tags") ?? "")),
           ).then(
             () => element.reset(),
             () => undefined,
@@ -78,6 +79,12 @@ export function Notes({
           rows={4}
           placeholder="Write in Markdown. Link with [text](https://…)."
           aria-label="Note body"
+        />
+        <input
+          className="field"
+          name="tags"
+          placeholder="Tags, separated by commas"
+          aria-label="Note tags"
         />
         <div className="note-actions">
           <label className="dialog-check">

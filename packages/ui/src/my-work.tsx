@@ -1,17 +1,9 @@
 import { type ReactNode, useState } from "react";
-import { inboxCount as count, inboxOf, weekEnd as lastDay } from "../../core/src/domain/inbox.js";
-import { dueLabel, type Note, type Snapshot, type Task, waitingOn } from "./api.js";
+import { inboxCount as count, inboxOf } from "../../core/src/domain/inbox.js";
+import { dueLabel, type Note, parentKind, type Snapshot, type Task, waitingOn } from "./api.js";
 import { answerRefusal, moveRefusal } from "./moves.js";
 import { holderName, knownName, nameOf, personName } from "./people.js";
 import { capital, statusWord } from "./words.js";
-
-/** The last day of this week (Sunday) in the reader's time zone, as YYYY-MM-DD. */
-export const weekEnd = (now = new Date()): string => lastDay(now);
-
-/** Comments that call you by name (`@ann`), newest first, until you answer on that record. */
-export function mentionsOf(data: Snapshot, now = new Date()): Note[] {
-  return myWork(data, now).mentions;
-}
 
 /** How many things wait for you: the number next to "My work". Assigned and due tasks are plans, not calls. */
 export function inboxCount(data: Snapshot, now = new Date()): number {
@@ -193,7 +185,7 @@ function Mention({
   const task = data.tasks.find((t) => t.id === on);
   const other =
     data.notes.find((n) => n.id === on)?.title ?? data.decisions.find((d) => d.id === on)?.title;
-  const page = on.startsWith("dec_") ? "/knowledge?kind=decisions" : "/knowledge";
+  const page = parentKind(data, on) === "decision" ? "/knowledge?kind=decisions" : "/knowledge";
   return (
     <article className="row">
       {task ? (

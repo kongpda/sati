@@ -2627,3 +2627,14 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 
 - Quick start: board section names the six pages, Settings and the Colours choice, and has a Keyboard table that copies the help sheet (`SHORTCUTS` in `packages/ui/src/hooks/use-keys.ts`). If a key changes, change both.
 - README feature row updated. The glossary already maps My work to `sati inbox`.
+
+### WP4 4.3: long lists
+
+- Log, Notes and Decisions draw 50 rows and then a "Show more (N left)" button, through `usePaged` in `packages/ui/src/hooks/use-paged.ts`. This is paging, not `useVirtualizer` as the review says: a note row holds a Markdown body, a thread, a diagram and edit buttons, with heights that change, and `show()` (search hits, links) finds a row by DOM id. Paging keeps every drawn row a normal row. Choice, stated here so it can be reversed.
+- `show()` in `app.tsx` now sends a `sati:reveal` event when the row is not in the DOM; the list grows to hold that row, then it is scrolled to and focused.
+- Test: `perf.spec.ts` "150 notes draw one page of rows, and a link to a later note opens it" (under 60 rows at first, more after Show more, search opens note 000 which sits past the first page). 150 notes, not the review's 2,000, to keep the suite short; the row count is the same either way.
+- The Log is also capped by the server at 200 rows.
+
+### WP15 15.6 follow-up: Columns control
+
+- Built after all: a "Columns" menu above the board (a `<details>` with one checkbox per column, checked means open) that writes the same `collapsedColumns` pref as each column's own fold button, so the two always agree. Hidden under 700 px, where the Status select picks the column. Test: flows "the Columns menu shows which columns are open and opens or folds them".

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Snapshot } from "../api.js";
+import { usePaged } from "../hooks/use-paged.js";
 import { nameOf } from "../people.js";
 import { threadOf } from "../thread.js";
 import { Ago } from "../time.js";
@@ -16,6 +17,7 @@ export function Activity({ data, tabs }: { data: Snapshot; tabs: ReactNode }) {
     ...data.milestones.map((m) => [m.id, m.title] as const),
   ]);
   const notes = new Map(data.notes.map((n) => [n.id, n]));
+  const paged = usePaged(data.activity);
   return (
     // Rows have no controls, so the scrolling page itself takes focus (WCAG scrollable region).
     // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be keyboard-reachable
@@ -25,7 +27,7 @@ export function Activity({ data, tabs }: { data: Snapshot; tabs: ReactNode }) {
       </div>
       {tabs}
       <div className="list">
-        {data.activity.map((row) => {
+        {paged.shown.map((row) => {
           // A new comment reads "commented on <the task>", not "added the note Comment on …".
           const note = row.entity === "note" ? notes.get(row.entityId) : undefined;
           const on = note && row.verb === "create" ? threadOf(note) : undefined;
@@ -49,6 +51,11 @@ export function Activity({ data, tabs }: { data: Snapshot; tabs: ReactNode }) {
             </article>
           );
         })}
+        {paged.hidden > 0 ? (
+          <button type="button" onClick={paged.more}>
+            Show more ({paged.hidden} left)
+          </button>
+        ) : null}
         {data.activity.length === 0 ? (
           <p className="empty">No activity yet. Changes appear here as they happen.</p>
         ) : null}

@@ -1,6 +1,7 @@
 import { type ReactNode, useMemo, useState } from "react";
 import type { Decision, Note, Snapshot } from "../api.js";
 import { DecisionForm, NoteForm, parseLabels } from "../forms.js";
+import { usePaged } from "../hooks/use-paged.js";
 import { Markdown } from "../markdown.js";
 import type { ThreadActions } from "../thread.js";
 import { isThreadNote, Thread, threadOf } from "../thread.js";
@@ -44,6 +45,7 @@ export function Notes({
   const shown = notes
     .filter((n) => !tag || n.tags.includes(tag))
     .sort((a, b) => Number(b.pinned) - Number(a.pinned));
+  const paged = usePaged(shown);
   return (
     <div className="page">
       <h1>Knowledge</h1>
@@ -110,7 +112,7 @@ export function Notes({
         </fieldset>
       ) : null}
       <div className="list" style={{ marginTop: 16 }}>
-        {shown.map((n) => (
+        {paged.shown.map((n) => (
           <article key={n.id} id={n.id} tabIndex={-1} className="row">
             <h2 className="row-title">
               {n.pinned ? <span className="badge">Pinned</span> : null}
@@ -157,6 +159,11 @@ export function Notes({
             {threadOf(n) ? null : <Thread data={data} on={n.id} folded {...thread} />}
           </article>
         ))}
+        {paged.hidden > 0 ? (
+          <button type="button" onClick={paged.more}>
+            Show more ({paged.hidden} left)
+          </button>
+        ) : null}
         {notes.length === 0 ? (
           <p className="empty">No notes yet. Write one above, or an agent records one.</p>
         ) : null}
@@ -199,6 +206,7 @@ export function Decisions({
   const replacedBy = new Map(
     data.decisions.flatMap((d) => (d.supersedes ? [[d.supersedes, d.title] as const] : [])),
   );
+  const paged = usePaged(data.decisions);
   return (
     <div className="page">
       <div className="page-head">
@@ -209,7 +217,7 @@ export function Decisions({
       </div>
       {tabs}
       <div className="list">
-        {data.decisions.map((d) => (
+        {paged.shown.map((d) => (
           <article
             key={d.id}
             id={d.id}
@@ -253,6 +261,11 @@ export function Decisions({
             <Thread data={data} on={d.id} folded {...thread} />
           </article>
         ))}
+        {paged.hidden > 0 ? (
+          <button type="button" onClick={paged.more}>
+            Show more ({paged.hidden} left)
+          </button>
+        ) : null}
         {data.decisions.length === 0 ? (
           <p className="empty">
             No decisions yet. Record one when you choose between options, so people and agents know

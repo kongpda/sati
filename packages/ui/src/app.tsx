@@ -6,6 +6,7 @@ import { useCards } from "./hooks/use-cards.js";
 import { useKeys } from "./hooks/use-keys.js";
 import { useLive } from "./hooks/use-live.js";
 import { useMoves } from "./hooks/use-moves.js";
+import { REVEAL } from "./hooks/use-paged.js";
 import { useRoute } from "./hooks/use-route.js";
 import { useSelection } from "./hooks/use-selection.js";
 import { useToast } from "./hooks/use-toast.js";
@@ -108,9 +109,16 @@ export function App() {
       if (!go(next)) return;
       // After the page has rendered.
       requestAnimationFrame(() => {
-        const row = document.getElementById(id);
-        row?.scrollIntoView({ block: "center" });
-        row?.focus();
+        const focus = () => {
+          const row = document.getElementById(id);
+          row?.scrollIntoView({ block: "center" });
+          row?.focus();
+          return row !== null;
+        };
+        if (focus()) return;
+        // A long list draws a page at a time: ask it to draw this row, then try again.
+        window.dispatchEvent(new CustomEvent(REVEAL, { detail: id }));
+        requestAnimationFrame(focus);
       });
     },
     [go],

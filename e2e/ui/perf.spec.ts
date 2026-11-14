@@ -119,3 +119,36 @@ test("the filter narrows a 2,000-card board within 100 ms", async ({ page }) => 
   );
   expect(median).toBeLessThan(100);
 });
+
+// Review 4.3: a long Knowledge list draws a page of rows, not all of them, and a link to a row
+// past the page still opens it.
+test("150 notes draw one page of rows, and a link to a later note opens it", async ({ page }) => {
+  test.setTimeout(120_000);
+  const ids: string[] = [];
+  let next = 0;
+  const writer = async () => {
+    while (next < 150) {
+      const i = next++;
+      const note = await ui.api<{ id: string }>("POST", "/api/notes", {
+        title: `Long list note ${String(i).padStart(3, "0")}`,
+        body: "Seeded for the list budget.",
+      });
+      ids[i] = note.id;
+    }
+  };
+  await Promise.all(Array.from({ length: 6 }, writer));
+  await page.goto(ui.signIn);
+  await page.getByRole("link", { name: "Knowledge", exact: true }).click();
+  await expect(page.locator("article.row").first()).toBeVisible();
+  expect(await page.locator("article.row").count()).toBeLessThan(60);
+  await page.getByRole("button", { name: /^Show more/u }).click();
+  expect(await page.locator("article.row").count()).toBeGreaterThan(50);
+  // Search opens a note by its id, wherever it sits in the list.
+  await page.keyboard.press("Control+k");
+  await page.getByRole("combobox", { name: "Search" }).fill("Long list note 000");
+  await page
+    .getByRole("option", { name: /Long list note 000/u })
+    .first()
+    .click();
+  await expect(page.locator(`[id="${ids.at(0)}"]`)).toBeFocused();
+});

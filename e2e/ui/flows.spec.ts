@@ -2029,6 +2029,22 @@ test.describe("columns that fit", () => {
     await page.reload();
     await expect(column(page, "Backlog")).not.toHaveClass(/collapsed/u);
   });
+
+  // Review 15.6: one place that shows which columns are open and changes it.
+  test("the Columns menu shows which columns are open and opens or folds them", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await page.goto(own.signIn);
+    await page.getByText("Columns", { exact: true }).click();
+    const backlog = page.getByRole("checkbox", { name: "Backlog" });
+    await expect(backlog).not.toBeChecked();
+    await expect(page.getByRole("checkbox", { name: "To do" })).toBeChecked();
+    await backlog.check();
+    await expect(column(page, "Backlog")).not.toHaveClass(/collapsed/u);
+    await page.getByRole("checkbox", { name: "To do" }).uncheck();
+    await expect(column(page, "To do")).toHaveClass(/collapsed/u);
+  });
 });
 
 test("an old /activity link lands on the Log tab of Changes", async ({ page }) => {

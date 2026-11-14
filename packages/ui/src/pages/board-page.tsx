@@ -1,7 +1,8 @@
 import type { Dispatch, SetStateAction } from "react";
 import { COLUMNS, type Snapshot, type Task } from "../api.js";
-import { Board } from "../board.js";
+import { Board, setFolded } from "../board.js";
 import type { Toast } from "../hooks/use-moves.js";
+import { usePrefs } from "../prefs.js";
 
 type BoardProps = Parameters<typeof Board>[0];
 
@@ -71,6 +72,7 @@ export function BoardPage({
   refusal: BoardProps["refusal"];
   heldBy: BoardProps["heldBy"];
 }) {
+  const prefs = usePrefs();
   // One line: how many hold a live claim, not a pill for each.
   const workers = new Set(working.map((t) => t.claim?.actorId)).size;
   return (
@@ -117,6 +119,22 @@ export function BoardPage({
           </a>
         </div>
       ) : null}
+      <details className="columns-menu">
+        <summary>Columns</summary>
+        <fieldset>
+          <legend className="sr-only">Show these columns</legend>
+          {COLUMNS.map(([id, label]) => (
+            <label key={id}>
+              <input
+                type="checkbox"
+                checked={!prefs.collapsedColumns.includes(id)}
+                onChange={(e) => setFolded(id, !e.target.checked)}
+              />{" "}
+              {label}
+            </label>
+          ))}
+        </fieldset>
+      </details>
       <select
         className="mobile-status"
         value={column}

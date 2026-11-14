@@ -41,7 +41,7 @@ const useWide = () =>
     () => true,
   );
 
-function setFolded(status: string, folded: boolean): void {
+export function setFolded(status: string, folded: boolean): void {
   const rest = readPrefs().collapsedColumns.filter((s) => s !== status);
   writePrefs({ collapsedColumns: folded ? [...rest, status] : rest });
 }

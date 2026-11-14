@@ -152,3 +152,20 @@ test("150 notes draw one page of rows, and a link to a later note opens it", asy
     .click();
   await expect(page.locator(`[id="${ids.at(0)}"]`)).toBeFocused();
 });
+
+// Review 4.2: an unchanged snapshot costs a header, and a changed one is never answered 304.
+test("an unchanged snapshot answers 304", async ({ page }) => {
+  await page.goto(ui.signIn);
+  const first = await page.request.get(`${ui.origin}/api/snapshot`);
+  const tag = first.headers().etag;
+  expect(tag).toBeTruthy();
+  const again = await page.request.get(`${ui.origin}/api/snapshot`, {
+    headers: { "If-None-Match": tag ?? "" },
+  });
+  expect(again.status()).toBe(304);
+  await ui.api("POST", "/api/tasks", { title: "Makes the snapshot change" });
+  const changed = await page.request.get(`${ui.origin}/api/snapshot`, {
+    headers: { "If-None-Match": tag ?? "" },
+  });
+  expect(changed.status()).toBe(200);
+});

@@ -1056,7 +1056,7 @@ Added 2026-11-12 at the owner's request: the whole-project review found the mode
 - [x] WP15 part B Board redesign: navigation, layout, palette, keyboard help, empty states, appearance
 - [x] WP12 MCP surface
 - [x] WP10 Core: concepts
-- [ ] WP4 Board: performance
+- [x] WP4 Board: performance
 - [x] WP11 Core and store: performance
 - [x] WP13 Docs
 - [ ] WP14 Housekeeping

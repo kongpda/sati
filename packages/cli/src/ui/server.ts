@@ -434,7 +434,15 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
   );
 
   app.get("/api/openapi.json", (c) => c.json(openApi()));
-  app.get("/api/snapshot", async (c) => c.json(await snapshot(rt, version)));
+  // The tag is a hash of the body itself, not of the record version: file drift and card
+  // staleness are read from disk and can change while the version stays the same.
+  app.get("/api/snapshot", async (c) => {
+    const body = JSON.stringify(await snapshot(rt, version));
+    const tag = `"${createHash("sha1").update(body).digest("base64url")}"`;
+    const headers = { ETag: tag, "Cache-Control": "no-cache" };
+    if (c.req.header("if-none-match") === tag) return c.body(null, 304, headers);
+    return c.body(body, 200, { ...headers, "Content-Type": "application/json" });
+  });
 
   app.use("/api/*", async (c, next) => {
     await next();

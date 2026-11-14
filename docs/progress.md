@@ -2638,3 +2638,8 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 ### WP15 15.6 follow-up: Columns control
 
 - Built after all: a "Columns" menu above the board (a `<details>` with one checkbox per column, checked means open) that writes the same `collapsedColumns` pref as each column's own fold button, so the two always agree. Hidden under 700 px, where the Status select picks the column. Test: flows "the Columns menu shows which columns are open and opens or folds them".
+
+### WP4 4.2: snapshot ETag
+
+- Done after all, with one change from the review: the tag is a hash of the response body, not of the record version. File drift and card staleness are read from disk and can change while the version stays the same, so a version tag could answer 304 for a changed payload. `Cache-Control: no-cache` makes the browser revalidate and send `If-None-Match`; the server still builds the snapshot, so the saving is bytes sent, not server work.
+- Test: `perf.spec.ts` "an unchanged snapshot answers 304" (also checks a write makes the next answer 200).

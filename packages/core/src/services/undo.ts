@@ -7,6 +7,7 @@ import type { StorageReader } from "../ports/storage.js";
 import {
   assertTransition,
   isCompacted,
+  isDeleted,
   nowIso,
   type ServiceContext,
   updateWithLog,
@@ -149,7 +150,7 @@ export async function undoActivity(ctx: ServiceContext, activityId: string) {
       }
     }
     if (act.verb === "create") {
-      if (current.version !== 1 || current.deletedAt !== null) {
+      if (current.version !== 1 || isDeleted(current)) {
         throw new SatiError(
           "CONFLICT",
           "That create has been changed since, so it cannot be undone.",

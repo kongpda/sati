@@ -13,7 +13,7 @@ import type { SearchableEntity, SearchHit } from "../ports/storage.js";
 import { estimateTokens } from "./brief.js";
 import { staleness } from "./card.js";
 import { COMMENT_TAG } from "./comment.js";
-import { parseInput, type ServiceContext } from "./context.js";
+import { isDeleted, parseInput, type ServiceContext } from "./context.js";
 import { supersededBy } from "./decision.js";
 import { clip, inert, splitWords } from "./text.js";
 
@@ -170,7 +170,7 @@ export async function recall(ctx: ServiceContext, input: unknown): Promise<Recal
     }[] = [];
     for (const hit of hits) {
       const record = await r.get(hit.entity as (typeof KINDS)[number], hit.id);
-      if (!record || record.deletedAt !== null) continue;
+      if (!record || isDeleted(record)) continue;
       if (hit.entity === "task" && !OPEN.has((record as Task).status)) continue;
       // A record holding only one word of a longer question ("b", "per") is noise, not memory.
       if (!all.has(hit.id) && shared(words, textOf(record)) < needed(words)) continue;

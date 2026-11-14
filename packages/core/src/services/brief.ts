@@ -16,7 +16,14 @@ import type { StorageReader } from "../ports/storage.js";
 import { approvalStates, contextViews } from "./card.js";
 import { type ChangeItem, lastSession, readChanges } from "./changes.js";
 import { COMMENT_TAG, isThreadNote, mentionsOf } from "./comment.js";
-import { actorName, listAll, nowIso, parseInput, type ServiceContext } from "./context.js";
+import {
+  actorName,
+  isDeleted,
+  listAll,
+  nowIso,
+  parseInput,
+  type ServiceContext,
+} from "./context.js";
 import { handoffFor, handoffNext, unreadHandoff } from "./handoff.js";
 import { readSettings } from "./project.js";
 import { reviewDrift, sweepExpiredClaims } from "./task.js";
@@ -148,7 +155,7 @@ export async function buildBrief(
     const features = new Map<string, Feature>();
     for (const id of featureIds) {
       const f = await r.get("feature", id);
-      if (f && f.deletedAt === null) features.set(id, f);
+      if (f && !isDeleted(f)) features.set(id, f);
     }
     const decisions = short ? [] : await decisionsSince(r, ctx, since);
     const allFeatures = short ? [] : await listAll(r, ctx, "feature");

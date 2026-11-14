@@ -153,7 +153,7 @@ export async function mustGet<E extends StoredEntity>(
 ): Promise<EntityMap[E]> {
   const rec = await r.get(entity, id);
   const projectId = rec && "projectId" in rec ? rec.projectId : rec?.id;
-  if (!rec || rec.deletedAt !== null || projectId !== ctx.projectId) {
+  if (!rec || isDeleted(rec) || projectId !== ctx.projectId) {
     throw new SatiError("NOT_FOUND", `No ${entity} with id ${id}.`, {
       hint: `List them with \`${CLI_NAME} ${entity} list\`.`,
     });
@@ -363,3 +363,7 @@ export function assertTransition<S extends string>(
 }
 
 export const ExpectedVersion = { expectedVersion: z.number().int().min(1).optional() };
+
+/** A record that was deleted: the plain `deletedAt` test, in one place. */
+export const isDeleted = (record: { deletedAt: string | null }): boolean =>
+  record.deletedAt !== null;

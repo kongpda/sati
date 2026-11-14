@@ -27,6 +27,7 @@ import {
   baseFields,
   ExpectedVersion,
   insertWithLog,
+  isDeleted,
   listAll,
   mustGet,
   nowIso,
@@ -468,7 +469,7 @@ async function applyClaim(
     for (const id of before.dependsOn) {
       const dep = await w.get("task", id);
       const finished = dep?.status === "done" || dep?.status === "cancelled";
-      if (!dep || (dep.deletedAt === null && !finished)) waiting.push(shortHandle(id));
+      if (!dep || (!isDeleted(dep) && !finished)) waiting.push(shortHandle(id));
     }
     if (waiting.length > 0) {
       throw new SatiError(
@@ -754,7 +755,7 @@ export async function sweepExpiredClaims(
   const released = await writeTx(ctx, async (w) => {
     for (const { id } of staleLocks) {
       const lock = await w.get("lock", id);
-      if (!lock || lock.deletedAt !== null || lock.leaseUntil > now) continue;
+      if (!lock || isDeleted(lock) || lock.leaseUntil > now) continue;
       await updateWithLog(w, ctx, "lock", lock, { deletedAt: now }, { verb: "release" });
     }
     const released: Task[] = [];

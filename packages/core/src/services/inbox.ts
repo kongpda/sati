@@ -4,7 +4,7 @@ import { parseHandle, parseId } from "../domain/ids.js";
 import { CLOSED, inboxCount, inboxOf, mentionsSince, waitingOn } from "../domain/inbox.js";
 import type { Actor, Note, Task } from "../domain/schemas.js";
 import { TASK_STATUSES } from "../domain/status.js";
-import { listAll, parseInput, type ServiceContext, UNKNOWN_ACTOR } from "./context.js";
+import { isDeleted, listAll, parseInput, type ServiceContext, UNKNOWN_ACTOR } from "./context.js";
 import { resolveId } from "./query.js";
 
 export { inboxCount, inboxOf, waitingOn, weekEnd } from "../domain/inbox.js";
@@ -130,7 +130,7 @@ export async function inbox(ctx: ServiceContext, input: unknown = {}): Promise<I
     for (const on of new Set(lists.mentions.map((n) => n.links[0] ?? ""))) {
       const entity = COMMENTED[parseId(on)?.prefix ?? ""];
       const record = entity ? await r.get(entity, on) : undefined;
-      if (record && record.projectId === ctx.projectId && record.deletedAt === null) {
+      if (record && record.projectId === ctx.projectId && !isDeleted(record)) {
         titles.set(on, record.title);
       }
     }

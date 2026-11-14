@@ -1,7 +1,14 @@
 import { SatiError } from "../domain/errors.js";
 import type { EntityMap, StoredEntity } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
-import { actorName, nowIso, type ServiceContext, updateWithLog, writeTx } from "./context.js";
+import {
+  actorName,
+  isDeleted,
+  nowIso,
+  type ServiceContext,
+  updateWithLog,
+  writeTx,
+} from "./context.js";
 import { releaseTaskLocks } from "./lock.js";
 
 /**
@@ -28,7 +35,7 @@ export async function deleteRecord(
   return writeTx(ctx, async (w) => {
     const rec = await w.get(entity, id);
     const projectId = rec && "projectId" in rec ? rec.projectId : undefined;
-    if (!rec || projectId !== ctx.projectId || rec.deletedAt !== null) {
+    if (!rec || projectId !== ctx.projectId || isDeleted(rec)) {
       throw new SatiError("NOT_FOUND", `No ${entity} with id ${id}.`, {
         hint: `Run \`${CLI_NAME} ${entity} list\` to see ids.`,
       });
@@ -72,7 +79,7 @@ export async function restoreRecord(
     if (!rec || projectId !== ctx.projectId) {
       throw new SatiError("NOT_FOUND", `No ${entity} with id ${id}.`);
     }
-    if (rec.deletedAt === null) {
+    if (!isDeleted(rec)) {
       throw new SatiError("VALIDATION", `${entity} ${id} is not deleted.`);
     }
     return updateWithLog(w, ctx, entity, rec, { deletedAt: null }, { verb: "update" });

@@ -6,7 +6,7 @@ import { ActorId, type Feature, type Milestone, type Note, type Task } from "../
 import type { FeatureStatus } from "../domain/status.js";
 import type { StorageReader } from "../ports/storage.js";
 import { COMMENT_TAG } from "./comment.js";
-import { listAll, nowIso, parseInput, type ServiceContext } from "./context.js";
+import { isDeleted, listAll, nowIso, parseInput, type ServiceContext } from "./context.js";
 import { HANDOFF_TAG } from "./handoff.js";
 import { resolveId } from "./query.js";
 import { clip, plural } from "./text.js";
@@ -172,7 +172,7 @@ export async function readChanges(
   for (const id of new Set(named)) {
     if (id === null || featureById.has(id)) continue;
     const f = await r.get("feature", id);
-    if (f && f.deletedAt === null) featureById.set(id, f);
+    if (f && !isDeleted(f)) featureById.set(id, f);
   }
   const milestoneOf = (t: Pick<Task, "milestoneId" | "featureId">) =>
     t.milestoneId ?? (t.featureId ? (featureById.get(t.featureId)?.milestoneId ?? null) : null);

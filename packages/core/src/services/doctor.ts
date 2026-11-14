@@ -5,6 +5,7 @@ import type { ContextEntry, Task } from "../domain/schemas.js";
 import { CLI_NAME } from "../name.js";
 import type { StorageReader } from "../ports/storage.js";
 import {
+  isDeleted,
   listAll,
   mustGet,
   nowIso,
@@ -57,7 +58,7 @@ export async function linkProblems(
     let ok = known.get(key);
     if (ok === undefined) {
       const rec = await r.get(entity, id);
-      ok = rec !== undefined && rec.deletedAt === null;
+      ok = rec !== undefined && !isDeleted(rec);
       known.set(key, ok);
     }
     return ok;
@@ -65,7 +66,7 @@ export async function linkProblems(
   const out: string[] = [];
   const cycles = new Set<string>();
   const check = ids ? ids.flatMap((id) => tasks.get(id) ?? []) : (all ?? []);
-  for (const t of check.filter((x: Task) => x.deletedAt === null)) {
+  for (const t of check.filter((x: Task) => !isDeleted(x))) {
     const h = shortHandle(t.id);
     if (t.featureId && !(await live("feature", t.featureId))) {
       out.push(`${h} links to feature ${shortHandle(t.featureId)}, which is missing or deleted.`);
@@ -82,7 +83,7 @@ export async function linkProblems(
     // Only waiting tasks block: a cycle through done, cancelled or deleted work is harmless.
     const blocks = (id: string) => {
       const dep = tasks.get(id);
-      const waits = dep && dep.deletedAt === null && !["done", "cancelled"].includes(dep.status);
+      const waits = dep && !isDeleted(dep) && !["done", "cancelled"].includes(dep.status);
       return waits ? dep.dependsOn : [];
     };
     const cycle = blocks(t.id).length ? findDependencyCycle(t.id, t.dependsOn, blocks) : undefined;
@@ -129,7 +130,7 @@ export async function doctorChecks(ctx: ServiceContext): Promise<DoctorCheck[]> 
   const data = await ctx.store.read(async (r) => {
     // One read of every task: the claims, review and link checks each used to read them again.
     const all = await listAll(r, ctx, "task", { includeDeleted: true });
-    const live = all.filter((t) => t.deletedAt === null);
+    const live = all.filter((t) => !isDeleted(t));
     const notes = await listAll(r, ctx, "note");
     const cards = await listAll(r, ctx, "context");
     // The merge driver can flag any synced record, not only a task.

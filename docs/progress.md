@@ -2643,3 +2643,8 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 
 - Done after all, with one change from the review: the tag is a hash of the response body, not of the record version. File drift and card staleness are read from disk and can change while the version stays the same, so a version tag could answer 304 for a changed payload. `Cache-Control: no-cache` makes the browser revalidate and send `If-None-Match`; the server still builds the snapshot, so the saving is bytes sent, not server work.
 - Test: `perf.spec.ts` "an unchanged snapshot answers 304" (also checks a write makes the next answer 200).
+
+### WP9 9.8: isDeleted
+
+- `isDeleted(record)` is in `packages/core/src/services/context.ts` and replaces the plain `x.deletedAt === null` and `!== null` tests in doctor, records, brief, changes, recall, plan, task, inbox, context and undo. Left alone on purpose: truthy tests (`feature?.deletedAt ? ...`, `similar.ts`), the `== null` in `domain/inbox.ts` (a different layer, takes loose records), SQL `isNull` in the store, and sync's merge, which compares values and not only presence. Behaviour is unchanged; the existing suite is the proof. No changeset (internal).
+- Done by the main agent after confirming no task or uncommitted change of the other agent touched these files.

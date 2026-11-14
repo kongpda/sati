@@ -5,7 +5,7 @@ import { LIMITS } from "../domain/schemas.js";
 import { refuseSecrets } from "../domain/secrets.js";
 import { CLI_NAME } from "../name.js";
 import type { StorageReader, StorageWriter } from "../ports/storage.js";
-import { listAll, parseInput, type ServiceContext, writeTx } from "./context.js";
+import { isDeleted, listAll, parseInput, type ServiceContext, writeTx } from "./context.js";
 import { CreateMilestoneInput, createMilestoneIn } from "./milestone.js";
 import { createTaskIn } from "./task.js";
 
@@ -108,7 +108,7 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
     // Open milestones only: a task must not land in a deleted or cancelled one.
     const milestoneIds = new Map(
       existing.milestones
-        .filter((m) => m.deletedAt === null && m.status !== "cancelled")
+        .filter((m) => !isDeleted(m) && m.status !== "cancelled")
         .map((m) => [m.title, m.id]),
     );
     const cancelled = new Set(
@@ -121,7 +121,7 @@ export async function importPlan(ctx: ServiceContext, input: unknown): Promise<P
     // Computed once; each created milestone takes the next order (see createMilestoneIn).
     let nextOrder =
       existing.milestones
-        .filter((m) => m.deletedAt === null)
+        .filter((m) => !isDeleted(m))
         .reduce((max, m) => Math.max(max, m.order), -1) + 1;
     const headings = [...new Set(items.map((i) => i.heading))];
     for (const title of headings) {

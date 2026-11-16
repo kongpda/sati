@@ -1,0 +1,25 @@
+{
+  "acknowledged": {
+    "at": "2026-11-16T04:39:48.467Z",
+    "by": "actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "body": "## Done so far\nThe CLI bundles @sati/*. The installed command is ~/.local/lib/sati and no longer uses this repo's dist. Test, changeset and progress note are written. Not committed.\n\n## Next step\nWhen the machine has free memory, run pnpm build && pnpm lint && pnpm typecheck && pnpm knip && pnpm test from the repo root, then commit the bundle fix and the PLAN.md WP9 tick, and push to main.\n\n## Open questions\nNone.\n\n## Files in flight\n- packages/cli/tsdown.config.ts\n- packages/cli/test/version.test.ts\n- .changeset/cli-bundle-name.md\n- docs/progress.md\n- PLAN.md",
+  "createdAt": "2026-11-14T17:59:37.094Z",
+  "createdBy": "actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+  "handoffFromName": "kongpda@sati",
+  "id": "note_01M7DKDZW7F0J747GMMS0S2547",
+  "links": [
+    "tsk_01M7DKC6M2PSSCCMJ1PPFSYH2B"
+  ],
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-14T17:59:37.099Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "acknowledged": "2026-11-16T04:39:48.467Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "tags": [
+    "handoff"
+  ],
+  "title": "Handoff CLI bundle includes the product name",
+  "updatedAt": "2026-11-16T04:39:48.467Z",
+  "version": 2
+}

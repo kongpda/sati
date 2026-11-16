@@ -1,0 +1,37 @@
+{
+  "body": "The built CLI imported @sati/core/name at runtime, so sati died in every project when packages/core/dist was missing. Bundle @sati/* and prove the built files import none of them.",
+  "branch": "main",
+  "completion": {
+    "branch": "main",
+    "commit": "19b218c309f7abd7ceee4e18a305486d0f728356",
+    "completedAt": "2026-11-16T04:41:33.332Z",
+    "completedBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "filesTouched": [
+      "packages/cli/tsdown.config.ts",
+      "packages/cli/test/version.test.ts",
+      ".changeset/cli-bundle-name.md",
+      "docs/progress.md"
+    ],
+    "releaseNote": "The installed sati command no longer fails with \"Cannot find module\" when the workspace build output is missing.",
+    "summary": "The CLI build now inlines @sati/* (deps.alwaysBundle in tsdown.config.ts), so the installed sati command no longer imports packages/core/dist at runtime and keeps working when the workspace build output is cleaned. Test: \"the built CLI does not import workspace packages at runtime\" in packages/cli/test/version.test.ts. Gate green (lint, typecheck, knip, test). Pushed as 9334c42."
+  },
+  "createdAt": "2026-11-14T17:58:38.465Z",
+  "createdBy": "actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+  "effort": "standard",
+  "id": "tsk_01M7DKC6M2PSSCCMJ1PPFSYH2B",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-14T17:58:38.471Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "branch": "2026-11-14T17:58:45.114Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+    "claim": "2026-11-16T04:41:33.333Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "completion": "2026-11-16T04:41:33.333Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "status": "2026-11-16T04:41:33.333Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "worktree": "2026-11-14T17:58:45.114Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT"
+  },
+  "status": "done",
+  "title": "CLI bundle includes the product name",
+  "updatedAt": "2026-11-16T04:41:33.333Z",
+  "version": 5,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

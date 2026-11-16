@@ -1,0 +1,27 @@
+{
+  "contentHash": "a776c6c98e2fec3023b80f27069375dadfe842b252b2eb102c47033656cc5750",
+  "createdAt": "2026-11-14T09:00:22.664Z",
+  "createdBy": "actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+  "facts": [
+    "WP9 package box is ticked.",
+    "WP14 Housekeeping stays unticked.",
+    "Phase 6 hosted mode is deferred.",
+    "Open decisions at the end are licence, snapshot branches, lock mode and hosted pricing."
+  ],
+  "gitCommit": "32419048f0022681098296334e3daf3fc3c0efc3",
+  "id": "ctx_01M7CMJKR82T30G0S99K207RSV",
+  "path": "PLAN.md",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "sourceSeen": "2026-11-14T16:00:07Z",
+  "sourceTokens": 4000,
+  "stamps": {
+    "*": "2026-11-14T09:00:22.668Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT"
+  },
+  "summary": "Phase 11 package list. WP9 Core correctness is ticked; WP14 Housekeeping stays open because 14.1-14.3, 14.6 and 14.7 are owner-only.",
+  "tags": [
+    "plan",
+    "phase-11"
+  ],
+  "updatedAt": "2026-11-14T09:00:22.664Z",
+  "version": 1
+}

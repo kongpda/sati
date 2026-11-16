@@ -2653,3 +2653,9 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 ## 2026-11-15 — CLI starts without the workspace build
 
 `packages/cli/dist` imported `@sati/core/name` at runtime. That file lives in `packages/core/dist`, which is gitignored, so a clean of the build output made every `sati` command on this machine throw `ERR_MODULE_NOT_FOUND` before it opened a database. Agents reported that as sati being down. `deps.alwaysBundle` now inlines `@sati/*`. The test is "the built CLI does not import workspace packages at runtime" in `packages/cli/test/version.test.ts`. No server is involved: a local database is opened by the command itself.
+
+## 2026-11-16 — 14.2 and 14.6 closed
+
+- Both are owner-only. The owner said "do all" in another agent thread on 2026-11-15, and that agent ran `sati projects forget` on the stale entries and removed the leftover `sati-*` folders from `$TMPDIR`. Checked on 2026-11-16: `sati projects` lists only kory, saart and proofr, and `$TMPDIR` has no `sati-*` folders.
+- `.sati/context/` holds context cards written by `sati sync`. `context` is one of `SNAPSHOT_DIRS` in `packages/core/src/services/sync.ts`, so these files are committed like the other snapshot dirs.
+- Still with the owner: 14.1 (unread tasks in review), 14.3 (the new name), 14.7 (publish, screen-reader pass, three-project trial, required checks).

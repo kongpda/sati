@@ -1,0 +1,25 @@
+{
+  "contentHash": "502ef0746aee2e0f2c81f434f4b04f5deee4175fff7df0758ebab88606afcf4b",
+  "createdAt": "2026-11-14T09:00:22.997Z",
+  "createdBy": "actr_01M6H685BMQWVNDQ0GEZGBA8VT",
+  "facts": [
+    "9.8 isDeleted landed in 3241904 without ticking PLAN.md.",
+    "The package box is ticked in a follow-up because every WP9 review item is done."
+  ],
+  "gitCommit": "32419048f0022681098296334e3daf3fc3c0efc3",
+  "id": "ctx_01M7CMJM2NT1FXQZA6E5XJP2DR",
+  "path": "docs/progress.md",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "sourceSeen": "2026-11-14T16:00:07Z",
+  "sourceTokens": 8000,
+  "stamps": {
+    "*": "2026-11-14T09:00:22.998Z#000000#actr_01M6H685BMQWVNDQ0GEZGBA8VT"
+  },
+  "summary": "Gate log. The 2026-11-13 WP9 9.8 note now says the PLAN package box was ticked after commit 3241904 left it open.",
+  "tags": [
+    "progress",
+    "phase-11"
+  ],
+  "updatedAt": "2026-11-14T09:00:22.997Z",
+  "version": 1
+}

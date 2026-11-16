@@ -54,7 +54,13 @@ export function afterWrites(
         await fn([...batch.values()]);
       } catch (err) {
         for (const [key, rec] of batch) if (!pending.has(key)) pending.set(key, rec);
-        onError(err);
+        // This run is started by a timer, so nothing awaits it: a throwing handler would be an
+        // unhandled rejection that ends the process.
+        try {
+          onError(err);
+        } catch {
+          // The records are queued again; the next run reports the error once more.
+        }
       }
     })();
     running = job;

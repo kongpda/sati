@@ -345,6 +345,24 @@ describe("afterWrites", () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
+  // Review 2026-11-16: an error handler that throws (a log write on a full disk) made the
+  // debounced run reject with nobody to catch it, an unhandled rejection that ends the process.
+  it("survives an error handler that throws", async () => {
+    const a = await clone();
+    const synced = afterWrites(
+      a.store,
+      0,
+      async () => {
+        throw new Error("export failed");
+      },
+      () => {
+        throw new Error("log failed");
+      },
+    );
+    await createTask({ ...a, store: synced.store }, { title: "1" });
+    await expect(synced.flush()).resolves.toBeUndefined();
+  });
+
   // After-write exports write only these records, so a rolled-back write must not appear, and
   // a failed export must not lose the records it was given.
   it("passes the records of committed writes, again after a failed run", async () => {

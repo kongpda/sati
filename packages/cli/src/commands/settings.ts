@@ -1,4 +1,11 @@
-import { CLI_NAME, readSettings, renameProject, updateSettings } from "@sati/core";
+import {
+  CLI_NAME,
+  parseInput,
+  readSettings,
+  renameProject,
+  UpdateSettingsInput,
+  updateSettings,
+} from "@sati/core";
 import { defineCommand } from "citty";
 import { json } from "../args.js";
 import { readProjects, rememberProject } from "../projects.js";
@@ -32,6 +39,13 @@ export default defineCommand({
     execute(
       args.json,
       async ({ ctx, project, location }) => {
+        // Checked before the rename, so a bad flag changes nothing at all.
+        const patch = parseInput(UpdateSettingsInput, {
+          review: args.review,
+          autoContinue: args["auto-continue"],
+          leaseMinutes: int(args.lease, "lease"),
+          kind: args.kind,
+        });
         const named =
           args.name === undefined
             ? project
@@ -45,12 +59,7 @@ export default defineCommand({
           args.lease !== undefined ||
           args.kind !== undefined;
         if (!changing) return { name: named.name, ...readSettings(named.settings) };
-        const updated = await updateSettings(ctx, {
-          review: args.review,
-          autoContinue: args["auto-continue"],
-          leaseMinutes: int(args.lease, "lease"),
-          kind: args.kind,
-        });
+        const updated = await updateSettings(ctx, patch);
         const settings = readSettings(updated.settings);
         writeConfigKind(location.root, settings.kind);
         return { name: named.name, ...settings };

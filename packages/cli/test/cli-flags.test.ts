@@ -605,6 +605,15 @@ describe("small", () => {
     expect(satiJson<{ name: string }>(dir, "settings").data.name).toBe("New name");
   });
 
+  // Review 2026-11-16: the rename was written before the other flags were checked, so a command
+  // that failed on a bad --review had still renamed the project.
+  it("settings refuses a bad flag before it renames anything", async () => {
+    const dir = await tempRepo({ init: true });
+    const bad = run(dir, ["settings", "--name", "Half done", "--review", "bogus"]);
+    expect(bad.code).not.toBe(0);
+    expect(satiJson<{ name: string }>(dir, "settings").data.name).toBe("Demo");
+  });
+
   // Why: about 1,400 temp repos from test runs had piled up in the owner's real registry.
   it("test runs register projects outside the real home", async () => {
     const registry = process.env.SATI_REGISTRY ?? "";

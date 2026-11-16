@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { type MutableRefObject, useEffect, useRef } from "react";
 import type { Snapshot } from "../api.js";
+import { coalesce } from "../coalesce.js";
 
 /**
  * Keeps the board current: the server's event stream refetches the snapshot, and the tasks that
@@ -26,7 +27,10 @@ export function useLive(
       // one (401): the link this tab signed in with is gone.
       if (source.readyState === EventSource.CLOSED) setExpired(true);
     };
-    source.onmessage = () => {
+    // Agents writing in a burst send many events; each refetch makes the server rebuild the
+    // whole snapshot. A lone event still refetches at once, a burst at most every 300 ms, which
+    // keeps live updates under the 500 ms the plan asks for.
+    const refresh = coalesce(() => {
       // A move in flight invalidates the snapshot itself when it settles.
       if (moving.current > 0) return;
       const previous = client.getQueryData<Snapshot>(["snapshot"]);
@@ -42,9 +46,11 @@ export function useLive(
         window.clearTimeout(freshTimer.current);
         freshTimer.current = window.setTimeout(() => setFresh(new Set()), 1600);
       });
-    };
+    }, 300);
+    source.onmessage = refresh;
     return () => {
       source.close();
+      refresh.cancel();
       window.clearTimeout(freshTimer.current);
     };
   }, [client, moving, setOffline, setExpired, setFresh]);

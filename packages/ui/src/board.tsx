@@ -22,6 +22,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { type Actor, COLUMNS, dueLabel, type Feature, type Task, waitingOn } from "./api.js";
+import { CLEARS_DEPENDENTS } from "./moves.js";
 import { Avatar } from "./people.js";
 import { readPrefs, usePrefs, writePrefs } from "./prefs.js";
 import { Ago } from "./time.js";
@@ -90,14 +91,8 @@ export const Board = memo(function Board({
   const prefs = usePrefs();
   const folded = new Set(wide ? prefs.collapsedColumns : []);
   // From every task, not only the filtered ones: a hidden task can still hold another one up.
-  // Work in review no longer holds anything up (ADR 0010).
   const unfinished = useMemo(
-    () =>
-      new Set(
-        allTasks
-          .filter((t) => !["review", "done", "cancelled"].includes(t.status))
-          .map((t) => t.id),
-      ),
+    () => new Set(allTasks.filter((t) => !CLEARS_DEPENDENTS.includes(t.status)).map((t) => t.id)),
     [allTasks],
   );
   const waiting = useCallback(

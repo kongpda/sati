@@ -7,6 +7,12 @@ import { statusWord } from "./words.js";
  * board from offering a move, a save or a button that the server is certain to refuse.
  */
 
+/**
+ * A dependency in these states no longer holds a task up (ADR 0010); mirrors CLEARS_DEPENDENTS
+ * in core (test/constants.test.ts checks it).
+ */
+export const CLEARS_DEPENDENTS: readonly string[] = ["review", "done", "cancelled"];
+
 /** Where a task may go next; mirrors TASK_TRANSITIONS in core (test/constants.test.ts checks it). */
 export const TASK_NEXT: Record<string, string[]> = {
   backlog: ["todo", "blocked", "cancelled"],

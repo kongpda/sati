@@ -219,24 +219,28 @@ describe("exportSnapshot / importSnapshot", () => {
     expect(result.problems[0]).toContain(`tasks/${t.id} (1).json`);
   });
 
-  // Skips as root, who can read a file with no read permission; CI runs as a normal user.
   // WHY: a file the scan lists but cannot open (permissions, removed mid-scan) must fail as a
   // snapshot error that `skipBad` can skip, and must not be blamed on its JSON.
-  it.skipIf(process.getuid?.() === 0)("reports a record file it cannot read as unreadable", () => {
-    const dir = tempDir();
-    mkdirSync(join(dir, "tasks"));
-    writeFileSync(join(dir, "tasks/tsk_x.json"), '{ "id": "tsk_x" }\n');
-    chmodSync(join(dir, "tasks/tsk_x.json"), 0o000);
-    try {
-      expect(() => readSnapshot(dir)).toThrow(/tsk_x\.json: cannot be read/);
-      // A folder that can be listed but not searched: lstat itself fails.
-      chmodSync(join(dir, "tasks/tsk_x.json"), 0o644);
-      chmodSync(join(dir, "tasks"), 0o444);
-      expect(() => readSnapshot(dir)).toThrow(/tsk_x\.json: cannot be read/);
-    } finally {
-      chmodSync(join(dir, "tasks"), 0o755);
-    }
-  });
+  // Skipped as root, which reads any file, and on Windows, where chmod cannot take away read
+  // access. The CI cells on Linux and macOS run it.
+  it.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
+    "reports a record file it cannot read as unreadable",
+    () => {
+      const dir = tempDir();
+      mkdirSync(join(dir, "tasks"));
+      writeFileSync(join(dir, "tasks/tsk_x.json"), '{ "id": "tsk_x" }\n');
+      chmodSync(join(dir, "tasks/tsk_x.json"), 0o000);
+      try {
+        expect(() => readSnapshot(dir)).toThrow(/tsk_x\.json: cannot be read/);
+        // A folder that can be listed but not searched: lstat itself fails.
+        chmodSync(join(dir, "tasks/tsk_x.json"), 0o644);
+        chmodSync(join(dir, "tasks"), 0o444);
+        expect(() => readSnapshot(dir)).toThrow(/tsk_x\.json: cannot be read/);
+      } finally {
+        chmodSync(join(dir, "tasks"), 0o755);
+      }
+    },
+  );
 
   // WHY: .sati/ is committed by teammates; a symlink there must not pull in files outside the repo
   // or echo their content in an error.

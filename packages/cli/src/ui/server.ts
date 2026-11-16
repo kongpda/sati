@@ -592,21 +592,31 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
     // means the browser's copy is current, so it is not told to refetch the whole board.
     const resume = ActivityCursor.safeParse(c.req.header("last-event-id"));
     let closed = false;
+    const stop = () => {
+      closed = true;
+      if (timer) clearInterval(timer);
+      if (beat) clearInterval(beat);
+    };
     const stream = new ReadableStream({
       async start(controller) {
-        const send = (cursor: string | undefined) => {
-          // A git read can finish after the browser left; the stream is closed by then.
+        // A write to a stream that is already gone throws; inside a timer that would be an
+        // uncaught exception, so a failed write ends this stream instead.
+        const write = (text: string) => {
           if (closed) return;
+          try {
+            controller.enqueue(new TextEncoder().encode(text));
+          } catch {
+            stop();
+          }
+        };
+        // A git read can finish after the browser left; `write` drops it then.
+        const send = (cursor: string | undefined) => {
           const id = cursor ? `id: ${cursor}\n` : "";
-          controller.enqueue(
-            new TextEncoder().encode(`${id}data: ${JSON.stringify({ version: last })}\n\n`),
-          );
+          write(`${id}data: ${JSON.stringify({ version: last })}\n\n`);
         };
         // A comment line every 25 s: a proxy or a sleeping laptop drops a silent stream, and the
         // write is also how the server learns that the browser has gone.
-        beat = setInterval(() => {
-          if (!closed) controller.enqueue(new TextEncoder().encode(": ping\n\n"));
-        }, 25_000);
+        beat = setInterval(() => write(": ping\n\n"), 25_000);
         let cursor: string | undefined;
         let missed = true;
         if (resume.success) {
@@ -620,7 +630,14 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
           }
         }
         if (closed) return;
-        cursor ??= await tailCursor(rt);
+        try {
+          cursor ??= await tailCursor(rt);
+        } catch {
+          // The database could not be read. End the stream; EventSource reconnects by itself.
+          stop();
+          controller.close();
+          return;
+        }
         // The browser can leave while a read is pending; cancel() has run, so no timer may start.
         if (closed) return;
         if (missed) send(cursor);
@@ -642,9 +659,7 @@ export function createUiApp(rt: UiRuntime, token: string, uiDir: string): Hono {
         }, 250);
       },
       cancel() {
-        closed = true;
-        if (timer) clearInterval(timer);
-        if (beat) clearInterval(beat);
+        stop();
       },
     });
     return new Response(stream, {

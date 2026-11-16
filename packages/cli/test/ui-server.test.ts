@@ -12,7 +12,7 @@ import {
   systemClock,
 } from "@sati/core";
 import { SqliteStore } from "@sati/store-sqlite";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { watchedSha256 } from "../src/file-hash.js";
 import { createUiApp, listenUi, sessionToken } from "../src/ui/server.js";
 
@@ -243,6 +243,26 @@ describe("ui server", () => {
     const second = await next();
     await reader.cancel();
     expect(second).not.toBe(first);
+  });
+
+  // Why: a failed first read on a new stream left the 25 s heartbeat running. Its write to the
+  // dead stream threw inside setInterval, an uncaught exception that could stop `sati ui`.
+  it("stops the heartbeat when the event stream fails to start", async () => {
+    const failing = Object.assign(Object.create(store) as typeof store, {
+      read: () => Promise.reject(new Error("database is locked")),
+    });
+    const broken = createUiApp({ ctx: { ...ctx, store: failing }, root: dir }, token, dir);
+    const cookie = cookieOf(await broken.request(`http://127.0.0.1/session?token=${token}`));
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      const events = await broken.request("http://127.0.0.1/events", { headers: { cookie } });
+      const reader = events.body?.getReader();
+      if (!reader) throw new Error("no event stream");
+      await reader.read().catch(() => undefined);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   // Why: the snapshot version left out this server's own writes while the event stream counted

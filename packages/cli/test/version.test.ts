@@ -1,5 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,6 +35,16 @@ const git = (cwd: string, ...args: string[]) =>
   }).trim();
 
 describe("sati --version", () => {
+  it("the built CLI does not import workspace packages at runtime", () => {
+    const dist = fileURLToPath(new URL("../dist", import.meta.url));
+    const files = readdirSync(dist).filter((name) => name.endsWith(".mjs"));
+    expect(files.length).toBeGreaterThan(0);
+    const leaked = files.filter((name) =>
+      readFileSync(join(dist, name), "utf8").includes("@sati/"),
+    );
+    expect(leaked).toEqual([]);
+  });
+
   // Phase 0 gate: the published binary must start and report the package version. Every build
   // of one version said the same number, so the commit and its date follow in brackets.
   it("prints the name, the package version, and the commit and date the bundle was built from", () => {

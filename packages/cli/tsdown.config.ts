@@ -90,6 +90,9 @@ export default defineConfig({
   entry: ["src/index.ts"],
   format: "esm",
   platform: "node",
+  // `@sati/*` is a devDependency, but the `./name` subpath was left as a runtime
+  // import. The installed `sati` then dies when this repo's dist is cleaned.
+  deps: { alwaysBundle: [/^@sati\//] },
   banner: { js: "#!/usr/bin/env node" },
   // A binary, not a library: no type declarations to ship.
   dts: false,

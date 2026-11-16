@@ -2648,3 +2648,8 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 
 - `isDeleted(record)` is in `packages/core/src/services/context.ts` and replaces the plain `x.deletedAt === null` and `!== null` tests in doctor, records, brief, changes, recall, plan, task, inbox, context and undo. Left alone on purpose: truthy tests (`feature?.deletedAt ? ...`, `similar.ts`), the `== null` in `domain/inbox.ts` (a different layer, takes loose records), SQL `isNull` in the store, and sync's merge, which compares values and not only presence. Behaviour is unchanged; the existing suite is the proof. No changeset (internal).
 - Done by the main agent after confirming no task or uncommitted change of the other agent touched these files.
+- The PLAN.md package box stayed open in that commit. Every WP9 item in `docs/review-2026-11-12.md` is ticked (9.1–9.8, 9.10, 9.11; there is no 9.9), so the package box is ticked now.
+
+## 2026-11-15 — CLI starts without the workspace build
+
+`packages/cli/dist` imported `@sati/core/name` at runtime. That file lives in `packages/core/dist`, which is gitignored, so a clean of the build output made every `sati` command on this machine throw `ERR_MODULE_NOT_FOUND` before it opened a database. Agents reported that as sati being down. `deps.alwaysBundle` now inlines `@sati/*`. The test is "the built CLI does not import workspace packages at runtime" in `packages/cli/test/version.test.ts`. No server is involved: a local database is opened by the command itself.

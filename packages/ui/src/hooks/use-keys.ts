@@ -24,6 +24,7 @@ export const SHORTCUTS: readonly { keys: string; does: string }[] = [
   { keys: "j and k", does: "Next and previous card on the Board" },
   { keys: "c", does: "New task, on the Board and My work" },
   { keys: "x", does: "Select or unselect the open card" },
+  { keys: "u", does: "Undo, while a message offers it" },
   { keys: "?", does: "Show this list" },
   { keys: "Esc", does: "Close what is open" },
 ];
@@ -44,6 +45,7 @@ export function useKeys({
   task,
   visible,
   cursor,
+  undo,
 }: {
   palette: boolean;
   closePalette: () => void;
@@ -58,6 +60,8 @@ export function useKeys({
   visible: MutableRefObject<Task[]>;
   /** The task j/k steps from: the open one, or the last one opened. */
   cursor: MutableRefObject<string | null>;
+  /** The Undo the toast offers, or null. */
+  undo: (() => void) | null;
 }) {
   useEffect(() => {
     let goAt = 0;
@@ -93,6 +97,12 @@ export function useKeys({
       if (event.key === "?") {
         event.preventDefault();
         setHelp(true);
+        return;
+      }
+      // Like `?`, from anywhere that is not typing: the toast sits at the end of the page.
+      if (event.key === "u" && undo) {
+        event.preventDefault();
+        undo();
         return;
       }
       if (goAt && Date.now() - goAt < GO_WAIT_MS) {
@@ -158,6 +168,7 @@ export function useKeys({
     setPalette,
     setSelected,
     task,
+    undo,
     visible,
   ]);
 }

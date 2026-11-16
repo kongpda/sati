@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, type Deletable, phoneColumn, type Task } from "./api.js";
 import { NewTask, SendBack } from "./forms.js";
 import { useCards } from "./hooks/use-cards.js";
@@ -55,10 +55,16 @@ export function App() {
     window.matchMedia(PHONE).matches ? null : "all",
   );
   const column = picked ?? phoneColumn(query.data?.tasks ?? []);
+  // The pick is made once, when the tasks first arrive. Made again on each live update, it moved
+  // the person to another column whenever an agent's change put a task in an earlier one.
+  const loaded = query.data !== undefined;
+  useEffect(() => {
+    if (picked === null && loaded) setColumn(column);
+  }, [picked, loaded, column]);
   const { selected, setSelected, toggle, selectColumn, bulkTargets, reviewing, approveRefusal } =
     useSelection(query.data);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
-  const { toast, setToast, setToastState, fail, copyFailed } = useToast();
+  const { toast, setToast, setToastState, fail, copyFailed, hold } = useToast();
   const [palette, setPalette] = useState(false);
   const [creating, setCreating] = useState(false);
   const [help, setHelp] = useState(false);
@@ -176,6 +182,15 @@ export function App() {
     setSelected,
     setSendingBack,
   );
+  /** What `u` does: the Undo the toast offers, if it offers one. */
+  const undo = useMemo(() => {
+    const offered = toast?.undo;
+    if (!offered) return null;
+    return () => {
+      offered();
+      setToast(null);
+    };
+  }, [toast, setToast]);
   useKeys({
     palette,
     closePalette,
@@ -188,6 +203,7 @@ export function App() {
     task,
     visible,
     cursor,
+    undo,
   });
 
   const { openTask, reviewed, refusal, heldBy, moveCard } = useCards(
@@ -330,10 +346,10 @@ export function App() {
       {/* Always mounted: a live region added together with its message is often not read. Errors
           use an assertive alert region; everything else is a polite status. */}
       <div role="status" aria-live="polite" className="toast-region">
-        {toast && !toast.error ? toastBox(toast, setToast) : null}
+        {toast && !toast.error ? toastBox(toast, setToast, hold) : null}
       </div>
       <div role="alert" className="toast-region">
-        {toast?.error ? toastBox(toast, setToast) : null}
+        {toast?.error ? toastBox(toast, setToast, hold) : null}
       </div>
     </div>
   );

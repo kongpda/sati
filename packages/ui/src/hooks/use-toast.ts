@@ -2,9 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import { plainError } from "../words.js";
 import type { Toast } from "./use-moves.js";
 
-/** The one toast on screen. Errors stay until dismissed; the rest go after a few seconds. */
+/**
+ * The one toast on screen. Errors stay until dismissed; the rest go after a few seconds, counted
+ * again from the start once the pointer and the focus leave it.
+ */
 export function useToast() {
   const [toast, setToastState] = useState<Toast | null>(null);
+  /** The pointer or the focus is on the toast: it waits until both leave. */
+  const [held, hold] = useState(false);
   const setToast = useCallback(
     (message: string | null, undo?: () => void) =>
       setToastState((shown) =>
@@ -32,12 +37,17 @@ export function useToast() {
     [],
   );
 
+  // A toast that goes while held takes the pointer's or the focus's target with it.
   useEffect(() => {
-    if (!toast || toast.error) return;
+    if (!toast) hold(false);
+  }, [toast]);
+
+  useEffect(() => {
+    if (!toast || toast.error || held) return;
     // An Undo stays a little longer, so there is time to reach it.
     const id = window.setTimeout(() => setToast(null), toast.undo ? 10000 : 6000);
     return () => window.clearTimeout(id);
-  }, [toast, setToast]);
+  }, [toast, held, setToast]);
 
-  return { toast, setToast, setToastState, fail, copyFailed };
+  return { toast, setToast, setToastState, fail, copyFailed, hold };
 }

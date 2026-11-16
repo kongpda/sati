@@ -184,7 +184,17 @@ export async function exportSnapshot(
     const rel = posix.join(SNAPSHOT_DIRS[rec.entity], `${rec.record.id}.json`);
     const file = join(dir, rel);
     const content = stableJson(encodeRecord(rec.record));
-    const onDisk = existsSync(file) ? readFileSync(file, "utf8") : undefined;
+    // lstat first, as import does: a symlink, folder or device committed where a record file
+    // belongs must be refused, never read (a FIFO or /dev/zero would hang or exhaust memory).
+    const info = lstatSync(file, { throwIfNoEntry: false });
+    if (info && !info.isFile()) {
+      throw new SatiError(
+        "VALIDATION",
+        `Invalid snapshot file ${rel}: not a regular file (symlinks and folders are refused).`,
+        { hint: "Nothing more was exported. Remove the file, or restore it from git." },
+      );
+    }
+    const onDisk = info ? readFileSync(file, "utf8") : undefined;
     if (onDisk === content) {
       result.unchanged++;
       continue;

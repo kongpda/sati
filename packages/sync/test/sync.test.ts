@@ -242,6 +242,19 @@ describe("exportSnapshot / importSnapshot", () => {
     },
   );
 
+  // WHY: export runs in pre-commit. A teammate's commit that puts a symlink to a folder or a
+  // device where a record file belongs used to make the read hang or crash; it must be refused
+  // with a message that names the file, and nothing behind the link may be read.
+  it("refuses to export over a record file that is a symlink", async () => {
+    const a = await clone();
+    const dir = tempDir();
+    const outside = tempDir();
+    const task = await createTask(a, { title: "Ship it" });
+    mkdirSync(join(dir, "tasks"));
+    symlinkSync(outside, join(dir, `tasks/${task.id}.json`));
+    await expect(exportSnapshot(a, dir)).rejects.toThrow(/not a regular file/);
+  });
+
   // WHY: .sati/ is committed by teammates; a symlink there must not pull in files outside the repo
   // or echo their content in an error.
   it("refuses symlinked record files and does not quote file content in parse errors", () => {

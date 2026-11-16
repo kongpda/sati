@@ -2,6 +2,7 @@ import { SatiError } from "../domain/errors.js";
 import { ID_PREFIXES, shortHandle } from "../domain/ids.js";
 import { findDependencyCycle } from "../domain/rules.js";
 import type { ContextEntry, Task } from "../domain/schemas.js";
+import { CLEARS_DEPENDENTS } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
 import type { StorageReader } from "../ports/storage.js";
 import {
@@ -80,10 +81,11 @@ export async function linkProblems(
     for (const dep of t.dependsOn) {
       if (!tasks.has(dep)) out.push(`${h} waits for ${shortHandle(dep)}, which is missing.`);
     }
-    // Only waiting tasks block: a cycle through done, cancelled or deleted work is harmless.
+    // Only waiting tasks block: a cycle through reviewed, done, cancelled or deleted work is
+    // harmless.
     const blocks = (id: string) => {
       const dep = tasks.get(id);
-      const waits = dep && !isDeleted(dep) && !["done", "cancelled"].includes(dep.status);
+      const waits = dep && !isDeleted(dep) && !CLEARS_DEPENDENTS.includes(dep.status);
       return waits ? dep.dependsOn : [];
     };
     const cycle = blocks(t.id).length ? findDependencyCycle(t.id, t.dependsOn, blocks) : undefined;

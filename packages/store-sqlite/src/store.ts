@@ -4,6 +4,7 @@ import { DatabaseSync, type SQLInputValue, type StatementSync } from "node:sqlit
 import {
   type Activity,
   type ActivityQuery,
+  CLEARS_DEPENDENTS,
   type EntityMap,
   HANDOFF_TAG,
   type ListQuery,
@@ -27,6 +28,9 @@ import { drizzle, type SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 import { buildFtsQuery } from "./fts.js";
 import { LATEST_SCHEMA_VERSION, migrate, userVersion } from "./migrate.js";
 import * as s from "./schema.js";
+
+/** `CLEARS_DEPENDENTS` as a SQL list. The values are fixed status names, never user input. */
+const CLEARED = sql.raw(`(${CLEARS_DEPENDENTS.map((status) => `'${status}'`).join(", ")})`);
 
 const TABLES: Record<StoredEntity, s.EntityTable> = {
   project: s.projects,
@@ -394,12 +398,12 @@ export class SqliteStore implements StorageAdapter {
             eq(t.status, "todo"),
             isNull(t.deletedAt),
             sql`(${t.claimLeaseUntil} IS NULL OR ${t.claimLeaseUntil} <= ${now})`,
-            // A done, cancelled or deleted dependency no longer blocks; a missing one still does
-            // (dep.status is NULL for it, and NULL is not in the list).
+            // A dependency in review, done, cancelled or deleted no longer blocks; a missing one
+            // still does (dep.status is NULL for it, and NULL is not in the list).
             sql`NOT EXISTS (
               SELECT 1 FROM json_each(${t.data}, '$.dependsOn') d
               LEFT JOIN tasks dep ON dep.id = d.value
-              WHERE (dep.status IS NULL OR dep.status NOT IN ('done', 'cancelled'))
+              WHERE (dep.status IS NULL OR dep.status NOT IN ${CLEARED})
                 AND dep.deleted_at IS NULL)`,
             cursor ? sql`(${t.rank}, ${t.id}) > (${cursor.rank}, ${after})` : undefined,
           ),

@@ -9,6 +9,13 @@ export const TASK_STATUSES = [
 ] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
+/**
+ * A dependency in one of these states no longer holds its dependents back. `review` is here
+ * because finished work waiting for a person must not stall the agents that build on it
+ * (ADR 0010); the person can still send it back.
+ */
+export const CLEARS_DEPENDENTS: readonly TaskStatus[] = ["review", "done", "cancelled"];
+
 export const FEATURE_STATUSES = [
   "planned",
   "building",

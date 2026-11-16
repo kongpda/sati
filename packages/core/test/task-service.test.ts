@@ -505,6 +505,23 @@ describe("fencing tokens", () => {
     expect((await claimTask(ctx, second.id)).status).toBe("in_progress");
   });
 
+  // ADR 0010: an agent's finished work goes to review and waits for a person. The agent that
+  // depends on it must still be able to start, or the whole chain waits on one person.
+  it("lets an agent claim a task whose dependency waits in review", async () => {
+    const { ctx } = await setup();
+    const first = await createTask(ctx, { title: "first" });
+    const second = await createTask(ctx, { title: "second", dependsOn: [first.id] });
+    const token = (await claimTask(ctx, first.id)).claim?.token;
+    const done = await completeTask(ctx, first.id, {
+      summary: "Built",
+      filesTouched: ["a.ts"],
+      token,
+    });
+    expect(done.status).toBe("review");
+    expect((await listTasks(ctx, { ready: true })).map((t) => t.id)).toEqual([second.id]);
+    expect((await claimTask(ctx, second.id)).status).toBe("in_progress");
+  });
+
   // PLAN review fix 2: a paused agent loses its lease, another claims the task, then the first
   // resumes. Its late write must be refused, or it overwrites the new holder's work.
   it("refuses a late write from an agent whose lease expired and was taken over", async () => {

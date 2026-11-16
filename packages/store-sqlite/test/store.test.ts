@@ -281,9 +281,10 @@ describe("queries", () => {
     const ready = await store.read((r) => r.readyTasks(PROJECT_ID, NOW, 10));
     expect(ready.map((t) => t.id).sort()).toEqual([free.id, expired.id].sort());
 
+    // ADR 0010: finished work waiting for a person no longer holds back the work after it.
     await store.write((w) => w.update("task", { ...dep, status: "review", version: 2 }, 1));
-    const stillBlocked = await store.read((r) => r.readyTasks(PROJECT_ID, NOW, 10));
-    expect(stillBlocked.map((t) => t.id)).not.toContain(blockedByDep.id);
+    const inReview = await store.read((r) => r.readyTasks(PROJECT_ID, NOW, 10));
+    expect(inReview.map((t) => t.id)).toContain(blockedByDep.id);
 
     // Cancelling the dependency unblocks the task, and so does deleting it; a dependency that
     // was never there still blocks.

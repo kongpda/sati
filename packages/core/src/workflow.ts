@@ -18,7 +18,7 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 - Do not crawl the repo to rediscover what the brief already tells you.
 
 ## Pick work
-- \`task_list\` with \`ready: true\` shows todo tasks whose dependencies are done and nobody holds.
+- \`task_list\` with \`ready: true\` shows todo tasks that nobody holds and whose dependencies are done, cancelled or in review.
   Rows are short; \`detail: "full"\` returns whole tasks. \`task_list\` and \`search\` return
   \`{ items, truncated }\`: when \`truncated\` is true there are more rows, so page on with \`offset\`
   (\`task_list\`) or narrow the query.
@@ -115,7 +115,7 @@ Every tool also exists as a CLI command (\`${CLI_NAME} <entity> <verb> --json\`)
 - Use \`search\` and \`note_get\` before asking the person for something already written down.
 
 ## Pick work
-- \`task_list\` with \`ready: true\` shows todo tasks whose dependencies are done and nobody holds.
+- \`task_list\` with \`ready: true\` shows todo tasks that nobody holds and whose dependencies are done, cancelled or in review.
   Add \`milestoneId\` for one plan, \`assigneeId\` for one person, \`dueBy\` for a deadline. Rows are
   short; \`detail: "full"\` returns whole tasks. \`task_list\` and \`search\` return
   \`{ items, truncated }\`: when \`truncated\` is true there are more rows, so page on with \`offset\`

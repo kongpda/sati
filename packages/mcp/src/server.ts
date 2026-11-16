@@ -437,7 +437,7 @@ function registerTools(
     "task_list",
     {
       description:
-        'List tasks by status, featureId, milestoneId, label, assigneeId, effort or dueBy; ready: true gives unclaimed todo tasks whose dependencies are done. Returns { items, truncated }: short rows, or whole tasks with detail: "full". limit: 50 by default, at most 500; offset pages on.',
+        'List tasks by status, featureId, milestoneId, label, assigneeId, effort or dueBy; ready: true gives unclaimed todo tasks whose dependencies are done, cancelled or in review. Returns { items, truncated }: short rows, or whole tasks with detail: "full". limit: 50 by default, at most 500; offset pages on.',
       inputSchema: linkable(ListTasksInput).extend({
         detail: z.enum(["short", "full"]).optional(),
       }),

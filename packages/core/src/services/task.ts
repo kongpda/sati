@@ -19,7 +19,7 @@ import {
   WAITING_KINDS,
 } from "../domain/schemas.js";
 import { refuseSecrets } from "../domain/secrets.js";
-import { TASK_TRANSITIONS } from "../domain/status.js";
+import { CLEARS_DEPENDENTS, TASK_TRANSITIONS } from "../domain/status.js";
 import { CLI_NAME } from "../name.js";
 import type { StorageReader, StorageWriter } from "../ports/storage.js";
 import {
@@ -464,12 +464,14 @@ async function applyClaim(
     );
   }
   if (before.status === "todo") {
-    // The same rule as the ready list: a done, cancelled or deleted dependency no longer blocks.
+    // The same rule as the ready list: a dependency in review, done, cancelled or deleted no
+    // longer blocks.
     const waiting: string[] = [];
     for (const id of before.dependsOn) {
       const dep = await w.get("task", id);
-      const finished = dep?.status === "done" || dep?.status === "cancelled";
-      if (!dep || (!isDeleted(dep) && !finished)) waiting.push(shortHandle(id));
+      if (!dep || (!isDeleted(dep) && !CLEARS_DEPENDENTS.includes(dep.status))) {
+        waiting.push(shortHandle(id));
+      }
     }
     if (waiting.length > 0) {
       throw new SatiError(
@@ -946,7 +948,8 @@ export async function reviewDrift(
 const READY_PAGE = 500;
 
 /**
- * Lists tasks; `ready: true` returns todo, unclaimed tasks whose dependencies are done.
+ * Lists tasks; `ready: true` returns todo, unclaimed tasks whose dependencies are done,
+ * cancelled or in review.
  * `milestoneId` matches a task whose own `milestoneId` is that milestone, or whose feature is in
  * it, so the milestone's features are looked up before the store sees the query.
  * The store's ready query takes no filters, so the filters apply here, page by page, until

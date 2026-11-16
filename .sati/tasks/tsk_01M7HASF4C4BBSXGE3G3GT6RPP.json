@@ -1,0 +1,31 @@
+{
+  "body": "Agents stall when a dependency sits in review waiting for a person. Count review as finished for the ready list, claim checks and doctor cycle check. Approval stays person-only.",
+  "branch": "main",
+  "claim": {
+    "actorId": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "heartbeatAt": "2026-11-16T04:45:35.520Z",
+    "holder": {
+      "host": "h:3fb635c67b4b8fcc",
+      "pid": 4497
+    },
+    "leaseUntil": "2026-11-16T05:15:35.520Z",
+    "token": 2
+  },
+  "createdAt": "2026-11-16T04:45:33.708Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "id": "tsk_01M7HASF4C4BBSXGE3G3GT6RPP",
+  "priority": "medium",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-16T04:45:33.710Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "branch": "2026-11-16T04:45:35.521Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "claim": "2026-11-16T04:45:35.521Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "status": "2026-11-16T04:45:35.521Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "worktree": "2026-11-16T04:45:35.521Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "status": "in_progress",
+  "title": "Work in review unblocks its dependents (ADR 0010)",
+  "updatedAt": "2026-11-16T04:45:35.521Z",
+  "version": 2,
+  "worktree": "/Users/kongpda/workspace/khable/ts/sati"
+}

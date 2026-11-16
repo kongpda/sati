@@ -236,6 +236,19 @@ export function storeContract(name: string, open: () => Promise<StorageAdapter>)
       await store.close();
     });
 
+    // ADR 0010: sati is a brain for agents. Finished work waiting for a person must not stall
+    // the agents whose tasks depend on it, so a dependency in review no longer holds them back.
+    it("counts a dependency in review as out of the way, and one in progress as not", async () => {
+      const reviewed = task({ status: "review" });
+      const working = task({ status: "in_progress" });
+      const afterReview = task({ dependsOn: [reviewed.id] });
+      const afterWork = task({ dependsOn: [working.id] });
+      const store = await seeded(reviewed, working, afterReview, afterWork);
+      const ready = await store.read((r) => r.readyTasks(PROJECT, NOW, 10));
+      expect(ready.map((t) => t.id)).toEqual([afterReview.id]);
+      await store.close();
+    });
+
     // listTasks pages the ready queue to find filtered matches past the 500 cap (review WP2.3).
     it("continues the ready queue after a cursor, and refuses an unknown cursor", async () => {
       const urgent = task({ priority: "urgent" });

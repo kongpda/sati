@@ -105,7 +105,8 @@ export const listCommand = defineCommand({
     effort: { type: "string", description: "Only tasks of this effort: light | standard | deep" },
     ready: {
       type: "boolean",
-      description: "Only todo tasks with no claim and all dependencies done",
+      description:
+        "Only todo tasks with no claim and all dependencies done, cancelled or in review",
     },
     full: {
       type: "boolean",

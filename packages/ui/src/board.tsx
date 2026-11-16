@@ -90,10 +90,13 @@ export const Board = memo(function Board({
   const prefs = usePrefs();
   const folded = new Set(wide ? prefs.collapsedColumns : []);
   // From every task, not only the filtered ones: a hidden task can still hold another one up.
+  // Work in review no longer holds anything up (ADR 0010).
   const unfinished = useMemo(
     () =>
       new Set(
-        allTasks.filter((t) => t.status !== "done" && t.status !== "cancelled").map((t) => t.id),
+        allTasks
+          .filter((t) => !["review", "done", "cancelled"].includes(t.status))
+          .map((t) => t.id),
       ),
     [allTasks],
   );

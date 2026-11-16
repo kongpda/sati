@@ -1,5 +1,6 @@
 import {
   type Activity,
+  CLEARS_DEPENDENTS,
   type EntityMap,
   HANDOFF_TAG,
   PRIORITY_RANK,
@@ -13,11 +14,14 @@ import {
   type Task,
 } from "../../src/index.js";
 
-/** The SQL store's readiness rule: todo, no live claim, every dependency done or cancelled. */
+/** The SQL store's readiness rule: todo, no live claim, every dependency out of the way. */
 function ready(t: Task, depStatus: (id: string) => Task["status"] | undefined, now: string) {
   if (t.deletedAt !== null || t.status !== "todo") return false;
   if (t.claim !== null && t.claim.leaseUntil > now) return false;
-  return t.dependsOn.every((id) => ["done", "cancelled"].includes(depStatus(id) ?? ""));
+  return t.dependsOn.every((id) => {
+    const status = depStatus(id);
+    return status !== undefined && CLEARS_DEPENDENTS.includes(status);
+  });
 }
 
 interface State {

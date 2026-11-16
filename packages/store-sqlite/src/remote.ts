@@ -388,6 +388,8 @@ export function connectStore(
         reject(new SatiError("INTERNAL", `Lost the connection to the sati daemon (${down}).`));
         return;
       }
+      // Framed first: a message over the limit is refused here, before any reply is awaited.
+      const frame = encode({ ...msg, id });
       // A reply that never comes leaves the transaction in an unknown state: drop the connection,
       // which fails every waiting request and makes the daemon roll back.
       const timer = setTimeout(() => {
@@ -396,7 +398,7 @@ export function connectStore(
         failAll(down);
       }, timeoutMs);
       pending.set(id, { resolve: (value) => resolve(value as T), reject, timer });
-      socket.write(encode({ ...msg, id }));
+      socket.write(frame);
     });
   const proxy = (txn: number): StorageWriter =>
     new Proxy({} as StorageWriter, {

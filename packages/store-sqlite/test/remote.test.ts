@@ -314,6 +314,18 @@ describe("daemon framing", () => {
     await remote.close();
   }, 30_000);
 
+  // Review 2026-11-16: a message refused before sending still left its reply timer running.
+  // When it fired, the client dropped the connection and every other request on it failed.
+  it("keeps the connection after refusing an over-limit message", async () => {
+    const remote = connectStore(sock, { requestTimeoutMs: 200 });
+    const huge = task({ body: "x".repeat(17 * 1024 * 1024) });
+    const refused = await within(remote.write((w) => w.insert("task", huge))).catch((e) => e);
+    expect(refused.message).toMatch(/limit is 16 MB/);
+    await new Promise((r) => setTimeout(r, 300));
+    expect(await within(remote.read((r) => r.getProject()))).toMatchObject({ id: project().id });
+    await remote.close();
+  });
+
   // Skips on Windows, where the socket is a named pipe with no file mode to check.
   // Anyone who can open the socket can read and write every record.
   it.skipIf(process.platform === "win32")("creates the socket readable only by its owner", () => {

@@ -1,15 +1,23 @@
 {
   "body": "Agents stall when a dependency sits in review waiting for a person. Count review as finished for the ready list, claim checks and doctor cycle check. Approval stays person-only.",
   "branch": "main",
-  "claim": {
-    "actorId": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
-    "heartbeatAt": "2026-11-16T04:45:35.520Z",
-    "holder": {
-      "host": "h:3fb635c67b4b8fcc",
-      "pid": 4497
-    },
-    "leaseUntil": "2026-11-16T05:15:35.520Z",
-    "token": 2
+  "completion": {
+    "branch": "main",
+    "commit": "1c1b197665cc6e98c487a35bc73d422b9a8e97a8",
+    "completedAt": "2026-11-16T04:51:17.139Z",
+    "completedBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "filesTouched": [
+      "packages/core/src/domain/status.ts",
+      "packages/core/src/services/task.ts",
+      "packages/core/src/services/doctor.ts",
+      "packages/store-sqlite/src/store.ts",
+      "packages/ui/src/board.tsx",
+      "packages/core/src/workflow.ts",
+      "packages/mcp/src/server.ts",
+      "packages/cli/src/commands/task/list.ts",
+      "docs/decisions/0010-review-unblocks-dependents.md"
+    ],
+    "summary": "CLEARS_DEPENDENTS (review, done, cancelled) used by ready list in both stores, claim check, doctor cycle check, board badge. ADR 0010, changeset, tests. Gate + test:ui green."
   },
   "createdAt": "2026-11-16T04:45:33.708Z",
   "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
@@ -19,13 +27,14 @@
   "stamps": {
     "*": "2026-11-16T04:45:33.710Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
     "branch": "2026-11-16T04:45:35.521Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
-    "claim": "2026-11-16T04:45:35.521Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
-    "status": "2026-11-16T04:45:35.521Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "claim": "2026-11-16T04:51:17.140Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "completion": "2026-11-16T04:51:17.140Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
+    "status": "2026-11-16T04:51:17.140Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42",
     "worktree": "2026-11-16T04:45:35.521Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
   },
-  "status": "in_progress",
+  "status": "done",
   "title": "Work in review unblocks its dependents (ADR 0010)",
-  "updatedAt": "2026-11-16T04:45:35.521Z",
-  "version": 2,
+  "updatedAt": "2026-11-16T04:51:17.140Z",
+  "version": 3,
   "worktree": "/Users/kongpda/workspace/khable/ts/sati"
 }

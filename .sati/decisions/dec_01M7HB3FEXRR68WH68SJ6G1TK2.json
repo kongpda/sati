@@ -1,0 +1,15 @@
+{
+  "consequences": "Rejected: default review none (loses human record), agent approval (breaks person-approves rule). Sending a task back may find work built on it.",
+  "context": "Sati exists so agents can keep working; review gating dependents stalled 498 tasks on one person.",
+  "createdAt": "2026-11-16T04:51:01.725Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "decision": "A dependency in review, done or cancelled no longer blocks dependents (CLEARS_DEPENDENTS). Approval stays person-only. ADR 0010.",
+  "id": "dec_01M7HB3FEXRR68WH68SJ6G1TK2",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-16T04:51:01.726Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "title": "Work in review unblocks its dependents",
+  "updatedAt": "2026-11-16T04:51:01.725Z",
+  "version": 1
+}

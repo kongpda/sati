@@ -83,6 +83,7 @@ export default defineCommand({
               let ready = 0;
               let inProgress = 0;
               let review = 0;
+              let error: string | undefined;
               let store: SqliteStore | undefined;
               try {
                 // Read-only: opening for writing creates an empty database where one is missing,
@@ -101,12 +102,14 @@ export default defineCommand({
                 ready = (await store.read((r) => r.readyTasks(project.projectId, now, 500))).length;
                 inProgress = tasks.filter((t) => t.status === "in_progress").length;
                 review = tasks.filter((t) => t.status === "review").length;
-              } catch {
+              } catch (err) {
                 ready = -1;
+                error = err instanceof Error ? err.message : String(err);
               } finally {
                 await store?.close();
               }
-              rows.push({ ...project, ready, inProgress, review });
+              // `ready` stays -1 for scripts that test it; `error` says why the database did not open.
+              rows.push({ ...project, ready, inProgress, review, ...(error ? { error } : {}) });
             }
             return rows;
           },

@@ -543,6 +543,28 @@ describe("small", () => {
     expect(existsSync(db)).toBe(false);
   });
 
+  // Why: an agent reads `projects --json`. A bare `ready: -1` hid the cause, so the agent could
+  // not tell a missing database from a broken one, nor recognise the row as broken without the rule.
+  it("projects --json names why a database did not open", () => {
+    const home = mkdtempSync(join(tmpdir(), "sati-home-"));
+    const root = mkdtempSync(join(tmpdir(), "sati-ghost-"));
+    rememberProject(
+      {
+        slug: "ghost",
+        name: "ghost",
+        projectId: "prj_ghost",
+        root,
+        mode: "git",
+        db: join(root, "sati.db"),
+      },
+      home,
+    );
+    const r = run(root, ["projects", "--json"], { HOME: home });
+    const [row] = JSON.parse(r.stdout) as { ready: number; error?: string }[];
+    expect(row?.ready).toBe(-1);
+    expect(row?.error).toMatch(/\S/);
+  });
+
   // Why: a project moved or given up stayed in `sati projects` for ever. Forgetting it must
   // never take the folder or the database with it, and must not happen by accident.
   it("projects forget removes only the registry entry", () => {

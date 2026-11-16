@@ -1045,7 +1045,7 @@ Added 2026-11-12 at the owner's request: the whole-project review found the mode
 - [x] WP0 Foundations: the guard's escaped-quote bug, hidden flags, repeatable flags, board preferences, temp-folder cleanup
 - [x] WP1 Board: approve in bulk, and columns that fit
 - [x] WP8 CLI: bugs and gaps
-- [ ] WP9 Core: correctness
+- [x] WP9 Core: correctness
 - [x] WP16 CLI code refactor (split `runtime.ts`, `commands/task.ts`, `commands/init.ts`)
 - [x] WP6 CLI: one command per job
 - [x] WP7 CLI: one flag per idea, one way to print

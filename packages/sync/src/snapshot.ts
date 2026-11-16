@@ -393,7 +393,7 @@ export async function importSnapshot(
   const { records, copies, skipped, bad } = scanSnapshot(dir, opts);
   let result: ImportResult;
   try {
-    result = await importRecords(ctx, await joinTies(ctx, records));
+    result = await joinAndImport(ctx, records);
   } catch (err) {
     // The file parsed but is not a whole record. Leave those out and import the others.
     const details = opts.skipBad && isSatiError(err) ? err.details : undefined;
@@ -406,12 +406,12 @@ export async function importSnapshot(
     if (named.length === 0) throw err;
     bad.push(...named);
     const rest = records.filter((r) => !named.includes(r.source));
-    result = await importRecords(ctx, await joinTies(ctx, rest));
+    result = await joinAndImport(ctx, rest);
   }
   // After the record itself, and one at a time: each copy meets what the ones before it left.
   for (const copy of copies) {
     try {
-      const more = await importRecords(ctx, await joinTies(ctx, [copy]));
+      const more = await joinAndImport(ctx, [copy]);
       result.imported.push(...more.imported);
       result.problems.push(...more.problems);
       rmSync(join(dir, copy.source), { force: true });
@@ -431,6 +431,18 @@ export async function importSnapshot(
     );
   }
   return { ...result, skipped: [...skipped, ...bad] };
+}
+
+/** A record written locally between the merge and the import: merge again, a few times at most. */
+async function joinAndImport(ctx: ServiceContext, records: ImportRecordsInput) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await importRecords(ctx, await joinTies(ctx, records));
+    } catch (err) {
+      const changed = isSatiError(err) && err.code === "CONFLICT" && isObj(err.details);
+      if (!changed || attempt >= 5) throw err;
+    }
+  }
 }
 
 /** True when each side holds a field the other wrote earlier: both were edited since they met. */
@@ -476,9 +488,9 @@ async function joinTies(ctx: ServiceContext, records: ImportRecordsInput) {
         // Compared as files: a task saved before `effort` has no effort stamp in the DB, and its
         // file reads back with the shared one. That is not a change.
         !isDeepStrictEqual(encodeRecord(stored), encodeRecord(file));
-      out.push(
-        tie ? { ...item, record: mergeByStamps(stored as unknown as Obj, file).record } : item,
-      );
+      const merged = tie ? mergeByStamps(stored as unknown as Obj, file).record : file;
+      // The import checks this is still the stored version, so a write in between is not lost.
+      out.push({ ...item, record: merged, seenVersion: stored?.version ?? 0 });
     }
     return out;
   });

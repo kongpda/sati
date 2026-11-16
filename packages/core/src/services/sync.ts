@@ -66,6 +66,12 @@ export const ImportRecordsInput = z
       /** Where the record came from (a file path), for error messages. */
       source: z.string().max(LIMITS.path),
       record: z.unknown(),
+      /**
+       * The stored version the caller merged against (0: none stored). When the record changed
+       * since, the import refuses with CONFLICT instead of judging the file against a copy the
+       * caller never saw, so the caller can merge again.
+       */
+      seenVersion: z.number().int().min(0).optional(),
     }),
   )
   .max(MAX_RECORDS);
@@ -110,9 +116,10 @@ function lostClaim(stored: Task, incoming: Task, now: string): string | undefine
 export async function importRecords(ctx: ServiceContext, input: unknown): Promise<ImportResult> {
   const items = parseInput(ImportRecordsInput, input);
   const parsed: SnapshotRecord[] = [];
+  const seen = new Map<string, number>();
   const bad: string[] = [];
   let newer = false;
-  for (const { entity, source, record } of items) {
+  for (const { entity, source, record, seenVersion } of items) {
     const r = ENTITY_SCHEMAS[entity].safeParse(record);
     if (!r.success) {
       const issue = r.error.issues[0];
@@ -127,6 +134,7 @@ export async function importRecords(ctx: ServiceContext, input: unknown): Promis
       bad.push(`${source}: belongs to project ${r.data.projectId}, not ${ctx.projectId}`);
     } else {
       parsed.push({ entity, record: r.data } as SnapshotRecord);
+      if (seenVersion !== undefined) seen.set(r.data.id, seenVersion);
     }
   }
   if (bad.length > 0) {
@@ -144,6 +152,13 @@ export async function importRecords(ctx: ServiceContext, input: unknown): Promis
     const lost: string[] = [];
     for (const { entity, record } of parsed) {
       const stored = await w.get(entity, record.id);
+      const expected = seen.get(record.id);
+      if (expected !== undefined && (stored?.version ?? 0) !== expected) {
+        throw new SatiError("CONFLICT", `${shortHandle(record.id)} changed during the import.`, {
+          hint: "Nothing was imported. Import again.",
+          details: { changed: record.id },
+        });
+      }
       // A file never replaces a private record, and a file marked private is not memory to take
       // in: private items are never exported, so one in `.sati/` was put there by hand.
       if (

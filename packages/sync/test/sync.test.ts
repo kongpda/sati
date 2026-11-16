@@ -479,6 +479,35 @@ describe("a file and the DB that changed apart at the same version", () => {
     expect(await getRecord(b, "task", t.id)).toMatchObject(want);
   });
 
+  // Review 2026-11-16: the merge read the DB in one transaction and the import wrote in another.
+  // A local write landing between them was judged against a stale copy, and one side's edit
+  // was lost. The import must notice the change and merge again.
+  it("keep a local edit made while the import was merging", async () => {
+    const a = await clone();
+    const b = await clone(a.projectId);
+    const dir = tempDir();
+    const t = await createTask(a, { title: "One" });
+    await exportSnapshot(a, dir);
+    await importSnapshot(b, dir);
+    await updateTask(b, t.id, { body: "theirs" });
+    await exportSnapshot(b, dir);
+
+    // The first read of the import is the merge; the local edit lands right after it.
+    const read = a.store.read.bind(a.store);
+    let edited = false;
+    a.store.read = (async (fn: Parameters<typeof read>[0]) => {
+      const out = await read(fn);
+      if (!edited) {
+        edited = true;
+        await updateTask(a, t.id, { title: "ours" });
+      }
+      return out;
+    }) as typeof a.store.read;
+
+    await importSnapshot(a, dir);
+    expect(await getRecord(a, "task", t.id)).toMatchObject({ title: "ours", body: "theirs" });
+  });
+
   it("leave a file the DB already holds alone", async () => {
     const a = await clone();
     const dir = tempDir();

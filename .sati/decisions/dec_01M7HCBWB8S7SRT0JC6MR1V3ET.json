@@ -1,0 +1,15 @@
+{
+  "consequences": "Windows users on shared machines are told not to run `sati serve` there. Revisit if Node gains pipe ACLs or if serve gets a handshake token.",
+  "context": "A review flagged that the Windows named pipe for `sati serve` has a predictable name (a hash of the DB path), so another local account could create it first.",
+  "createdAt": "2026-11-16T05:13:05.638Z",
+  "createdBy": "actr_01M788ZHXXGJ73JXCAYSPWPY42",
+  "decision": "Rejected adding a per-user part to the pipe name: usernames are known to other local accounts, so the name would stay predictable and squatting would still work. A real fix needs a shared secret in a user-only file or a pipe ACL, which Node does not expose. The limit is documented in SECURITY.md instead, next to the note that actor kind comes from environment variables.",
+  "id": "dec_01M7HCBWB8S7SRT0JC6MR1V3ET",
+  "projectId": "prj_01M6G3W2R99D4NQMR3RN9AGG6G",
+  "stamps": {
+    "*": "2026-11-16T05:13:05.641Z#000000#actr_01M788ZHXXGJ73JXCAYSPWPY42"
+  },
+  "title": "Windows serve pipe: document the limit, do not rename the pipe",
+  "updatedAt": "2026-11-16T05:13:05.638Z",
+  "version": 1
+}

@@ -28,6 +28,17 @@ Only the latest minor release of `@kongpda/sati` gets security fixes.
   cannot swap it through `PATH`. A project install records `node_modules/.bin/sati` instead, so
   the hooks follow the version in the lockfile.
 
+## What sati does not protect
+
+- **Who is an agent** is read from the environment (`CLAUDECODE`, `AI_AGENT`) or from the MCP
+  client's name. This keeps honest agents to their rules, such as never approving their own
+  work. It is not a login: a process that clears those variables and runs `sati` as you acts
+  as a person. Run agents you do not trust under a separate user account.
+- **`sati serve` on Windows** listens on a named pipe. The pipe name comes from the database
+  path, so another account on the same machine could create the pipe first and answer in its
+  place. On macOS and Linux the socket sits next to the database with mode `0600`. Do not run
+  `sati serve` on a Windows machine shared with accounts you do not trust.
+
 ## Dependencies
 
 Renovate opens updates only for releases at least 14 days old. CI runs `pnpm audit` and OSV

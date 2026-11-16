@@ -2659,3 +2659,30 @@ Run alone, all seven passed. They were load timeouts, not hangs. A run with the 
 - Both are owner-only. The owner said "do all" in another agent thread on 2026-11-15, and that agent ran `sati projects forget` on the stale entries and removed the leftover `sati-*` folders from `$TMPDIR`. Checked on 2026-11-16: `sati projects` lists only kory, saart and proofr, and `$TMPDIR` has no `sati-*` folders.
 - `.sati/context/` holds context cards written by `sati sync`. `context` is one of `SNAPSHOT_DIRS` in `packages/core/src/services/sync.ts`, so these files are committed like the other snapshot dirs.
 - Still with the owner: 14.1 (unread tasks in review), 14.3 (the new name), 14.7 (publish, screen-reader pass, three-project trial, required checks).
+
+## 2026-11-16 — Review round: stability, UX and security fixes
+
+The owner asked for every open review finding to be fixed. Each fix has a test that failed first, and a changeset where users can see the change.
+
+- Core: work in review unblocks its dependents (ADR 0010). Approval still needs a person.
+- Sync:
+  - `.sati export` refuses to write over a symlink or a folder.
+  - An import that races a local edit retries the merge instead of overwriting the edit.
+  - An export error handler that throws no longer ends the process.
+- Serve: a request over the size limit is refused without dropping the connection.
+- Board server: the `/events` heartbeat stops when the stream fails to start.
+- Board:
+  - Live refreshes are coalesced to one per 300 ms.
+  - On a phone, the column is picked once, when the tasks first arrive.
+  - A toast waits while the pointer or focus is on it.
+  - `u` takes the Undo a message offers.
+  - The phone and toast fixes share one commit: one hunk in `app.tsx` holds both.
+- CLI:
+  - `settings` checks every flag before it renames the project.
+  - `--version` after a command is refused.
+  - `projects --json` adds an `error` field. `ready` stays `-1` for scripts.
+- Security: the Windows `serve` pipe has a predictable name.
+  - A per-user name would not help, because other accounts know the username.
+  - SECURITY.md now documents this limit, and that the agent or person kind comes from environment variables (decision dec_01M7HCBWB8S7SRT0JC6MR1V3ET).
+- Not done: caching `files()` and card states per data version on the board server.
+  - No measured slowness justifies it. `perf.spec.ts` stays within budget.

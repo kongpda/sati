@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 /** How many rows a long list draws before "Show more". */
-export const PAGE = 50;
+const PAGE = 50;
 
 /** The event `show` sends when the row it wants is not drawn yet. */
 export const REVEAL = "sati:reveal";

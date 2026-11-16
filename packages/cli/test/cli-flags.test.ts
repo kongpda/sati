@@ -694,6 +694,16 @@ describe("flag renames keep the old name working", () => {
     expect(sati(dir, "milestone", "create", "M", "--due", "2026-13-45").stderr).toContain("--due:");
   });
 
+  // Review 2026-11-16: `sati task create X --version` created a task and printed no version.
+  // A version flag below the root must be refused before the command writes anything.
+  it("refuses a version flag after a command, and writes nothing", async () => {
+    const dir = await tempRepo({ init: true });
+    const r = run(dir, ["task", "create", "Should not exist", "--version"]);
+    expect(r.code).not.toBe(0);
+    expect(r.stderr).toContain("Unknown option --version");
+    expect(satiJson<Row[]>(dir, "task", "list").data).toHaveLength(0);
+  });
+
   it("--commit is the approving flag on task update, --approved-commit still works", async () => {
     const dir = await tempRepo({ init: true });
     const t = satiJson<Row>(dir, "task", "create", "Review me").data;

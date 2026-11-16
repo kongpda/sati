@@ -144,7 +144,8 @@ async function unknownFlag(root: CommandDef, argv: readonly string[]): Promise<F
       }
       continue;
     }
-    if (HELP.has(token) || VERSION_FLAGS.has(token)) {
+    // Only help passes through: a version flag is read before any command, never after one.
+    if (HELP.has(token)) {
       kept.push(token);
       continue;
     }
